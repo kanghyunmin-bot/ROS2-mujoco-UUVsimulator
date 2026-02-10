@@ -1,0 +1,21 @@
+{
+  "axes": {
+    "sway": 2,
+    "forward": 3,
+    "yaw": [0],
+    "heave": [1]
+  },
+  "axis_sign": {
+    "sway": 1.0,
+    "forward": -1.0,
+    "yaw": 1.0,
+    "heave": -1.0
+  },
+  "deadzone": 0.12,
+  "yaw_deadzone": 0.18,
+  "buttons": {
+    "stop": 0,
+    "pause": 7,
+    "mode": 6
+  }
+}

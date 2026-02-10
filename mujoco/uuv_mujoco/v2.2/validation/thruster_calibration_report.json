@@ -1,0 +1,15 @@
+{
+  "updated": true,
+  "median_speed": 0.39413820144123823,
+  "gains": {
+    "ver_lf": 1.3,
+    "ver_lr": 1.3,
+    "ver_rf": 1.3,
+    "ver_rr": 1.3,
+    "yaw_lf": 0.7395,
+    "yaw_lr": 0.7522,
+    "yaw_rf": 0.7593,
+    "yaw_rr": 0.7747
+  },
+  "path": "/home/khm/mujoco/uuv_mujoco/v2.0/thruster_params.json"
+}

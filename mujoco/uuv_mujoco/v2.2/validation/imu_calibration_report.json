@@ -1,0 +1,15 @@
+{
+  "updated": true,
+  "path": "/home/khm/mujoco/uuv_mujoco/v2.0/imu_calibration.json",
+  "gyro_bias": [
+    0.15796451294788488,
+    0.2596329531122701,
+    0.11241533751973927
+  ],
+  "accel_bias": [
+    -0.03134556826239754,
+    0.005694121430273924,
+    0.03228868943303653
+  ],
+  "gravity_included": true
+}

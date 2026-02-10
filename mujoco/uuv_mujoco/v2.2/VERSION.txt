@@ -1,0 +1,4 @@
+UUV MuJoCo Simulator v2.1
+Built on: 2026-02-06
+Base: urdf_full_scene.xml + run_urdf_full.py + ros2_bridge.py
+Notes: docs/structure/comments refreshed, Ubuntu install script improved

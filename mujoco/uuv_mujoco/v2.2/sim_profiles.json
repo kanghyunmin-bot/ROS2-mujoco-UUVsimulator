@@ -1,0 +1,40 @@
+{
+  "sim_fast": {
+    "half_height": 0.147,
+    "buoyancy_scale": 1.0,
+    "cob_torque_scale": 1.0,
+    "buoyancy_point_blend": 1.0,
+    "align_com_to_thruster_plane": false,
+    "cob_y_offset": 0.0,
+    "thruster_force_max": 65.0,
+    "linear_drag": 0.95,
+    "angular_drag": 0.1,
+    "spin_gain": 26.0,
+    "validation_timestep": 0.004,
+    "validation_iterations": 20,
+    "validation_ls_iterations": 8,
+    "validation_step_start": 0.5,
+    "validation_step_end": 1.4,
+    "validation_total_time": 3.2,
+    "validation_step_amp_ratio": 0.35
+  },
+  "sim_real": {
+    "half_height": 0.147,
+    "buoyancy_scale": 1.0,
+    "cob_torque_scale": 1.0,
+    "buoyancy_point_blend": 1.0,
+    "align_com_to_thruster_plane": false,
+    "cob_y_offset": 0.0,
+    "thruster_force_max": 50.0,
+    "linear_drag": 1.2,
+    "angular_drag": 0.12,
+    "spin_gain": 22.0,
+    "validation_timestep": 0.005,
+    "validation_iterations": 20,
+    "validation_ls_iterations": 8,
+    "validation_step_start": 0.5,
+    "validation_step_end": 1.4,
+    "validation_total_time": 3.2,
+    "validation_step_amp_ratio": 0.3
+  }
+}

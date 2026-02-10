@@ -1,0 +1,42 @@
+<launch>
+  <arg name="fcu_url" default="/dev/ttyACM0:57600"/>
+  <arg name="rovio_launch" default="$(find rovio)/launch/rovio_d435i_stereo.launch"/>
+  <include file="$(find mavros)/launch/apm.launch"><arg name="fcu_url" value="$(arg fcu_url)"/></include>
+  <include file="$(arg rovio_launch)"/>
+  <arg name="dvl_ip" default="192.168.194.95"/>
+  <include file="$(find waterlinked_a50_ros_driver)/launch/dvl_start.launch"><arg name="ip" value="$(arg dvl_ip)"/></include>
+  <include file="$(find hit25_interpreter)/launch/interpreter.launch"/>
+  <node pkg="hit25_auv" type="joy2mavros" name="joy2mavros" output="screen" respawn="true"/>
+  <node pkg="hit25_auv" type="vfr2atm_pressure" name="vfr2atm_pressure" output="screen" respawn="true"/>
+  <node pkg="hit25_auv" type="dronecan2mavros_battery.py" name="dronecan2mavros_battery" output="screen" respawn="true"><param name="auto_bringup" value="false"/></node>
+  <node pkg="hit25_auv" type="ref_point_marker_node.py" name="ref_point_marker" output="screen"><param name="parent_frame" value="odom"/><param name="auv_frame" value="auv_link"/></node>
+
+
+  <node pkg="hit25_auv" type="main_node.py" name="hit25_auv_main" output="screen" respawn="true">
+    <param name="enable_map_odom_broadcaster" value="true"/>
+    <param name="enable_controller"           value="true"/>
+    <param name="log_level" value="INFO"/>
+    
+    <param name="dvl_roll"  value="3.14159265"/> 
+    <param name="dvl_pitch" value="0.0"/>
+    <param name="dvl_yaw"   value="0.0"/>
+
+    <param name="enable_profile_yaw" value="true"/>
+    <param name="enable_profile_xy"  value="true"/>
+
+    <param name="max_yaw_accel" value="0.15"/>
+    <param name="max_xy_accel"  value="0.5"/>
+
+    <param name="K_ff_xy"  value="0.5"/> 
+    <param name="K_ff_yaw" value="0.8"/>
+
+    <param name="Kp_yaw" value="0.4"/>
+    <param name="Kp_x"   value="0.8"/>
+    <param name="Kp_y"   value="0.8"/>
+    <param name="Kp_z"   value="0.5"/>
+  </node>
+
+
+  <param name="robot_description" command="$(find xacro)/xacro $(find hit25_auv)/urdf/rov.urdf" />
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen" />
+</launch>

@@ -1,0 +1,41 @@
+<launch>
+  <!-- === Args === -->
+  <arg name="fcu_url" default="/dev/ttyACM0:57600"/>
+  <!-- 필요 시 바꿔 쓸 수 있게 만듦 -->
+  <arg name="rovio_launch" default="$(find rovio)/launch/rovio_d435i_stereo.launch"/>
+
+  <!-- === MAVROS (ArduSub) === -->
+  <include file="$(find mavros)/launch/apm.launch">
+    <arg name="fcu_url" value="$(arg fcu_url)"/>
+  </include>
+
+  <!-- === ROVIO (D435i stereo) === -->
+  <include file="$(arg rovio_launch)"/>
+
+  <!-- === Water Linked A50 DVL === -->
+  <arg name="dvl_ip"   default="192.168.194.95"/>
+  <include file="$(find waterlinked_a50_ros_driver)/launch/dvl_start.launch">
+    <arg name="ip" value="$(arg dvl_ip)"/>
+  </include>
+
+
+  <!-- === Joystick → MAVROS 노드 === -->
+  <!-- joy2mavros가 hit25_auv 패키지 안의 노드라고 가정 -->
+  <node pkg="hit25_auv" type="joy2mavros" name="joy2mavros" output="screen" respawn="true"/>
+
+  <!-- === vfr_hub → MAVROS_baro 토픽 변환 노드 === -->
+  <node pkg="hit25_auv" type="vfr2atm_pressure" name="vfr2atm_pressure" output="screen" respawn="true"/>
+
+  <!-- === reaqrovio_odom → MAVROS 노드 === -->
+  <!-- <node pkg="hit25_auv" type="odom2mavros" name="odom2mavros" output="screen" respawn="true"/> -->
+
+
+  <!-- === DroneCAN 배터리 브리지 === -->
+  <node pkg="hit25_auv"
+        type="dronecan2mavros_battery.py"
+        name="dronecan2mavros_battery"
+        output="screen"
+        respawn="true">
+    <param name="auto_bringup" value="false"/>
+  </node>
+</launch>

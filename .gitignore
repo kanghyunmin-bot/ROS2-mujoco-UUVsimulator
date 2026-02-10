@@ -1,0 +1,17 @@
+# Local/runtime artifacts
+QGroundControl-x86_64.AppImage
+
+# ROS2 workspace build outputs
+kmu_hit25_ros2_ws/build/
+kmu_hit25_ros2_ws/install/
+kmu_hit25_ros2_ws/log/
+
+# ArduPilot build outputs
+kmu_hit25_ros2_ws/ardupilot/build/
+kmu_hit25_ros2_ws/ardupilot/logs/
+
+# Python virtual environments and caches
+**/venv/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/

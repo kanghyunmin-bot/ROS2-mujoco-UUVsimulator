@@ -1,0 +1,16 @@
+[INFO] [1770569190.737790736] [vision_interpreter_node]: OpenVINO 모델 로딩 중: /home/khm/antigravity/kmu_hit25_ros2_ws/src/hit25_interpreter/models/1123best_openvino_model/1123best.xml
+[INFO] [1770569190.876086690] [vision_interpreter_node]: 모델 로딩 완료. 입력 크기: (640, 640)
+[INFO] [1770569190.879599410] [vision_interpreter_node]: 원본 이미지 토픽 구독 (/stereo/left/image_raw)
+[INFO] [1770569190.879881529] [vision_interpreter_node]: 로우패스 필터 Alpha: 0.5
+Traceback (most recent call last):
+  File "/home/khm/antigravity/kmu_hit25_ros2_ws/install/hit25_interpreter/lib/hit25_interpreter/vision_interpreter_node.py", line 260, in <module>
+    main()
+  File "/home/khm/antigravity/kmu_hit25_ros2_ws/install/hit25_interpreter/lib/hit25_interpreter/vision_interpreter_node.py", line 256, in main
+    rclpy.shutdown()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+    _shutdown(context=context)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+    return context.shutdown()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
+    self.__context.shutdown()
+rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241

@@ -1,0 +1,13 @@
+<launch>
+    <!-- <node pkg="joy" type="joy_node" name="joy_node" output="screen">
+        <param name="dev" value="/dev/input/js0" />
+        <param name="deadzone" value="0.1" />
+        <param name="autorepeat_rate" value="20" />
+    </node> -->
+
+    <node pkg="hit25_auv" type="auv_state_gui.py" name="auv_state_gui" output="screen" />
+
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find hit25_auv)/rviz/auv_view.rviz" />
+
+    <node pkg="rqt_image_view" type="rqt_image_view" name="rqt_image_view" args="image:=/camera/color/image_raw/compressed" output="screen"/>
+</launch>

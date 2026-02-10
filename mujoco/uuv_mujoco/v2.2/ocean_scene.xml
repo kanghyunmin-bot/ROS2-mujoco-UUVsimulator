@@ -1,0 +1,150 @@
+<mujoco model="urdf_full">
+  <compiler angle="radian" meshdir="assets/urdf_full/meshes_split/" settotalmass="10" />
+
+  <option density="1000" viscosity="0.001" integrator="implicitfast" />
+
+  <visual>
+    <headlight diffuse="0.9 0.9 0.9" ambient="0.8 0.8 0.8" specular="0.05 0.05 0.05" />
+  </visual>
+
+  <default>
+    <site size="0.03" rgba="1 0.1 0.1 1" />
+  </default>
+
+  <asset>
+    <texture name="skybox" type="skybox" builtin="gradient" rgb1="0.45 0.65 0.85" rgb2="0.05 0.08 0.12" width="512" height="512" />
+    <hfield name="water_hf" nrow="49" ncol="49" size="30 30 0.12 0.2" />
+    <mesh name="seabed_wiki" content_type="model/stl" file="seabed_wiki.stl" />
+    <mesh name="rock_1" content_type="model/obj" file="rock_1.obj" />
+    <mesh name="rock_2" content_type="model/obj" file="rock_2.obj" />
+    <mesh name="rock_3" content_type="model/obj" file="rock_3.obj" />
+    <mesh name="rock_4" content_type="model/obj" file="rock_4.obj" />
+    <mesh name="rock_5" content_type="model/obj" file="rock_5.obj" />
+    <mesh name="base_link_part0" content_type="model/stl" file="base_link_part0.stl" />
+    <mesh name="base_link_part1" content_type="model/stl" file="base_link_part1.stl" />
+    <mesh name="base_link_part2" content_type="model/stl" file="base_link_part2.stl" />
+    <mesh name="base_link_part3" content_type="model/stl" file="base_link_part3.stl" />
+    <mesh name="base_link_part4" content_type="model/stl" file="base_link_part4.stl" />
+    <mesh name="VER_LF" content_type="model/stl" file="VER_LF.STL" />
+    <mesh name="VER_LR" content_type="model/stl" file="VER_LR.STL" />
+    <mesh name="VER_RF" content_type="model/stl" file="VER_RF.STL" />
+    <mesh name="VER_RR" content_type="model/stl" file="VER_RR.STL" />
+    <mesh name="YAW_LF" content_type="model/stl" file="YAW_LF.STL" />
+    <mesh name="YAW_LR" content_type="model/stl" file="YAW_LR.STL" />
+    <mesh name="YAW_RF" content_type="model/stl" file="YAW_RF.STL" />
+    <mesh name="YAW_RR" content_type="model/stl" file="YAW_RR.STL" />
+    <mesh name="t200_prop" content_type="model/stl" file="t200_prop.stl" scale="0.001 0.001 0.001" />
+    <texture name="sand_tex" type="2d" file="assets/urdf_full/meshes_split/sand_tex.png" />
+    <texture name="water_tex" type="2d" builtin="gradient" rgb1="0.12 0.35 0.55" rgb2="0.02 0.08 0.15" width="512" height="512" />
+    <material name="orange" rgba="0.95 0.45 0.05 1" />
+    <material name="frame_grey" rgba="0.55 0.55 0.55 1" />
+    <material name="enclosure_white" rgba="0.95 0.95 0.95 1" />
+    <material name="seabed_mat" texture="sand_tex" texrepeat="6 6" texuniform="true" specular="0.02" shininess="0.2" reflectance="0.01" />
+    <material name="water_mat" texture="water_tex" texrepeat="1 1" rgba="0.22 0.55 0.85 0.65" specular="0.9" shininess="0.98" reflectance="0.35" />
+    <material name="rock" rgba="0.50 0.48 0.45 1" specular="0.05" shininess="0.2" reflectance="0.02" />
+    <material name="wall" rgba="0.40 0.40 0.40 1" />
+  </asset>
+
+  <worldbody>
+    <light name="sun" pos="0 0 20" dir="0 0 -1" diffuse="1 1 1" specular="0.2 0.2 0.2" />
+    <light name="fill_1" pos="15 15 10" dir="-1 -1 -0.6" diffuse="0.8 0.8 0.8" specular="0.1 0.1 0.1" />
+    <light name="fill_2" pos="-15 15 10" dir="1 -1 -0.6" diffuse="0.8 0.8 0.8" specular="0.1 0.1 0.1" />
+    <light name="fill_3" pos="15 -15 10" dir="-1 1 -0.6" diffuse="0.8 0.8 0.8" specular="0.1 0.1 0.1" />
+    <light name="fill_4" pos="-15 -15 10" dir="1 1 -0.6" diffuse="0.8 0.8 0.8" specular="0.1 0.1 0.1" />
+    <light name="fill_center" pos="0 0 5" dir="0 0 -1" diffuse="0.6 0.6 0.6" specular="0.05 0.05 0.05" />
+    <!-- Seabed mesh from uuv_simulator wiki -->
+    <geom name="seabed_wiki" type="mesh" mesh="seabed_wiki" pos="0 0 -8" material="seabed_mat" />
+    <geom name="water_surface" type="hfield" hfield="water_hf" pos="0 0 -0.06" material="water_mat" contype="0" conaffinity="0" />
+
+    <!-- Boundary walls for ~60m x 60m x 15m area -->
+    <geom name="wall_px" type="box" pos="30 0 -7.5" size="1.0 30 7.5" material="wall" />
+    <geom name="wall_nx" type="box" pos="-30 0 -7.5" size="1.0 30 7.5" material="wall" />
+    <geom name="wall_py" type="box" pos="0 30 -7.5" size="30 1.0 7.5" material="wall" />
+    <geom name="wall_ny" type="box" pos="0 -30 -7.5" size="30 1.0 7.5" material="wall" />
+
+    <!-- Large rocks on seabed -->
+    <geom name="rock_1" type="mesh" mesh="rock_1" pos="-12 -6 -12.0" size="1.4 1.2 1.0" quat="0.9659 0.1 0.15 0.2" material="rock" />
+    <geom name="rock_2" type="mesh" mesh="rock_2" pos="-5 8 -10.0" size="1.2 1.0 0.9" quat="0.9808 0.0 0.18 0.08" material="rock" />
+    <geom name="rock_3" type="mesh" mesh="rock_3" pos="7 -7 -12.823" size="1.7 1.3 1.1" quat="0.9239 0.12 0.22 0.18" material="rock" />
+    <geom name="rock_4" type="mesh" mesh="rock_4" pos="12 5 -8.925" size="1.3 1.1 0.9" quat="0.9511 0.18 0.05 0.25" material="rock" />
+    <geom name="rock_5" type="mesh" mesh="rock_5" pos="0 0 -13.814" size="1.9 1.4 1.1" quat="0.9397 0.2 0.12 0.25" material="rock" />
+    <body name="base_link" pos="0 0 -0.8" quat="0.7071068 0.7071068 0 0">
+      <inertial pos="0.1807 0.1472 -0.1826" quat="1 0 0 0" mass="10" diaginertia="0.365 0.722 0.501" />
+      <joint name="world_joint" type="free" />
+      <geom type="mesh" mesh="base_link_part0" material="frame_grey" />
+      <geom type="mesh" mesh="base_link_part1" material="frame_grey" />
+      <geom type="mesh" mesh="base_link_part2" material="frame_grey" />
+      <geom type="mesh" mesh="base_link_part3" material="frame_grey" />
+      <geom type="mesh" mesh="base_link_part4" material="frame_grey" />
+      <geom pos="0.3297 0.228406 0.052" quat="0.707107 0 0 -0.707107" type="mesh" mesh="VER_LF" material="orange" />
+      <geom pos="0.0097 0.228406 0.052" quat="0.707107 0 0 -0.707107" type="mesh" mesh="VER_LR" material="orange" />
+      <geom pos="0.3297 0.22841 -0.417" quat="-2.59734e-06 0.707105 -0.707108 2.59735e-06" type="mesh" mesh="VER_RF" material="orange" />
+      <geom pos="0.0097 0.22841 -0.417" quat="-2.59734e-06 0.707105 -0.707108 2.59735e-06" type="mesh" mesh="VER_RR" material="orange" />
+      <geom pos="0.26359 0.12 0.00029211" quat="0.658623 0.658625 0.257321 -0.257322" type="mesh" mesh="YAW_LF" material="orange" />
+      <geom pos="0.08309 0.12 0.00065541" quat="0.65328 0.653282 -0.270598 0.270599" type="mesh" mesh="YAW_LR" material="orange" />
+      <geom pos="0.26374 0.12 -0.36613" quat="0.65328 0.653282 -0.270598 0.270599" type="mesh" mesh="YAW_RF" material="orange" />
+      <geom pos="0.083645 0.12 -0.3655" quat="0.652943 0.652945 0.271411 -0.271412" type="mesh" mesh="YAW_RR" material="orange" />
+
+      
+      <site name="thr_ver_lf" pos="0.3297 0.228406 0.052" />
+      <site name="thr_ver_lr" pos="0.0097 0.228406 0.052" />
+      <site name="thr_ver_rf" pos="0.3297 0.22841 -0.417" />
+      <site name="thr_ver_rr" pos="0.0097 0.22841 -0.417" />
+      <site name="thr_yaw_lf" pos="0.26359 0.12 0.00029211" />
+      <site name="thr_yaw_lr" pos="0.08309 0.12 0.00065541" />
+      <site name="thr_yaw_rf" pos="0.26374 0.12 -0.36613" />
+      <site name="thr_yaw_rr" pos="0.083645 0.12 -0.3655" />
+
+      
+      <body name="prop_ver_lf" pos="0.3297 0.228406 0.052" quat="0.7071068 -0.7071068 0 0">
+        <joint name="prop_ver_lf_j" type="hinge" axis="0 0 1" damping="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+      </body>
+      <body name="prop_ver_lr" pos="0.0097 0.228406 0.052" quat="0.7071068 -0.7071068 0 0">
+        <joint name="prop_ver_lr_j" type="hinge" axis="0 0 1" damping="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+      </body>
+      <body name="prop_ver_rf" pos="0.3297 0.22841 -0.417" quat="0.7071068 -0.7071068 0 0">
+        <joint name="prop_ver_rf_j" type="hinge" axis="0 0 1" damping="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+      </body>
+      <body name="prop_ver_rr" pos="0.0097 0.22841 -0.417" quat="0.7071068 -0.7071068 0 0">
+        <joint name="prop_ver_rr_j" type="hinge" axis="0 0 1" damping="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+      </body>
+
+      <body name="prop_yaw_lf" pos="0.26359 0.12 0.00029211" quat="0.4013022 0 0.9159457 0">
+        <joint name="prop_yaw_lf_j" type="hinge" axis="0 0 1" damping="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+      </body>
+      <body name="prop_yaw_lr" pos="0.08309 0.12 0.00065541" quat="0.9238799 0 0.3826825 0">
+        <joint name="prop_yaw_lr_j" type="hinge" axis="0 0 1" damping="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+      </body>
+      <body name="prop_yaw_rf" pos="0.26374 0.12 -0.36613" quat="0.9238799 0 0.3826825 0">
+        <joint name="prop_yaw_rf_j" type="hinge" axis="0 0 1" damping="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+      </body>
+      <body name="prop_yaw_rr" pos="0.083645 0.12 -0.3655" quat="0.3815321 0 0.9243556 0">
+        <joint name="prop_yaw_rr_j" type="hinge" axis="0 0 1" damping="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    
+    <motor name="ver_lf" site="thr_ver_lf" gear="0 1 0 0 0 0" ctrlrange="-15 15" />
+    <motor name="ver_lr" site="thr_ver_lr" gear="0 1 0 0 0 0" ctrlrange="-15 15" />
+    <motor name="ver_rf" site="thr_ver_rf" gear="0 1 0 0 0 0" ctrlrange="-15 15" />
+    <motor name="ver_rr" site="thr_ver_rr" gear="0 1 0 0 0 0" ctrlrange="-15 15" />
+
+    
+    <motor name="yaw_lf" site="thr_yaw_lf" gear="0.735142 0 -0.677913 0 0 0" ctrlrange="-15 15" />
+    <motor name="yaw_lr" site="thr_yaw_lr" gear="0.707105 0 0.707108 0 0 0" ctrlrange="-15 15" />
+    <motor name="yaw_rf" site="thr_yaw_rf" gear="0.707105 0 0.707108 0 0 0" ctrlrange="-15 15" />
+    <motor name="yaw_rr" site="thr_yaw_rr" gear="0.705343 0 -0.708867 0 0 0" ctrlrange="-15 15" />
+
+    
+  </actuator>
+</mujoco>

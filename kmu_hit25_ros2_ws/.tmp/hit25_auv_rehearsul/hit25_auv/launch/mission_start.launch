@@ -1,0 +1,17 @@
+<launch>
+    <node pkg="hit25_auv" type="buoy_mission.py" name="buoy_mission_node" output="screen">
+    </node>
+
+    <node pkg="hit25_auv" type="gate_mission.py" name="gate_mission_node" output="screen">
+    </node>
+
+    <node pkg="hit25_auv" type="line_qr_mission.py" name="line_qr_mission_node" output="screen">
+    </node>
+
+    <node pkg="hit25_auv" type="hydrophone_mission.py" name="hydrophone_mission_node" output="screen">
+    </node>
+
+    <node pkg="hit25_auv" type="return_mission.py" name="return_mission_node" output="screen" >
+    </node>
+
+</launch>

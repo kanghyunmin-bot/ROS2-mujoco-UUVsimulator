@@ -1,0 +1,85 @@
+// Copyright 2016 Proyectos y Sistemas de Mantenimiento SL (eProsima).
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// internal plugins
+apply plugin: 'java-library'
+apply plugin: 'eclipse' // Eclipse integration
+
+version = '2.0.2'
+description = 'Build script with all necessary tasks to compile and test MicroXRCEDDSGen'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation files('thirdparty/IDL-Parser/build/libs/idlparser-1.6.0.jar')
+    testImplementation('org.junit.jupiter:junit-jupiter-api:5.5.2')
+    testRuntimeOnly('org.junit.jupiter:junit-jupiter-engine:5.5.2')
+}
+
+task buildIDLParser(type: GradleBuild) {
+    dir = 'thirdparty/IDL-Parser'
+    tasks = ['clean', 'build']
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir 'src/main/java'
+        }
+    }
+    test {
+        java {
+            srcDir 'src/test/java'
+        }
+    }
+}
+
+jar {
+    duplicatesStrategy 'exclude'
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    baseName = 'microxrceddsgen'
+    archiveName = "${jar.baseName}.${jar.extension}"
+    manifest {
+        attributes(
+                "Created-By": "eProsima",
+                "Main-Class": "com.eprosima.uxr.microxrceddsgen",
+                "Specification-Version": version,
+                "Class-Path": configurations.runtimeClasspath.collect { it.getName() }.join(' ')
+                )
+    }
+    doLast
+    {
+        copy {
+            from jar
+            into "share/microxrcedds"
+        }
+    }
+}
+
+processResources() {
+    duplicatesStrategy = 'EXCLUDE'
+}
+
+compileJava.dependsOn buildIDLParser
+compileJava {
+    sourceCompatibility = 11
+    targetCompatibility = 11
+}
+
+test {
+    useJUnitPlatform()
+    testLogging.showStandardStreams = true
+    systemProperties = System.getProperties()
+}

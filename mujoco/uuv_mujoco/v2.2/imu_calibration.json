@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "gyro_bias": [
+    0.018976998249549154,
+    0.16666376687582565,
+    0.1116779215518613
+  ],
+  "accel_bias": [
+    -0.027137201108369157,
+    0.007984185217473527,
+    0.0016145572714031326
+  ],
+  "gravity_included": true,
+  "calib_seconds": 2.5,
+  "profile": "sim_real",
+  "scene": "urdf_full_scene.xml",
+  "timestamp": "2026-02-06T18:47:51"
+}

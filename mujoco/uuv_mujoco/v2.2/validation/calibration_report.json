@@ -1,0 +1,12 @@
+{
+  "profile": "sim_real",
+  "scene": "uuv_mujoco/v2.0/urdf_full_scene.xml",
+  "joystick": null,
+  "thrusters": null,
+  "thresholds": null,
+  "imu": {
+    "updated": false,
+    "reason": "no imu samples"
+  },
+  "success": false
+}

@@ -1,0 +1,46 @@
+<launch>
+  <arg name="fcu_url" default="/dev/ttyACM0:57600"/>
+  <arg name="rovio_launch" default="$(find rovio)/launch/rovio_d435i_stereo.launch"/>
+  <arg name="dvl_ip" default="192.168.194.95"/>
+
+  <include file="$(find mavros)/launch/apm.launch">
+    <arg name="fcu_url" value="$(arg fcu_url)"/>
+  </include>
+
+  <include file="$(arg rovio_launch)"/>
+
+  <include file="$(find waterlinked_a50_ros_driver)/launch/dvl_start.launch">
+    <arg name="ip" value="$(arg dvl_ip)"/>
+  </include>
+
+  <node pkg="hit25_auv" type="joy2mavros" name="joy2mavros" output="screen" respawn="true"/>
+  <node pkg="hit25_auv" type="vfr2atm_pressure" name="vfr2atm_pressure" output="screen" respawn="true"/>
+  <node pkg="hit25_auv" type="dronecan2mavros_battery.py" name="dronecan2mavros_battery" output="screen" respawn="true">
+    <param name="auto_bringup" value="false"/>
+  </node>
+
+
+  <node pkg="hit25_auv" type="rov_tf_broadcaster.py" name="rov_tf_broadcaster" output="screen">
+    <param name="map_frame" value="map"/>
+    <param name="odom_frame" value="odom"/>
+    <param name="publish_rate" value="20.0"/>
+
+    <param name="base_frame" value="auv_link"/> <param name="dvl_x" value="0.0"/>
+    <param name="dvl_y" value="0.0"/>
+    <param name="dvl_z" value="0.0"/>
+    <param name="dvl_roll"  value="3.14159265"/> 
+    <param name="dvl_pitch" value="0.0"/>
+    <param name="dvl_yaw"   value="0.0"/>
+  </node>
+
+  <node pkg="hit25_auv" type="ref_point_marker_node.py" name="ref_point_marker" output="screen">
+    <param name="parent_frame" value="odom"/>
+    <param name="auv_frame"    value="auv_link"/>
+    <param name="max_path_points" value="50000"/>
+    <param name="marker_topic" value="/ref_point_marker"/>
+  </node>
+
+  <param name="robot_description" command="$(find xacro)/xacro $(find hit25_auv)/urdf/rov.urdf" />
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen" />
+
+</launch>

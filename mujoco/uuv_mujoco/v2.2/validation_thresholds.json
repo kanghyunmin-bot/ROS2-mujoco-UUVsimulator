@@ -1,0 +1,25 @@
+{
+  "forward_step": {
+    "overshoot_pct_max": 5.0,
+    "settling_time_s_max": 0.645,
+    "steady_state_drift_max": 0.1466,
+    "target_ss_abs_min": 0.3048
+  },
+  "heave_step": {
+    "overshoot_pct_max": 5.0,
+    "settling_time_s_max": 0.366,
+    "steady_state_drift_max": 0.2585,
+    "target_ss_abs_min": 0.2463
+  },
+  "yaw_step": {
+    "overshoot_pct_max": 5.0,
+    "settling_time_s_max": 0.654,
+    "steady_state_drift_max": 0.8453,
+    "target_ss_abs_min": 1.1403
+  },
+  "thruster_single": {
+    "alignment_dot_min": 0.5541,
+    "min_speed": 0.2216,
+    "min_pass_ratio": 1.0
+  }
+}

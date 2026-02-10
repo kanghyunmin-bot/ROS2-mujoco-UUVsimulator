@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+JAR="/home/khm/kmu_hit25_ros2_ws/tools/Micro-XRCE-DDS-Gen/build/libs/microxrceddsgen.jar"
+if [ ! -f "$JAR" ]; then
+  echo "microxrceddsgen jar not found at $JAR" >&2
+  exit 1
+fi
+# ArduPilot's AP_DDS wscript passes -default-container-prealloc-size <N>
+# The Micro-XRCE-DDS-Gen 2.0.2 tool doesn't recognize this arg, so strip it.
+args=()
+skip_next=0
+for arg in "$@"; do
+  if [ $skip_next -eq 1 ]; then
+    skip_next=0
+    continue
+  fi
+  if [ "$arg" = "-default-container-prealloc-size" ]; then
+    skip_next=1
+    continue
+  fi
+  args+=("$arg")
+done
+exec java -jar "$JAR" "${args[@]}"

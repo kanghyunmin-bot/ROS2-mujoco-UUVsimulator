@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <!-- === 공통 args === -->
+  <arg name="fcu_url" default="/dev/ttyACM0:57600"/>
+  <arg name="rovio_launch" default="$(find rovio)/launch/rovio_d435i_stereo.launch"/>
+  <arg name="dvl_ip" default="192.168.194.95"/>
+
+  <!-- 1) DVL: 가장 먼저 띄우기 -->
+  <include file="$(find waterlinked_a50_ros_driver)/launch/dvl_start.launch">
+    <arg name="ip" value="$(arg dvl_ip)"/>
+  </include>
+
+  <!-- 2) MAVROS -->
+  <include file="$(find mavros)/launch/apm.launch">
+    <arg name="fcu_url" value="$(arg fcu_url)"/>
+  </include>
+
+  <!-- 3) ROVIO -->
+  <include file="$(arg rovio_launch)"/>
+
+  <!-- 4) 나머지 AUV 노드들 -->
+  <node pkg="hit25_auv" type="joy2mavros" name="joy2mavros" output="screen" respawn="true"/>
+
+  <node pkg="hit25_auv" type="vfr2atm_pressure" name="vfr2atm_pressure" output="screen" respawn="true"/>
+
+  <node pkg="hit25_auv" type="odom2mavros" name="odom2mavros" output="screen" respawn="true"/>
+
+  <node pkg="hit25_auv"
+        type="dronecan2mavros_battery.py"
+        name="dronecan2mavros_battery"
+        output="screen"
+        respawn="true">
+    <param name="auto_bringup" value="false"/>
+  </node>
+
+  <node pkg="hit25_auv" type="auv_tf_broadcaster" name="auv_tf_broadcaster" output="screen">
+    <param name="alpha_tf"           value="0.1"/>
+    <param name="fresh_timeout_s"    value="0.2"/>
+    <param name="jump_reject_deg"    value="10.0"/>
+    <param name="parent_map_frame"   value="map"/>
+    <param name="child_map_frame"    value="auv_map"/>
+    <param name="parent_base_frame"  value="base_link"/>
+    <param name="child_base_frame"   value="auv_base_link"/>
+  </node>
+
+  <!-- === yaw drift compensator === -->
+  <node pkg="hit25_auv" type="auv_yaw_drift_compensator" name="auv_yaw_drift_compensator" output="screen">
+    <param name="bias_pub_rate_hz"     value="20.0"/>
+    <param name="yaw_thr_deg"          value="5.0"/>
+    <param name="sustain_sec"          value="5.0"/>
+    <param name="yaw_rate_deg_s"       value="5.0"/>
+    <param name="command_period_sec"   value="5.0"/>
+    <param name="ewma_alpha"           value="0.2"/>
+    <param name="completion_eps_deg"   value="0.5"/>
+    <param name="completion_timeout_s" value="8.0"/>
+  </node>
+
+  <node pkg="hit25_auv" type="auv_target_controller_node" name="auv_target_controller_node" output="screen" respawn="true">
+    <param name="cmd_pub_rate_hz"     value="10.0"/>
+    <param name="pos_reach_threshold" value="0.20"/>
+    <param name="yaw_rate_deg_s"      value="10.0"/>
+    <param name="yaw_eps_deg"         value="1.0"/>
+  </node>
+
+</launch>

@@ -1,0 +1,22 @@
+[launch] Running in headless mode (EGL rendering)
+[launch] Starting MuJoCo UUV Competition Simulation
+[launch] Scene: competition_scene.xml
+[launch] ROS2 Topics:
+  Input:  /cmd_vel, /mavros/rc/override
+  Output: /imu/data, /dvl/velocity, /dvl/odometry, /dvl/altitude
+  Debug:  /mujoco/ground_truth/pose
+  Images: /stereo/left/image_raw, /stereo/right/image_raw
+
+[profile] using 'sim_real' from /home/khm/antigravity/mujoco/uuv_mujoco/v2.1/sim_profiles.json
+[INFO] [1770569188.421935099] [uuv_mujoco_bridge]: ROS2 bridge active: /cmd_vel -> control, /imu/data, /dvl/velocity, /dvl/odometry, /dvl/altitude, /mavros/rc/override, /stereo/*
+[ros2] bridge enabled: /cmd_vel, /mavros/rc/override -> control, /imu/data, /dvl/velocity, /dvl/odometry, /dvl/altitude, /mujoco/ground_truth/pose, /stereo/*
+Terminal control ready.
+Keys: w/s fwd, a/d sway, q/e yaw, r/f heave, x stop, p status, m mode, l labels, i sensors, c follow, 1/2 stereo cam, 0 free cam, space pause, q quit
+Joystick: left stick=fwd/sway, right stick=yaw/heave, A=stop, Start=pause, Back=mode
+Step: +/- to change step size (default 2.0)
+[joy] no joystick found (/dev/input/js*)
+[model] aligned CoM.y: 0.1472 -> 0.1200
+/home/khm/.local/lib/python3.10/site-packages/glfw/__init__.py:917: GLFWError: (65550) b'X11: Failed to open display '
+  warnings.warn(message, GLFWError)
+ERROR: could not initialize GLFW
+

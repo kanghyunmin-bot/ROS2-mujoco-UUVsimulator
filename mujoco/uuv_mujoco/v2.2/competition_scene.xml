@@ -1,0 +1,229 @@
+<mujoco model="competition_scene">
+  <!-- Competition environment: pool + ROV + buoys + QR panels -->
+  <compiler angle="radian" meshdir="assets/urdf_full/meshes_split/" settotalmass="10" />
+
+  <option density="1000" viscosity="0.001" integrator="implicitfast" />
+
+  <visual>
+    <headlight diffuse="0.9 0.9 0.9" ambient="0.3 0.3 0.3" specular="0.1 0.1 0.1" />
+  </visual>
+
+  <default>
+    <site size="0.03" rgba="0 0 0 0" />
+  </default>
+
+  <asset>
+    <!-- CAD-split structural meshes -->
+    <mesh name="base_link_part0" content_type="model/stl" file="base_link_part0.stl" />
+    <mesh name="base_link_part1" content_type="model/stl" file="base_link_part1.stl" />
+    <mesh name="base_link_part2" content_type="model/stl" file="base_link_part2.stl" />
+    <mesh name="base_link_part3" content_type="model/stl" file="base_link_part3.stl" />
+    <mesh name="base_link_part4" content_type="model/stl" file="base_link_part4.stl" />
+    <mesh name="VER_LF" content_type="model/stl" file="VER_LF.STL" />
+    <mesh name="VER_LR" content_type="model/stl" file="VER_LR.STL" />
+    <mesh name="VER_RF" content_type="model/stl" file="VER_RF.STL" />
+    <mesh name="VER_RR" content_type="model/stl" file="VER_RR.STL" />
+    <mesh name="YAW_LF" content_type="model/stl" file="YAW_LF.STL" />
+    <mesh name="YAW_LR" content_type="model/stl" file="YAW_LR.STL" />
+    <mesh name="YAW_RF" content_type="model/stl" file="YAW_RF.STL" />
+    <mesh name="YAW_RR" content_type="model/stl" file="YAW_RR.STL" />
+    <mesh name="t200_prop" content_type="model/stl" file="t200_prop.stl" scale="0.001 0.001 0.001" />
+    
+    <!-- Materials -->
+    <material name="orange" rgba="0.95 0.45 0.05 1" />
+    <material name="frame_grey" rgba="0.55 0.55 0.55 1" />
+    <material name="enclosure_white" rgba="0.95 0.95 0.95 1" />
+    <material name="buoy_red" rgba="1.0 0.1 0.1 1" />
+    <material name="qr_white" rgba="1.0 1.0 1.0 1" />
+    <material name="qr_black" rgba="0.1 0.1 0.1 1" />
+    <material name="line_yellow" rgba="1.0 0.9 0.0 1" />
+    <material name="gate_blue" rgba="0.2 0.4 0.9 1" />
+    <material name="pool_tile" rgba="0.3 0.5 0.7 1" />
+  </asset>
+
+  <worldbody>
+    <!-- Pool bounds and water visual volume -->
+    <light name="sun" pos="0 0 10" dir="0 0 -1" diffuse="0.9 0.9 0.9" specular="0.3 0.3 0.3" />
+    
+    <!-- Pool floor with tile pattern -->
+    <geom name="pool_floor" type="plane" pos="0 0 -2" size="30 15 0.1" material="pool_tile" />
+    
+    <!-- Pool walls -->
+    <geom name="pool_wall_px" type="box" pos="12.5 0 -1" size="0.1 6.25 1" rgba="0.7 0.7 0.7 1" />
+    <geom name="pool_wall_nx" type="box" pos="-12.5 0 -1" size="0.1 6.25 1" rgba="0.7 0.7 0.7 1" />
+    <geom name="pool_wall_py" type="box" pos="0 6.25 -1" size="12.5 0.1 1" rgba="0.7 0.7 0.7 1" />
+    <geom name="pool_wall_ny" type="box" pos="0 -6.25 -1" size="12.5 0.1 1" rgba="0.7 0.7 0.7 1" />
+    
+    <!-- Water visual volume (transparent blue) -->
+    <geom name="water_vis" type="box" pos="0 0 -1" size="12.5 6.25 1" rgba="0.2 0.5 0.8 0.15" contype="0" conaffinity="0" />
+    
+    <!-- ============================================ -->
+    <!-- COMPETITION OBJECTS -->
+    <!-- ============================================ -->
+    
+    <!-- Red Buoy 1: 10-inch diameter (0.127m radius) floating on surface -->
+    <body name="buoy_1" pos="3 0 0.05">
+      <geom name="buoy_1_geom" type="sphere" size="0.127" material="buoy_red" />
+    </body>
+    
+    <!-- Red Buoy 2: positioned further -->
+    <body name="buoy_2" pos="6 2 0.05">
+      <geom name="buoy_2_geom" type="sphere" size="0.127" material="buoy_red" />
+    </body>
+    
+    <!-- Red Buoy 3: positioned to the left -->
+    <body name="buoy_3" pos="5 -2 0.05">
+      <geom name="buoy_3_geom" type="sphere" size="0.127" material="buoy_red" />
+    </body>
+    
+    <!-- QR Code Box 1: underwater at depth 1.5m -->
+    <body name="qr_box_1" pos="4 0 -1.5">
+      <!-- Main box body -->
+      <geom name="qr_box_1_body" type="box" size="0.2 0.2 0.2" material="qr_white" />
+      <!-- QR pattern on front face (simulated with black squares) -->
+      <geom name="qr_box_1_pattern_1" type="box" pos="0.201 0 0" size="0.001 0.15 0.15" material="qr_black" />
+      <geom name="qr_box_1_corner_tl" type="box" pos="0.202 0.08 0.08" size="0.001 0.04 0.04" material="qr_black" />
+      <geom name="qr_box_1_corner_tr" type="box" pos="0.202 -0.08 0.08" size="0.001 0.04 0.04" material="qr_black" />
+      <geom name="qr_box_1_corner_bl" type="box" pos="0.202 0.08 -0.08" size="0.001 0.04 0.04" material="qr_black" />
+    </body>
+    
+    <!-- QR Code Box 2: different location -->
+    <body name="qr_box_2" pos="7 -1 -1.2">
+      <geom name="qr_box_2_body" type="box" size="0.2 0.2 0.2" material="qr_white" />
+      <geom name="qr_box_2_pattern" type="box" pos="0.201 0 0" size="0.001 0.15 0.15" material="qr_black" />
+    </body>
+    
+    <!-- Yellow Line on pool floor for line following -->
+    <body name="line_1" pos="2 0 -1.95">
+      <geom name="line_1_geom" type="box" size="4 0.05 0.01" material="line_yellow" />
+    </body>
+    
+    <!-- Gate structure (two vertical poles + horizontal bar) -->
+    <body name="gate_1" pos="8 0 -1">
+      <!-- Left pole -->
+      <geom name="gate_1_left" type="cylinder" pos="0 1 0" size="0.05 1" material="gate_blue" />
+      <!-- Right pole -->
+      <geom name="gate_1_right" type="cylinder" pos="0 -1 0" size="0.05 1" material="gate_blue" />
+      <!-- Top bar -->
+      <geom name="gate_1_top" type="box" pos="0 0 0.8" size="0.05 1 0.05" material="gate_blue" />
+    </body>
+
+    <!-- ============================================ -->
+    <!-- ROBOT -->
+    <!-- ============================================ -->
+    
+    <!-- Robot root body (free joint): spawn pose set by pos+quat -->
+    <body name="base_link" pos="0 0 -0.8" quat="0.7071068 -0.7071068 0 0">
+      <inertial pos="0.1807 0.1472 -0.1826" quat="1 0 0 0" mass="10" diaginertia="0.365 0.722 0.501" />
+      <joint name="world_joint" type="free" />
+      <geom type="mesh" mesh="base_link_part0" material="frame_grey" />
+      <geom type="mesh" mesh="base_link_part1" material="frame_grey" />
+      <geom type="mesh" mesh="base_link_part2" material="frame_grey" />
+      <geom type="mesh" mesh="base_link_part3" material="frame_grey" />
+      <geom type="mesh" mesh="base_link_part4" material="frame_grey" />
+      <geom pos="0.3297 0.228406 0.052" quat="0.707107 0 0 -0.707107" type="mesh" mesh="VER_LF" material="orange" />
+      <geom pos="0.0097 0.228406 0.052" quat="0.707107 0 0 -0.707107" type="mesh" mesh="VER_LR" material="orange" />
+      <geom pos="0.3297 0.22841 -0.417" quat="-2.59734e-06 0.707105 -0.707108 2.59735e-06" type="mesh" mesh="VER_RF" material="orange" />
+      <geom pos="0.0097 0.22841 -0.417" quat="-2.59734e-06 0.707105 -0.707108 2.59735e-06" type="mesh" mesh="VER_RR" material="orange" />
+      <geom pos="0.26359 0.12 0.00029211" quat="0.658623 0.658625 0.257321 -0.257322" type="mesh" mesh="YAW_LF" material="orange" />
+      <geom pos="0.08309 0.12 0.00065541" quat="0.65328 0.653282 -0.270598 0.270599" type="mesh" mesh="YAW_LR" material="orange" />
+      <geom pos="0.26374 0.12 -0.36613" quat="0.65328 0.653282 -0.270598 0.270599" type="mesh" mesh="YAW_RF" material="orange" />
+      <geom pos="0.083645 0.12 -0.3655" quat="0.652943 0.652945 0.271411 -0.271412" type="mesh" mesh="YAW_RR" material="orange" />
+
+      <!-- Thruster sites -->
+      <site name="thr_ver_lf" pos="0.3297 0.228406 0.052" />
+      <site name="thr_ver_lr" pos="0.0097 0.228406 0.052" />
+      <site name="thr_ver_rf" pos="0.3297 0.22841 -0.417" />
+      <site name="thr_ver_rr" pos="0.0097 0.22841 -0.417" />
+      <site name="thr_yaw_lf" pos="0.26359 0.12 0.00029211" />
+      <site name="thr_yaw_lr" pos="0.08309 0.12 0.00065541" />
+      <site name="thr_yaw_rf" pos="0.26374 0.12 -0.36613" />
+      <site name="thr_yaw_rr" pos="0.083645 0.12 -0.3655" />
+      <site name="cob_site" pos="0.1807 0.182 -0.1826" size="0.015" rgba="0.1 1 0.1 0.7" />
+      
+      <!-- Buoyancy points -->
+      <site name="buoy_p0" pos="0.1807 0.1472 -0.1826" size="0.01" rgba="0.2 0.8 1 0.5" />
+      <site name="buoy_p1" pos="0.3300 0.1472 0.0400" size="0.01" rgba="0.2 0.8 1 0.5" />
+      <site name="buoy_p2" pos="0.3300 0.1472 -0.4050" size="0.01" rgba="0.2 0.8 1 0.5" />
+      <site name="buoy_p3" pos="0.0300 0.1472 0.0400" size="0.01" rgba="0.2 0.8 1 0.5" />
+      <site name="buoy_p4" pos="0.0300 0.1472 -0.4050" size="0.01" rgba="0.2 0.8 1 0.5" />
+      <site name="buoy_p5" pos="0.2500 0.2050 -0.1826" size="0.01" rgba="0.2 0.8 1 0.5" />
+      <site name="buoy_p6" pos="0.1100 0.2050 -0.1826" size="0.01" rgba="0.2 0.8 1 0.5" />
+      <site name="buoy_p7" pos="0.2500 0.0900 -0.1826" size="0.01" rgba="0.2 0.8 1 0.5" />
+      <site name="buoy_p8" pos="0.1100 0.0900 -0.1826" size="0.01" rgba="0.2 0.8 1 0.5" />
+      
+      <!-- Sensor mounting sites -->
+      <site name="imu_site" pos="0.1807 0.1472 -0.1826" quat="0.7071068 0.7071068 0 0" size="0.020" rgba="1 1 0 1" />
+      <site name="dvl_site" pos="0.1807 0.2500 -0.1826" quat="0.7071068 -0.7071068 0 0" size="0.020" rgba="0 1 1 1" />
+
+      <!-- Camera sites - adjusted for forward-downward view of underwater objects -->
+      <site name="cam_left_site" pos="0.3300 0.1700 -0.2050" size="0.018" rgba="1 0 1 1" />
+      <site name="cam_right_site" pos="0.3300 0.1700 -0.1600" size="0.018" rgba="1 0.5 0 1" />
+      
+      <!-- Stereo cameras - tilted 30 degrees down to see underwater objects -->
+      <camera name="stereo_left" pos="0.3300 0.1700 -0.2050" quat="0.6124 0.6124 -0.3536 -0.3536" fovy="70" />
+      <camera name="stereo_right" pos="0.3300 0.1700 -0.1600" quat="0.6124 0.6124 -0.3536 -0.3536" fovy="70" />
+
+      <!-- Visual-only propeller bodies (spin joints are driven by runtime code) -->
+      <body name="prop_ver_lf" pos="0.3297 0.228406 0.052" quat="0.7071068 -0.7071068 0 0">
+        <joint name="prop_ver_lf_j" type="hinge" axis="0 0 1" damping="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+      </body>
+      <body name="prop_ver_lr" pos="0.0097 0.228406 0.052" quat="0.7071068 -0.7071068 0 0">
+        <joint name="prop_ver_lr_j" type="hinge" axis="0 0 1" damping="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+      </body>
+      <body name="prop_ver_rf" pos="0.3297 0.22841 -0.417" quat="0.7071068 -0.7071068 0 0">
+        <joint name="prop_ver_rf_j" type="hinge" axis="0 0 1" damping="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+      </body>
+      <body name="prop_ver_rr" pos="0.0097 0.22841 -0.417" quat="0.7071068 -0.7071068 0 0">
+        <joint name="prop_ver_rr_j" type="hinge" axis="0 0 1" damping="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+      </body>
+
+      <body name="prop_yaw_lf" pos="0.26359 0.12 0.00029211" quat="0.4013022 0 0.9159457 0">
+        <joint name="prop_yaw_lf_j" type="hinge" axis="0 0 1" damping="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+      </body>
+      <body name="prop_yaw_lr" pos="0.08309 0.12 0.00065541" quat="0.9238799 0 0.3826825 0">
+        <joint name="prop_yaw_lr_j" type="hinge" axis="0 0 1" damping="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+      </body>
+      <body name="prop_yaw_rf" pos="0.26374 0.12 -0.36613" quat="0.9238799 0 0.3826825 0">
+        <joint name="prop_yaw_rf_j" type="hinge" axis="0 0 1" damping="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+      </body>
+      <body name="prop_yaw_rr" pos="0.083645 0.12 -0.3655" quat="0.3815321 0 0.9243556 0">
+        <joint name="prop_yaw_rr_j" type="hinge" axis="0 0 1" damping="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <!-- Vertical thrusters (heave control) -->
+    <motor name="ver_lf" site="thr_ver_lf" gear="0 1 0 0 0 0" ctrlrange="-80 80" />
+    <motor name="ver_lr" site="thr_ver_lr" gear="0 1 0 0 0 0" ctrlrange="-80 80" />
+    <motor name="ver_rf" site="thr_ver_rf" gear="0 1 0 0 0 0" ctrlrange="-80 80" />
+    <motor name="ver_rr" site="thr_ver_rr" gear="0 1 0 0 0 0" ctrlrange="-80 80" />
+
+    <!-- Horizontal thrusters (forward/yaw control) -->
+    <motor name="yaw_lf" site="thr_yaw_lf" gear="0.735142 0 -0.677913 0 0 0" ctrlrange="-80 80" />
+    <motor name="yaw_lr" site="thr_yaw_lr" gear="0.707105 0 0.707108 0 0 0" ctrlrange="-80 80" />
+    <motor name="yaw_rf" site="thr_yaw_rf" gear="0.707105 0 0.707108 0 0 0" ctrlrange="-80 80" />
+    <motor name="yaw_rr" site="thr_yaw_rr" gear="0.705343 0 -0.708867 0 0 0" ctrlrange="-80 80" />
+  </actuator>
+
+  <sensor>
+    <framequat name="imu_quat" objtype="body" objname="base_link" />
+    <gyro name="imu_gyro" site="imu_site" noise="0.002" />
+    <accelerometer name="imu_acc" site="imu_site" noise="0.03" />
+    <velocimeter name="dvl_vel_body" site="dvl_site" noise="0.01" />
+    <rangefinder name="dvl_altitude" site="dvl_site" cutoff="30" />
+    <!-- Additional sensors for position tracking -->
+    <framepos name="base_pos" objtype="body" objname="base_link" />
+    <framexaxis name="base_xaxis" objtype="body" objname="base_link" />
+    <frameyaxis name="base_yaxis" objtype="body" objname="base_link" />
+  </sensor>
+</mujoco>

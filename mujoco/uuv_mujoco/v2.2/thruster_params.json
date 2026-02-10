@@ -1,0 +1,58 @@
+{
+  "global": {
+    "deadzone": 0.05,
+    "tau_up": 0.12,
+    "tau_down": 0.18,
+    "reverse_asymmetry": 0.75,
+    "forward_poly": [
+      0.0,
+      3.5,
+      7.0,
+      12.0
+    ],
+    "reverse_poly": [
+      0.0,
+      2.8,
+      5.5,
+      9.5
+    ],
+    "command_limit": 0.65,
+    "last_gain_calibration_profile": "sim_real",
+    "last_gain_calibration_scene": "uuv_mujoco/v2.0/urdf_full_scene.xml",
+    "last_gain_calibration_time": "2026-02-06T15:38:29"
+  },
+  "per_thruster": {
+    "ver_lf": {
+      "gain_scale": 1.3,
+      "speed_sample": 0.2787
+    },
+    "ver_lr": {
+      "gain_scale": 1.3,
+      "speed_sample": 0.2795
+    },
+    "ver_rf": {
+      "gain_scale": 1.3,
+      "speed_sample": 0.2764
+    },
+    "ver_rr": {
+      "gain_scale": 1.3,
+      "speed_sample": 0.2776
+    },
+    "yaw_lf": {
+      "gain_scale": 0.7395,
+      "speed_sample": 0.533
+    },
+    "yaw_lr": {
+      "gain_scale": 0.7522,
+      "speed_sample": 0.524
+    },
+    "yaw_rf": {
+      "gain_scale": 0.7593,
+      "speed_sample": 0.5191
+    },
+    "yaw_rr": {
+      "gain_scale": 0.7747,
+      "speed_sample": 0.5088
+    }
+  }
+}

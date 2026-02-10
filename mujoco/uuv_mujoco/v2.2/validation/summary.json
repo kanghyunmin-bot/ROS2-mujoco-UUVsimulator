@@ -1,0 +1,56 @@
+{
+  "forward_step": {
+    "target_ss": 0.5830529991229186,
+    "peak": 0.5833915460316105,
+    "overshoot_pct": 0.058064517153862884,
+    "settling_time_s": 0.3050000000000006,
+    "steady_state_drift": 0.10040757760272827,
+    "status": "ok",
+    "log_csv": "uuv_mujoco/v2.2/validation/forward_step.csv",
+    "pass": true,
+    "fail_reasons": [],
+    "thresholds": {
+      "overshoot_pct_max": 5.0,
+      "settling_time_s_max": 0.645,
+      "steady_state_drift_max": 0.1466,
+      "target_ss_abs_min": 0.3048
+    }
+  },
+  "heave_step": {
+    "target_ss": -0.5949656936959768,
+    "peak": -0.5964617170918945,
+    "overshoot_pct": 0.2514470013597385,
+    "settling_time_s": 0.13500000000000045,
+    "steady_state_drift": 0.04969199712625865,
+    "status": "ok",
+    "log_csv": "uuv_mujoco/v2.2/validation/heave_step.csv",
+    "pass": true,
+    "fail_reasons": [],
+    "thresholds": {
+      "overshoot_pct_max": 5.0,
+      "settling_time_s_max": 0.366,
+      "steady_state_drift_max": 0.2585,
+      "target_ss_abs_min": 0.2463
+    }
+  },
+  "yaw_step": {
+    "target_ss": 2.150606457081643,
+    "peak": 2.1534738396113156,
+    "overshoot_pct": 0.13332902076205863,
+    "settling_time_s": 0.3250000000000006,
+    "steady_state_drift": 0.36655056543311376,
+    "status": "ok",
+    "log_csv": "uuv_mujoco/v2.2/validation/yaw_step.csv",
+    "pass": true,
+    "fail_reasons": [],
+    "thresholds": {
+      "overshoot_pct_max": 5.0,
+      "settling_time_s_max": 0.654,
+      "steady_state_drift_max": 0.8453,
+      "target_ss_abs_min": 1.1403
+    }
+  },
+  "_overall": {
+    "pass": true
+  }
+}
