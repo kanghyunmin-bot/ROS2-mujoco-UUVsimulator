@@ -12,6 +12,7 @@ NO_REBUILD="1"
 WIPE_EEPROM="0"
 DDS_ENABLE="0"
 EXTRA_SIM_ARGS=""
+PILOT_FAILSAFE_MODE="disabled"
 
 usage() {
   cat <<'EOF'
@@ -23,6 +24,8 @@ Options:
   --instance <N>                     SITL instance index (default: 0)
   --qgc-port <port>                  MAVLink UDP target port for QGC (default: 14550)
   --dds                              Enable DDS (default: disabled)
+  --pilot-failsafe <disabled|warn|disarm>
+                                     FS_PILOT_INPUT for SITL (default: disabled)
   --rebuild                          Rebuild before launch (default: no rebuild)
   --wipe                             Wipe eeprom/params on boot
   --sim-args "<args>"                Extra args forwarded to ArduSub binary (-A)
@@ -48,6 +51,10 @@ while [[ $# -gt 0 ]]; do
       DDS_ENABLE="1"
       shift
       ;;
+    --pilot-failsafe)
+      PILOT_FAILSAFE_MODE="${2:-}"
+      shift 2
+      ;;
     --rebuild)
       NO_REBUILD="0"
       shift
@@ -71,6 +78,17 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+case "${PILOT_FAILSAFE_MODE}" in
+  disabled) PILOT_FAILSAFE_VALUE="0" ;;
+  warn) PILOT_FAILSAFE_VALUE="1" ;;
+  disarm) PILOT_FAILSAFE_VALUE="2" ;;
+  *)
+    echo "[error] invalid --pilot-failsafe: ${PILOT_FAILSAFE_MODE}" >&2
+    echo "        use one of: disabled, warn, disarm" >&2
+    exit 2
+    ;;
+esac
 
 if [[ ! -d "${ARDUPILOT_DIR}" ]]; then
   echo "[error] ArduPilot directory not found: ${ARDUPILOT_DIR}" >&2
@@ -106,6 +124,7 @@ echo "[run] ArduSub JSON SITL"
 echo "  frame      : ${FRAME}"
 echo "  instance   : ${INSTANCE}"
 echo "  dds_enable : ${DDS_ENABLE}"
+echo "  fs_pilot   : ${PILOT_FAILSAFE_MODE} (${PILOT_FAILSAFE_VALUE})"
 echo "  qgc udp    : 127.0.0.1:${QGC_PORT}"
 echo "  sim args   : ${SIM_ARGS}"
 echo
@@ -124,4 +143,5 @@ python3 Tools/autotest/sim_vehicle.py \
   ${NO_REBUILD_ARG} \
   ${WIPE_ARG} \
   -P "DDS_ENABLE=${DDS_ENABLE}" \
+  -P "FS_PILOT_INPUT=${PILOT_FAILSAFE_VALUE}" \
   -A "${SIM_ARGS}"
