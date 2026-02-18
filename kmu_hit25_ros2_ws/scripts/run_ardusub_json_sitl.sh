@@ -8,6 +8,10 @@ ARDUPILOT_DIR="${WS_DIR}/ardupilot"
 FRAME="vectored"
 INSTANCE="0"
 QGC_PORT="14550"
+QGC_HOST="127.0.0.1"
+SIM_IP="127.0.0.1"
+SIM_PORT_IN="9003"
+SIM_PORT_OUT="9002"
 NO_REBUILD="1"
 WIPE_EEPROM="0"
 DDS_ENABLE="0"
@@ -22,7 +26,11 @@ Usage:
 Options:
   --frame <vectored|vectored_6dof>   ArduSub frame (default: vectored)
   --instance <N>                     SITL instance index (default: 0)
+  --qgc-host <ip>                    QGC UDP host (default: 127.0.0.1)
   --qgc-port <port>                  MAVLink UDP target port for QGC (default: 14550)
+  --sim-ip <ip>                      Sim address for ArduPilot JSON (default: 127.0.0.1)
+  --sim-port-in <port>                ArduPilot JSON input port (default: 9003)
+  --sim-port-out <port>               ArduPilot JSON output port (default: 9002)
   --dds                              Enable DDS (default: disabled)
   --pilot-failsafe <disabled|warn|disarm>
                                      FS_PILOT_INPUT for SITL (default: disabled)
@@ -43,8 +51,24 @@ while [[ $# -gt 0 ]]; do
       INSTANCE="${2:-}"
       shift 2
       ;;
+    --qgc-host)
+      QGC_HOST="${2:-}"
+      shift 2
+      ;;
     --qgc-port)
       QGC_PORT="${2:-}"
+      shift 2
+      ;;
+    --sim-ip)
+      SIM_IP="${2:-}"
+      shift 2
+      ;;
+    --sim-port-in)
+      SIM_PORT_IN="${2:-}"
+      shift 2
+      ;;
+    --sim-port-out)
+      SIM_PORT_OUT="${2:-}"
       shift 2
       ;;
     --dds)
@@ -105,7 +129,10 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 1
 fi
 
-SIM_ARGS="--serial0 udpclient:127.0.0.1:${QGC_PORT}"
+SIM_ARGS="--serial0 udpclient:${QGC_HOST}:${QGC_PORT}"
+SIM_ARGS+=" --sim-address ${SIM_IP}"
+SIM_ARGS+=" --sim-port-in ${SIM_PORT_IN}"
+SIM_ARGS+=" --sim-port-out ${SIM_PORT_OUT}"
 if [[ -n "${EXTRA_SIM_ARGS}" ]]; then
   SIM_ARGS="${SIM_ARGS} ${EXTRA_SIM_ARGS}"
 fi
@@ -123,9 +150,12 @@ fi
 echo "[run] ArduSub JSON SITL"
 echo "  frame      : ${FRAME}"
 echo "  instance   : ${INSTANCE}"
+echo "  qgc host   : ${QGC_HOST}"
 echo "  dds_enable : ${DDS_ENABLE}"
 echo "  fs_pilot   : ${PILOT_FAILSAFE_MODE} (${PILOT_FAILSAFE_VALUE})"
-echo "  qgc udp    : 127.0.0.1:${QGC_PORT}"
+echo "  qgc udp    : ${QGC_HOST}:${QGC_PORT}"
+echo "  sitl ip    : ${SIM_IP}"
+echo "  sitl in/out: ${SIM_IP}:${SIM_PORT_IN} / ${SIM_IP}:${SIM_PORT_OUT}"
 echo "  sim args   : ${SIM_ARGS}"
 echo
 echo "[note] Start MuJoCo bridge in another terminal:"
