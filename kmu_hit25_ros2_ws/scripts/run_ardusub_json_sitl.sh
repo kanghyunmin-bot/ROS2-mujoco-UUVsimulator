@@ -72,8 +72,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ ! -d "${ARDUPILOT_DIR}/.git" ]]; then
-  echo "[error] ArduPilot repo not found: ${ARDUPILOT_DIR}" >&2
+if [[ ! -d "${ARDUPILOT_DIR}" ]]; then
+  echo "[error] ArduPilot directory not found: ${ARDUPILOT_DIR}" >&2
+  exit 1
+fi
+
+if ! git -C "${ARDUPILOT_DIR}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "[error] ArduPilot path is not a git worktree: ${ARDUPILOT_DIR}" >&2
   exit 1
 fi
 
