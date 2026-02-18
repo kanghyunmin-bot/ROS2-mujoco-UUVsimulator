@@ -46,7 +46,7 @@ class _VideoRecorder(Node):
         self.create_subscription(Image, self.topic, self._on_image, 10)
         self.get_logger().info(
             f"recording {self.topic} -> {self.output} (fps={self.fps:.1f}, "
-            ff"duration={self.duration:.1f}s, keep={self.keep})"
+            f"duration={self.duration:.1f}s, keep={self.keep})"
         )
 
     def _open_writer(self, image) -> None:
