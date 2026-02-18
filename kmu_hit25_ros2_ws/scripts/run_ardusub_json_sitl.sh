@@ -105,7 +105,7 @@ echo "  qgc udp    : 127.0.0.1:${QGC_PORT}"
 echo "  sim args   : ${SIM_ARGS}"
 echo
 echo "[note] Start MuJoCo bridge in another terminal:"
-echo "  cd /home/khm/antigravity/mujoco/uuv_mujoco/v2.2"
+echo "  cd ${SCRIPT_DIR}/../mujoco/uuv_mujoco/v2.2"
 echo "  ./launch_competition_sim.sh --sitl --images"
 echo
 

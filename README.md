@@ -57,7 +57,7 @@ cd ~/antigravity
 
 ```bash
 cd ~/antigravity/mujoco/uuv_mujoco/v2.2
-./launch_competition_sim.sh --sitl --hover-stable --images
+./launch_competition_sim.sh --sitl --images
 ```
 
 터미널 3: ROS2 제어 패키지
