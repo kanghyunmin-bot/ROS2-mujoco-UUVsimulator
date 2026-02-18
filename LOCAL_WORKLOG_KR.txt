@@ -739,3 +739,20 @@
 - 기본 실행에서 로컬 ROS 제어 노드 자동 기동이 비활성화되어,
   QGC/SITL 수동 제어 경로만 올릴 수 있는 상태로 정리됨.
 - 필요 시 각 런치 인자로 제어 노드를 켤 수 있어, 테스트 시 제어 경로를 명시적으로 분리 가능.
+
+5) 2026-02-19: SITL JSON 포트 정합성/브릿지 파싱 이슈 수정
+- MuJoCo 서브모듈에서 SITL 포트 분리
+  - `--sitl-port`는 9002(ArduPilot이 servo 패킷을 듣는 포트),  
+    `--sitl-send-port`는 9003(센서 JSON을 ArduPilot이 받는 포트)로 분기.
+  - `launch_competition_sim.sh`, `run_urdf_full.py`, `ros2_bridge.py`에 반영.
+- `ros2_bridge.py` servo 수신 처리 버그 수정
+  - `_poll_sitl_servo_endpoint()`의 패킷 파싱 루프 인덴트를 바로잡아
+    마지막 패킷만 처리되는 오류와 `addr` 미정의 동작을 제거.
+  - endpoint 변경/탐지 로그를 명확화하고 최초 탐지/변경 시점 표시.
+- ArduPilot JSON SIM 바인딩 수정
+  - `kmu_hit25_ros2_ws/ardupilot/libraries/SITL/SIM_JSON.cpp`에서
+    `set_interface_ports()`가 `port_in`으로 UDP bind 하도록 추가.
+  - 9003 바인딩 미설정으로 인한 센서 수신 부재("No JSON sensor message received") 원인 제거.
+- 커밋
+  - ArduPilot: `8783986755`
+  - MuJoCo: `886edcf4`
