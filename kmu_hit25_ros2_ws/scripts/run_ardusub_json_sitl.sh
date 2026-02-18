@@ -9,6 +9,7 @@ FRAME="vectored"
 INSTANCE="0"
 QGC_PORT="14550"
 QGC_HOST="127.0.0.1"
+QGC_LINK_MODE="udpclient"
 SIM_IP="127.0.0.1"
 SIM_PORT_IN="9003"
 SIM_PORT_OUT="9002"
@@ -28,6 +29,7 @@ Options:
   --instance <N>                     SITL instance index (default: 0)
   --qgc-host <ip>                    QGC UDP host (default: 127.0.0.1)
   --qgc-port <port>                  MAVLink UDP target port for QGC (default: 14550)
+  --qgc-link <udpclient|tcpclient>   QGC serial link mode for ArduPilot (default: udpclient)
   --sim-ip <ip>                      Sim address for ArduPilot JSON (default: 127.0.0.1)
   --sim-port-in <port>                ArduPilot JSON input port (default: 9003)
   --sim-port-out <port>               ArduPilot JSON output port (default: 9002)
@@ -57,6 +59,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --qgc-port)
       QGC_PORT="${2:-}"
+      shift 2
+      ;;
+    --qgc-link)
+      QGC_LINK_MODE="${2:-}"
       shift 2
       ;;
     --sim-ip)
@@ -114,6 +120,16 @@ case "${PILOT_FAILSAFE_MODE}" in
     ;;
 esac
 
+case "${QGC_LINK_MODE}" in
+  udpclient|tcpclient)
+    ;;
+  *)
+    echo "[error] invalid --qgc-link: ${QGC_LINK_MODE}" >&2
+    echo "        use one of: udpclient, tcpclient" >&2
+    exit 2
+    ;;
+esac
+
 if [[ ! -d "${ARDUPILOT_DIR}" ]]; then
   echo "[error] ArduPilot directory not found: ${ARDUPILOT_DIR}" >&2
   exit 1
@@ -129,7 +145,7 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 1
 fi
 
-SIM_ARGS="--serial0 udpclient:${QGC_HOST}:${QGC_PORT}"
+SIM_ARGS="--serial0 ${QGC_LINK_MODE}:${QGC_HOST}:${QGC_PORT}"
 SIM_ARGS+=" --sim-address ${SIM_IP}"
 SIM_ARGS+=" --sim-port-in ${SIM_PORT_IN}"
 SIM_ARGS+=" --sim-port-out ${SIM_PORT_OUT}"
@@ -151,6 +167,7 @@ echo "[run] ArduSub JSON SITL"
 echo "  frame      : ${FRAME}"
 echo "  instance   : ${INSTANCE}"
 echo "  qgc host   : ${QGC_HOST}"
+echo "  qgc link   : ${QGC_LINK_MODE}"
 echo "  dds_enable : ${DDS_ENABLE}"
 echo "  fs_pilot   : ${PILOT_FAILSAFE_MODE} (${PILOT_FAILSAFE_VALUE})"
 echo "  qgc udp    : ${QGC_HOST}:${QGC_PORT}"
