@@ -80,6 +80,33 @@ python3 scripts/ros2_to_qgc_video.py \
   --fps 15 --bitrate-kbps 2000 --width 640 --height 360
 ```
 
+터미널 5 (선택): GUI 미확보 환경에서 모션 점검용 영상 저장
+
+```bash
+source /opt/ros/humble/setup.bash
+cd ~/antigravity
+python3 scripts/capture_mujoco_video.py \
+  --topic /stereo/left/image_raw \
+  --duration 30 \
+  --fps 15 \
+  --width 640 \
+  --height 360 \
+  --output /tmp/mujoco_preview.mp4
+```
+
+- 기본은 녹화 후 자동 삭제됩니다. 꼭 확인해야 하면 `--keep` 추가.
+- 영상 확인(동일 머신):
+
+```bash
+ffplay /tmp/mujoco_preview.mp4
+```
+
+삭제:
+
+```bash
+rm -f /tmp/mujoco_preview.mp4
+```
+
 ## 5. QGroundControl 설정
 
 ### 5.1 텔레메트리 링크
@@ -94,6 +121,10 @@ python3 scripts/ros2_to_qgc_video.py \
 - `Application Settings -> General -> Video`
 - Source: `UDP h.264 Video Stream`
 - UDP Port: `5600`
+
+참고:
+- QGC는 `QGroundControl-x86_64.AppImage` 실행이 필요합니다. 앱을 띄운 뒤 위 링크를 켭니다.
+- 연결이 안 되면 QGC를 재시작하고, 차량 자동탐지/통신 링크를 수동으로 삭제 후 재등록해 보십시오.
 
 ## 6. 동작 확인 체크리스트
 
@@ -152,7 +183,19 @@ ss -uapn | rg '14550|9002|5600'
 - `mujoco/uuv_mujoco/ROS2_BRIDGE.md`
 - `kmu_hit25_ros2_ws/docs/PORTING_GUIDE.md`
 
-## 9. 주의사항 (중첩 Git 저장소)
+## 9. 스크린샷/영상 기반 현장 점검 가이드
+
+- MuJoCo GUI 창이 보이지 않아도 시뮬레이션 영상은 위 스크립트로 확인할 수 있습니다.
+- 영상이 안 잡히면 아래 순서로 확인:
+  - `launch_competition_sim.sh --images --sitl` 옵션 실행
+  - `ros2 topic hz /stereo/left/image_raw`
+  - `python3 scripts/capture_mujoco_video.py ... --keep`
+- QGC와 통신이 안 되면:
+  - MAVLink 포트 5760/14550 순서를 맞게 열었는지 확인
+  - `ros2_to_qgc_video.py`가 `/stereo/left/image_raw`를 받는지 로그로 확인
+  - `ss -uapn | rg 14550|5600`로 UDP 바인딩 확인
+
+## 10. 주의사항 (중첩 Git 저장소)
 
 현재 워크스페이스에는 아래 경로가 중첩 git 저장소 형태로 존재합니다.
 
