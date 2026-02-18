@@ -1,6 +1,15 @@
 #include <rclcpp/rclcpp.hpp>
 #include <mavros_msgs/msg/vfr_hud.hpp>
 #include <sensor_msgs/msg/fluid_pressure.hpp>
+#include <cmath>
+
+namespace
+{
+constexpr double kSeaLevelPressurePa = 101325.0;
+constexpr double kLapseRate = 0.0065;     // K/m
+constexpr double kSeaLevelTempK = 288.15;  // K
+constexpr double kLapseExponent = 5.25588; // g*M/(R*L) for standard atmosphere
+} // namespace
 
 class VfrToPressureNode : public rclcpp::Node
 {
@@ -23,10 +32,22 @@ private:
 
   void vfrHudCallback(const mavros_msgs::msg::VfrHud::SharedPtr msg)
   {
+    const double altitude_m = static_cast<double>(msg->altitude);
+    // Convert altitude to a pressure estimate.
+    // Approximation:
+    // P = P0 * (1 - L*h/T0)^(g*M/(R*L))
+    // where h is altitude (m), L is lapse rate (K/m).
+    double pressure_ratio = 1.0 - (kLapseRate * altitude_m) / kSeaLevelTempK;
+    if (pressure_ratio <= 0.0)
+    {
+      pressure_ratio = 0.0001;
+    }
+    const double atm_pressure_pa = kSeaLevelPressurePa * std::pow(pressure_ratio, kLapseExponent);
+
     sensor_msgs::msg::FluidPressure pressure_msg;
     pressure_msg.header.stamp = msg->header.stamp;
     pressure_msg.header.frame_id = "base_link";
-    pressure_msg.fluid_pressure = msg->altitude;
+    pressure_msg.fluid_pressure = static_cast<float>(atm_pressure_pa);
     pressure_msg.variance = 0.0;
     pressure_pub_->publish(pressure_msg);
   }

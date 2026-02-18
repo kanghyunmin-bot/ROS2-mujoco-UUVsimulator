@@ -28,6 +28,8 @@ def generate_launch_description():
     use_mavros = LaunchConfiguration('use_mavros')
     use_dvl = LaunchConfiguration('use_dvl')
     use_rovio = LaunchConfiguration('use_rovio')
+    use_joy2mavros = LaunchConfiguration('use_joy2mavros')
+    use_vfr2atm_pressure = LaunchConfiguration('use_vfr2atm_pressure')
     use_dronecan_battery = LaunchConfiguration('use_dronecan_battery')
     use_joy = LaunchConfiguration('use_joy')
     joy_dev = LaunchConfiguration('joy_dev')
@@ -43,6 +45,8 @@ def generate_launch_description():
         DeclareLaunchArgument('use_mavros', default_value='true'),
         DeclareLaunchArgument('use_dvl', default_value='false'),
         DeclareLaunchArgument('use_rovio', default_value='false'),
+        DeclareLaunchArgument('use_joy2mavros', default_value='false'),
+        DeclareLaunchArgument('use_vfr2atm_pressure', default_value='false'),
         DeclareLaunchArgument('use_dronecan_battery', default_value='false'),
         DeclareLaunchArgument('use_joy', default_value='false'),
         DeclareLaunchArgument('joy_dev', default_value='/dev/input/js0'),
@@ -107,8 +111,20 @@ def generate_launch_description():
             }],
             condition=IfCondition(use_joy),
         ),
-        Node(package='hit25_auv', executable='joy2mavros', name='joy2mavros', output='screen'),
-        Node(package='hit25_auv', executable='vfr2atm_pressure', name='vfr2atm_pressure', output='screen'),
+        Node(
+            package='hit25_auv',
+            executable='joy2mavros',
+            name='joy2mavros',
+            output='screen',
+            condition=IfCondition(use_joy2mavros),
+        ),
+        Node(
+            package='hit25_auv',
+            executable='vfr2atm_pressure',
+            name='vfr2atm_pressure',
+            output='screen',
+            condition=IfCondition(use_vfr2atm_pressure),
+        ),
         Node(
             package='hit25_auv',
             executable='dronecan2mavros_battery',

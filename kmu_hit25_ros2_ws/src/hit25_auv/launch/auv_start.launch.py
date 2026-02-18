@@ -30,6 +30,9 @@ def generate_launch_description():
     use_rovio = LaunchConfiguration('use_rovio')
     use_dronecan_battery = LaunchConfiguration('use_dronecan_battery')
     use_joy = LaunchConfiguration('use_joy')
+    enable_controller = LaunchConfiguration('enable_controller')
+    use_joy2mavros = LaunchConfiguration('use_joy2mavros')
+    use_vfr2atm_pressure = LaunchConfiguration('use_vfr2atm_pressure')
     joy_dev = LaunchConfiguration('joy_dev')
     joy_deadzone = LaunchConfiguration('joy_deadzone')
     joy_autorepeat_rate = LaunchConfiguration('joy_autorepeat_rate')
@@ -44,6 +47,9 @@ def generate_launch_description():
         DeclareLaunchArgument('use_dvl', default_value='false'),
         DeclareLaunchArgument('use_rovio', default_value='false'),
         DeclareLaunchArgument('use_dronecan_battery', default_value='false'),
+        DeclareLaunchArgument('enable_controller', default_value='false'),
+        DeclareLaunchArgument('use_joy2mavros', default_value='false'),
+        DeclareLaunchArgument('use_vfr2atm_pressure', default_value='false'),
         DeclareLaunchArgument('use_joy', default_value='false'),
         DeclareLaunchArgument('joy_dev', default_value='/dev/input/js0'),
         DeclareLaunchArgument('joy_deadzone', default_value='0.5'),
@@ -120,8 +126,20 @@ def generate_launch_description():
             }],
             condition=IfCondition(use_joy),
         ),
-        Node(package='hit25_auv', executable='joy2mavros', name='joy2mavros', output='screen'),
-        Node(package='hit25_auv', executable='vfr2atm_pressure', name='vfr2atm_pressure', output='screen'),
+        Node(
+            package='hit25_auv',
+            executable='joy2mavros',
+            name='joy2mavros',
+            output='screen',
+            condition=IfCondition(use_joy2mavros),
+        ),
+        Node(
+            package='hit25_auv',
+            executable='vfr2atm_pressure',
+            name='vfr2atm_pressure',
+            output='screen',
+            condition=IfCondition(use_vfr2atm_pressure),
+        ),
         Node(package='hit25_auv', executable='odom2mavros', name='odom2mavros', output='screen'),
         Node(
             package='hit25_auv',
@@ -137,7 +155,7 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 'enable_map_odom_broadcaster': True,
-                'enable_controller': True,
+                'enable_controller': enable_controller,
                 'log_level': 'INFO',
                 'map_frame': 'map',
                 'odom_frame': 'odom',

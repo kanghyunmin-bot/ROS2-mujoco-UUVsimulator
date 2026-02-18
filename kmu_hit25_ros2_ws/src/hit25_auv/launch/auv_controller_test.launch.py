@@ -30,6 +30,9 @@ def generate_launch_description():
     use_mavros = LaunchConfiguration('use_mavros')
     use_dvl = LaunchConfiguration('use_dvl')
     use_rovio = LaunchConfiguration('use_rovio')
+    enable_controller = LaunchConfiguration('enable_controller')
+    use_joy2mavros = LaunchConfiguration('use_joy2mavros')
+    use_vfr2atm_pressure = LaunchConfiguration('use_vfr2atm_pressure')
     use_interpreter = LaunchConfiguration('use_interpreter')
     start_robot_state_publisher = LaunchConfiguration('start_robot_state_publisher')
     use_dronecan_battery = LaunchConfiguration('use_dronecan_battery')
@@ -47,6 +50,9 @@ def generate_launch_description():
         DeclareLaunchArgument('use_mavros', default_value='true'),
         DeclareLaunchArgument('use_dvl', default_value='false'),
         DeclareLaunchArgument('use_rovio', default_value='false'),
+        DeclareLaunchArgument('enable_controller', default_value='false'),
+        DeclareLaunchArgument('use_joy2mavros', default_value='false'),
+        DeclareLaunchArgument('use_vfr2atm_pressure', default_value='false'),
         DeclareLaunchArgument('use_interpreter', default_value='true'),
         DeclareLaunchArgument('start_robot_state_publisher', default_value='true'),
         DeclareLaunchArgument('use_dronecan_battery', default_value='false'),
@@ -124,8 +130,20 @@ def generate_launch_description():
             }],
             condition=IfCondition(use_joy),
         ),
-        Node(package='hit25_auv', executable='joy2mavros', name='joy2mavros', output='screen'),
-        Node(package='hit25_auv', executable='vfr2atm_pressure', name='vfr2atm_pressure', output='screen'),
+        Node(
+            package='hit25_auv',
+            executable='joy2mavros',
+            name='joy2mavros',
+            output='screen',
+            condition=IfCondition(use_joy2mavros),
+        ),
+        Node(
+            package='hit25_auv',
+            executable='vfr2atm_pressure',
+            name='vfr2atm_pressure',
+            output='screen',
+            condition=IfCondition(use_vfr2atm_pressure),
+        ),
         Node(
             package='hit25_auv',
             executable='dronecan2mavros_battery',
@@ -150,7 +168,7 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 'enable_map_odom_broadcaster': True,
-                'enable_controller': True,
+                'enable_controller': enable_controller,
                 'log_level': 'INFO',
                 'dvl_use_odom': True,
                 'dvl_odom_topic': '/dvl/odometry',
