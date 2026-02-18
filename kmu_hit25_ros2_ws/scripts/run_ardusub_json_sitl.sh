@@ -106,7 +106,7 @@ echo "  sim args   : ${SIM_ARGS}"
 echo
 echo "[note] Start MuJoCo bridge in another terminal:"
 echo "  cd /home/khm/antigravity/mujoco/uuv_mujoco/v2.2"
-echo "  ./launch_competition_sim.sh --sitl --images --hover-stable"
+echo "  ./launch_competition_sim.sh --sitl --images"
 echo
 
 cd "${ARDUPILOT_DIR}"
