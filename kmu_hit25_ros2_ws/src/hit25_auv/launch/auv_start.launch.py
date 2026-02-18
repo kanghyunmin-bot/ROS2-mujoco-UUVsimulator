@@ -86,6 +86,17 @@ def generate_launch_description():
 
     # AUV nodes
     actions.extend([
+        Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            name='robot_state_publisher',
+            output='screen',
+            parameters=[{
+                'robot_description': open(
+                    os.path.join(get_package_share_directory('hit25_auv'), 'urdf', 'rov.urdf')
+                ).read()
+            }],
+        ),
         Node(package='hit25_auv', executable='joy2mavros', name='joy2mavros', output='screen'),
         Node(package='hit25_auv', executable='vfr2atm_pressure', name='vfr2atm_pressure', output='screen'),
         Node(package='hit25_auv', executable='odom2mavros', name='odom2mavros', output='screen'),
@@ -108,8 +119,11 @@ def generate_launch_description():
                 'map_frame': 'map',
                 'odom_frame': 'odom',
                 'auv_link_frame': 'auv_link',
+                'base_link_alias_frame': 'base_link',
+                'publish_base_link_alias': True,
                 'dvl_use_odom': True,
                 'dvl_odom_topic': '/dvl/odometry',
+                'dvl_frame': 'dvl_link',
                 'dvl_ned_to_flu': True,
                 'dvl_roll': 3.14159265,
                 'dvl_pitch': 0.0,

@@ -150,6 +150,10 @@ Visualization Manager:
     - Alpha: 0.8999999761581421
       Class: rviz_default_plugins/RobotModel
       Collision Enabled: false
+      Description File: ""
+      Description Source: Topic
+      Description Topic:
+        Value: /robot_description
       Enabled: true
       Links:
         All Links Enabled: true
@@ -163,8 +167,6 @@ Visualization Manager:
           Show Trail: false
           Value: true
       Name: RobotModel
-      Robot Description: robot_description
-      TF Prefix: ""
       Update Interval: 0
       Value: true
       Visual Enabled: true
@@ -180,7 +182,7 @@ Visualization Manager:
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: map
+    Fixed Frame: odom
     Frame Rate: 30
   Name: root
   Tools:

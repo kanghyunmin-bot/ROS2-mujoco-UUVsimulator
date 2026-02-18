@@ -91,7 +91,9 @@ class PositionController:
         self.control_rate = self._param("control_rate", 20.0)
         self.odom_frame = self._param("odom_frame", "odom")
         self.auv_link_frame = self._param("auv_link_frame", "auv_link")
-        self.dvl_frame = self._param("dvl_frame", "dvl")
+        self.base_link_alias_frame = self._param("base_link_alias_frame", "base_link")
+        self.publish_base_link_alias = bool(self._param("publish_base_link_alias", True))
+        self.dvl_frame = self._param("dvl_frame", "dvl_link")
         self.dvl_timeout = Duration(seconds=float(self._param("dvl_timeout", 0.7)))
         self.dvl_use_odom = bool(self._param("dvl_use_odom", True))
         self.dvl_odom_topic = self._param("dvl_odom_topic", "/dvl/odometry")
@@ -287,6 +289,20 @@ class PositionController:
         t1.transform.rotation.z = float(q[2])
         t1.transform.rotation.w = float(q[3])
         transforms.append(t1)
+
+        if self.publish_base_link_alias and self.base_link_alias_frame:
+            t_alias = TransformStamped()
+            t_alias.header.stamp = stamp.to_msg()
+            t_alias.header.frame_id = self.odom_frame
+            t_alias.child_frame_id = self.base_link_alias_frame
+            t_alias.transform.translation.x = float(p[0])
+            t_alias.transform.translation.y = float(p[1])
+            t_alias.transform.translation.z = float(p[2])
+            t_alias.transform.rotation.x = float(q[0])
+            t_alias.transform.rotation.y = float(q[1])
+            t_alias.transform.rotation.z = float(q[2])
+            t_alias.transform.rotation.w = float(q[3])
+            transforms.append(t_alias)
 
         t2 = TransformStamped()
         t2.header.stamp = stamp.to_msg()
