@@ -29,6 +29,11 @@ def generate_launch_description():
     use_dvl = LaunchConfiguration('use_dvl')
     use_rovio = LaunchConfiguration('use_rovio')
     use_dronecan_battery = LaunchConfiguration('use_dronecan_battery')
+    use_joy = LaunchConfiguration('use_joy')
+    joy_dev = LaunchConfiguration('joy_dev')
+    joy_deadzone = LaunchConfiguration('joy_deadzone')
+    joy_autorepeat_rate = LaunchConfiguration('joy_autorepeat_rate')
+    joy_coalesce_interval_ms = LaunchConfiguration('joy_coalesce_interval_ms')
 
     fcu_url = LaunchConfiguration('fcu_url')
     dvl_ip = LaunchConfiguration('dvl_ip')
@@ -39,6 +44,11 @@ def generate_launch_description():
         DeclareLaunchArgument('use_dvl', default_value='false'),
         DeclareLaunchArgument('use_rovio', default_value='false'),
         DeclareLaunchArgument('use_dronecan_battery', default_value='false'),
+        DeclareLaunchArgument('use_joy', default_value='false'),
+        DeclareLaunchArgument('joy_dev', default_value='/dev/input/js0'),
+        DeclareLaunchArgument('joy_deadzone', default_value='0.5'),
+        DeclareLaunchArgument('joy_autorepeat_rate', default_value='20.0'),
+        DeclareLaunchArgument('joy_coalesce_interval_ms', default_value='1'),
         DeclareLaunchArgument('fcu_url', default_value='/dev/ttyACM0:57600'),
         DeclareLaunchArgument('dvl_ip', default_value='192.168.194.95'),
         DeclareLaunchArgument('rovio_launch', default_value=''),
@@ -84,6 +94,19 @@ def generate_launch_description():
     rviz_config = os.path.join(get_package_share_directory('hit25_auv'), 'rviz', 'rov.rviz')
 
     actions.extend([
+        Node(
+            package='joy',
+            executable='joy_node',
+            name='joy_node',
+            output='screen',
+            parameters=[{
+                'dev': joy_dev,
+                'deadzone': joy_deadzone,
+                'autorepeat_rate': joy_autorepeat_rate,
+                'coalesce_interval_ms': joy_coalesce_interval_ms,
+            }],
+            condition=IfCondition(use_joy),
+        ),
         Node(package='hit25_auv', executable='joy2mavros', name='joy2mavros', output='screen'),
         Node(package='hit25_auv', executable='vfr2atm_pressure', name='vfr2atm_pressure', output='screen'),
         Node(
