@@ -1,7 +1,9 @@
 [submodule "mujoco"]
 	path = mujoco
 	url = git@github.com:kanghyunmin-bot/mujoco.git
+	ignore = all
 
 [submodule "kmu_hit25_ros2_ws/ardupilot"]
 	path = kmu_hit25_ros2_ws/ardupilot
 	url = git@github.com:kanghyunmin-bot/ardupilot.git
+	ignore = all
