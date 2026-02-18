@@ -1,0 +1,36 @@
+<launch>
+    <!-- 
+        HIT25 Interpreter Package Main Launch File
+        Author: [SangAn Nam]
+        Date: [2025.11.23]
+    -->
+
+    <!-- ================= 1. Hydrophone Analyzer Node ================= -->
+    <node name="hydrophone_analyzer_node" pkg="hit25_interpreter" type="hydrophone_analyzer_node.py" output="screen">
+        <!-- 오디오 장치 설정 -->
+        <param name="device_name" value="AMS-22" />
+        <param name="sample_rate" value="96000" />
+        <param name="block_size" value="4096" />
+        
+        <!-- 탐지할 주파수 대역 -->
+        <param name="freq_range_min" value="10000" />
+        <param name="freq_range_max" value="30000" />
+        
+        <!-- 신뢰도 계산을 위한 파라미터 -->
+	<param name="target_frequency" value="12000.0" />
+        <param name="freq_tolerance" value="150.0" /> <!-- 목표 주파수 +- 150Hz 까지 허용 -->
+        <param name="db_threshold" value="-40.0" />   <!-- 최소 -40dB 이상이어야 신호로 간주 -->
+        <param name="db_for_max_confidence" value="-20.0" /> <!-- -20dB 이상이면 신뢰도 1.0 -->
+    </node>
+    
+    
+    <!-- ================= 2. Vision Interpreter Node ================= -->
+    <node name="vision_interpreter_node" pkg="hit25_interpreter" type="vision_interpreter_node.py" output="screen">
+        <!-- 이제 이 노드는 '/hydrophone/acoustic_feature' 토픽을 구독하여
+             confidence가 높은 음향 신호와 시각 정보를 연계할 수 있습니다. -->
+        <param name="model_path" value="$(find hit25_interpreter)/models/1123best_openvino_model/1123best.xml" />
+        <param name="conf_threshold" value="0.5" />
+        <param name="iou_threshold" value="0.45" />
+    </node>
+
+</launch>

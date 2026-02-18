@@ -1,0 +1,324 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="urdf_full">
+  <link name="base_link">
+    <inertial>
+      
+      <origin xyz="0.000000 0.000000 0.000000" rpy="0.000000 0.000000 0.000000" />
+      <mass value="124.0" />
+      <inertia ixx="4.585" ixy="0" ixz="0" iyy="6.295" iyz="0" izz="9.067" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.180700 -0.147245 0.182618" rpy="0.000000 -0.000000 0.000000" />
+      <geometry>
+        <mesh filename="package://hit25_auv/meshes/base_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.180700 -0.147245 0.182618" rpy="0.000000 -0.000000 0.000000" />
+      <geometry>
+        <mesh filename="package://hit25_auv/meshes/base_link.STL" />
+      </geometry>
+    </collision>
+    <collision name="buoyancy_collision">
+      <origin xyz="-0.000000 0.000000 -0.000000" rpy="0.000000 -0.000000 0.000000" />
+      <geometry>
+        <box size="0.718 0.593 0.294" />
+      </geometry>
+    </collision>
+  </link>
+  <gazebo reference="base_link">
+    <linear_damping>0.8</linear_damping>
+    <angular_damping>0.8</angular_damping>
+  </gazebo>
+  <link name="VER_LF">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.01" />
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://hit25_auv/meshes/VER_LF.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    </link>
+  <joint name="VER_LF_J" type="continuous">
+    <origin xyz="0.149000 0.081161 0.234618" rpy="0.000000 -0.000000 -1.570796" />
+    <parent link="base_link" />
+    <child link="VER_LF" />
+    <axis xyz="1 0 0" />
+  </joint>
+  <link name="VER_LR">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.01" />
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://hit25_auv/meshes/VER_LR.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    </link>
+  <joint name="VER_LR_J" type="continuous">
+    <origin xyz="-0.171000 0.081161 0.234618" rpy="0.000000 -0.000000 -1.570796" />
+    <parent link="base_link" />
+    <child link="VER_LR" />
+    <axis xyz="1 0 0" />
+  </joint>
+  <link name="VER_RF">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.01" />
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://hit25_auv/meshes/VER_RF.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    </link>
+  <joint name="VER_RF_J" type="continuous">
+    <origin xyz="0.149000 0.081165 -0.234382" rpy="-3.141585 -0.000000 -1.570800" />
+    <parent link="base_link" />
+    <child link="VER_RF" />
+    <axis xyz="1 0 0" />
+  </joint>
+  <link name="VER_RR">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.01" />
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://hit25_auv/meshes/VER_RR.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    </link>
+  <joint name="VER_RR_J" type="continuous">
+    <origin xyz="-0.171000 0.081165 -0.234382" rpy="-3.141585 -0.000000 -1.570800" />
+    <parent link="base_link" />
+    <child link="VER_RR" />
+    <axis xyz="1 0 0" />
+  </joint>
+  <link name="YAW_LF">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.01" />
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://hit25_auv/meshes/YAW_LF.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    </link>
+  <joint name="YAW_LF_J" type="continuous">
+    <origin xyz="0.082890 -0.027245 0.182910" rpy="1.570800 0.744920 0.000000" />
+    <parent link="base_link" />
+    <child link="YAW_LF" />
+    <axis xyz="1 0 0" />
+  </joint>
+  <link name="YAW_LR">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.01" />
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://hit25_auv/meshes/YAW_LR.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    </link>
+  <joint name="YAW_LR_J" type="continuous">
+    <origin xyz="-0.097610 -0.027245 0.183273" rpy="1.570800 -0.785400 0.000000" />
+    <parent link="base_link" />
+    <child link="YAW_LR" />
+    <axis xyz="1 0 0" />
+  </joint>
+  <link name="YAW_RF">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.01" />
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://hit25_auv/meshes/YAW_RF.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    </link>
+  <joint name="YAW_RF_J" type="continuous">
+    <origin xyz="0.083040 -0.027245 -0.183512" rpy="1.570800 -0.785400 0.000000" />
+    <parent link="base_link" />
+    <child link="YAW_RF" />
+    <axis xyz="1 0 0" />
+  </joint>
+  <link name="YAW_RR">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.01" />
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://hit25_auv/meshes/YAW_RR.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    </link>
+  <joint name="YAW_RR_J" type="continuous">
+    <origin xyz="-0.097055 -0.027245 -0.182882" rpy="1.570800 0.787890 0.000000" />
+    <parent link="base_link" />
+    <child link="YAW_RR" />
+    <axis xyz="1 0 0" />
+  </joint>
+  <link name="camera">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.01" />
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.05 0.05 0.05" />
+      </geometry>
+      <material name="camera_black">
+        <color rgba="0.1 0.1 0.1 1" />
+      </material>
+    </visual>
+  </link>
+  <joint name="camera_j" type="fixed">
+    <origin xyz="0.184100 0.003535 -0.002502" rpy="1.570800 -0.000000 0.000000" />
+    <parent link="base_link" />
+    <child link="camera" />
+    <axis xyz="0 0 0" />
+  </joint>
+  <link name="imu">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.02" />
+      <inertia ixx="0.0002" ixy="0" ixz="0" iyy="0.0002" iyz="0" izz="0.0002" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.04 0.03 0.02" />
+      </geometry>
+      <material name="imu_blue">
+        <color rgba="0.2 0.4 0.9 1" />
+      </material>
+    </visual>
+  </link>
+  <joint name="imu_j" type="fixed">
+    
+    <origin xyz="0 0 0.03" rpy="0 0 0" />
+    <parent link="base_link" />
+    <child link="imu" />
+    <axis xyz="0 0 0" />
+  </joint>
+  <link name="dvl">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.05" />
+      <inertia ixx="0.0004" ixy="0" ixz="0" iyy="0.0004" iyz="0" izz="0.0004" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.03" length="0.05" />
+      </geometry>
+      <material name="dvl_gray">
+        <color rgba="0.4 0.4 0.4 1" />
+      </material>
+    </visual>
+  </link>
+  <joint name="dvl_j" type="fixed">
+    
+    <origin xyz="0 0 -0.06" rpy="0 0 0" />
+    <parent link="base_link" />
+    <child link="dvl" />
+    <axis xyz="0 0 0" />
+  </joint>
+  <link name="pixhawk">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.01" />
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.08 0.05 0.02" />
+      </geometry>
+      <material name="pixhawk_gray">
+        <color rgba="0.2 0.2 0.2 1" />
+      </material>
+    </visual>
+  </link>
+  <joint name="pixhawk_j" type="fixed">
+    <origin xyz="0.050900 -0.019965 -0.000002" rpy="1.570800 -0.000000 0.000000" />
+    <parent link="base_link" />
+    <child link="pixhawk" />
+    <axis xyz="0 0 0" />
+  </joint>
+  <link name="depth">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.01" />
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.04 0.04 0.02" />
+      </geometry>
+      <material name="depth_blue">
+        <color rgba="0.1 0.2 0.6 1" />
+      </material>
+    </visual>
+  </link>
+  <joint name="depth_j" type="fixed">
+    <origin xyz="-0.192525 0.010255 -0.030312" rpy="1.570800 -0.000000 0.000000" />
+    <parent link="base_link" />
+    <child link="depth" />
+    <axis xyz="0 0 0" />
+  </joint>
+<gazebo><plugin filename="ignition-gazebo-hydrodynamics-system" name="ignition::gazebo::v6::systems::Hydrodynamics"><link_name>base_link</link_name><xDotU>-4.0</xDotU><yDotV>-8.0</yDotV><zDotW>-8.0</zDotW><kDotP>-0.1</kDotP><mDotQ>-0.2</mDotQ><nDotR>-0.2</nDotR><xUabsU>-6.0</xUabsU><xU>-1.0</xU><yVabsV>-20.0</yVabsV><yV>-2.0</yV><zWabsW>-20.0</zWabsW><zW>-2.0</zW><kPabsP>-0.1</kPabsP><kP>-0.05</kP><mQabsQ>-1.0</mQabsQ><mQ>-0.1</mQ><nRabsR>-1.0</nRabsR><nR>-0.1</nR></plugin></gazebo><gazebo><plugin filename="ignition-gazebo-thruster-system" name="ignition::gazebo::v6::systems::Thruster"><namespace>hit25_auv</namespace><joint_name>VER_LF_J</joint_name><thrust_coefficient>0.004</thrust_coefficient><fluid_density>1000</fluid_density><propeller_diameter>0.1</propeller_diameter></plugin></gazebo><gazebo><plugin filename="ignition-gazebo-thruster-system" name="ignition::gazebo::v6::systems::Thruster"><namespace>hit25_auv</namespace><joint_name>VER_LR_J</joint_name><thrust_coefficient>0.004</thrust_coefficient><fluid_density>1000</fluid_density><propeller_diameter>0.1</propeller_diameter></plugin></gazebo><gazebo><plugin filename="ignition-gazebo-thruster-system" name="ignition::gazebo::v6::systems::Thruster"><namespace>hit25_auv</namespace><joint_name>VER_RF_J</joint_name><thrust_coefficient>0.004</thrust_coefficient><fluid_density>1000</fluid_density><propeller_diameter>0.1</propeller_diameter></plugin></gazebo><gazebo><plugin filename="ignition-gazebo-thruster-system" name="ignition::gazebo::v6::systems::Thruster"><namespace>hit25_auv</namespace><joint_name>VER_RR_J</joint_name><thrust_coefficient>0.004</thrust_coefficient><fluid_density>1000</fluid_density><propeller_diameter>0.1</propeller_diameter></plugin></gazebo><gazebo><plugin filename="ignition-gazebo-thruster-system" name="ignition::gazebo::v6::systems::Thruster"><namespace>hit25_auv</namespace><joint_name>YAW_LF_J</joint_name><thrust_coefficient>0.004</thrust_coefficient><fluid_density>1000</fluid_density><propeller_diameter>0.1</propeller_diameter></plugin></gazebo><gazebo><plugin filename="ignition-gazebo-thruster-system" name="ignition::gazebo::v6::systems::Thruster"><namespace>hit25_auv</namespace><joint_name>YAW_LR_J</joint_name><thrust_coefficient>0.004</thrust_coefficient><fluid_density>1000</fluid_density><propeller_diameter>0.1</propeller_diameter></plugin></gazebo><gazebo><plugin filename="ignition-gazebo-thruster-system" name="ignition::gazebo::v6::systems::Thruster"><namespace>hit25_auv</namespace><joint_name>YAW_RF_J</joint_name><thrust_coefficient>0.004</thrust_coefficient><fluid_density>1000</fluid_density><propeller_diameter>0.1</propeller_diameter></plugin></gazebo><gazebo><plugin filename="ignition-gazebo-thruster-system" name="ignition::gazebo::v6::systems::Thruster"><namespace>hit25_auv</namespace><joint_name>YAW_RR_J</joint_name><thrust_coefficient>0.004</thrust_coefficient><fluid_density>1000</fluid_density><propeller_diameter>0.1</propeller_diameter></plugin></gazebo><gazebo><plugin filename="ignition-gazebo-odometry-publisher-system" name="ignition::gazebo::v6::systems::OdometryPublisher"><dimensions>3</dimensions></plugin></gazebo></robot>

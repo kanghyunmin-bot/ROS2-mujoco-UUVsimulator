@@ -1,0 +1,31 @@
+# Editor/OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# ROS2 generated artifacts
+kmu_hit25_ros2_ws/build/
+kmu_hit25_ros2_ws/install/
+kmu_hit25_ros2_ws/log/
+kmu_hit25_ros2_ws/.tmp/
+kmu_hit25_ros2_ws/**/venv/
+
+# Runtime outputs
+*.log
+*.tlog
+*.tlog.raw
+*.parm
+eeprom.bin
+
+# Large local binaries
+QGroundControl-*.AppImage

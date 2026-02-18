@@ -1,0 +1,12 @@
+repositories:
+  # Visual-Inertial Odometry (community ROS2 port; see link in README)
+  rovio:
+    type: git
+    url: https://github.com/suyash023/rovio.git
+    version: master
+
+  # Water Linked DVL ROS2 (3rd-party driver, widely used)
+  waterlinked_dvl:
+    type: git
+    url: https://github.com/Robotic-Decision-Making-Lab/waterlinked_dvl.git
+    version: main

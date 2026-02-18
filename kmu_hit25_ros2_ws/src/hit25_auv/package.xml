@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>hit25_auv</name>
+  <version>0.0.0</version>
+  <description>KMU-HIT 2025 AUV/ROV package (ROS 2 port scaffold). Provides message interfaces and robot description assets. Legacy ROS 1 sources are kept under ros1_legacy/ for reference.</description>
+
+  <maintainer email="hit24@todo.todo">hit24</maintainer>
+  <license>TODO</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+  <!-- Interface generation -->
+  <build_depend>rosidl_default_generators</build_depend>
+  <exec_depend>rosidl_default_runtime</exec_depend>
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <!-- Core ROS 2 deps -->
+  <depend>rclcpp</depend>
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>visualization_msgs</depend>
+
+  <!-- Launch + visualization for a basic smoke test -->
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>rqt_image_view</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+
+  <!-- MAVROS -->
+  <exec_depend>mavros</exec_depend>
+  <exec_depend>mavros_msgs</exec_depend>
+
+  <!-- Python TF helper -->
+  <exec_depend>tf_transformations</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-scipy</exec_depend>
+  <exec_depend>python3-matplotlib</exec_depend>
+
+  <!-- External drivers / vision (provided separately) -->
+  <exec_depend>waterlinked_a50_ros_driver</exec_depend>
+  <exec_depend>hit25_interpreter</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
