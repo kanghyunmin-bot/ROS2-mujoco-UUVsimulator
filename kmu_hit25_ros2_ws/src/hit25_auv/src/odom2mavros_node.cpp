@@ -12,8 +12,10 @@ public:
   OdomToVisionPose()
   : Node("odom_to_vision_pose")
   {
-    odom_topic_ = declare_parameter<std::string>("odom_topic", "/rovio/odometry");
-    apply_rotation_ = declare_parameter<bool>("apply_rotation", true);
+    // Legacy bridge: convert any odometry source (typically /dvl/odometry) into
+    // MAVROS vision_pose for position controller integrations.
+    odom_topic_ = declare_parameter<std::string>("odom_topic", "/dvl/odometry");
+    apply_rotation_ = declare_parameter<bool>("apply_rotation", false);
 
     pub_ = create_publisher<geometry_msgs::msg::PoseStamped>(
       "/mavros/vision_pose/pose", 10);
@@ -21,14 +23,14 @@ public:
       odom_topic_, 10, std::bind(&OdomToVisionPose::cb, this, std::placeholders::_1));
 
     if (apply_rotation_) {
-      tf2::Matrix3x3 R_rovio_to_base(
+      tf2::Matrix3x3 R_source_to_base(
         0, 0, 1,
         1, 0, 0,
         0, -1, 0);
-      R_rovio_to_base.getRotation(q_rovio_to_base_);
-      q_rovio_to_base_.normalize();
+      R_source_to_base.getRotation(q_odom_to_base_);
+      q_odom_to_base_.normalize();
     } else {
-      q_rovio_to_base_.setValue(0.0, 0.0, 0.0, 1.0);
+      q_odom_to_base_.setValue(0.0, 0.0, 0.0, 1.0);
     }
 
     RCLCPP_INFO(
@@ -41,9 +43,9 @@ public:
 private:
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr sub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pub_;
-  tf2::Quaternion q_rovio_to_base_;
+  tf2::Quaternion q_odom_to_base_;
   std::string odom_topic_;
-  bool apply_rotation_{true};
+  bool apply_rotation_{false};
 
   void cb(const nav_msgs::msg::Odometry::SharedPtr msg_in)
   {
@@ -53,7 +55,7 @@ private:
 
     tf2::Quaternion q_in;
     tf2::fromMsg(msg_in->pose.pose.orientation, q_in);
-    tf2::Quaternion q_out = q_in * q_rovio_to_base_;
+    tf2::Quaternion q_out = q_in * q_odom_to_base_;
     q_out.normalize();
     msg_out.pose.orientation = tf2::toMsg(q_out);
 

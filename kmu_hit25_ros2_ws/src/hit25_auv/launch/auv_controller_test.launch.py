@@ -2,26 +2,11 @@ import os
 
 from ament_index_python.packages import PackageNotFoundError, get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo
 from launch.conditions import IfCondition
 from launch.launch_description_sources import AnyLaunchDescriptionSource, PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-
-
-def _maybe_include_rovio(context, tag: str):
-    """Include external ROVIO launch file only when enabled and path is valid."""
-    use_rovio = LaunchConfiguration('use_rovio').perform(context).strip().lower()
-    if use_rovio not in ('1', 'true', 'yes', 'on'):
-        return []
-
-    rovio_path = LaunchConfiguration('rovio_launch').perform(context).strip()
-    if not rovio_path:
-        return [LogInfo(msg=f'[{tag}] use_rovio=true but rovio_launch is empty; skipping ROVIO launch.')]
-    if not os.path.exists(rovio_path):
-        return [LogInfo(msg=f'[{tag}] rovio_launch not found: {rovio_path}; skipping ROVIO launch.')]
-
-    return [IncludeLaunchDescription(AnyLaunchDescriptionSource(rovio_path))]
 
 
 def generate_launch_description():
@@ -29,7 +14,6 @@ def generate_launch_description():
 
     use_mavros = LaunchConfiguration('use_mavros')
     use_dvl = LaunchConfiguration('use_dvl')
-    use_rovio = LaunchConfiguration('use_rovio')
     enable_controller = LaunchConfiguration('enable_controller')
     use_joy2mavros = LaunchConfiguration('use_joy2mavros')
     use_vfr2atm_pressure = LaunchConfiguration('use_vfr2atm_pressure')
@@ -44,12 +28,10 @@ def generate_launch_description():
 
     fcu_url = LaunchConfiguration('fcu_url')
     dvl_ip = LaunchConfiguration('dvl_ip')
-    rovio_launch = LaunchConfiguration('rovio_launch')
 
     actions = [
         DeclareLaunchArgument('use_mavros', default_value='true'),
         DeclareLaunchArgument('use_dvl', default_value='false'),
-        DeclareLaunchArgument('use_rovio', default_value='false'),
         DeclareLaunchArgument('enable_controller', default_value='false'),
         DeclareLaunchArgument('use_joy2mavros', default_value='false'),
         DeclareLaunchArgument('use_vfr2atm_pressure', default_value='false'),
@@ -63,7 +45,6 @@ def generate_launch_description():
         DeclareLaunchArgument('joy_coalesce_interval_ms', default_value='1'),
         DeclareLaunchArgument('fcu_url', default_value='/dev/ttyACM0:57600'),
         DeclareLaunchArgument('dvl_ip', default_value='192.168.194.95'),
-        DeclareLaunchArgument('rovio_launch', default_value=''),
     ]
 
     try:
@@ -78,6 +59,8 @@ def generate_launch_description():
         )
     except PackageNotFoundError:
         actions.append(LogInfo(msg='[auv_controller_test] mavros package not found; skipping MAVROS launch.'))
+
+    actions.append(LogInfo(msg='[auv_controller_test] VIO/ROVIO is not enabled from this launch profile.'))
 
     try:
         dvl_share = get_package_share_directory('waterlinked_a50_ros_driver')
@@ -98,10 +81,6 @@ def generate_launch_description():
             actions.append(LogInfo(msg='[auv_controller_test] DVL launch file not found (dvl_start/launch_dvl); skipping.'))
     except PackageNotFoundError:
         actions.append(LogInfo(msg='[auv_controller_test] waterlinked_a50_ros_driver not found; skipping DVL.'))
-
-    actions.append(
-        OpaqueFunction(function=lambda context: _maybe_include_rovio(context, 'auv_controller_test'))
-    )
 
     try:
         interp_share = get_package_share_directory('hit25_interpreter')
