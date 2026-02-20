@@ -120,6 +120,33 @@
 - 새로 추가한 체크리스트는 참조 문서이므로, 실제 링크/포트 값은 각 브랜치·버전의 launch 스크립트 인자와 일치해야 함
 
 ==================================================================
+[2026-02-20 21:55:00 KST] SITL 실행 중 ROS2 브리지 필수성 강화
+==================================================================
+
+1) 요청 배경
+- QGC 연동에서 "No JSON sensor message received" / "Lost manual control"이 반복되는 상황에서
+  실제 원인 분리가 어려워짐.
+- 현재 코드는 `--sitl` 실행 시 ROS2 브리지 초기화가 실패해도 시뮬레이터를 계속 기동시켜
+  센서/서보 루프가 동작하지 않은 채로 종료되거나 정지하는 상태를 만들 수 있음.
+
+2) 오류 / 원인 / 조치
+- 오류: `--sitl`에서 ros2_bridge 초기화 실패 시 `ros_bridge=None`으로 계속 진행되어
+  ArduPilot과 센서/명령 연결이 성립되지 않음.
+- 원인: 기존 런처는 초기화 실패를 치명 오류로 처리하지 않아, 표면상 실행은 되지만 실질적으로 동작하지 않음.
+- 조치:
+  - 파일: `mujoco/uuv_mujoco/v2.2/run_urdf_full.py`
+  - `if args.sitl and ros_bridge is None:` 조건에서 즉시 종료하도록 변경
+  - 메시지: `--sitl` 모드에서는 ROS2 + ros2_bridge가 필수임을 명시적으로 경고 후 종료
+
+3) 검증
+- `python3 -m py_compile mujoco/uuv_mujoco/v2.2/run_urdf_full.py` 통과
+- 인자 파싱/실행 흐름에서 `--sitl` 초기화 실패시 즉시 실패 처리되는지 확인
+
+4) 의미
+- 이전처럼 조용히 "동작 중인데 안 움직임" 상태를 줄이고, `--sitl` 실패 원인을 즉시 드러내서
+  QGC 연동 디버깅 시간을 줄이기 위함.
+
+==================================================================
 [2026-02-18 22:42:47 KST] 캡처 스크립트 구문 오류 수정
 ==================================================================
 
@@ -754,5 +781,32 @@
     `set_interface_ports()`가 `port_in`으로 UDP bind 하도록 추가.
   - 9003 바인딩 미설정으로 인한 센서 수신 부재("No JSON sensor message received") 원인 제거.
 - 커밋
-  - ArduPilot: `8783986755`
-  - MuJoCo: `886edcf4`
+ - ArduPilot: `8783986755`
+ - MuJoCo: `886edcf4`
+
+==================================================================
+[2026-02-20 16:30:00 KST] ArduSub SITL 수동 제어(로스트 매뉴얼) 방어로깅 고정
+==================================================================
+
+1) 증상
+- QGC에서 `Lost manual control`, `No JSON sensor message received`/`No ping response`가 반복
+- `FS_PILOT_INPUT`이 2(Disarm)로 남아 있을 가능성이 높음(재시작/파라미터 잔존)
+
+2) 조치
+- `kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh`
+  - 기본 `WIPE_EEPROM`을 `1`로 변경(부팅 시 eeprom 초기화 기본화)
+  - `--no-wipe` 플래그 추가(기존 상태 유지가 필요한 경우 수동 선택)
+  - `--dual-qgc-link`, `--qgc-tcp-port` 옵션 명시 정리
+  - 실행 전 eeprom 잔존 경고 메시지 추가
+- `README.md`
+  - 기본 실행이 `--wipe`임을 문서화
+  - `FS_PILOT_INPUT` 잔존 시 재시작 순서( `--wipe` )를 트러블슈팅에 반영
+  - 포트/토픽 확인 명령 보완
+
+3) 검증
+- `bash -n kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh`
+
+4) 다음 액션
+- 사용자 테스트에서 QGC `Lost manual control` 반복 여부 확인:
+  - 계속 뜨면 동일 조건으로 새로 실행 후 `--wipe` 강제 유지
+  - 그래도 반복되면 ArduPilot 로그에서 `FS_PILOT_INPUT` 실제 읽힘 값 재확인

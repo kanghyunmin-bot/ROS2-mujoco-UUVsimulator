@@ -52,6 +52,7 @@ colcon build --symlink-install
 cd ~/antigravity
 ./kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh --frame vectored
 ```
+기본 동작은 `--wipe`가 기본 적용되어 시작됩니다. (필요 시 `--no-wipe` 사용)
 
 터미널 2: MuJoCo competition map + SITL bridge
 
@@ -67,7 +68,7 @@ cd ~/antigravity/kmu_hit25_ros2_ws
 source /opt/ros/humble/setup.bash
 source install/setup.bash
 ros2 launch hit25_auv auv_start.launch.py \
-  use_mavros:=false use_dvl:=false use_rovio:=false use_dronecan_battery:=false
+  use_mavros:=true use_dvl:=true use_odom2mavros:=false use_dronecan_battery:=false
 ```
 
 터미널 4(선택): QGC 비디오 스트림(UDP 5600)
@@ -115,6 +116,10 @@ rm -f /tmp/mujoco_preview.mp4
 - `UDP` 링크 추가
 - 포트: `14550`
 - 기존 `TCP 127.0.0.1:5760`만 활성화되어 있으면 연결 실패할 수 있음
+- `--dual-qgc-link` 옵션으로 UDP/TCP 동시 노출:
+  `./kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh --dual-qgc-link`
+- TCP만 쓰는 환경이면:
+  `./kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh --qgc-link tcpclient --qgc-port 5760`
 
 ### 5.2 영상
 
@@ -132,13 +137,13 @@ ROS 토픽 확인:
 
 ```bash
 source /opt/ros/humble/setup.bash
-ros2 topic list | rg '/imu/data|/dvl/odometry|/mujoco/ground_truth/pose|/mavros/rc/override'
+ros2 topic list | grep -E '/imu/data|/dvl/odometry|/mujoco/ground_truth/pose|/mavros/rc/override'
 ```
 
 포트 확인:
 
 ```bash
-ss -uapn | rg '14550|9002|5600'
+ss -uapn | rg '14550|9002|9003|5600'
 ```
 
 정상 상태 예:
@@ -153,12 +158,14 @@ ss -uapn | rg '14550|9002|5600'
 
 원인:
 - MuJoCo를 `--sitl` 없이 실행
-- SITL/MuJoCo 포트 불일치 (`9002`)
+- SITL/MuJoCo 포트 불일치 (`9002` / `9003`)
 - 실행 순서 문제
+- 기존 `eeprom.bin` 잔존으로 `FS_PILOT_INPUT`이 `2`(disarm)로 고정
 
 해결:
 - 섹션 4의 순서대로 재실행
 - `run_ardusub_json_sitl.sh`와 `launch_competition_sim.sh --sitl` 조합 유지
+- `Lost manual control`가 반복되면 `--wipe`로 재시작 후 QGC를 다시 연결
 
 ### QGC 연결 안 됨
 
@@ -167,6 +174,7 @@ ss -uapn | rg '14550|9002|5600'
 
 해결:
 - UDP `14550` 링크 수동 추가
+- 또는 `--dual-qgc-link`로 ArduPilot을 다시 시작해 동시에 열기
 
 ### 카메라 안 보임
 
