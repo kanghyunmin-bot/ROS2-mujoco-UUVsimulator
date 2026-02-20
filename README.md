@@ -61,6 +61,21 @@ cd ~/antigravity/mujoco/uuv_mujoco/v2.2
 ./launch_competition_sim.sh --sitl --images
 ```
 
+움직임 방향이 반대로 들리면 아래 값으로 시작해서 즉시 다시 맞춰 보세요.
+
+```bash
+cd ~/antigravity/mujoco/uuv_mujoco/v2.2
+./launch_competition_sim.sh --sitl --images \
+  --sitl-forward-sign 1 \
+  --sitl-lateral-sign -1 \
+  --sitl-yaw-sign 1 \
+  --sitl-heave-sign -1 \
+  --sitl-cmd-scale 0.4 \
+  --sitl-command-debug
+```
+
+`--sitl-command-debug`를 주면 로그에서 채널별 `raw->mapped` 추적이 찍혀 역방향/채널 매핑 오류를 바로 찾을 수 있습니다.
+
 터미널 3: ROS2 제어 패키지
 
 ```bash
