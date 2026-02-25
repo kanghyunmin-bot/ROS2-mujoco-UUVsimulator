@@ -84,6 +84,13 @@ cd ~/antigravity/mujoco/uuv_mujoco/v2.2
 ./launch_competition_sim.sh --sitl --images --force-clean
 ```
 
+기본 `sim_real` 프로파일은 T200 엑셀 곡선의 `16V` 커브를 자동 사용합니다.
+필요하면 전압 커브를 명시적으로 바꿉니다:
+
+```bash
+./launch_competition_sim.sh --sitl --images --force-clean --thruster-voltage 20
+```
+
 부력이 과하면 즉시 튜닝:
 
 ```bash
@@ -143,6 +150,14 @@ python3 scripts/check_sitl_manual_input.py --listen 14550 --timeout 20 --strict
 정상 기준:
 - `armed_seen=True`
 - `rc_active_seen=True` 또는 `servo_active_seen=True`
+
+DVL 속도 확인:
+
+```bash
+source /opt/ros/humble/setup.bash
+ros2 topic hz /dvl/velocity
+ros2 topic echo /dvl/velocity_raw --once
+```
 
 ## 8. 자주 발생하는 문제
 
