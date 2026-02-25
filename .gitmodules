@@ -7,3 +7,8 @@
 	path = kmu_hit25_ros2_ws/ardupilot
 	url = git@github.com:kanghyunmin-bot/ardupilot.git
 	ignore = all
+
+[submodule "kmu_hit25_ros2_ws/tools/Micro-XRCE-DDS-Gen"]
+	path = kmu_hit25_ros2_ws/tools/Micro-XRCE-DDS-Gen
+	url = https://github.com/eProsima/Micro-XRCE-DDS-Gen.git
+	ignore = all

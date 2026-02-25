@@ -258,8 +258,9 @@ while true; do
     exit 1
   fi
   if [[ -n "${VIDEO_PID}" ]] && ! kill -0 "${VIDEO_PID}" 2>/dev/null; then
-    echo "[auto] video bridge exited. stopping stack."
-    exit 1
+    echo "[auto] warning: video bridge exited; keeping ArduSub+MuJoCo running."
+    echo "[auto]          check video log: ${VIDEO_LOG}"
+    VIDEO_PID=""
   fi
   sleep 2
 done
