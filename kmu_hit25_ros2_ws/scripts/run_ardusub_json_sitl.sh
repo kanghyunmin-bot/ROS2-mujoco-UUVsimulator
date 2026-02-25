@@ -5,14 +5,14 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 WS_DIR=$(cd "${SCRIPT_DIR}/.." && pwd)
 ARDUPILOT_DIR="${WS_DIR}/ardupilot"
 
-FRAME="vectored"
+FRAME="vectored_6dof"
 INSTANCE="0"
 QGC_PORT="14550"
 QGC_HOST="127.0.0.1"
 QGC_LINK_MODE="udpclient"
 QGC_TCP_PORT="5760"
 QGC_PORT_WAS_SET="0"
-DUAL_QGC_LINK="0"
+DUAL_QGC_LINK="1"
 USE_MAVPROXY="0"
 SIM_IP="127.0.0.1"
 SIM_PORT_IN="9003"
@@ -22,6 +22,7 @@ WIPE_EEPROM="1"
 DDS_ENABLE="0"
 EXTRA_SIM_ARGS=""
 PILOT_FAILSAFE_MODE="disabled"
+FORCE_CLEAN="0"
 
 usage() {
   cat <<'EOF'
@@ -29,17 +30,21 @@ Usage:
   ./scripts/run_ardusub_json_sitl.sh [options]
 
 Options:
-  --frame <vectored|vectored_6dof>   ArduSub frame (default: vectored)
+  --frame <vectored|vectored_6dof>   ArduSub frame (default: vectored_6dof)
   --instance <N>                     SITL instance index (default: 0)
   --qgc-host <ip>                    QGC UDP host (default: 127.0.0.1)
   --qgc-port <port>                  MAVLink port for --qgc-link (default: 14550 for udpclient, 5760 for tcpclient)
   --qgc-tcp-port <port>              QGC TCP port (default: 5760)
   --qgc-link <udpclient|tcpclient>   QGC serial link mode for ArduPilot (default: udpclient)
-  --dual-qgc-link                     Also open the opposite link in parallel (udp+tcp)
+  --dual-qgc-link                     Also open the opposite link in parallel (udp + tcp server/client pair, default: enabled)
+  --no-dual-qgc-link                  Disable opposite parallel link
   --use-mavproxy                      Start sim_vehicle with MAVProxy (default: disabled)
   --sim-ip <ip>                      Sim address for ArduPilot JSON (default: 127.0.0.1)
-  --sim-port-in <port>                ArduPilot JSON input port (default: 9003)
-  --sim-port-out <port>               ArduPilot JSON output port (default: 9002)
+  --sim-port-in <port>                ArduPilot JSON input port; simulator JSON packets must arrive here
+                                        (default: 9003)
+  --sim-port-out <port>               ArduPilot JSON output port; SITL servo packets are sent here
+                                        (default: 9002)
+  --force-clean                       Kill existing ArduSub/SITL processes from this workspace before launch
   --dds                              Enable DDS (default: disabled)
   --pilot-failsafe <disabled|warn|disarm>
                                      FS_PILOT_INPUT for SITL (default: disabled)
@@ -82,8 +87,16 @@ while [[ $# -gt 0 ]]; do
       DUAL_QGC_LINK="1"
       shift
       ;;
+    --no-dual-qgc-link)
+      DUAL_QGC_LINK="0"
+      shift
+      ;;
     --use-mavproxy)
       USE_MAVPROXY="1"
+      shift
+      ;;
+    --force-clean)
+      FORCE_CLEAN="1"
       shift
       ;;
     --sim-ip)
@@ -174,6 +187,11 @@ if ! [[ "${SIM_PORT_IN}" =~ ^[0-9]+$ && "${SIM_PORT_OUT}" =~ ^[0-9]+$ ]]; then
   exit 2
 fi
 
+if [[ "${SIM_PORT_IN}" == "${SIM_PORT_OUT}" ]]; then
+  echo "[error] --sim-port-in and --sim-port-out must be different" >&2
+  exit 2
+fi
+
 if ! [[ -d "${ARDUPILOT_DIR}" ]]; then
   echo "[error] ArduPilot directory not found: ${ARDUPILOT_DIR}" >&2
   exit 1
@@ -194,10 +212,58 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 1
 fi
 
+collect_existing_sitl_pids() {
+  ps -eo pid=,args= | awk -v ap="${ARDUPILOT_DIR}" '
+    index($0, ap "/build/sitl/bin/ardusub") > 0 {
+      print $1
+      next
+    }
+    index($0, "Tools/autotest/sim_vehicle.py") > 0 && index($0, "ArduSub") > 0 {
+      print $1
+    }
+  '
+}
+
+kill_pid_list() {
+  local pids="$1"
+  [[ -z "${pids}" ]] && return 0
+  # shellcheck disable=SC2086
+  kill ${pids} 2>/dev/null || true
+  sleep 0.6
+  local alive=""
+  # shellcheck disable=SC2086
+  for pid in ${pids}; do
+    if kill -0 "${pid}" 2>/dev/null; then
+      alive+=" ${pid}"
+    fi
+  done
+  if [[ -n "${alive}" ]]; then
+    # shellcheck disable=SC2086
+    kill -9 ${alive} 2>/dev/null || true
+  fi
+}
+
+EXISTING_SITL_PIDS="$(collect_existing_sitl_pids | xargs)"
+if [[ -n "${EXISTING_SITL_PIDS}" ]]; then
+  if [[ "${FORCE_CLEAN}" == "1" ]]; then
+    echo "[run] --force-clean: stopping existing ArduSub/SITL pids:${EXISTING_SITL_PIDS}"
+    kill_pid_list "${EXISTING_SITL_PIDS}"
+  else
+    echo "[error] existing ArduSub/SITL process detected:${EXISTING_SITL_PIDS}" >&2
+    echo "        Stop old processes first (example):" >&2
+    echo "          pkill -f 'Tools/autotest/sim_vehicle.py -v ArduSub'" >&2
+    echo "          pkill -f '/build/sitl/bin/ardusub'" >&2
+    echo "        Or rerun with --force-clean." >&2
+    exit 1
+  fi
+fi
+
 SIM_ARGS="--serial0 ${QGC_LINK_MODE}:${QGC_HOST}:${QGC_PORT}"
 if [[ "${DUAL_QGC_LINK}" == "1" ]]; then
   if [[ "${QGC_LINK_MODE}" == "udpclient" ]]; then
-    SIM_ARGS+=" --serial1 tcpclient:${QGC_HOST}:${QGC_TCP_PORT}"
+    # When primary is UDP out to QGC, expose a TCP server so QGC can
+    # optionally connect via TCP without requiring QGC to run a TCP server.
+    SIM_ARGS+=" --serial1 tcp:${QGC_TCP_PORT}"
   else
     SIM_ARGS+=" --serial1 udpclient:${QGC_HOST}:14550"
   fi
@@ -232,7 +298,7 @@ echo "  qgc link   : ${QGC_LINK_MODE}"
 if [[ "${DUAL_QGC_LINK}" == "1" ]]; then
   if [[ "${QGC_LINK_MODE}" == "udpclient" ]]; then
     echo "  qgc links  : --serial0 udpclient:${QGC_HOST}:${QGC_PORT}"
-    echo "               --serial1 tcpclient:${QGC_HOST}:${QGC_TCP_PORT}"
+    echo "               --serial1 tcp:${QGC_TCP_PORT} (server)"
   else
     echo "  qgc links  : --serial0 tcpclient:${QGC_HOST}:${QGC_PORT}"
     echo "               --serial1 udpclient:${QGC_HOST}:14550"
@@ -245,7 +311,8 @@ echo "  fs_pilot   : ${PILOT_FAILSAFE_MODE} (${PILOT_FAILSAFE_VALUE})"
 echo "  wipe-eeprom: ${WIPE_EEPROM} (1=clean)"
 echo "  qgc tcp    : ${QGC_HOST}:${QGC_TCP_PORT}"
 echo "  sitl ip    : ${SIM_IP}"
-echo "  sitl in/out: ${SIM_IP}:${SIM_PORT_IN} / ${SIM_IP}:${SIM_PORT_OUT}"
+echo "  sitl in/out: ${SIM_IP}:${SIM_PORT_IN} (simulator->ArduPilot, JSON state) / ${SIM_IP}:${SIM_PORT_OUT} (ArduPilot->simulator, servo PWM)"
+echo "  sitl tune  : ARMING_CHECK=0, EK3_IMU_MASK=1, INS_USE2/3=0, COMPASS_USE2/3=0, FS_GCS_ENABLE=0"
 echo "  sim args   : ${SIM_ARGS}"
 echo
 echo "[note] Start MuJoCo bridge in another terminal:"
@@ -264,4 +331,11 @@ python3 Tools/autotest/sim_vehicle.py \
   ${WIPE_ARG} \
   -P "DDS_ENABLE=${DDS_ENABLE}" \
   -P "FS_PILOT_INPUT=${PILOT_FAILSAFE_VALUE}" \
+  -P "FS_GCS_ENABLE=0" \
+  -P "ARMING_CHECK=0" \
+  -P "EK3_IMU_MASK=1" \
+  -P "INS_USE2=0" \
+  -P "INS_USE3=0" \
+  -P "COMPASS_USE2=0" \
+  -P "COMPASS_USE3=0" \
   -A "${SIM_ARGS}"

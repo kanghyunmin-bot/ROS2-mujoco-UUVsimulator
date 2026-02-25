@@ -19,6 +19,10 @@ kmu_hit25_ros2_ws/install/
 kmu_hit25_ros2_ws/log/
 kmu_hit25_ros2_ws/.tmp/
 kmu_hit25_ros2_ws/**/venv/
+build/
+install/
+log/
+_reference_src/
 
 # Runtime outputs
 *.log

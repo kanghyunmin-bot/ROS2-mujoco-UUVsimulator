@@ -810,3 +810,381 @@
 - 사용자 테스트에서 QGC `Lost manual control` 반복 여부 확인:
   - 계속 뜨면 동일 조건으로 새로 실행 후 `--wipe` 강제 유지
   - 그래도 반복되면 ArduPilot 로그에서 `FS_PILOT_INPUT` 실제 읽힘 값 재확인
+
+==================================================================
+[2026-02-22 21:20:00 KST] QGC 조작감 개선: SITL direct-thruster 경로 적용
+==================================================================
+
+1) 증상
+- QGC 스틱 입력과 MuJoCo 반응이 일치하지 않음.
+- 원인: ArduSub에서 이미 믹싱된 서보(PWM)를 다시 4축(fwd/sway/yaw/heave)으로 역변환 후
+  MuJoCo 내부 믹서에서 재믹싱하는 "더블 믹싱" 구조.
+
+2) 조치
+- `mujoco/uuv_mujoco/v2.2/ros2_bridge.py`
+  - SITL raw servo 콜백 경로 추가:
+    - `set_sitl_servo_handler(callback, axis_control=...)`
+    - `axis_control=False`면 축 역변환을 건너뛰고 raw PWM만 전달.
+  - 디버그 로그 추가: `SITL servo pwm[1..8]=...`
+- `mujoco/uuv_mujoco/v2.2/run_urdf_full.py`
+  - 신규 CLI:
+    - `--sitl-direct-thrusters` / `--no-sitl-direct-thrusters`
+    - `--sitl-servo-map`
+    - `--sitl-servo-signs`
+  - 기본값: SITL에서 direct-thruster 활성.
+  - `run_step()`에서 SITL direct 모드면
+    - 서보 PWM -> thruster target 직접 반영
+    - 기존 축 기반 믹싱 경로 우회.
+- 문서 업데이트
+  - `README.md`, `mujoco/uuv_mujoco/v2.2/README.md`에 direct-thruster 사용법/튜닝법 반영.
+- `kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh`
+  - `--dual-qgc-link`의 TCP 링크를 `tcpclient`에서 `tcp:5760 (server)`로 수정.
+  - QGC가 TCP 서버를 열지 않아도 연결 가능하도록 개선.
+
+3) 검증
+- 정적 검사:
+  - `python3 -m py_compile ros2_bridge.py run_urdf_full.py` 통과
+  - `bash -n run_ardusub_json_sitl.sh` 통과
+- 런타임 재현(Headless):
+  - `SITL control mode set: servo-direct`
+  - `direct thruster mode enabled: ch1->...`
+  - `SITL servo endpoint discovered`
+  - `SITL send ok ...` 확인.
+
+4) 메모
+- 이제 QGC 입력 이상 시 1차 점검 포인트는 `--sitl-servo-map`/`--sitl-servo-signs`.
+- 필요하면 `--no-sitl-direct-thrusters`로 레거시 축 재매핑으로 즉시 복귀 가능.
+
+==================================================================
+[2026-02-25 01:10:00 KST] 전체 스택 원커맨드 자동 실행 스크립트 추가
+==================================================================
+
+1) 요구사항
+- "MuJoCo/Python 쪽에서 바로 자동으로 올라와야 한다"는 요청 반영.
+- 수동으로 터미널 2~4개를 각각 띄우는 절차를 단일 커맨드로 통합.
+
+2) 조치
+- 신규 파일 추가: `scripts/launch_stack_auto.sh`
+  - ArduSub -> MuJoCo 순서 자동 기동
+  - 옵션으로 QGroundControl 자동 기동(`--with-qgc`)
+  - 로그를 `log/auto_stack_YYYYmmdd_HHMMSS/`에 저장
+  - `Ctrl+C` 시 스크립트가 실행한 프로세스 정리 종료
+  - 지원 옵션:
+    - `--headless`
+    - `--no-images`
+    - `--no-wipe`
+    - `--sitl-debug`
+    - `--frame <vectored|vectored_6dof>`
+- 문서 반영: `README.md`
+  - "4.0 원커맨드 자동 실행" 섹션 추가
+  - 실행/옵션/로그 위치 설명 추가
+
+3) 검증
+- `bash -n scripts/launch_stack_auto.sh` 통과
+- `./scripts/launch_stack_auto.sh --help` 출력 확인
+
+4) 메모
+- QGC 자동 연결 자체는 QGC 내부 Comm Link 설정/자동연결 옵션 영향을 받음.
+- 본 스크립트는 연결에 필요한 포트 노출과 실행 순서를 고정해 재현성을 높임.
+
+==================================================================
+[2026-02-25 01:20:00 KST] 조이스틱 앞/뒤/좌/우 자동 반응 개선(프레임 기본값 정합)
+==================================================================
+
+1) 문제 정리
+- 사용자는 "실행 자동"보다 "조이스틱 방향(앞/뒤/좌/우) 자동 정합"을 요구.
+- 기본 프레임이 `vectored`(6모터)인데 direct-thruster 예시/기본맵이 8채널 기준이면
+  일부 채널이 비활성(0)로 들어와 반응이 비정상적으로 느껴질 수 있음.
+
+2) 조치
+- `run_urdf_full.py`
+  - `--sitl-servo-map` 기본값을 8채널 -> 6채널로 조정:
+    - `yaw_rf,yaw_lf,yaw_rr,yaw_lr,ver_rf,ver_lf`
+  - `--sitl-servo-signs` 기본값도 6개로 조정.
+- 문서(`README.md`, `mujoco/uuv_mujoco/v2.2/README.md`)
+  - 기본 `vectored`는 6채널 사용으로 명시.
+  - `vectored_6dof`에서만 8채널 맵 사용하도록 구분.
+
+3) 기대 효과
+- 별도 수동 맵핑 없이 QGC 조이스틱의 기본 앞/뒤/좌/우 반응이 더 일관되게 동작.
+- 8채널 기체/프레임을 쓸 때만 명시적으로 8채널 맵을 주면 됨.
+
+==================================================================
+[2026-02-24 22:35:00 KST] QGC 조이스틱 뒤죽박죽/회전 불능 문제 핵심 수정(역믹서 자동화)
+==================================================================
+
+1) 문제
+- 기존 direct-thruster 고정 채널 매핑은 ArduSub 프레임(`vectored`, `vectored_6dof`)과
+  MuJoCo 쓰러스터 기하가 조금만 어긋나도 조작감이 붕괴됨.
+- 결과적으로 앞/뒤/옆/회전이 직관과 다르게 반응하고, 프레임 전환 시 재튜닝이 반복됨.
+
+2) 이번 수정
+- `mujoco/uuv_mujoco/v2.2/run_urdf_full.py`
+  - 신규 옵션:
+    - `--sitl-mixer-frame {auto|vectored|vectored_6dof}`
+  - `--sitl-servo-map auto`일 때 동작을 direct 채널맵이 아니라 **ArduSub 믹서 역추정 모드**로 변경.
+    - ArduSub PWM(servo 1..N) -> (roll,pitch,yaw,throttle,forward,lateral) 역복원
+    - 복원된 명령을 MuJoCo 수평/수직 allocator에 재할당
+    - heave/roll/pitch까지 포함해 6DOF 제어 의미를 보존
+  - `--sitl-servo-scale`를 역믹서 출력에도 적용(감도 조절 통일).
+  - `auto` 프레임 감지:
+    - ch7/ch8 비활성(0/65535) 패턴이면 `vectored` 고정
+    - ch7/ch8 유의미한 출력이 보이면 `vectored_6dof`로 고정
+  - 디버그 확장:
+    - `--sitl-command-debug` 시 `SITL servo pwm[1..8]` + 역믹싱 결과 동시 출력.
+- 수직 allocator 확장:
+  - 토크 기반 `vert_pinv`(기존 안정화용) 유지
+  - 정규화 명령 기반 `vert_att_pinv` 추가(역믹서 roll/pitch 분배용)
+
+3) 문서 반영
+- `README.md`
+  - 터미널1 권장 프레임을 `vectored_6dof`로 상향
+  - MuJoCo 실행 기본 권장을 `--sitl-servo-map auto` 역믹서 모드로 변경
+- `mujoco/uuv_mujoco/v2.2/README.md`
+  - QGC 입력 조정 섹션을 역믹서 기준으로 정리
+
+4) 검증
+- 정적 검사:
+  - `python3 -m py_compile run_urdf_full.py` 통과
+  - `python3 -m py_compile ros2_bridge.py` 통과
+  - `bash -n launch_competition_sim.sh` 통과
+- 런타임 스모크:
+  - headless SITL 실행 시 `mixer-inverse mode enabled` 확인
+  - UDP 서보 패킷 주입 테스트에서 `mixer decode [vectored] ...` 로그 확인
+  - 예전 `name 'sitl_*' is not defined` 계열 런타임 오류 없음
+
+==================================================================
+[2026-02-24 22:45:00 KST] 기본 프레임 상향(vectored_6dof)으로 초기 셋업 혼선 축소
+==================================================================
+
+1) 조치
+- `kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh`
+  - 기본 `FRAME`을 `vectored` -> `vectored_6dof`로 변경
+  - `--help`의 기본 프레임 설명도 동일하게 수정
+- `scripts/launch_stack_auto.sh`
+  - 자동 실행 기본 프레임을 `vectored_6dof`로 변경
+  - 도움말 문구 동기화
+
+2) 기대 효과
+- 사용자가 프레임 옵션을 안 넣고 실행해도 8쓰러스터 모델과 기본 정합이 맞아짐.
+- "채널 7/8 비활성로 인한 조작 불균형" 재발 가능성 감소.
+
+==================================================================
+[2026-02-24 23:00:00 KST] 제어 불능 재발 대응: SITL 안정화 파라미터 + 중립 PWM 경고 추가
+==================================================================
+
+1) 재발 증상
+- 사용자 환경에서 QGC 연결은 되어 보이는데 실제 기체 반응이 없거나 뒤죽박죽.
+- 내부 재현 시 MuJoCo가 수신한 서보 값이 장시간 `1500` 고정(중립)인 케이스 확인.
+
+2) 조치
+- `kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh`
+  - SITL 기본 파라미터 추가:
+    - `FS_GCS_ENABLE=0`
+    - `ARMING_CHECK=0`
+    - `EK3_IMU_MASK=1`
+    - `INS_USE2=0`, `INS_USE3=0`
+    - `COMPASS_USE2=0`, `COMPASS_USE3=0`
+  - 목적:
+    - EKF lane switch/다중 IMU, compass 전환으로 인한 불안정 감소
+    - SITL 부팅 후 arm/수동 입력 테스트 재현성 향상
+- `mujoco/uuv_mujoco/v2.2/ros2_bridge.py`
+  - SITL 서보 패킷이 장시간 중립(1500 근처)일 때 명시 경고 출력:
+    - `SITL servo stream is neutral (all near 1500). Check: vehicle ARM state, QGC joystick enabled, MANUAL mode.`
+  - 연결은 됐지만 제어가 안 들어오는 상황을 즉시 식별 가능하게 개선
+- 문서 반영:
+  - `README.md`, `mujoco/uuv_mujoco/v2.2/README.md`에 위 안정화 파라미터 자동 적용 사실 명시
+
+3) 검증
+- `bash -n kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh` 통과
+- `python3 -m py_compile mujoco/uuv_mujoco/v2.2/ros2_bridge.py` 통과
+- 중립 PWM 주입 테스트에서 경고 로그 출력 확인
+
+==================================================================
+[2026-02-24 23:25:00 KST] 중립 PWM(1500 고정) 재발 대응: 중복 프로세스 차단 + 강제 정리 플로우 추가
+==================================================================
+
+1) 재발 증상/원인 정리
+- 로그상 MuJoCo bridge는 SITL 패킷 수신 중인데 PWM이 계속 1500 유지.
+- 환경 점검 결과 동일 포트(9002/14550)를 사용하는 ArduSub/MuJoCo 프로세스가 중복 실행된 상태 확인.
+- 이 상태에서는 QGC 조이스틱 입력이 정상 전달되지 않거나, 전달되어도 다른 인스턴스로 흘러 제어 불능처럼 보임.
+
+2) 조치
+- `kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh`
+  - 기본 `--dual-qgc-link`를 활성 상태로 변경(UDP 14550 + TCP 5760 동시 노출).
+  - 신규 옵션: `--no-dual-qgc-link`, `--force-clean`.
+  - 실행 전 기존 ArduSub/SITL 프로세스 자동 탐지.
+    - 기본: 중복 발견 시 에러로 중단(명확한 정리 명령 출력).
+    - `--force-clean`: 기존 PID 강제 정리 후 단일 인스턴스로 시작.
+- `mujoco/uuv_mujoco/v2.2/launch_competition_sim.sh`
+  - 신규 옵션: `--force-clean`.
+  - 기존 `run_urdf_full.py --scene competition_scene.xml` 중복 실행 감지/차단.
+  - `--force-clean` 사용 시 기존 MuJoCo 런타임 정리 후 재시작.
+- 신규 스크립트: `scripts/stack_reset.sh`
+  - ArduSub + MuJoCo 관련 프로세스를 일괄 정리.
+  - 옵션 `--with-qgc-stop`으로 QGC까지 종료 가능.
+  - 정리 후 관련 프로세스/포트 상태 출력.
+- `scripts/launch_stack_auto.sh`
+  - 기본 동작으로 `--force-clean` 경로 사용(중복 인스턴스 자동 회피).
+  - `--no-force-clean` 옵션 추가.
+- `scripts/check_sitl_manual_input.py`
+  - `--strict` 추가.
+  - `armed_seen`, `rc_active_seen`, `servo_active_seen` 요약 출력.
+  - 입력 미유입 시 비정상 종료코드(2/3)로 즉시 판별 가능.
+
+3) 문서 반영
+- `README.md`
+  - 권장 실행 명령을 `--force-clean` 기반으로 갱신.
+  - `--dual-qgc-link` 기본 활성화 설명 반영.
+  - `check_sitl_manual_input.py --strict` 진단 절차 추가.
+  - `SITL servo stream is neutral` 트러블슈팅 섹션 추가.
+- `mujoco/uuv_mujoco/v2.2/README.md`
+  - 실행 예시를 `--force-clean` 기준으로 정리.
+
+4) 검증
+- `bash -n kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh` 통과
+- `bash -n mujoco/uuv_mujoco/v2.2/launch_competition_sim.sh` 통과
+- `bash -n scripts/launch_stack_auto.sh` 통과
+- `python3 -m py_compile scripts/check_sitl_manual_input.py` 통과
+- 추가 보완:
+  - `ros2_bridge.py` 경고 메시지 세분화
+    - 모두 1500 근처: 수동입력 미유입 경고
+    - 모두 0/65535: disarm/JSON 센서 스트림 이상 경고
+  - `scripts/stack_reset.sh` 종료 로직 강화
+    - TERM 후 잔존 PID는 SIGKILL로 정리
+
+==================================================================
+[2026-02-24 03:10 KST] QGC 좌/우 반전 수정 (SITL mixer-inverse lateral sign)
+==================================================================
+
+1) 증상
+- QGC Virtual Joystick 기준으로 전/후, yaw, heave는 정상이나 좌/우(sway)만 반대로 동작.
+
+2) 원인
+- `--sitl-servo-map auto` 역믹싱 경로에서 ArduSub lateral 축(+right)과
+  MuJoCo 모델 sway 축 정의가 반대인데, 부호 보정이 없었음.
+
+3) 조치
+- 파일: `mujoco/uuv_mujoco/v2.2/run_urdf_full.py`
+- 변경: `sitl_mixer_cmd["lateral"] = -cmd[5]`
+- 주석 추가로 축 방향 차이를 코드에 명시.
+
+4) 검증
+- `python3 -m py_compile mujoco/uuv_mujoco/v2.2/run_urdf_full.py` 통과.
+
+==================================================================
+[2026-02-24 03:22 KST] STABILIZE 과민/뒤집힘 완화: SITL mixer-inverse 롤/피치 감쇠 추가
+==================================================================
+
+1) 증상
+- QGC `STABILIZE` 모드 진입 시 기체가 한바퀴 뒤집히거나 과도하게 요동함.
+- 수평/수동 조작은 대체로 가능하나, 자세 보정(roll/pitch)에서 과제어 발생.
+
+2) 조치
+- 파일: `mujoco/uuv_mujoco/v2.2/run_urdf_full.py`
+  - 신규 인자 추가:
+    - `--sitl-roll-scale` (기본 `0.45`)
+    - `--sitl-pitch-scale` (기본 `0.45`)
+  - SITL mixer-inverse 경로에서 roll/pitch 명령에 개별 감쇠 적용:
+    - `roll_cmd *= sitl_roll_scale`
+    - `pitch_cmd *= sitl_pitch_scale`
+  - 시작 로그에 roll/pitch 스케일 출력 추가.
+
+3) 문서 반영
+- `README.md`
+- `mujoco/uuv_mujoco/v2.2/README.md`
+  - 예시 명령에 `--sitl-roll-scale`, `--sitl-pitch-scale` 추가
+  - STABILIZE 과민 시 값을 더 낮추는 튜닝 가이드 추가
+
+4) 검증
+- `python3 -m py_compile mujoco/uuv_mujoco/v2.2/run_urdf_full.py` 통과.
+
+==================================================================
+[2026-02-24 03:35 KST] STABILIZE 뒤집힘 + 부력 과다 동시 수정 (IMU 프레임 정합 + 질량 스케일 오류)
+==================================================================
+
+1) 원인 분석
+- `competition_scene.xml` / `urdf_full_scene.xml`의 `compiler settotalmass="10"` 때문에,
+  환경 오브젝트 전체 질량 기준으로 스케일링이 걸려 ROV 실제 질량이 `~0.45kg`로 축소됨.
+  -> 쓰러스터 대비 질량이 지나치게 작아 과격한 동작/자세 불안정 유발.
+- SITL 전송에서 quaternion은 base_link 기준인데, gyro/acc는 `imu_site` 기준(축 회전 포함) 원값 사용.
+  -> EKF에 프레임 불일치 입력이 들어가 STABILIZE에서 뒤집힘/과제어 가능.
+
+2) 조치
+- XML 수정
+  - `mujoco/uuv_mujoco/v2.2/competition_scene.xml`
+  - `mujoco/uuv_mujoco/v2.2/urdf_full_scene.xml`
+  - 변경: `<compiler ... settotalmass="10" />` -> `settotalmass` 제거
+- ROS2/SITL 브리지 수정
+  - 파일: `mujoco/uuv_mujoco/v2.2/ros2_bridge.py`
+  - `imu_site` ID 추적 추가
+  - SITL 전송 시 `gyro/acc`를 `imu_site` 축에서 `base body` 축으로 회전 변환 후 FRD 변환
+  - 결과적으로 quaternion/gyro/acc 프레임 정합 확보
+
+3) 검증
+- 컴파일/문법:
+  - `python3 -m py_compile ros2_bridge.py run_urdf_full.py` 통과
+- 질량 확인:
+  - base subtree mass: `~10.46kg` (수정 전 ~0.45kg)
+- 초기 부력 계산(sim_real, scale=0.999):
+  - weight ≈ 102.64N, buoyancy ≈ 102.54N, 순상향력 ≈ -0.10N(약간 하강)
+  - 즉 "부력이 너무 세서 계속 뜨는" 상태는 구조적으로 해소됨
+
+==================================================================
+[2026-02-25 03:45 KST] 부력 과다 최종 원인 확정 및 수정 (환경 질량 합산 버그)
+==================================================================
+
+1) 재현/로그
+- 사용자가 "여전히 부력이 너무 세다" 보고.
+- 런타임 로그/모델 질량 점검 결과:
+  - 전체 non-world 질량: `232.018kg`
+  - 실제 ROV(base_link subtree) 질량: `10.463kg`
+
+2) 확정 원인
+- `run_urdf_full.py`에서 중성부력 기준 질량을
+  `sum(model.body_mass[1:])`로 계산하고 있었음.
+- competition scene의 QR 박스/게이트/라인/부표 질량까지 포함되어
+  부력이 ROV 기준보다 과대 계산됨.
+
+3) 조치
+- 파일: `mujoco/uuv_mujoco/v2.2/run_urdf_full.py`
+  - `base_link` 기준 body subtree mass 계산 함수 추가
+  - 중성부력 계산 질량을 `vehicle_subtree_mass`로 교체
+  - 런타임 진단 로그 추가:
+    - `[physics] buoyancy mass reference: vehicle_subtree=...`
+    - `[physics] buoyancy setup: scale=..., mass=..., neutral_volume=...`
+  - 부력 즉시 튜닝용 CLI 추가:
+    - `--buoyancy-scale <value>`
+
+4) 검증
+- `python3 -m py_compile run_urdf_full.py ros2_bridge.py` 통과
+- 8초 headless 실행에서 신규 물리 로그 정상 출력 확인:
+  - `vehicle_subtree=10.463kg (all_nonworld=232.018kg)`
+  - `neutral_volume=0.01046m^3`
+
+==================================================================
+[2026-02-25 19:15 KST] 원클릭 스택 실행에 QGC 비디오 자동 브리지 연동
+==================================================================
+
+1) 요청
+- `launch_stack_auto.sh` 한 번 실행 시 ArduSub + MuJoCo + QGC뿐 아니라
+  비디오(UDP 5600)도 자동으로 계속 송출되게 통합.
+
+2) 변경
+- 복구: `mujoco/uuv_mujoco/v2.2/scripts/ros2_to_qgc_video.py`
+  - 삭제됐던 ROS2 Image -> QGC UDP H264 브리지 스크립트 복구.
+- 수정: `scripts/launch_stack_auto.sh`
+  - 기본 동작에 ROS2->QGC 비디오 브리지 자동 실행 추가
+  - 신규 옵션 `--no-video` 추가
+  - 비디오 로그 파일 추가: `video_bridge.log`
+  - 종료/모니터링에 video PID 포함
+  - `rg` 미설치 환경 대응 (`grep -E` 폴백)
+  - `set -u` 환경에서 `/opt/ros/humble/setup.bash` source 실패하던 문제 수정
+    (`set +u` 후 source, 이후 `set -u` 복구)
+
+3) 검증
+- `bash -n scripts/launch_stack_auto.sh` 통과
+- `python3 -m py_compile mujoco/uuv_mujoco/v2.2/scripts/ros2_to_qgc_video.py` 통과
+- 35초 자동 실행 테스트에서 비디오 브리지 로그 확인:
+  - `video encoder started at 640x360`
+  - `stream alive: ... frames sent` 반복
