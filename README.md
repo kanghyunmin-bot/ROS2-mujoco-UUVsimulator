@@ -50,6 +50,8 @@ cd ~/antigravity
 기본 동작:
 - ArduSub: `--wipe` + SITL 안정화 파라미터 적용 (QGC 단일 링크 기본)
 - MuJoCo: `--sitl --images --force-clean`
+  - 기본값으로 `직접 쓰러스터 매핑(ch1..8)` 적용
+  - SITL 센서 송신 주기 기본 `200Hz`
 - 비디오 브리지: `/stereo/left/image_raw -> udp://127.0.0.1:5600`
 
 자주 쓰는 옵션:
@@ -82,6 +84,17 @@ cd ~/antigravity
 ```bash
 cd ~/antigravity/mujoco/uuv_mujoco/v2.2
 ./launch_competition_sim.sh --sitl --images --force-clean
+```
+
+기본 SITL 매핑(자동 적용):
+- `ch1..8 -> yaw_rf,yaw_lf,yaw_rr,yaw_lr,ver_rf,ver_lf,ver_rr,ver_lr`
+- `--sitl-servo-signs 1,1,1,1,1,1,1,1`
+
+레거시 mixer-inverse로 강제하려면:
+
+```bash
+./launch_competition_sim.sh --sitl --images --force-clean \
+  --sitl-servo-map auto --sitl-mixer-frame vectored_6dof
 ```
 
 기본 `sim_real` 프로파일은 T200 엑셀 곡선의 `16V` 커브를 자동 사용합니다.
@@ -168,6 +181,12 @@ ros2 topic echo /dvl/velocity_raw --once
 ### `SITL servo stream is neutral (all near 1500)`
 - Arm 안 됨, Virtual Joystick 꺼짐, Manual 모드 아님, 중복 프로세스 충돌
 - `./scripts/stack_reset.sh --with-qgc-stop` 후 재실행
+
+### Stabilize에서 기울기가 더 커짐(양의 피드백처럼 보임)
+- 대부분 `모터 매핑/프레임 재구성` 불일치가 원인
+- 기본 direct-thruster 매핑을 유지하고 (`--sitl-servo-map auto` 강제하지 않기)
+- 꼭 `vectored_6dof` 프레임으로 실행:
+  `./kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh --frame vectored_6dof --force-clean`
 
 ### QGC 연결 안 됨
 - UDP 14550 링크 미설정
