@@ -30,6 +30,7 @@ _reference_src/
 *.tlog.raw
 *.parm
 eeprom.bin
+LOCAL_WORKLOG_KR.txt
 
 # Large local binaries
 QGroundControl-*.AppImage
