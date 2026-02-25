@@ -169,8 +169,14 @@ case "${QGC_LINK_MODE}" in
 esac
 
 if [[ "${FRAME}" == "vectored" ]]; then
-  echo "[warn] --frame vectored uses 6-motor mixing and can destabilize this 8-thruster MuJoCo model."
-  echo "       Recommended: --frame vectored_6dof"
+  if [[ "${AG_ALLOW_VECTORED_FRAME:-0}" != "1" ]]; then
+    echo "[error] --frame vectored is disabled for this workspace."
+    echo "        Reason: MuJoCo model uses 8-thruster layout and expects vectored_6dof mixing."
+    echo "        Use: --frame vectored_6dof"
+    echo "        Override (not recommended): AG_ALLOW_VECTORED_FRAME=1 ..."
+    exit 2
+  fi
+  echo "[warn] --frame vectored override enabled via AG_ALLOW_VECTORED_FRAME=1"
 fi
 
 if [[ "${QGC_LINK_MODE}" == "tcpclient" && "${QGC_PORT_WAS_SET}" == "0" ]]; then
