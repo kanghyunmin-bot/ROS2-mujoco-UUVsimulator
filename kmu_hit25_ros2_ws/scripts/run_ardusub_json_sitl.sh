@@ -168,6 +168,11 @@ case "${QGC_LINK_MODE}" in
     ;;
 esac
 
+if [[ "${FRAME}" == "vectored" ]]; then
+  echo "[warn] --frame vectored uses 6-motor mixing and can destabilize this 8-thruster MuJoCo model."
+  echo "       Recommended: --frame vectored_6dof"
+fi
+
 if [[ "${QGC_LINK_MODE}" == "tcpclient" && "${QGC_PORT_WAS_SET}" == "0" ]]; then
   QGC_PORT="${QGC_TCP_PORT}"
 fi
