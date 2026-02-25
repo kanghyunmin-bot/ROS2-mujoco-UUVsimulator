@@ -16,6 +16,7 @@ NO_WIPE=0
 SITL_DEBUG=0
 FRAME="vectored_6dof"
 FORCE_CLEAN=1
+DUAL_QGC_LINK=0
 VIDEO_TOPIC="/stereo/left/image_raw"
 VIDEO_HOST="127.0.0.1"
 VIDEO_PORT=5600
@@ -37,6 +38,7 @@ Options:
   --no-wipe         Keep ArduSub eeprom/params (default: wipe)
   --sitl-debug      Enable SITL command debug logs in MuJoCo bridge
   --frame <name>    ArduSub frame (default: vectored_6dof)
+  --dual-qgc-link   Enable parallel UDP+TCP QGC links (default: single link)
   --no-force-clean  Do not auto-stop existing stack processes before launch
   -h, --help        Show this help
 EOF
@@ -71,6 +73,10 @@ while [[ $# -gt 0 ]]; do
     --frame)
       FRAME="${2:-}"
       shift 2
+      ;;
+    --dual-qgc-link)
+      DUAL_QGC_LINK=1
+      shift
       ;;
     --no-force-clean)
       FORCE_CLEAN=0
@@ -160,9 +166,12 @@ wait_for_log() {
 echo "[auto] log dir: ${LOG_DIR}"
 echo "[auto] starting ArduSub..."
 
-ARDU_CMD=("${ARDU_SCRIPT}" --frame "${FRAME}" --dual-qgc-link)
+ARDU_CMD=("${ARDU_SCRIPT}" --frame "${FRAME}")
 if (( FORCE_CLEAN )); then
   ARDU_CMD+=(--force-clean)
+fi
+if (( DUAL_QGC_LINK )); then
+  ARDU_CMD+=(--dual-qgc-link)
 fi
 if (( NO_WIPE )); then
   ARDU_CMD+=(--no-wipe)

@@ -2,7 +2,8 @@
 """Check whether QGC manual input reaches ArduSub SITL.
 
 Usage:
-  python3 scripts/check_sitl_manual_input.py --listen 14550
+  python3 scripts/check_sitl_manual_input.py --mode tcp --host 127.0.0.1 --port 5760
+  python3 scripts/check_sitl_manual_input.py --mode udp --listen 14550
 
 What to look for:
   - `armed=True` and RC channel values (roll/pitch/throttle/yaw) move away from 1500
@@ -19,7 +20,11 @@ from pymavlink import mavutil
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Monitor SITL manual input flow")
-    parser.add_argument("--listen", type=int, default=14550, help="UDP listen port (default: 14550)")
+    parser.add_argument("--mode", choices=("tcp", "udp"), default="tcp", help="MAVLink transport mode")
+    parser.add_argument("--host", default="127.0.0.1", help="TCP host (default: 127.0.0.1)")
+    parser.add_argument("--port", type=int, default=5760, help="TCP port (default: 5760)")
+    parser.add_argument("--listen", type=int, default=14550, help="UDP listen port for --mode udp")
+    parser.add_argument("--hb-timeout", type=float, default=20.0, help="Heartbeat wait timeout seconds")
     parser.add_argument("--timeout", type=float, default=60.0, help="Monitoring timeout seconds")
     parser.add_argument(
         "--strict",
@@ -28,17 +33,56 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    conn = mavutil.mavlink_connection(
-        f"udpin:0.0.0.0:{int(args.listen)}",
-        source_system=255,
-        source_component=190,
-    )
-    print(f"[check] waiting heartbeat on udp:{args.listen} ...", flush=True)
-    hb = conn.wait_heartbeat(timeout=20)
+    if args.mode == "tcp":
+        endpoint = f"tcp:{args.host}:{int(args.port)}"
+    else:
+        endpoint = f"udpin:0.0.0.0:{int(args.listen)}"
+
+    try:
+        conn = mavutil.mavlink_connection(endpoint, source_system=255, source_component=190)
+    except Exception as exc:
+        print(f"[check] FAIL: cannot open MAVLink endpoint {endpoint}: {exc}", flush=True)
+        return 4
+    print(f"[check] waiting heartbeat on {endpoint} ...", flush=True)
+    hb = conn.wait_heartbeat(timeout=float(args.hb_timeout))
+    if hb is None:
+        print(
+            "[check] FAIL: heartbeat not received. "
+            "ArduSub may be down or endpoint/link is wrong.",
+            flush=True,
+        )
+        return 4
     print(
         f"[check] connected vehicle sysid={hb.get_srcSystem()} compid={hb.get_srcComponent()}",
         flush=True,
     )
+    try:
+        conn.mav.request_data_stream_send(
+            hb.get_srcSystem(),
+            hb.get_srcComponent(),
+            mavutil.mavlink.MAV_DATA_STREAM_RC_CHANNELS,
+            10,
+            1,
+        )
+        conn.mav.request_data_stream_send(
+            hb.get_srcSystem(),
+            hb.get_srcComponent(),
+            mavutil.mavlink.MAV_DATA_STREAM_EXTENDED_STATUS,
+            5,
+            1,
+        )
+        for mid in (mavutil.mavlink.MAVLINK_MSG_ID_RC_CHANNELS, mavutil.mavlink.MAVLINK_MSG_ID_SERVO_OUTPUT_RAW):
+            conn.mav.command_long_send(
+                hb.get_srcSystem(),
+                hb.get_srcComponent(),
+                mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,
+                0,
+                float(mid),
+                100000.0,  # 10 Hz
+                0, 0, 0, 0, 0,
+            )
+    except Exception:
+        pass
 
     start = time.time()
     last_print = 0.0
@@ -108,10 +152,16 @@ def main() -> int:
         if not rc_active_seen and not servo_active_seen:
             print(
                 "[check] FAIL: manual input did not change RC/SERVO. "
-                "Verify QGC Virtual Joystick enabled and mode is MANUAL.",
+                "Verify QGC Virtual Joystick enabled, MANUAL mode, and Comm Link is active.",
                 flush=True,
             )
             return 3
+        if servo_active_seen and not rc_active_seen:
+            print(
+                "[check] note: SERVO active but RC channels stayed 1500 "
+                "(normal when QGC Virtual Joystick uses MANUAL_CONTROL).",
+                flush=True,
+            )
     print("[check] done", flush=True)
     return 0
 

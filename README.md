@@ -48,7 +48,7 @@ cd ~/antigravity
 ```
 
 기본 동작:
-- ArduSub: `--dual-qgc-link` + `--wipe` + SITL 안정화 파라미터 적용
+- ArduSub: `--wipe` + SITL 안정화 파라미터 적용 (QGC 단일 링크 기본)
 - MuJoCo: `--sitl --images --force-clean`
 - 비디오 브리지: `/stereo/left/image_raw -> udp://127.0.0.1:5600`
 
@@ -144,7 +144,7 @@ ss -tapn | grep -E '5760'
 
 ```bash
 cd ~/antigravity
-python3 scripts/check_sitl_manual_input.py --listen 14550 --timeout 20 --strict
+python3 scripts/check_sitl_manual_input.py --mode tcp --host 127.0.0.1 --port 5760 --timeout 20 --strict
 ```
 
 정상 기준:

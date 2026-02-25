@@ -12,7 +12,7 @@ QGC_HOST="127.0.0.1"
 QGC_LINK_MODE="udpclient"
 QGC_TCP_PORT="5760"
 QGC_PORT_WAS_SET="0"
-DUAL_QGC_LINK="1"
+DUAL_QGC_LINK="0"
 USE_MAVPROXY="0"
 SIM_IP="127.0.0.1"
 SIM_PORT_IN="9003"
@@ -36,7 +36,7 @@ Options:
   --qgc-port <port>                  MAVLink port for --qgc-link (default: 14550 for udpclient, 5760 for tcpclient)
   --qgc-tcp-port <port>              QGC TCP port (default: 5760)
   --qgc-link <udpclient|tcpclient>   QGC serial link mode for ArduPilot (default: udpclient)
-  --dual-qgc-link                     Also open the opposite link in parallel (udp + tcp server/client pair, default: enabled)
+  --dual-qgc-link                     Also open the opposite link in parallel (udp + tcp server/client pair)
   --no-dual-qgc-link                  Disable opposite parallel link
   --use-mavproxy                      Start sim_vehicle with MAVProxy (default: disabled)
   --sim-ip <ip>                      Sim address for ArduPilot JSON (default: 127.0.0.1)
