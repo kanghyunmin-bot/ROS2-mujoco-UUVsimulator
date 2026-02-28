@@ -40,29 +40,61 @@ colcon build --symlink-install
 
 ## 4. 원커맨드 실행 (권장)
 
-아래 1줄로 ArduSub + MuJoCo + (선택)QGC + QGC 비디오 스트림까지 같이 실행합니다.
+ArduSub+MuJoCo+QGC를 한 번에 실행합니다.
 
 ```bash
 cd ~/antigravity
-./scripts/launch_stack_auto.sh --with-qgc --frame vectored_6dof
+./scripts/start_full_stack_direct.sh
 ```
 
 기본 동작:
-- ArduSub: `--wipe` + SITL 안정화 파라미터 적용 (QGC 단일 링크 기본)
-- MuJoCo: `--sitl --images --force-clean`
-  - 기본값으로 `직접 쓰러스터 매핑(ch1..8)` 적용
-  - SITL 센서 송신 주기 기본 `200Hz`
-- 비디오 브리지: `/stereo/left/image_raw -> udp://127.0.0.1:5600`
+- ArduSub: `-L RATBeach -v ArduSub -f vectored_6dof --model JSON --no-mavproxy` + 포트 14550/14551/14660 고정
+- MAVProxy: `mavproxy.py --non-interactive`로 분리 실행
+- ArduSub 내부 파라미터: `MAV_GCS_SYSID=3`, `MAV_GCS_SYSID_HI=0`
+- MuJoCo: `--sitl --images --sitl-servo-source mavlink --sitl-mavlink-endpoint udpin:0.0.0.0:14660 --force-clean`
+- QGC: `QGroundControl-x86_64.AppImage` 자동 기동
 
-자주 쓰는 옵션:
+원하면 옵션으로 제어합니다.
 
 ```bash
-./scripts/launch_stack_auto.sh --headless
-./scripts/launch_stack_auto.sh --sitl-debug
-./scripts/launch_stack_auto.sh --no-video
-./scripts/launch_stack_auto.sh --no-images
-./scripts/launch_stack_auto.sh --no-force-clean
+./scripts/start_full_stack_direct.sh --no-qgc
+./scripts/start_full_stack_direct.sh --no-video
+./scripts/start_full_stack_direct.sh --headless
 ```
+
+직접 터미널 분리 방식(디버깅용):
+
+```bash
+./scripts/stack_reset.sh --with-qgc-stop
+cd ~/antigravity/kmu_hit25_ros2_ws/ardupilot
+python3 Tools/autotest/sim_vehicle.py -L RATBeach --console --map \
+  -v ArduSub -f vectored_6dof --model JSON \
+  --out=udp:127.0.0.1:14550 \
+  --out=udp:127.0.0.1:14551 \
+  --out=udp:127.0.0.1:14660
+```
+
+터미널 2: MuJoCo
+
+```bash
+cd ~/antigravity/mujoco/uuv_mujoco/v2.2
+./launch_competition_sim.sh --sitl --images --sitl-servo-source mavlink --sitl-mavlink-endpoint udpin:0.0.0.0:14660 --force-clean
+```
+
+터미널 3: QGC
+
+```bash
+cd ~/antigravity
+./QGroundControl-x86_64.AppImage
+```
+
+터미널 4: MAVROS 상태 확인
+
+```bash
+ros2 launch mavros apm.launch fcu_url:="udp://:14551@"
+```
+
+`launch_stack_auto.sh`는 기존 통합 스크립트로 유지되지만, 연결 재현성 때문에 현재는 위 직접 실행 라인을 우선 사용합니다.
 
 종료:
 
@@ -76,7 +108,17 @@ cd ~/antigravity
 
 ```bash
 cd ~/antigravity
-./kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh --frame vectored_6dof --force-clean
+./kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh --frame vectored_6dof --force-clean --fast-response --lateral-reversed --mav-gcs-sysid 3 --mav-gcs-sysid-hi 0
+```
+
+조이스틱 축이 체감과 다르면 (Stabilize는 유지):
+
+```bash
+# 좌/우 반전 해제
+./kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh --frame vectored_6dof --force-clean --lateral-normal
+
+# 필요 시 전/후, yaw, throttle도 개별 반전
+./kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh --frame vectored_6dof --force-clean --forward-reversed --yaw-reversed
 ```
 
 터미널 2: MuJoCo + SITL 브리지
@@ -88,7 +130,9 @@ cd ~/antigravity/mujoco/uuv_mujoco/v2.2
 
 기본 SITL 매핑(자동 적용):
 - `ch1..8 -> yaw_rf,yaw_lf,yaw_rr,yaw_lr,ver_rf,ver_lf,ver_rr,ver_lr`
-- `--sitl-servo-signs 1,1,1,1,1,1,1,1`
+- `--sitl-servo-signs=1,1,1,1,-1,-1,-1,-1`  # ArduSub VECTORED_6DOF 모터팩터와 일치
+- SITL 서보 입력: `SERVO_OUTPUT_RAW (MAVLink, udpin:0.0.0.0:14660)`
+- SITL 센서 입력: `UDP JSON (9003)`  # ArduSub 외부물리 입력 경로는 JSON 유지
 
 레거시 mixer-inverse로 강제하려면:
 
@@ -108,6 +152,14 @@ cd ~/antigravity/mujoco/uuv_mujoco/v2.2
 
 ```bash
 ./launch_competition_sim.sh --sitl --images --force-clean --buoyancy-scale 0.98
+```
+
+조작 응답을 더 빠르게 하려면(입력 필터 오버라이드):
+
+```bash
+cd ~/antigravity/mujoco/uuv_mujoco/v2.2
+ROS2_UUV_CMD_DEADBAND=0.01 ROS2_UUV_CMD_SLEW_RATE=40 ROS2_UUV_CMD_TIMEOUT_S=0.35 \
+./launch_competition_sim.sh --sitl --images --force-clean
 ```
 
 터미널 3(선택): ROS2 제어 패키지
@@ -149,15 +201,14 @@ Video:
 포트 점검:
 
 ```bash
-ss -uapn | grep -E '9002|9003|14550|5600'
-ss -tapn | grep -E '5760'
+ss -uapn | grep -E '9002|9003|14550|14551|14660|5600'
 ```
 
 수동 입력 유입 점검:
 
 ```bash
 cd ~/antigravity
-python3 scripts/check_sitl_manual_input.py --mode tcp --host 127.0.0.1 --port 5760 --timeout 20 --strict
+python3 scripts/check_sitl_manual_input.py --mode udp --listen 14550 --timeout 20 --strict
 ```
 
 정상 기준:
