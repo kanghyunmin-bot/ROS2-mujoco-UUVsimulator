@@ -1,32 +1,64 @@
 # AntiGravity UUV Integration Workspace
 
-MuJoCo + ArduSub(SITL) + ROS2 + QGroundControl 통합 테스트 워크스페이스입니다.
+MuJoCo + ArduSub(SITL) + ROS2 + QGroundControl(QGC) 통합 시뮬레이션 워크스페이스입니다.
 
-핵심 목표:
-- MuJoCo 수중 물리/센서 시뮬레이션
-- ArduSub(Pixhawk4 SITL) 제어 루프 연동
-- ROS2 패키지(MAVROS 포함) 통신 검증
-- QGC 수동 조작 + 영상 확인
+이 저장소는 `루트 저장소 + 서브모듈(mujoco, ardupilot)` 구조입니다.
 
-## 1. 구성
+## 0) 먼저 설치해야 하는 외부 구성요소
 
-```text
-antigravity/
-├── kmu_hit25_ros2_ws/                 # ROS2 워크스페이스 + ArduSub 실행 스크립트
-├── mujoco/uuv_mujoco/v2.2/            # MuJoCo 시뮬레이터 + SITL/ROS2 브리지
-├── scripts/launch_stack_auto.sh       # 원커맨드 전체 실행(비디오 포함)
-├── scripts/stack_reset.sh             # 관련 프로세스 정리
-└── QGroundControl-x86_64.AppImage
-```
+이 프로젝트는 코드만으로 완전 실행되지 않습니다. 아래 항목을 먼저 준비해야 합니다.
 
-## 2. 요구 환경
+1. ArduSub SITL 실행 환경
+- 포함 위치: `kmu_hit25_ros2_ws/ardupilot` (서브모듈)
+- 필수: 빌드/의존성 설치
 
-- Ubuntu 22.04
-- ROS 2 Humble
-- Python 3.10+
-- QGroundControl AppImage
+2. QGroundControl
+- 별도 설치 필요 (AppImage 권장)
+- 권장: Stable 버전 사용 (Daily 비권장)
 
-## 3. 초기 설치
+3. ROS2 Humble (Ubuntu 22.04 기준)
+- MuJoCo ROS2 bridge, MAVROS 연동에 사용
+
+## 1) 핵심 폴더/파일 정의
+
+### 루트 오케스트레이션
+
+- `scripts/start_full_stack_direct.sh`
+  - 표준 전체 실행 스크립트
+  - ArduSub를 `sim_vehicle.py --console --map` 형태로 실행
+  - 이후 MuJoCo + Video Bridge + QGC를 순차 기동
+- `scripts/launch_stack_auto.sh`
+  - 자동 실행 스크립트 (옵션형)
+  - `run_ardusub_json_sitl.sh`와 연동하여 readiness 체크 수행
+- `scripts/stack_reset.sh`
+  - 스택 관련 프로세스 정리, 포트 충돌 해소
+- `scripts/check_sitl_manual_input.py`
+  - heartbeat/manual 입력 검증 스크립트
+
+### ArduSub/SITL 쪽
+
+- `kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh`
+  - ArduSub SITL 실행 래퍼
+  - 포트/heartbeat/readiness 점검 포함
+
+### MuJoCo 시뮬레이터 쪽
+
+- `mujoco/uuv_mujoco/v2.2/launch_competition_sim.sh`
+  - v2.2 실행 엔트리
+  - SITL direct-thruster/MAVLink 입력 옵션 처리
+- `mujoco/uuv_mujoco/v2.2/run_urdf_full.py`
+  - 메인 런타임 루프(물리, 쓰러스터, 센서, SITL/ROS2 연동)
+- `mujoco/uuv_mujoco/v2.2/ros2_bridge.py`
+  - SITL JSON 송신 + MAVLink SERVO 수신 + ROS2 publish/subscribe
+  - IMU/DVL/Depth/카메라 브리지 핵심
+- `mujoco/uuv_mujoco/v2.2/competition_scene.xml`
+  - 로봇/센서/쓰러스터/환경 씬 정의
+- `mujoco/uuv_mujoco/v2.2/sim_profiles.json`
+  - 물리 프로파일(sim_real/sim_fast 등)
+- `mujoco/uuv_mujoco/v2.2/thruster_tune.json`
+  - 쓰러스터 튜닝 파라미터
+
+## 2) 초기 설치 (처음 1회)
 
 ```bash
 cd ~/antigravity/kmu_hit25_ros2_ws
@@ -38,227 +70,132 @@ rosdep install --from-paths src --ignore-src -r -y
 colcon build --symlink-install
 ```
 
-## 4. 원커맨드 실행 (권장)
-
-ArduSub+MuJoCo+QGC를 한 번에 실행합니다.
+QGroundControl(AppImage) 준비:
 
 ```bash
 cd ~/antigravity
+chmod +x QGroundControl*.AppImage
+```
+
+## 3) 표준 실행 (권장)
+
+```bash
+cd ~/antigravity
+./scripts/stack_reset.sh --with-qgc-stop
 ./scripts/start_full_stack_direct.sh
 ```
 
-기본 동작:
-- ArduSub: `-L RATBeach -v ArduSub -f vectored_6dof --model JSON --no-mavproxy` + 포트 14550/14551/14660 고정
-- MAVProxy: `mavproxy.py --non-interactive`로 분리 실행
-- ArduSub 내부 파라미터: `MAV_GCS_SYSID=3`, `MAV_GCS_SYSID_HI=0`
-- MuJoCo: `--sitl --images --sitl-servo-source mavlink --sitl-mavlink-endpoint udpin:0.0.0.0:14660 --force-clean`
-- QGC: `QGroundControl-x86_64.AppImage` 자동 기동
+이 경로는 내부적으로 다음 흐름을 사용합니다.
 
-원하면 옵션으로 제어합니다.
+1. ArduSub: `sim_vehicle.py -L RATBeach --console --map -v ArduSub -f vectored_6dof --model JSON`
+2. 출력: `14550(QGC)`, `14551(MAVROS)`, `14660(MAVLink SERVO)`
+3. MuJoCo: `launch_competition_sim.sh --sitl --images --sitl-servo-source mavlink`
+4. QGC 자동 실행(옵션)
 
-```bash
-./scripts/start_full_stack_direct.sh --no-qgc
-./scripts/start_full_stack_direct.sh --no-video
-./scripts/start_full_stack_direct.sh --headless
-```
+## 4) 수동 분리 실행 (디버깅 표준)
 
-직접 터미널 분리 방식(디버깅용):
+터미널 1: ArduSub SITL
 
 ```bash
-./scripts/stack_reset.sh --with-qgc-stop
 cd ~/antigravity/kmu_hit25_ros2_ws/ardupilot
 python3 Tools/autotest/sim_vehicle.py -L RATBeach --console --map \
   -v ArduSub -f vectored_6dof --model JSON \
   --out=udp:127.0.0.1:14550 \
   --out=udp:127.0.0.1:14551 \
-  --out=udp:127.0.0.1:14660
+  --out=udp:127.0.0.1:14660 \
+  --out=tcpin:0.0.0.0:5773 \
+  -P MAV_GCS_SYSID=1 -P MAV_GCS_SYSID_HI=255
 ```
 
 터미널 2: MuJoCo
 
 ```bash
 cd ~/antigravity/mujoco/uuv_mujoco/v2.2
-./launch_competition_sim.sh --sitl --images --sitl-servo-source mavlink --sitl-mavlink-endpoint udpin:0.0.0.0:14660 --force-clean
+./launch_competition_sim.sh --sitl --images \
+  --sitl-servo-source mavlink \
+  --sitl-mavlink-endpoint udpin:0.0.0.0:14660 \
+  --sitl-servo-map "yaw_rr,yaw_lr,yaw_rf,yaw_lf,ver_lf,ver_rf,ver_lr,ver_rr" \
+  --sitl-servo-signs=1,1,1,1,1,1,1,1 \
+  --force-clean
 ```
 
 터미널 3: QGC
 
 ```bash
 cd ~/antigravity
-./QGroundControl-x86_64.AppImage
+./QGroundControl*.AppImage
 ```
 
-터미널 4: MAVROS 상태 확인
+## 5) 포트/통신 맵
 
-```bash
-ros2 launch mavros apm.launch fcu_url:="udp://:14551@"
-```
+- `14550/udp`: QGC 링크
+- `14551/udp`: MAVROS/보조 GCS 링크
+- `14660/udp`: SERVO_OUTPUT_RAW (ArduSub -> MuJoCo)
+- `9002/udp`: SITL JSON servo endpoint(MuJoCo 수신)
+- `9003/udp`: SITL JSON sensor endpoint(ArduSub 수신)
+- `5600/udp`: QGC 비디오 스트림
+- `5773/tcp`: QGC TCP 링크(선택)
 
-`launch_stack_auto.sh`는 기존 통합 스크립트로 유지되지만, 연결 재현성 때문에 현재는 위 직접 실행 라인을 우선 사용합니다.
+## 6) QGroundControl 기본 설정
 
-종료:
+1. Firmware: `ArduPilot`
+2. Vehicle: `Submarine`
+3. Comm Link:
+- 기본은 UDP `14550` 사용
+- 필요 시 TCP `127.0.0.1:5773` 추가 가능
+4. Video:
+- UDP h264
+- Port `5600`
 
-```bash
-./scripts/stack_reset.sh --with-qgc-stop
-```
-
-## 5. 수동 실행 (디버깅용)
-
-터미널 1: ArduSub
-
-```bash
-cd ~/antigravity
-./kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh --frame vectored_6dof --force-clean --fast-response --lateral-reversed --mav-gcs-sysid 3 --mav-gcs-sysid-hi 0
-```
-
-조이스틱 축이 체감과 다르면 (Stabilize는 유지):
-
-```bash
-# 좌/우 반전 해제
-./kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh --frame vectored_6dof --force-clean --lateral-normal
-
-# 필요 시 전/후, yaw, throttle도 개별 반전
-./kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh --frame vectored_6dof --force-clean --forward-reversed --yaw-reversed
-```
-
-터미널 2: MuJoCo + SITL 브리지
-
-```bash
-cd ~/antigravity/mujoco/uuv_mujoco/v2.2
-./launch_competition_sim.sh --sitl --images --force-clean
-```
-
-기본 SITL 매핑(자동 적용):
-- `ch1..8 -> yaw_rf,yaw_lf,yaw_rr,yaw_lr,ver_rf,ver_lf,ver_rr,ver_lr`
-- `--sitl-servo-signs=1,1,1,1,-1,-1,-1,-1`  # ArduSub VECTORED_6DOF 모터팩터와 일치
-- SITL 서보 입력: `SERVO_OUTPUT_RAW (MAVLink, udpin:0.0.0.0:14660)`
-- SITL 센서 입력: `UDP JSON (9003)`  # ArduSub 외부물리 입력 경로는 JSON 유지
-
-레거시 mixer-inverse로 강제하려면:
-
-```bash
-./launch_competition_sim.sh --sitl --images --force-clean \
-  --sitl-servo-map auto --sitl-mixer-frame vectored_6dof
-```
-
-기본 `sim_real` 프로파일은 T200 엑셀 곡선의 `16V` 커브를 자동 사용합니다.
-필요하면 전압 커브를 명시적으로 바꿉니다:
-
-```bash
-./launch_competition_sim.sh --sitl --images --force-clean --thruster-voltage 20
-```
-
-부력이 과하면 즉시 튜닝:
-
-```bash
-./launch_competition_sim.sh --sitl --images --force-clean --buoyancy-scale 0.98
-```
-
-조작 응답을 더 빠르게 하려면(입력 필터 오버라이드):
-
-```bash
-cd ~/antigravity/mujoco/uuv_mujoco/v2.2
-ROS2_UUV_CMD_DEADBAND=0.01 ROS2_UUV_CMD_SLEW_RATE=40 ROS2_UUV_CMD_TIMEOUT_S=0.35 \
-./launch_competition_sim.sh --sitl --images --force-clean
-```
-
-터미널 3(선택): ROS2 제어 패키지
-
-```bash
-cd ~/antigravity/kmu_hit25_ros2_ws
-source /opt/ros/humble/setup.bash
-source install/setup.bash
-ros2 launch hit25_auv auv_start.launch.py \
-  use_mavros:=true use_dvl:=true use_odom2mavros:=false use_dronecan_battery:=false
-```
-
-터미널 4(선택): 비디오 브리지 수동 실행
-
-```bash
-cd ~/antigravity/mujoco/uuv_mujoco/v2.2
-source /opt/ros/humble/setup.bash
-python3 scripts/ros2_to_qgc_video.py --topic /stereo/left/image_raw --host 127.0.0.1 --port 5600
-```
-
-## 6. QGroundControl 설정
-
-Comm Link:
-- `Application Settings -> Comm Links`
-- `UDP` 링크 추가, 포트 `14550`
-
-Video:
-- `Application Settings -> General -> Video`
-- Source: `UDP h.264 Video Stream`
-- Port: `5600`
-
-추가 확인:
-- 모드 `Manual`
-- 상태 `Armed`
-- Virtual Joystick 활성
-
-## 7. 빠른 점검
+## 7) 빠른 상태 점검
 
 포트 점검:
 
 ```bash
-ss -uapn | grep -E '9002|9003|14550|14551|14660|5600'
+ss -lntup | grep -E '14550|14551|14660|9002|9003|5600|5773'
 ```
 
-수동 입력 유입 점검:
+heartbeat-only 점검:
+
+```bash
+cd ~/antigravity
+python3 scripts/check_sitl_manual_input.py --mode udp --listen 14551 --heartbeat-only --timeout 20
+```
+
+수동 입력 점검(strict):
 
 ```bash
 cd ~/antigravity
 python3 scripts/check_sitl_manual_input.py --mode udp --listen 14550 --timeout 20 --strict
 ```
 
-정상 기준:
-- `armed_seen=True`
-- `rc_active_seen=True` 또는 `servo_active_seen=True`
+## 8) 자주 발생하는 문제와 원인
 
-DVL 속도 확인:
+1. QGC Connected인데 조종 안 됨
+- ArduSub 미Arm
+- Virtual Joystick 미활성
+- MANUAL/STABILIZE 모드 미설정
+- SERVO stream neutral(1500 고정)
 
-```bash
-source /opt/ros/humble/setup.bash
-ros2 topic hz /dvl/velocity
-ros2 topic echo /dvl/velocity_raw --once
-```
-
-## 8. 자주 발생하는 문제
-
-### `[sub.parm -1] No JSON sensor message received`
-- 실행 순서/포트 불일치가 원인인 경우가 대부분
-- `stack_reset.sh` 후 다시 원커맨드 실행
-
-### `SITL servo stream is neutral (all near 1500)`
-- Arm 안 됨, Virtual Joystick 꺼짐, Manual 모드 아님, 중복 프로세스 충돌
+2. launch 스크립트가 기존 MuJoCo runtime 때문에 종료됨
+- 기존 `run_urdf_full.py` 프로세스 잔존
 - `./scripts/stack_reset.sh --with-qgc-stop` 후 재실행
 
-### Stabilize에서 기울기가 더 커짐(양의 피드백처럼 보임)
-- 대부분 `모터 매핑/프레임 재구성` 불일치가 원인
-- 기본 direct-thruster 매핑을 유지하고 (`--sitl-servo-map auto` 강제하지 않기)
-- 꼭 `vectored_6dof` 프레임으로 실행:
-  `./kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh --frame vectored_6dof --force-clean`
+3. 튜닝 탭/파라미터 일부 누락 경고
+- QGC Daily + Dev firmware 조합에서 자주 발생
+- Stable QGC 사용 권장
 
-### QGC 연결 안 됨
-- UDP 14550 링크 미설정
-- 기존 TCP 링크만 활성화된 경우 UDP 링크 추가
+## 9) 저장소 구조 주의사항
 
-### QGC 비디오가 `WAITING FOR VIDEO`
-- `--no-video`로 실행했거나 `/stereo/left/image_raw` 미발행
-- `log/auto_stack_*/video_bridge.log`에서 `stream alive` 확인
+`mujoco`는 서브모듈입니다.
 
-## 9. 참고 문서
+- 루트 커밋과 `mujoco` 커밋은 별도로 관리됩니다.
+- `mujoco` 코드 변경 후에는:
+  1. `mujoco` 저장소에서 먼저 커밋/푸시
+  2. 루트 저장소에서 서브모듈 포인터 커밋/푸시
+
+## 10) 관련 문서
 
 - `mujoco/uuv_mujoco/v2.2/README.md`
 - `mujoco/uuv_mujoco/ROS2_BRIDGE.md`
 - `kmu_hit25_ros2_ws/docs/PORTING_GUIDE.md`
-
-## 10. 저장소 주의사항
-
-현재 워크스페이스는 중첩 저장소(서브모듈 포함)를 사용합니다.
-
-- `mujoco`
-- `kmu_hit25_ros2_ws/ardupilot`
-- `kmu_hit25_ros2_ws/tools/Micro-XRCE-DDS-Gen`
-
-클론 후 동기화 시 각 하위 저장소의 브랜치/원격 상태를 함께 확인하세요.
