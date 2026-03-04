@@ -97,7 +97,7 @@ class PositionController:
         self.dvl_timeout = Duration(seconds=float(self._param("dvl_timeout", 0.7)))
         self.dvl_use_odom = bool(self._param("dvl_use_odom", True))
         self.dvl_odom_topic = self._param("dvl_odom_topic", "/dvl/odometry")
-        self.dvl_ned_to_flu = bool(self._param("dvl_ned_to_flu", True))
+        self.dvl_ned_to_flu = bool(self._param("dvl_ned_to_flu", False))
 
         self.Kp_x = self._param("Kp_x", 0.8)
         self.Kp_y = self._param("Kp_y", 0.8)

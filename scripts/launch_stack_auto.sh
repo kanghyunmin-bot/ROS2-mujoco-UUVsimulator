@@ -6,29 +6,31 @@ ARDU_SCRIPT="${ROOT_DIR}/kmu_hit25_ros2_ws/scripts/run_ardusub_json_sitl.sh"
 MUJOCO_DIR="${ROOT_DIR}/mujoco/uuv_mujoco/v2.2"
 MUJOCO_SCRIPT="${MUJOCO_DIR}/launch_competition_sim.sh"
 VIDEO_BRIDGE_SCRIPT="${MUJOCO_DIR}/scripts/ros2_to_qgc_video.py"
-QGC_APP="${ROOT_DIR}/QGroundControl-x86_64.AppImage"
+CHECKER_SCRIPT="${ROOT_DIR}/scripts/check_sitl_manual_input.py"
+QGC_APP="${QGC_APP_OVERRIDE:-${ROOT_DIR}/QGroundControl.AppImage}"
+QGC_BIN="${QGC_BIN_OVERRIDE:-$(command -v QGroundControl || true)}"
 
 WITH_QGC=0
 HEADLESS=0
 USE_IMAGES=1
 USE_VIDEO=1
-NO_WIPE=0
+NO_WIPE=1
 SITL_DEBUG=0
 MAVLINK_TO_MUJOCO=0
 MAVLINK_TO_MUJOCO_FORCED=0
 MUJOCO_MAVLINK_PORT=14660
-MUJOCO_MAVLINK_HZ=80
-MAV_GCS_SYSID=3
-MAV_GCS_SYSID_HI=0
+MUJOCO_MAVLINK_HZ=20
+MAV_GCS_SYSID=1
+MAV_GCS_SYSID_HI=255
 QGC_MAVROS_PORT=14551
 SITL_MAVLINK_TARGET_SYSID=0
 SITL_MAVLINK_TARGET_COMPID=0
-SITL_MAVLINK_SOURCE_SYSID=255
+SITL_MAVLINK_SOURCE_SYSID=200
 SITL_MAVLINK_SOURCE_COMPID=190
 FRAME="vectored_6dof"
 FORCE_CLEAN=1
 FAST_RESPONSE=1
-LATERAL_REVERSED=1
+LATERAL_REVERSED=0
 FORWARD_REVERSED=0
 YAW_REVERSED=0
 THROTTLE_REVERSED=0
@@ -58,14 +60,14 @@ Options:
   --no-video        Disable QGC UDP video bridge (default: enabled)
   --with-mavlink    Use legacy MAVLink SERVO_OUTPUT_RAW bridge (default: JSON direct)
   --mavlink-port    Port for SERVO_OUTPUT_RAW from ArduSub (default: 14660)
-  --mavlink-hz      SERVO_OUTPUT_RAW stream request rate in Hz (default: 80)
+  --mavlink-hz      SERVO_OUTPUT_RAW stream request rate in Hz (default: 20)
   --mavlink-target-sysid <0-255>    MAVLink target sysid used by MuJoCo servo listener (0=auto from heartbeat)
   --mavlink-target-compid <0-255>   MAVLink target compid used by MuJoCo servo listener (0=auto from heartbeat)
-  --mavlink-source-sysid <1-255>    MAVLink source sysid used by MuJoCo MAVLink socket (default: 255)
+  --mavlink-source-sysid <1-255>    MAVLink source sysid used by MuJoCo MAVLink socket (default: 200)
   --mavlink-source-compid <1-255>   MAVLink source compid used by MuJoCo MAVLink socket (default: 190)
-  --mav-gcs-sysid <1-255>          MAVLink ground station sysid required for manual control/failsafe (default: 3)
-  --mav-gcs-sysid-hi <0-255>       Upper GCS sysid for range acceptance (default: 0, means single id)
-  --no-wipe         Keep ArduSub eeprom/params (default: wipe)
+  --mav-gcs-sysid <1-255>          MAVLink ground station sysid required for manual control/failsafe (default: 1)
+  --mav-gcs-sysid-hi <0-255>       Upper GCS sysid for range acceptance (default: 255)
+  --no-wipe         Keep ArduSub eeprom/params (default: keep)
   --sitl-debug      Enable SITL command debug logs in MuJoCo bridge
   --frame <name>    ArduSub frame (default: vectored_6dof)
   --no-fast-response Disable ArduSub fast-response tuning
@@ -73,7 +75,7 @@ Options:
   --lateral-reversed Reverse lateral axis
   --forward-reversed Reverse forward axis
   --yaw-reversed    Reverse yaw axis
-  --throttle-reversed Reverse throttle axis
+  --throttle-reversed Reverse throttle axis (default)
   --rcmap-forward <1-16>   Override ArduSub RCMAP_FORWARD (default: 5)
   --rcmap-lateral <1-16>   Override ArduSub RCMAP_LATERAL (default: 6)
   --rcmap-roll <1-16>      Override ArduSub RCMAP_ROLL (default: 1)
@@ -348,6 +350,62 @@ wait_for_log() {
   done
 }
 
+collect_ardusub_pids() {
+  pgrep -f "${ROOT_DIR}/kmu_hit25_ros2_ws/ardupilot/build/sitl/bin/ardusub" || true
+}
+
+print_sitl_start_failure() {
+  echo "[auto] SITL readiness failed. diagnostics:"
+  echo "  log: ${ARDU_LOG}"
+  echo "  cmd: ${ARDU_CMD[*]}"
+  echo "  pgrep:"
+  pgrep -af "Tools/autotest/sim_vehicle.py|/build/sitl/bin/ardusub|mavproxy.py" || true
+  echo "  ports:"
+  ss -lntup 2>/dev/null | grep -E "5760|5763|5773|14551|14660" || true
+  echo "[auto] quick checks:"
+  echo "  tail -n 120 ${ARDU_LOG}"
+  echo "  ss -lntup | grep -E '5760|5763|5773|14551|14660'"
+  echo "  pgrep -af 'sim_vehicle.py|mavproxy.py|/build/sitl/bin/ardusub'"
+}
+
+wait_sitl_heartbeat_ready() {
+  local timeout_s="${1:-60}"
+  local start now
+  start="$(date +%s)"
+  while true; do
+    if python3 "${CHECKER_SCRIPT}" --mode udp --listen "${QGC_MAVROS_PORT}" --heartbeat-only --hb-timeout 1.5 --timeout 2.0 >/dev/null 2>&1; then
+      return 0
+    fi
+    now="$(date +%s)"
+    if (( now - start >= timeout_s )); then
+      return 1
+    fi
+    sleep 0.4
+  done
+}
+
+start_qgc() {
+  local qgc_app="${QGC_APP}"
+  if [[ ! -x "${qgc_app}" ]] && [[ -x "${ROOT_DIR}/QGroundControl-x86_64.AppImage" ]]; then
+    qgc_app="${ROOT_DIR}/QGroundControl-x86_64.AppImage"
+  fi
+
+  if [[ -x "${qgc_app}" ]]; then
+    echo "[auto] starting QGroundControl (AppImage extract-and-run)..."
+    "${qgc_app}" --appimage-extract-and-run >"${QGC_LOG}" 2>&1 &
+    QGC_PID=$!
+    return 0
+  fi
+
+  if [[ -n "${QGC_BIN}" ]] && [[ -x "${QGC_BIN}" ]]; then
+    echo "[auto] starting QGroundControl (system binary: ${QGC_BIN})..."
+    "${QGC_BIN}" >"${QGC_LOG}" 2>&1 &
+    QGC_PID=$!
+    return 0
+  fi
+  return 1
+}
+
 echo "[auto] log dir: ${LOG_DIR}"
 echo "[auto] starting ArduSub..."
 
@@ -405,14 +463,19 @@ fi
     --mav-gcs-sysid-hi "${MAV_GCS_SYSID_HI}"
   )
 
-"${ARDU_CMD[@]}" >"${ARDU_LOG}" 2>&1 &
-AP_PID=$!
-
-if wait_for_log "${ARDU_LOG}" "RiTW: Starting ArduSub|ArduPilot Ready|ArduSub V" 25; then
-  echo "[auto] ArduSub start detected."
-else
-  echo "[auto] warning: ArduSub ready log not found yet (continuing)."
+if ! AG_SITL_BG_MODE=1 SITL_RITW_TERMINAL="bash -lc" AG_SITL_LOG_PATH="${ARDU_LOG}" "${ARDU_CMD[@]}" >"${ARDU_LOG}" 2>&1; then
+  echo "[auto] error: ArduSub startup/readiness failed."
+  print_sitl_start_failure
+  exit 1
 fi
+
+AP_PID="$(collect_ardusub_pids | head -n1 || true)"
+if [[ -z "${AP_PID}" ]]; then
+  echo "[auto] error: readiness passed but ardusub pid not found."
+  print_sitl_start_failure
+  exit 1
+fi
+echo "[auto] ArduSub readiness passed (pid=${AP_PID})."
 
 echo "[auto] starting MuJoCo..."
 MUJOCO_CMD=("${MUJOCO_SCRIPT}" --sitl)
@@ -433,8 +496,8 @@ if (( MAVLINK_TO_MUJOCO )); then
     --sitl-mavlink-target-compid "${SITL_MAVLINK_TARGET_COMPID}"
     --sitl-mavlink-source-sysid "${SITL_MAVLINK_SOURCE_SYSID}"
     --sitl-mavlink-source-compid "${SITL_MAVLINK_SOURCE_COMPID}"
-    --sitl-servo-map "yaw_rf,yaw_lf,yaw_rr,yaw_lr,ver_rf,ver_lf,ver_rr,ver_lr"
-    --sitl-servo-signs=1,1,1,1,-1,-1,-1,-1
+    --sitl-servo-map "yaw_rr,yaw_lr,yaw_rf,yaw_lf,ver_lf,ver_rf,ver_lr,ver_rr"
+    --sitl-servo-signs=1,1,1,1,1,1,1,1
   )
   echo "[auto] MuJoCo MAVLink target sysid/compid=${SITL_MAVLINK_TARGET_SYSID}/${SITL_MAVLINK_TARGET_COMPID}, source sysid/compid=${SITL_MAVLINK_SOURCE_SYSID}/${SITL_MAVLINK_SOURCE_COMPID}"
 else
@@ -455,7 +518,7 @@ fi
 
 (
   cd "${MUJOCO_DIR}"
-  "${MUJOCO_CMD[@]}"
+  AG_DISABLE_QGC_VIDEO_BRIDGE=1 "${MUJOCO_CMD[@]}"
 ) >"${MUJOCO_LOG}" 2>&1 &
 MJ_PID=$!
 
@@ -463,6 +526,17 @@ if wait_for_log "${MUJOCO_LOG}" "SITL socket initialized" 20; then
   echo "[auto] MuJoCo SITL socket initialized."
 else
   echo "[auto] warning: MuJoCo SITL socket init log not found yet."
+fi
+
+if wait_sitl_heartbeat_ready 60; then
+  echo "[auto] ArduSub heartbeat on udp:${QGC_MAVROS_PORT} detected."
+else
+  echo "[auto] error: ArduSub heartbeat not detected on udp:${QGC_MAVROS_PORT} after MuJoCo startup."
+  print_sitl_start_failure
+  echo "[auto] MuJoCo diagnostics:"
+  echo "  log: ${MUJOCO_LOG}"
+  tail -n 120 "${MUJOCO_LOG}" || true
+  exit 1
 fi
 
 if (( USE_VIDEO )) && (( USE_IMAGES )); then
@@ -487,12 +561,8 @@ elif (( USE_VIDEO )); then
 fi
 
 if (( WITH_QGC )); then
-  if [[ -x "${QGC_APP}" ]]; then
-    echo "[auto] starting QGroundControl..."
-    "${QGC_APP}" >"${QGC_LOG}" 2>&1 &
-    QGC_PID=$!
-  else
-    echo "[auto] warning: QGC AppImage not executable: ${QGC_APP}"
+  if ! start_qgc; then
+    echo "[auto] warning: QGC not found. Checked system binary and ${QGC_APP}"
   fi
 fi
 

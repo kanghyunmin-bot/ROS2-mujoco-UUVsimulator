@@ -138,7 +138,7 @@ def generate_launch_description():
                 'dvl_yaw': 0.0,
                 'dvl_use_odom': True,
                 'dvl_odom_topic': '/dvl/odometry',
-                'dvl_ned_to_flu': True,
+                'dvl_ned_to_flu': False,
             }],
         ),
         Node(

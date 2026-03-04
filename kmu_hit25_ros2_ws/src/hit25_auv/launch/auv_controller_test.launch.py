@@ -151,7 +151,7 @@ def generate_launch_description():
                 'log_level': 'INFO',
                 'dvl_use_odom': True,
                 'dvl_odom_topic': '/dvl/odometry',
-                'dvl_ned_to_flu': True,
+                'dvl_ned_to_flu': False,
                 'dvl_roll': 3.14159265,
                 'dvl_pitch': 0.0,
                 'dvl_yaw': 0.0,

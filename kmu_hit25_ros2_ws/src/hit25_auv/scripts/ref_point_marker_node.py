@@ -36,7 +36,7 @@ class RefPointMarkerNode(Node):
         self.marker_topic = self.declare_parameter("marker_topic", "/ref_point_marker").value
         self.dvl_use_odom = bool(self.declare_parameter("dvl_use_odom", True).value)
         self.dvl_odom_topic = self.declare_parameter("dvl_odom_topic", "/dvl/odometry").value
-        self.dvl_ned_to_flu = bool(self.declare_parameter("dvl_ned_to_flu", True).value)
+        self.dvl_ned_to_flu = bool(self.declare_parameter("dvl_ned_to_flu", False).value)
         self.dvl_topic = self.declare_parameter("dvl_topic", "/dvl/integrated_data").value
 
         self.max_path_points = int(self.declare_parameter("max_path_points", 2000).value)

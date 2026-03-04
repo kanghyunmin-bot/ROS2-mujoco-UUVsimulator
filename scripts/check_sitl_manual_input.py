@@ -4,6 +4,7 @@
 Usage:
   python3 scripts/check_sitl_manual_input.py --mode udp --listen 14550
   python3 scripts/check_sitl_manual_input.py --mode tcp --host 127.0.0.1 --port 5760
+  python3 scripts/check_sitl_manual_input.py --mode udp --listen 14551 --heartbeat-only
 
 What to look for:
   - `armed=True` and any RC/SERVO channel values move away from 1500
@@ -43,6 +44,11 @@ def main() -> int:
     parser.add_argument("--source-compid", type=int, default=190, help="MAVLink source component id for this checker")
     parser.add_argument("--hb-timeout", type=float, default=20.0, help="Heartbeat wait timeout seconds")
     parser.add_argument("--timeout", type=float, default=60.0, help="Monitoring timeout seconds")
+    parser.add_argument(
+        "--heartbeat-only",
+        action="store_true",
+        help="Exit success once heartbeat is detected (for launcher readiness checks).",
+    )
     parser.add_argument(
         "--strict",
         action="store_true",
@@ -90,6 +96,9 @@ def main() -> int:
         f"[check] connected vehicle sysid={hb.get_srcSystem()} compid={hb.get_srcComponent()}",
         flush=True,
     )
+    if args.heartbeat_only:
+        print("[check] heartbeat-only: PASS", flush=True)
+        return 0
     try:
         conn.mav.request_data_stream_send(
             hb.get_srcSystem(),

@@ -35,7 +35,7 @@ class RovTfBroadcasterNode(Node):
         self.dvl_frame = self._param("dvl_frame", "dvl_link")
         self.dvl_use_odom = bool(self._param("dvl_use_odom", True))
         self.dvl_odom_topic = self._param("dvl_odom_topic", "/dvl/odometry")
-        self.dvl_ned_to_flu = bool(self._param("dvl_ned_to_flu", True))
+        self.dvl_ned_to_flu = bool(self._param("dvl_ned_to_flu", False))
 
         self.dvl_x = self._param("dvl_x", 0.0)
         self.dvl_y = self._param("dvl_y", 0.0)
