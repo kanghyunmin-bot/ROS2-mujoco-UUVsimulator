@@ -1,0 +1,570 @@
+{
+  "method": "Per-axis inverse dynamics least squares: M_rb*nu_dot - tau_thr = Y(theta). Positive damping/restoring signs mean force/torque opposes velocity/angle.",
+  "assumptions": {
+    "body_frame": "MuJoCo/base_link FLU convention assumed: x forward, y left, z up.",
+    "linear_velocity_source": "/dvl/twist linear velocity, interpolated and smoothed",
+    "angular_velocity_source": "/mavros/imu/data angular_velocity",
+    "attitude_source": "/mavros/imu/data orientation",
+    "thruster_source": "rc_out",
+    "rigid_body_coriolis": "not included in this first linear diagnostic fit",
+    "ellipsoid_mujoco_drag": "not directly observable as a separate regressor from the real bag; residual captures missing/nonlinear terms"
+  },
+  "bag": "bag_2026-04-01_20-08-11",
+  "window": {
+    "start_s": 0.31538208900000003,
+    "end_s": 120.31538208899997,
+    "duration_s": 119.99999999999997,
+    "dt_s": 0.05,
+    "smooth_s": 0.55,
+    "samples": 2401
+  },
+  "source_counts": {
+    "dvl": 4219,
+    "imu": 9426,
+    "rc_out": 939,
+    "rc_override": 46615,
+    "joy": 46589,
+    "pressure_depth": 943
+  },
+  "thruster_force_scale": {
+    "note": "Applied by scaling per-thruster gain_scale before computing tau_thruster.",
+    "horizontal": 0.196,
+    "vertical": 0.432
+  },
+  "velocity_signs": [
+    1.0,
+    1.0,
+    -1.0
+  ],
+  "gyro_signs": [
+    1.0,
+    1.0,
+    1.0
+  ],
+  "attitude_signs": [
+    1.0,
+    -1.0,
+    1.0
+  ],
+  "current_profile_reference": {
+    "mass_kg": 15.462736704432913,
+    "inertia_diag_kg_m2": [
+      0.4733759999999999,
+      0.37023,
+      0.7393259999999999
+    ],
+    "buoyancy_scale": 1.02,
+    "net_buoyancy_minus_weight_n": 3.0337889414097408,
+    "manual_full_heave_damping_n_per_mps": 58.08,
+    "manual_surface_heave_damping_n_per_mps": 13.2,
+    "cob_torque_scale": 1.98,
+    "effective_cob_minus_com_z_m": 0.056999999999999995,
+    "small_angle_restoring_k_n_m_per_rad": 17.462064416302653,
+    "buoyancy_point_center_body_m": [
+      -0.0020000000000000018,
+      0.00010000000000000286,
+      0.08399999999999999
+    ],
+    "note": "MuJoCo built-in ellipsoid fluid force is active but not exposed as an explicit coefficient here."
+  },
+  "fits": {
+    "surge_x": {
+      "count": 1639,
+      "status": "ok",
+      "coefficients": {
+        "added_mass_u_dot": 27.35269662843161,
+        "linear_damping_u": 32.58840185005083,
+        "quadratic_damping_u": 166.74260996063848,
+        "bias_force_x": -1.0818763710340347
+      },
+      "rmse": 7.8922875151135665,
+      "mae": 5.003837977224027,
+      "bias": -6.600886697790292e-10,
+      "r2": 0.8394437910742691,
+      "target_rms": 25.69134940483448,
+      "target_std": 19.696512938546803,
+      "condition_number_scaled": 8.790825918065387,
+      "time_start_s": 38.41538208899999,
+      "time_end_s": 120.31538208899997,
+      "kept_columns": [
+        "added_mass_u_dot",
+        "linear_damping_u",
+        "quadratic_damping_u",
+        "bias_force_x"
+      ]
+    },
+    "sway_y": {
+      "count": 1639,
+      "status": "ok",
+      "coefficients": {
+        "added_mass_v_dot": -6.063972157565172,
+        "linear_damping_v": 6.799104883826548,
+        "quadratic_damping_v": 59.104424164944774,
+        "bias_force_y": 1.2011213924600659
+      },
+      "rmse": 1.8146546452471577,
+      "mae": 1.435003399270534,
+      "bias": 7.328381882079472e-10,
+      "r2": 0.13018663865713398,
+      "target_rms": 2.272973084542495,
+      "target_std": 1.9457227079801283,
+      "condition_number_scaled": 5.035387763136921,
+      "time_start_s": 38.41538208899999,
+      "time_end_s": 120.31538208899997,
+      "kept_columns": [
+        "added_mass_v_dot",
+        "linear_damping_v",
+        "quadratic_damping_v",
+        "bias_force_y"
+      ]
+    },
+    "heave_z": {
+      "count": 1639,
+      "status": "ok",
+      "coefficients": {
+        "added_mass_w_dot": 77.74200345709968,
+        "linear_damping_w": 107.88364487595605,
+        "quadratic_damping_w": 75.38930092426142,
+        "net_buoyancy_minus_weight": 12.217441392468114,
+        "depth_stiffness_about_mean": -39.08488258384025
+      },
+      "rmse": 7.048319648292644,
+      "mae": 4.39581772522052,
+      "bias": 7.454201512300731e-09,
+      "r2": 0.5434093480289075,
+      "target_rms": 13.623462417183099,
+      "target_std": 10.430907248707626,
+      "condition_number_scaled": 4.859624976775854,
+      "time_start_s": 38.41538208899999,
+      "time_end_s": 120.31538208899997,
+      "kept_columns": [
+        "added_mass_w_dot",
+        "linear_damping_w",
+        "quadratic_damping_w",
+        "net_buoyancy_minus_weight",
+        "depth_stiffness_about_mean"
+      ]
+    },
+    "roll_k": {
+      "count": 2401,
+      "status": "ok",
+      "coefficients": {
+        "added_inertia_p_dot": 4.8101464215024805,
+        "linear_damping_p": 3.586146173210218,
+        "quadratic_damping_p": 5.805023993519583,
+        "restoring_roll": 3.5054770371157473,
+        "bias_torque_roll": -0.8087045902386285
+      },
+      "rmse": 2.2649120175109703,
+      "mae": 1.1812704158088645,
+      "bias": -3.368195584997947e-10,
+      "r2": 0.06596930137725576,
+      "target_rms": 2.4420037091883118,
+      "target_std": 2.3435313143570986,
+      "condition_number_scaled": 4.6399382973133845,
+      "time_start_s": 0.31538208900000003,
+      "time_end_s": 120.31538208899997,
+      "kept_columns": [
+        "added_inertia_p_dot",
+        "linear_damping_p",
+        "quadratic_damping_p",
+        "restoring_roll",
+        "bias_torque_roll"
+      ]
+    },
+    "pitch_m": {
+      "count": 2401,
+      "status": "ok",
+      "coefficients": {
+        "added_inertia_q_dot": 1.7212822160115662,
+        "linear_damping_q": -3.0490198029805424,
+        "quadratic_damping_q": 5.425230208764868,
+        "restoring_pitch": 0.41082331249705917,
+        "bias_torque_pitch": 0.6058676807359178
+      },
+      "rmse": 1.72282124562483,
+      "mae": 1.2431568551659335,
+      "bias": 2.5233975009489333e-10,
+      "r2": 0.032495992186975076,
+      "target_rms": 1.8595613015335297,
+      "target_std": 1.7515148848718174,
+      "condition_number_scaled": 4.9735734160266105,
+      "time_start_s": 0.31538208900000003,
+      "time_end_s": 120.31538208899997,
+      "kept_columns": [
+        "added_inertia_q_dot",
+        "linear_damping_q",
+        "quadratic_damping_q",
+        "restoring_pitch",
+        "bias_torque_pitch"
+      ]
+    },
+    "yaw_n": {
+      "count": 2401,
+      "status": "ok",
+      "coefficients": {
+        "added_inertia_r_dot": 2.309696459165211,
+        "linear_damping_r": 6.082057041125224,
+        "quadratic_damping_r": 0.03169432086448284,
+        "bias_torque_yaw": -0.2669782333523181
+      },
+      "rmse": 1.8875765076921411,
+      "mae": 1.0495147577099126,
+      "bias": -1.1119477110098863e-10,
+      "r2": 0.6409403570429678,
+      "target_rms": 3.1504913603519786,
+      "target_std": 3.150077699865851,
+      "condition_number_scaled": 5.545437174158643,
+      "time_start_s": 0.31538208900000003,
+      "time_end_s": 120.31538208899997,
+      "kept_columns": [
+        "added_inertia_r_dot",
+        "linear_damping_r",
+        "quadratic_damping_r",
+        "bias_torque_yaw"
+      ]
+    }
+  },
+  "physical_fits": {
+    "surge_x": {
+      "count": 1639,
+      "status": "ok",
+      "coefficients": {
+        "added_mass_u_dot": 27.35269662843161,
+        "linear_damping_u": 32.58840185005083,
+        "quadratic_damping_u": 166.74260996063848,
+        "bias_force_x": -1.0818763710340347
+      },
+      "rmse": 7.8922875151135665,
+      "mae": 5.003837977224027,
+      "bias": -6.600879761436556e-10,
+      "r2": 0.8394437910742691,
+      "target_rms": 25.69134940483448,
+      "target_std": 19.696512938546803,
+      "condition_number_scaled": 8.790825918065387,
+      "time_start_s": 38.41538208899999,
+      "time_end_s": 120.31538208899997,
+      "active_lower_bounds": [],
+      "kept_columns": [
+        "added_mass_u_dot",
+        "linear_damping_u",
+        "quadratic_damping_u",
+        "bias_force_x"
+      ]
+    },
+    "sway_y": {
+      "count": 1639,
+      "status": "ok",
+      "coefficients": {
+        "added_mass_v_dot": 0.0,
+        "linear_damping_v": 6.97607269590669,
+        "quadratic_damping_v": 59.21374418775686,
+        "bias_force_y": 1.1927649177409858
+      },
+      "rmse": 1.8529625610171316,
+      "mae": 1.4492848329037225,
+      "bias": 7.277396213948128e-10,
+      "r2": 0.09307495731818816,
+      "target_rms": 2.272973084542495,
+      "target_std": 1.9457227079801283,
+      "condition_number_scaled": 5.035387763136921,
+      "time_start_s": 38.41538208899999,
+      "time_end_s": 120.31538208899997,
+      "active_lower_bounds": [
+        "added_mass_v_dot"
+      ],
+      "kept_columns": [
+        "added_mass_v_dot",
+        "linear_damping_v",
+        "quadratic_damping_v",
+        "bias_force_y"
+      ]
+    },
+    "heave_z": {
+      "count": 1639,
+      "status": "ok",
+      "coefficients": {
+        "added_mass_w_dot": 77.74200345709968,
+        "linear_damping_w": 107.88364487595605,
+        "quadratic_damping_w": 75.38930092426142,
+        "net_buoyancy_minus_weight": 12.217441392468114,
+        "depth_stiffness_about_mean": -39.08488258384025
+      },
+      "rmse": 7.048319648292644,
+      "mae": 4.39581772522052,
+      "bias": 7.454201651027806e-09,
+      "r2": 0.5434093480289075,
+      "target_rms": 13.623462417183099,
+      "target_std": 10.430907248707626,
+      "condition_number_scaled": 4.859624976775854,
+      "time_start_s": 38.41538208899999,
+      "time_end_s": 120.31538208899997,
+      "active_lower_bounds": [],
+      "kept_columns": [
+        "added_mass_w_dot",
+        "linear_damping_w",
+        "quadratic_damping_w",
+        "net_buoyancy_minus_weight",
+        "depth_stiffness_about_mean"
+      ]
+    },
+    "roll_k": {
+      "count": 2401,
+      "status": "ok",
+      "coefficients": {
+        "added_inertia_p_dot": 4.8101464215024805,
+        "linear_damping_p": 3.586146173210218,
+        "quadratic_damping_p": 5.805023993519583,
+        "restoring_roll": 3.5054770371157473,
+        "bias_torque_roll": -0.8087045902386285
+      },
+      "rmse": 2.2649120175109703,
+      "mae": 1.1812704158088645,
+      "bias": -3.368195584997947e-10,
+      "r2": 0.06596930137725576,
+      "target_rms": 2.4420037091883118,
+      "target_std": 2.3435313143570986,
+      "condition_number_scaled": 4.6399382973133845,
+      "time_start_s": 0.31538208900000003,
+      "time_end_s": 120.31538208899997,
+      "active_lower_bounds": [],
+      "kept_columns": [
+        "added_inertia_p_dot",
+        "linear_damping_p",
+        "quadratic_damping_p",
+        "restoring_roll",
+        "bias_torque_roll"
+      ]
+    },
+    "pitch_m": {
+      "count": 2401,
+      "status": "ok",
+      "coefficients": {
+        "added_inertia_q_dot": 1.68336086107693,
+        "linear_damping_q": 0.0,
+        "quadratic_damping_q": 0.0,
+        "restoring_pitch": 0.5295002210124689,
+        "bias_torque_pitch": 0.6065827790973574
+      },
+      "rmse": 1.7296467165608223,
+      "mae": 1.2482542823459806,
+      "bias": 2.5263743820349636e-10,
+      "r2": 0.024814694189179143,
+      "target_rms": 1.8595613015335297,
+      "target_std": 1.7515148848718174,
+      "condition_number_scaled": 4.9735734160266105,
+      "time_start_s": 0.31538208900000003,
+      "time_end_s": 120.31538208899997,
+      "active_lower_bounds": [
+        "linear_damping_q",
+        "quadratic_damping_q"
+      ],
+      "kept_columns": [
+        "added_inertia_q_dot",
+        "linear_damping_q",
+        "quadratic_damping_q",
+        "restoring_pitch",
+        "bias_torque_pitch"
+      ]
+    },
+    "yaw_n": {
+      "count": 2401,
+      "status": "ok",
+      "coefficients": {
+        "added_inertia_r_dot": 2.309696459165211,
+        "linear_damping_r": 6.082057041125224,
+        "quadratic_damping_r": 0.03169432086448284,
+        "bias_torque_yaw": -0.2669782333523181
+      },
+      "rmse": 1.8875765076921411,
+      "mae": 1.0495147577099126,
+      "bias": -1.1119477110098863e-10,
+      "r2": 0.6409403570429678,
+      "target_rms": 3.1504913603519786,
+      "target_std": 3.150077699865851,
+      "condition_number_scaled": 5.545437174158643,
+      "time_start_s": 0.31538208900000003,
+      "time_end_s": 120.31538208899997,
+      "active_lower_bounds": [],
+      "kept_columns": [
+        "added_inertia_r_dot",
+        "linear_damping_r",
+        "quadratic_damping_r",
+        "bias_torque_yaw"
+      ]
+    }
+  },
+  "mujoco_fluid_fits": {
+    "surge_x": {
+      "count": 1639,
+      "status": "ok",
+      "coefficients": {
+        "added_mass_u_dot": 1.3583963114472954,
+        "linear_damping_u": 3.2791726432339092,
+        "quadratic_damping_u": 126.16612905487483,
+        "bias_force_x": -0.02128419784188456
+      },
+      "rmse": 2.0576809421779134,
+      "mae": 1.016923050696741,
+      "bias": -1.299051599122364e-11,
+      "r2": 0.9599527444886594,
+      "target_rms": 12.962070536039125,
+      "target_std": 10.282332792509232,
+      "condition_number_scaled": 8.790825918065387,
+      "time_start_s": 38.41538208899999,
+      "time_end_s": 120.31538208899997,
+      "active_lower_bounds": [],
+      "kept_columns": [
+        "added_mass_u_dot",
+        "linear_damping_u",
+        "quadratic_damping_u",
+        "bias_force_x"
+      ]
+    },
+    "sway_y": {
+      "count": 1639,
+      "status": "ok",
+      "coefficients": {
+        "added_mass_v_dot": 22.18679450673962,
+        "linear_damping_v": 90.32278749585907,
+        "quadratic_damping_v": 0.0,
+        "bias_force_y": 1.558428882828851
+      },
+      "rmse": 2.8568964567897037,
+      "mae": 1.9620970387713077,
+      "bias": 9.508412485951247e-10,
+      "r2": 0.7010627516699209,
+      "target_rms": 5.330195849703806,
+      "target_std": 5.225218840734061,
+      "condition_number_scaled": 5.035387763136921,
+      "time_start_s": 38.41538208899999,
+      "time_end_s": 120.31538208899997,
+      "active_lower_bounds": [
+        "quadratic_damping_v"
+      ],
+      "kept_columns": [
+        "added_mass_v_dot",
+        "linear_damping_v",
+        "quadratic_damping_v",
+        "bias_force_y"
+      ]
+    },
+    "heave_z": {
+      "count": 1639,
+      "status": "ok",
+      "coefficients": {
+        "added_mass_w_dot": 0.001345214423635265,
+        "linear_damping_w": 16.943014855778312,
+        "quadratic_damping_w": 41.99117508241751,
+        "net_buoyancy_minus_weight": -0.4588965486430854,
+        "depth_stiffness_about_mean": 2.5904430153385185
+      },
+      "rmse": 0.7740265320615628,
+      "mae": 0.566406845938048,
+      "bias": -2.7998569309400887e-10,
+      "r2": 0.7288105051823253,
+      "target_rms": 1.6513294972237926,
+      "target_std": 1.4863442816852799,
+      "condition_number_scaled": 4.859624976775854,
+      "time_start_s": 38.41538208899999,
+      "time_end_s": 120.31538208899997,
+      "active_lower_bounds": [],
+      "kept_columns": [
+        "added_mass_w_dot",
+        "linear_damping_w",
+        "quadratic_damping_w",
+        "net_buoyancy_minus_weight",
+        "depth_stiffness_about_mean"
+      ]
+    },
+    "roll_k": {
+      "count": 1639,
+      "status": "ok",
+      "coefficients": {
+        "added_inertia_p_dot": 0.66834473591328,
+        "linear_damping_p": 5.844531084464915,
+        "quadratic_damping_p": 0.0,
+        "restoring_roll": 1.308162982754163,
+        "bias_torque_roll": -0.043029358610211656
+      },
+      "rmse": 0.5111215069178343,
+      "mae": 0.3401652711847656,
+      "bias": -2.625342259363263e-11,
+      "r2": 0.3653098412756183,
+      "target_rms": 0.6422529813482548,
+      "target_std": 0.6415688556295132,
+      "condition_number_scaled": 5.102508804686745,
+      "time_start_s": 38.41538208899999,
+      "time_end_s": 120.31538208899997,
+      "active_lower_bounds": [
+        "quadratic_damping_p"
+      ],
+      "kept_columns": [
+        "added_inertia_p_dot",
+        "linear_damping_p",
+        "quadratic_damping_p",
+        "restoring_roll",
+        "bias_torque_roll"
+      ]
+    },
+    "pitch_m": {
+      "count": 1639,
+      "status": "ok",
+      "coefficients": {
+        "added_inertia_q_dot": 0.10783531002617662,
+        "linear_damping_q": 3.997248343330519,
+        "quadratic_damping_q": 0.0,
+        "restoring_pitch": 0.0,
+        "bias_torque_pitch": -0.03953156517885151
+      },
+      "rmse": 0.2884282722622986,
+      "mae": 0.17606677978869437,
+      "bias": -2.4119392673871482e-11,
+      "r2": 0.6204733912829694,
+      "target_rms": 0.47160151075563345,
+      "target_std": 0.4681841571647045,
+      "condition_number_scaled": 5.238409979088317,
+      "time_start_s": 38.41538208899999,
+      "time_end_s": 120.31538208899997,
+      "active_lower_bounds": [
+        "quadratic_damping_q",
+        "restoring_pitch"
+      ],
+      "kept_columns": [
+        "added_inertia_q_dot",
+        "linear_damping_q",
+        "quadratic_damping_q",
+        "restoring_pitch",
+        "bias_torque_pitch"
+      ]
+    },
+    "yaw_n": {
+      "count": 1639,
+      "status": "ok",
+      "coefficients": {
+        "added_inertia_r_dot": 0.0,
+        "linear_damping_r": 1.017799919778852,
+        "quadratic_damping_r": 17.964598636617897,
+        "bias_torque_yaw": 0.06392270731203603
+      },
+      "rmse": 1.2509065360422857,
+      "mae": 0.738743470926026,
+      "bias": 3.9000871409086915e-11,
+      "r2": 0.9765822504685577,
+      "target_rms": 8.26154560305057,
+      "target_std": 8.174332204155819,
+      "condition_number_scaled": 5.775634403133706,
+      "time_start_s": 38.41538208899999,
+      "time_end_s": 120.31538208899997,
+      "active_lower_bounds": [
+        "added_inertia_r_dot"
+      ],
+      "kept_columns": [
+        "added_inertia_r_dot",
+        "linear_damping_r",
+        "quadratic_damping_r",
+        "bias_torque_yaw"
+      ]
+    }
+  }
+}

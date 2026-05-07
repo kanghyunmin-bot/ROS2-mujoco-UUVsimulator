@@ -1,0 +1,186 @@
+\documentclass[9pt]{article}
+\usepackage{fontspec}
+\usepackage[paperwidth=13.333in,paperheight=7.5in,margin=0.34in]{geometry}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{enumitem}
+\usetikzlibrary{arrows.meta,positioning,calc}
+
+\setmainfont{Apple SD Gothic Neo}
+\setsansfont{Apple SD Gothic Neo}
+\setmonofont{Menlo}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+\linespread{0.98}
+
+\definecolor{TitleBlue}{HTML}{1D4ED8}
+\definecolor{AccentOrange}{HTML}{EA580C}
+\definecolor{SoftBlue}{HTML}{EFF6FF}
+\definecolor{SoftGreen}{HTML}{ECFDF5}
+\definecolor{SoftGray}{HTML}{F8FAFC}
+\definecolor{SoftYellow}{HTML}{FEF3C7}
+\definecolor{SoftWhite}{HTML}{FFFFFF}
+\definecolor{LineGray}{HTML}{475569}
+\definecolor{SoftBorder}{HTML}{CBD5E1}
+
+\newcommand{\panel}[4]{
+  \begin{tikzpicture}
+    \node[
+      draw=#2,
+      fill=#3,
+      rounded corners=7pt,
+      line width=0.95pt,
+      inner sep=7pt,
+      text width=#4,
+      align=left
+    ] {#1};
+  \end{tikzpicture}
+}
+
+\begin{document}
+\sffamily
+
+{\fontsize{19}{22}\selectfont\bfseries\color{TitleBlue} DVL의 \(\omega \times r\) 회전 성분 보정}
+
+\vspace{0.03in}
+{\small MuJoCo DVL raw 속도에서 \textbf{센서 오프셋 때문에 회전만으로 생기는 추가 속도}를 빼서 body 중심 기준 속도에 가깝게 만든다.}
+
+\vspace{0.04in}
+
+\begin{minipage}[t]{0.43\linewidth}
+  \panel{
+    {\large\bfseries\color{TitleBlue} 1. 핵심 개념}
+
+    \vspace{0.04in}
+    {\small
+    \[
+      \mathbf{v}_{sensor} = \mathbf{v}_{body} + \boldsymbol{\omega}\times\mathbf{r},
+      \quad
+      \mathbf{v}_{body} \approx \mathbf{v}_{dvl,raw} - \boldsymbol{\omega}\times\mathbf{r}
+    \]
+
+    \begin{itemize}[leftmargin=1.25em,itemsep=0.18em,topsep=0.25em]
+      \item \(\boldsymbol{\omega}\): 기체 각속도
+      \item \(\mathbf{r}\): 기체 중심에서 DVL까지의 위치 벡터
+      \item \(\boldsymbol{\omega}\times\mathbf{r}\): 회전만으로 센서 위치에서 생기는 추가 속도
+    \end{itemize}
+    }
+  }{TitleBlue}{SoftBlue}{0.96\linewidth}
+
+  \vspace{0.04in}
+
+  \panel{
+    {\large\bfseries\color{AccentOrange} 2. 왜 빼야 하나}
+
+    \vspace{0.04in}
+    {\small
+    \begin{itemize}[leftmargin=1.25em,itemsep=0.28em,topsep=0.25em]
+      \item DVL은 기체 중심이 아니라 \texttt{tank\_current\_scene.xml}의 \texttt{dvl\_site}처럼 \textbf{오프셋된 위치}에 있다.
+      \item 기체가 제자리에서 yaw, pitch, roll만 해도 센서 위치는 원운동한다.
+      \item 이 성분을 그대로 두면 \textbf{회전을 병진 속도로 오해}해서 DVL odometry가 틀어진다.
+    \end{itemize}
+    }
+  }{AccentOrange}{SoftYellow}{0.96\linewidth}
+
+  \vspace{0.04in}
+
+  \panel{
+    {\large\bfseries\color{green!40!black} 3. 실제 구현}
+
+    \vspace{0.03in}
+    {\small
+    \begin{itemize}[leftmargin=1.25em,itemsep=0.22em,topsep=0.25em]
+      \item MuJoCo scene에서 \texttt{velocimeter dvl\_vel\_body}와 \texttt{rangefinder dvl\_altitude}를 읽는다.
+      \item bridge가 DVL 센서축을 body 축으로 돌린다.
+      \item 그 다음 \texttt{vel\_body = vel\_body - np.cross(gyro\_bmj, r\_body)}로 회전 성분을 뺀다.
+      \item 보정값을 \texttt{/dvl/velocity}, \texttt{/dvl/odometry}, \texttt{/dvl/data}로 publish 한다.
+    \end{itemize}
+    }
+  }{green!45!black}{SoftGreen}{0.96\linewidth}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.53\linewidth}
+  \panel{
+    {\large\bfseries\color{LineGray} 직관 그림}
+
+    \vspace{0.01in}
+    \begin{center}
+    \begin{tikzpicture}[x=0.92in,y=0.92in]
+      \draw[rounded corners=9pt, fill=SoftGray, draw=SoftBorder, line width=0.95pt] (0.0,0.0) rectangle (5.25,2.85);
+
+      \coordinate (C) at (1.80,1.55);
+      \coordinate (S) at (3.45,1.00);
+
+      \filldraw[fill=TitleBlue, draw=TitleBlue] (C) circle (0.055);
+      \node[anchor=south west, text=TitleBlue, font=\bfseries] at ($(C)+(0.08,0.00)$) {Body origin};
+
+      \filldraw[fill=AccentOrange, draw=AccentOrange] (S) circle (0.055);
+      \node[anchor=west, text=AccentOrange, font=\bfseries] at ($(S)+(0.10,-0.02)$) {DVL sensor};
+
+      \draw[-{Latex[length=3.4mm]}, line width=1.20pt, color=LineGray] (C) -- (S)
+        node[midway, above, sloped, fill=white, inner sep=1.5pt] {\(\mathbf{r}\)};
+
+      \draw[-{Latex[length=3.5mm]}, line width=1.35pt, color=TitleBlue]
+        ($(C)+(135:0.45)$) arc[start angle=135,end angle=20,radius=0.45];
+      \node[text=TitleBlue, font=\bfseries] at ($(C)+(0.56,0.68)$) {\(\boldsymbol{\omega}\)};
+
+      \draw[-{Latex[length=3.6mm]}, line width=1.45pt, color=AccentOrange] (S) -- ++(0.92,0.48)
+        node[midway, above, fill=white, inner sep=1.5pt] {\(\boldsymbol{\omega}\times\mathbf{r}\)};
+
+      \draw[-{Latex[length=3.6mm]}, line width=1.55pt, color=green!45!black] (S) -- ++(0.08,1.02)
+        node[midway, right, fill=white, inner sep=1.5pt] {\(\mathbf{v}_{dvl,raw}\)};
+
+      \draw[-{Latex[length=3.6mm]}, line width=1.55pt, color=purple!70!black] (C) -- ++(0.18,0.92)
+        node[midway, left, fill=white, inner sep=1.5pt] {\(\mathbf{v}_{body}\)};
+
+      \node[
+        draw=SoftBorder,
+        rounded corners=8pt,
+        fill=SoftWhite,
+        align=left,
+        text width=2.20in,
+        inner sep=6pt
+      ] at (3.58,2.30) {
+        \small
+        \textbf{해석}\\
+        기체가 제자리에서 도는 동안에도 DVL 위치에서는 속도가 생긴다.\\
+        따라서 raw DVL 속도에서 \(\omega \times r\)를 빼야 body 중심 속도에 가까워진다.
+      };
+    \end{tikzpicture}
+    \end{center}
+  }{SoftBorder}{SoftWhite}{0.98\linewidth}
+
+  \vspace{0.04in}
+
+  \panel{
+    {\large\bfseries\color{TitleBlue} 처리 흐름}
+
+    \vspace{0.02in}
+    {\small
+    \(
+      \texttt{MuJoCo velocimeter}
+      \rightarrow
+      \texttt{body frame transform}
+      \rightarrow
+      \texttt{subtract }\omega \times r
+      \rightarrow
+      \texttt{ROS2 / SITL output}
+    \)
+
+    \vspace{0.02in}
+    \textbf{코드 포인트}
+    \begin{itemize}[leftmargin=1.25em,itemsep=0.18em,topsep=0.22em]
+      \item \texttt{ros2\_bridge.py}: \texttt{\_dvl\_velocity\_body()}
+      \item \texttt{ros2\_bridge.py}: \texttt{vel\_body = vel\_body - np.cross(gyro\_bmj, r\_body)}
+      \item \texttt{tank\_current\_scene.xml}: \texttt{velocimeter dvl\_vel\_body}
+    \end{itemize}
+
+    \vspace{0.02in}
+    \textbf{요약}: 회전 때문에 생긴 센서 위치 속도를 빼야 DVL 병진 속도와 odometry drift가 더 정확해진다.
+    }
+  }{TitleBlue}{SoftBlue}{0.98\linewidth}
+\end{minipage}
+
+\end{document}

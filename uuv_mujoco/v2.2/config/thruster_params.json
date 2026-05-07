@@ -1,0 +1,60 @@
+{
+  "global": {
+    "deadzone": 0.002,
+    "tau_up": 0.04,
+    "tau_down": 0.06,
+    "reverse_asymmetry": 0.70,
+    "reaction_torque_gain": 0.0,
+    "gain_scale_all": 1.0,
+    "forward_poly": [
+      0.0,
+      1.9,
+      4.8,
+      11.8
+    ],
+    "reverse_poly": [
+      0.0,
+      1.4,
+      3.5,
+      9.4
+    ],
+    "command_limit": 0.90,
+    "last_gain_calibration_profile": "legacy",
+    "last_gain_calibration_scene": "scenes/tank_legacy_scene.xml",
+    "last_gain_calibration_time": "2026-02-25T22:22:46"
+  },
+  "per_thruster": {
+    "ver_lf": {
+      "gain_scale": 2.425,
+      "speed_sample": 0.3
+    },
+    "ver_lr": {
+      "gain_scale": 2.425,
+      "speed_sample": 0.3029
+    },
+    "ver_rf": {
+      "gain_scale": 2.425,
+      "speed_sample": 0.2976
+    },
+    "ver_rr": {
+      "gain_scale": 2.425,
+      "speed_sample": 0.3001
+    },
+    "yaw_lf": {
+      "gain_scale": 3.3,
+      "speed_sample": 0.3204
+    },
+    "yaw_lr": {
+      "gain_scale": 3.3,
+      "speed_sample": 0.3199
+    },
+    "yaw_rf": {
+      "gain_scale": 3.3,
+      "speed_sample": 0.3265
+    },
+    "yaw_rr": {
+      "gain_scale": 3.3,
+      "speed_sample": 0.3243
+    }
+  }
+}

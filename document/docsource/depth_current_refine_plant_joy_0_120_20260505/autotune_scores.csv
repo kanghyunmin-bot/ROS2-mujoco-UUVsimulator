@@ -1,0 +1,13 @@
+candidate,status,score,fluid_linear_scale,fluid_rot_scale,fluid_blunt_scale,fluid_slender_scale,fluid_angular_scale,fluid_kutta,fluid_magnus,profile_updates,tune_mode,command_source,out_dir
+buoy_p020_heave_p20,ok,2.0882569997168927,1.0,1.0,1.0,1.0,1.0,,,"{""buoyancy_scale"": 1.04, ""surface_heave_damping"": 15.8, ""heave_damping_scale"": 5.2}",plant-joy,joy_node,document/docsource/depth_current_refine_plant_joy_0_120_20260505/buoy_p020_heave_p20
+buoy_p010,ok,2.0906835017847563,1.0,1.0,1.0,1.0,1.0,,,"{""buoyancy_scale"": 1.03}",plant-joy,joy_node,document/docsource/depth_current_refine_plant_joy_0_120_20260505/buoy_p010
+buoy_p010_heave_p20,ok,2.0975596748175773,1.0,1.0,1.0,1.0,1.0,,,"{""buoyancy_scale"": 1.03, ""surface_heave_damping"": 15.8, ""heave_damping_scale"": 5.2}",plant-joy,joy_node,document/docsource/depth_current_refine_plant_joy_0_120_20260505/buoy_p010_heave_p20
+buoy_p005,ok,2.110913218254532,1.0,1.0,1.0,1.0,1.0,,,"{""buoyancy_scale"": 1.025}",plant-joy,joy_node,document/docsource/depth_current_refine_plant_joy_0_120_20260505/buoy_p005
+baseline,ok,2.1169057894290453,1.0,1.0,1.0,1.0,1.0,,,{},plant-joy,joy_node,document/docsource/depth_current_refine_plant_joy_0_120_20260505/baseline
+buoy_p030,ok,2.1398055003358003,1.0,1.0,1.0,1.0,1.0,,,"{""buoyancy_scale"": 1.05}",plant-joy,joy_node,document/docsource/depth_current_refine_plant_joy_0_120_20260505/buoy_p030
+buoy_p020,ok,2.141381646129863,1.0,1.0,1.0,1.0,1.0,,,"{""buoyancy_scale"": 1.04}",plant-joy,joy_node,document/docsource/depth_current_refine_plant_joy_0_120_20260505/buoy_p020
+heave_m20,ok,2.1624526504059496,1.0,1.0,1.0,1.0,1.0,,,"{""surface_heave_damping"": 10.5, ""heave_damping_scale"": 3.5}",plant-joy,joy_node,document/docsource/depth_current_refine_plant_joy_0_120_20260505/heave_m20
+heave_p20,ok,2.315588800991433,1.0,1.0,1.0,1.0,1.0,,,"{""surface_heave_damping"": 15.8, ""heave_damping_scale"": 5.2}",plant-joy,joy_node,document/docsource/depth_current_refine_plant_joy_0_120_20260505/heave_p20
+buoy_p020_heave_p50,ok,2.3335178376010917,1.0,1.0,1.0,1.0,1.0,,,"{""buoyancy_scale"": 1.04, ""surface_heave_damping"": 19.8, ""heave_damping_scale"": 6.6}",plant-joy,joy_node,document/docsource/depth_current_refine_plant_joy_0_120_20260505/buoy_p020_heave_p50
+heave_p50,ok,2.34400855726157,1.0,1.0,1.0,1.0,1.0,,,"{""surface_heave_damping"": 19.8, ""heave_damping_scale"": 6.6}",plant-joy,joy_node,document/docsource/depth_current_refine_plant_joy_0_120_20260505/heave_p50
+buoy_p030_heave_p50,ok,2.365921898175226,1.0,1.0,1.0,1.0,1.0,,,"{""buoyancy_scale"": 1.05, ""surface_heave_damping"": 19.8, ""heave_damping_scale"": 6.6}",plant-joy,joy_node,document/docsource/depth_current_refine_plant_joy_0_120_20260505/buoy_p030_heave_p50

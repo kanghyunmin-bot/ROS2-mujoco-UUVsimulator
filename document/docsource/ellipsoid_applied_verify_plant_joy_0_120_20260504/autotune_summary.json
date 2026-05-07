@@ -1,0 +1,215 @@
+{
+  "best": {
+    "candidate": "baseline",
+    "returncode": 0,
+    "out_dir": "document/docsource/ellipsoid_applied_verify_plant_joy_0_120_20260504/baseline",
+    "profile_updates": {},
+    "fluid_linear_scale": 1.0,
+    "fluid_rot_scale": 1.0,
+    "fluid_blunt_scale": 1.0,
+    "fluid_slender_scale": 1.0,
+    "fluid_angular_scale": 1.0,
+    "fluid_kutta": null,
+    "fluid_magnus": null,
+    "tune_mode": "plant-joy",
+    "command_source": "joy_node",
+    "score": 2.1757612255678827,
+    "status": "ok",
+    "axis_scores": {
+      "dvl_x": {
+        "count": 743,
+        "rmse": 0.435653353941357,
+        "real_rms": 0.24011664396237006,
+        "sim_rms": 0.47957507524570364,
+        "normalized_rmse": 1.8143405086472495,
+        "correlation": 0.14435459162190056,
+        "axis_score": 2.132018205262639
+      },
+      "dvl_z": {
+        "count": 743,
+        "rmse": 0.17043880306066514,
+        "real_rms": 0.05738976813486415,
+        "sim_rms": 0.13925428300977258,
+        "normalized_rmse": 2.9698465179392137,
+        "correlation": -0.3366335650900009,
+        "axis_score": 3.43697024982503
+      },
+      "dvl_y": {
+        "count": 738,
+        "rmse": 0.10775951193337638,
+        "real_rms": 0.0514094945834787,
+        "sim_rms": 0.11498424625505263,
+        "normalized_rmse": 2.096101368170359,
+        "correlation": 0.3425366306669723,
+        "axis_score": 2.3812130487487244
+      },
+      "gyro_z": {
+        "count": 2300,
+        "rmse": 0.35097094204993295,
+        "real_rms": 0.36366502716591503,
+        "sim_rms": 0.44475471719551996,
+        "normalized_rmse": 0.9650940173848759,
+        "correlation": 0.6650341165340176,
+        "axis_score": 1.0790289498490164
+      },
+      "gyro_x": {
+        "count": 2300,
+        "rmse": 0.11833541801697871,
+        "real_rms": 0.0683723821376637,
+        "sim_rms": 0.1136088948184739,
+        "normalized_rmse": 1.730748795306231,
+        "correlation": 0.22675722410773316,
+        "axis_score": 2.0002284137051856
+      },
+      "gyro_y": {
+        "count": 2298,
+        "rmse": 0.21358216928868115,
+        "real_rms": 0.08882691641617192,
+        "sim_rms": 0.21179627591180236,
+        "normalized_rmse": 2.4044757817327107,
+        "correlation": 0.18907323805407275,
+        "axis_score": 2.7375477421853525
+      },
+      "bar30_depth": {
+        "count": 230,
+        "rmse": 0.6777175845230036,
+        "real_rms": 0.3217096650028313,
+        "sim_rms": 0.9320175751209787,
+        "normalized_rmse": 2.1066124467135268,
+        "correlation": 0.3845306353357001,
+        "axis_score": 2.4200351170714685
+      },
+      "bar30_depth_shape": {
+        "count": 230,
+        "rmse": 0.3347484659651153,
+        "real_rms": 0.3217096650028313,
+        "sim_rms": 0.9320175751209787,
+        "normalized_rmse": 1.0405297147730057,
+        "correlation": 0.3845306353357001,
+        "axis_score": 1.3539523851309474
+      },
+      "bar30_depth_rate": {
+        "count": 230,
+        "rmse": 0.10889329671994502,
+        "real_rms": 0.060084848319234226,
+        "sim_rms": 0.11101657530520224,
+        "normalized_rmse": 1.8123253992651978,
+        "correlation": 0.3058160285517595,
+        "axis_score": 2.0779596644244256
+      }
+    },
+    "summary_json": "document/docsource/ellipsoid_applied_verify_plant_joy_0_120_20260504/baseline/comparison/closed_loop_real_vs_sim_summary.json"
+  },
+  "results": [
+    {
+      "candidate": "baseline",
+      "returncode": 0,
+      "out_dir": "document/docsource/ellipsoid_applied_verify_plant_joy_0_120_20260504/baseline",
+      "profile_updates": {},
+      "fluid_linear_scale": 1.0,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "plant-joy",
+      "command_source": "joy_node",
+      "score": 2.1757612255678827,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 743,
+          "rmse": 0.435653353941357,
+          "real_rms": 0.24011664396237006,
+          "sim_rms": 0.47957507524570364,
+          "normalized_rmse": 1.8143405086472495,
+          "correlation": 0.14435459162190056,
+          "axis_score": 2.132018205262639
+        },
+        "dvl_z": {
+          "count": 743,
+          "rmse": 0.17043880306066514,
+          "real_rms": 0.05738976813486415,
+          "sim_rms": 0.13925428300977258,
+          "normalized_rmse": 2.9698465179392137,
+          "correlation": -0.3366335650900009,
+          "axis_score": 3.43697024982503
+        },
+        "dvl_y": {
+          "count": 738,
+          "rmse": 0.10775951193337638,
+          "real_rms": 0.0514094945834787,
+          "sim_rms": 0.11498424625505263,
+          "normalized_rmse": 2.096101368170359,
+          "correlation": 0.3425366306669723,
+          "axis_score": 2.3812130487487244
+        },
+        "gyro_z": {
+          "count": 2300,
+          "rmse": 0.35097094204993295,
+          "real_rms": 0.36366502716591503,
+          "sim_rms": 0.44475471719551996,
+          "normalized_rmse": 0.9650940173848759,
+          "correlation": 0.6650341165340176,
+          "axis_score": 1.0790289498490164
+        },
+        "gyro_x": {
+          "count": 2300,
+          "rmse": 0.11833541801697871,
+          "real_rms": 0.0683723821376637,
+          "sim_rms": 0.1136088948184739,
+          "normalized_rmse": 1.730748795306231,
+          "correlation": 0.22675722410773316,
+          "axis_score": 2.0002284137051856
+        },
+        "gyro_y": {
+          "count": 2298,
+          "rmse": 0.21358216928868115,
+          "real_rms": 0.08882691641617192,
+          "sim_rms": 0.21179627591180236,
+          "normalized_rmse": 2.4044757817327107,
+          "correlation": 0.18907323805407275,
+          "axis_score": 2.7375477421853525
+        },
+        "bar30_depth": {
+          "count": 230,
+          "rmse": 0.6777175845230036,
+          "real_rms": 0.3217096650028313,
+          "sim_rms": 0.9320175751209787,
+          "normalized_rmse": 2.1066124467135268,
+          "correlation": 0.3845306353357001,
+          "axis_score": 2.4200351170714685
+        },
+        "bar30_depth_shape": {
+          "count": 230,
+          "rmse": 0.3347484659651153,
+          "real_rms": 0.3217096650028313,
+          "sim_rms": 0.9320175751209787,
+          "normalized_rmse": 1.0405297147730057,
+          "correlation": 0.3845306353357001,
+          "axis_score": 1.3539523851309474
+        },
+        "bar30_depth_rate": {
+          "count": 230,
+          "rmse": 0.10889329671994502,
+          "real_rms": 0.060084848319234226,
+          "sim_rms": 0.11101657530520224,
+          "normalized_rmse": 1.8123253992651978,
+          "correlation": 0.3058160285517595,
+          "axis_score": 2.0779596644244256
+        }
+      },
+      "summary_json": "document/docsource/ellipsoid_applied_verify_plant_joy_0_120_20260504/baseline/comparison/closed_loop_real_vs_sim_summary.json"
+    }
+  ],
+  "tune_mode": "plant-joy",
+  "candidate_set": "ellipsoid-lift-refine",
+  "include_depth": true,
+  "depth_weights": {
+    "absolute_depth": 1.4,
+    "offset_removed_shape": 0.7,
+    "depth_rate": 1.1
+  },
+  "score_definition": "Weighted normalized RMSE plus correlation/amplitude penalties over DVL x/y/z, IMU gyro x/y/z, and Bar30 static-pressure-derived depth/depth-rate when depth is enabled. Lower is better."
+}

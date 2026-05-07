@@ -1,0 +1,396 @@
+{
+  "best": {
+    "candidate": "buoy1020_heavep10_fluidlinearp10",
+    "returncode": 0,
+    "out_dir": "/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/physics_only_closedloop_combo_0_120_20260504/buoy1020_heavep10_fluidlinearp10",
+    "profile_updates": {
+      "buoyancy_scale": 1.02,
+      "surface_heave_damping": 13.2,
+      "heave_damping_scale": 4.4
+    },
+    "fluid_linear_scale": 1.1,
+    "fluid_rot_scale": 1.0,
+    "fluid_blunt_scale": 1.0,
+    "fluid_slender_scale": 1.0,
+    "fluid_angular_scale": 1.0,
+    "fluid_kutta": null,
+    "fluid_magnus": null,
+    "tune_mode": "closed-loop",
+    "score": 1.0164972148648086,
+    "status": "ok",
+    "axis_scores": {
+      "dvl_x": {
+        "count": 763,
+        "rmse": 0.11268454237722941,
+        "real_rms": 0.24641076125090544,
+        "sim_rms": 0.30979635635560726,
+        "normalized_rmse": 0.4573036575398971,
+        "correlation": 0.8824270587561298,
+        "axis_score": 0.521034182153941
+      },
+      "dvl_z": {
+        "count": 763,
+        "rmse": 0.04905051437138378,
+        "real_rms": 0.05695578628610613,
+        "sim_rms": 0.02226332476032838,
+        "normalized_rmse": 0.8612033573724752,
+        "correlation": 0.43138616532470736,
+        "axis_score": 1.1442570049391199
+      },
+      "dvl_y": {
+        "count": 761,
+        "rmse": 0.043729812559293826,
+        "real_rms": 0.05185564403115424,
+        "sim_rms": 0.02456209154165484,
+        "normalized_rmse": 0.8432989962099687,
+        "correlation": 0.5637179604025575,
+        "axis_score": 1.0644584343594568
+      },
+      "gyro_z": {
+        "count": 2347,
+        "rmse": 0.2387540256786042,
+        "real_rms": 0.3681538879259728,
+        "sim_rms": 0.2856613391052377,
+        "normalized_rmse": 0.6485169205292003,
+        "correlation": 0.7919832229414027,
+        "axis_score": 0.7385752214370576
+      },
+      "gyro_x": {
+        "count": 2346,
+        "rmse": 0.06872701326171662,
+        "real_rms": 0.06782546859678104,
+        "sim_rms": 0.004882139984388297,
+        "normalized_rmse": 1.013292125857548,
+        "correlation": -0.15437462760764678,
+        "axis_score": 1.6965889011039867
+      },
+      "gyro_y": {
+        "count": 2341,
+        "rmse": 0.0879657500932976,
+        "real_rms": 0.08815488000762389,
+        "sim_rms": 0.013096552878379079,
+        "normalized_rmse": 0.9978545723809058,
+        "correlation": 0.08846769476528192,
+        "axis_score": 1.5117495803477805
+      }
+    },
+    "summary_json": "/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/physics_only_closedloop_combo_0_120_20260504/buoy1020_heavep10_fluidlinearp10/comparison/closed_loop_real_vs_sim_summary.json"
+  },
+  "results": [
+    {
+      "candidate": "buoy1020_heavep10",
+      "returncode": 0,
+      "out_dir": "/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/physics_only_closedloop_combo_0_120_20260504/buoy1020_heavep10",
+      "profile_updates": {
+        "buoyancy_scale": 1.02,
+        "surface_heave_damping": 13.2,
+        "heave_damping_scale": 4.4
+      },
+      "fluid_linear_scale": 1.0,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "closed-loop",
+      "score": 1.0181472511135412,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 763,
+          "rmse": 0.12068287475812006,
+          "real_rms": 0.24641076125090544,
+          "sim_rms": 0.32156520831487284,
+          "normalized_rmse": 0.4897630044462054,
+          "correlation": 0.8839704165537904,
+          "axis_score": 0.558700466868532
+        },
+        "dvl_z": {
+          "count": 763,
+          "rmse": 0.04891471410216501,
+          "real_rms": 0.05695578628610613,
+          "sim_rms": 0.02261730155376694,
+          "normalized_rmse": 0.858819047049085,
+          "correlation": 0.4347930682673752,
+          "axis_score": 1.1386547977995611
+        },
+        "dvl_y": {
+          "count": 761,
+          "rmse": 0.042884513144152044,
+          "real_rms": 0.05185564403115424,
+          "sim_rms": 0.026961781351995742,
+          "normalized_rmse": 0.8269979853762408,
+          "correlation": 0.5811777025850147,
+          "axis_score": 1.0298100733394275
+        },
+        "gyro_z": {
+          "count": 2347,
+          "rmse": 0.23896157842151072,
+          "real_rms": 0.3681538879259728,
+          "sim_rms": 0.28842852200986796,
+          "normalized_rmse": 0.6490806867957356,
+          "correlation": 0.7918829606505479,
+          "axis_score": 0.7377180056157184
+        },
+        "gyro_x": {
+          "count": 2346,
+          "rmse": 0.0687775641401755,
+          "real_rms": 0.06782546859678104,
+          "sim_rms": 0.005619158996397343,
+          "normalized_rmse": 1.0140374340655811,
+          "correlation": -0.13343350114256017,
+          "axis_score": 1.6710091732750205
+        },
+        "gyro_y": {
+          "count": 2383,
+          "rmse": 0.08755891690619436,
+          "real_rms": 0.08766979056934694,
+          "sim_rms": 0.013074507059712316,
+          "normalized_rmse": 0.998735326474119,
+          "correlation": 0.08286484873453787,
+          "axis_score": 1.5134560745629946
+        }
+      },
+      "summary_json": "/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/physics_only_closedloop_combo_0_120_20260504/buoy1020_heavep10/comparison/closed_loop_real_vs_sim_summary.json"
+    },
+    {
+      "candidate": "buoy1020_fluidlinearp10",
+      "returncode": 0,
+      "out_dir": "/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/physics_only_closedloop_combo_0_120_20260504/buoy1020_fluidlinearp10",
+      "profile_updates": {
+        "buoyancy_scale": 1.02
+      },
+      "fluid_linear_scale": 1.1,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "closed-loop",
+      "score": 1.0255545149210792,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 764,
+          "rmse": 0.1126733760632448,
+          "real_rms": 0.2468503728449597,
+          "sim_rms": 0.30909836186097733,
+          "normalized_rmse": 0.45644401815026636,
+          "correlation": 0.880417472838455,
+          "axis_score": 0.5200712260861938
+        },
+        "dvl_z": {
+          "count": 764,
+          "rmse": 0.05161731922358536,
+          "real_rms": 0.05696888521621994,
+          "sim_rms": 0.019250916628541635,
+          "normalized_rmse": 0.9060615988478057,
+          "correlation": 0.2889568378278947,
+          "axis_score": 1.246564374699513
+        },
+        "dvl_y": {
+          "count": 761,
+          "rmse": 0.04373134829834085,
+          "real_rms": 0.05185564403115424,
+          "sim_rms": 0.02462687534791972,
+          "normalized_rmse": 0.8433286118685092,
+          "correlation": 0.5636379174480071,
+          "axis_score": 1.064112948715342
+        },
+        "gyro_z": {
+          "count": 2347,
+          "rmse": 0.23871882711578532,
+          "real_rms": 0.3681538879259728,
+          "sim_rms": 0.28518877475593185,
+          "normalized_rmse": 0.6484213122415432,
+          "correlation": 0.7922720764156715,
+          "axis_score": 0.7386557475234964
+        },
+        "gyro_x": {
+          "count": 2371,
+          "rmse": 0.06686295661894422,
+          "real_rms": 0.06756188189838026,
+          "sim_rms": 0.00517461284131312,
+          "normalized_rmse": 0.9896550353572552,
+          "correlation": 0.16259550217804727,
+          "axis_score": 1.5843980733658696
+        },
+        "gyro_y": {
+          "count": 2341,
+          "rmse": 0.08756636576470257,
+          "real_rms": 0.08815488000762389,
+          "sim_rms": 0.011561347748622655,
+          "normalized_rmse": 0.9933240877547513,
+          "correlation": 0.11592194445455102,
+          "axis_score": 1.5190577752231125
+        }
+      },
+      "summary_json": "/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/physics_only_closedloop_combo_0_120_20260504/buoy1020_fluidlinearp10/comparison/closed_loop_real_vs_sim_summary.json"
+    },
+    {
+      "candidate": "buoy1020_heavep10_fluidlinearp10",
+      "returncode": 0,
+      "out_dir": "/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/physics_only_closedloop_combo_0_120_20260504/buoy1020_heavep10_fluidlinearp10",
+      "profile_updates": {
+        "buoyancy_scale": 1.02,
+        "surface_heave_damping": 13.2,
+        "heave_damping_scale": 4.4
+      },
+      "fluid_linear_scale": 1.1,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "closed-loop",
+      "score": 1.0164972148648086,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 763,
+          "rmse": 0.11268454237722941,
+          "real_rms": 0.24641076125090544,
+          "sim_rms": 0.30979635635560726,
+          "normalized_rmse": 0.4573036575398971,
+          "correlation": 0.8824270587561298,
+          "axis_score": 0.521034182153941
+        },
+        "dvl_z": {
+          "count": 763,
+          "rmse": 0.04905051437138378,
+          "real_rms": 0.05695578628610613,
+          "sim_rms": 0.02226332476032838,
+          "normalized_rmse": 0.8612033573724752,
+          "correlation": 0.43138616532470736,
+          "axis_score": 1.1442570049391199
+        },
+        "dvl_y": {
+          "count": 761,
+          "rmse": 0.043729812559293826,
+          "real_rms": 0.05185564403115424,
+          "sim_rms": 0.02456209154165484,
+          "normalized_rmse": 0.8432989962099687,
+          "correlation": 0.5637179604025575,
+          "axis_score": 1.0644584343594568
+        },
+        "gyro_z": {
+          "count": 2347,
+          "rmse": 0.2387540256786042,
+          "real_rms": 0.3681538879259728,
+          "sim_rms": 0.2856613391052377,
+          "normalized_rmse": 0.6485169205292003,
+          "correlation": 0.7919832229414027,
+          "axis_score": 0.7385752214370576
+        },
+        "gyro_x": {
+          "count": 2346,
+          "rmse": 0.06872701326171662,
+          "real_rms": 0.06782546859678104,
+          "sim_rms": 0.004882139984388297,
+          "normalized_rmse": 1.013292125857548,
+          "correlation": -0.15437462760764678,
+          "axis_score": 1.6965889011039867
+        },
+        "gyro_y": {
+          "count": 2341,
+          "rmse": 0.0879657500932976,
+          "real_rms": 0.08815488000762389,
+          "sim_rms": 0.013096552878379079,
+          "normalized_rmse": 0.9978545723809058,
+          "correlation": 0.08846769476528192,
+          "axis_score": 1.5117495803477805
+        }
+      },
+      "summary_json": "/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/physics_only_closedloop_combo_0_120_20260504/buoy1020_heavep10_fluidlinearp10/comparison/closed_loop_real_vs_sim_summary.json"
+    },
+    {
+      "candidate": "buoy1020_restore_m10",
+      "returncode": 0,
+      "out_dir": "/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/physics_only_closedloop_combo_0_120_20260504/buoy1020_restore_m10",
+      "profile_updates": {
+        "buoyancy_scale": 1.02,
+        "cob_torque_scale": 1.62,
+        "cob_z_offset": 0.036
+      },
+      "fluid_linear_scale": 1.0,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "closed-loop",
+      "score": 1.020263306778217,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 763,
+          "rmse": 0.12033436047145518,
+          "real_rms": 0.24641076125090544,
+          "sim_rms": 0.3210321425107822,
+          "normalized_rmse": 0.48834864135225753,
+          "correlation": 0.8835853157085785,
+          "axis_score": 0.5571335143154917
+        },
+        "dvl_z": {
+          "count": 763,
+          "rmse": 0.051054927251019934,
+          "real_rms": 0.05695578628610613,
+          "sim_rms": 0.02014021062388506,
+          "normalized_rmse": 0.896395793652213,
+          "correlation": 0.31903281945013523,
+          "axis_score": 1.222571130153369
+        },
+        "dvl_y": {
+          "count": 761,
+          "rmse": 0.04272980176912651,
+          "real_rms": 0.05185564403115424,
+          "sim_rms": 0.02707014818440548,
+          "normalized_rmse": 0.8240144841987685,
+          "correlation": 0.5885445631998546,
+          "axis_score": 1.024383174010949
+        },
+        "gyro_z": {
+          "count": 2347,
+          "rmse": 0.2392725142520567,
+          "real_rms": 0.3681538879259728,
+          "sim_rms": 0.28829868154482613,
+          "normalized_rmse": 0.649925267936241,
+          "correlation": 0.7910428486133224,
+          "axis_score": 0.7388401547392484
+        },
+        "gyro_x": {
+          "count": 2371,
+          "rmse": 0.0668890544164557,
+          "real_rms": 0.06756188189838026,
+          "sim_rms": 0.006172267714610603,
+          "normalized_rmse": 0.9900413152650698,
+          "correlation": 0.14321770078989896,
+          "axis_score": 1.5631835356987804
+        },
+        "gyro_y": {
+          "count": 2341,
+          "rmse": 0.08741940086523968,
+          "real_rms": 0.08815488000762389,
+          "sim_rms": 0.013153644943733549,
+          "normalized_rmse": 0.9916569662130944,
+          "correlation": 0.12979410716085685,
+          "axis_score": 1.4945678942224778
+        }
+      },
+      "summary_json": "/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/physics_only_closedloop_combo_0_120_20260504/buoy1020_restore_m10/comparison/closed_loop_real_vs_sim_summary.json"
+    }
+  ],
+  "tune_mode": "closed-loop",
+  "candidate_set": "custom_combo",
+  "include_depth": false,
+  "depth_weights": {
+    "absolute_depth": 1.4,
+    "offset_removed_shape": 0.7,
+    "depth_rate": 1.1
+  },
+  "score_definition": "Weighted normalized RMSE plus correlation/amplitude penalties over DVL x/y/z, IMU gyro x/y/z, and Bar30 static-pressure-derived depth/depth-rate when depth is enabled. Lower is better."
+}

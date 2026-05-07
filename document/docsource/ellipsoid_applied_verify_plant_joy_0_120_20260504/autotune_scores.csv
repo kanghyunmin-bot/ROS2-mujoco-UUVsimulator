@@ -1,0 +1,2 @@
+candidate,status,score,fluid_linear_scale,fluid_rot_scale,fluid_blunt_scale,fluid_slender_scale,fluid_angular_scale,fluid_kutta,fluid_magnus,profile_updates,tune_mode,command_source,out_dir
+baseline,ok,2.1757612255678827,1.0,1.0,1.0,1.0,1.0,,,{},plant-joy,joy_node,document/docsource/ellipsoid_applied_verify_plant_joy_0_120_20260504/baseline

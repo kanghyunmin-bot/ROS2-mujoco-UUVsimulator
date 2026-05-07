@@ -1,0 +1,11 @@
+candidate,status,score,fluid_linear_scale,fluid_rot_scale,fluid_blunt_scale,fluid_slender_scale,fluid_angular_scale,fluid_kutta,fluid_magnus,profile_updates,tune_mode,command_source,out_dir
+lift_half,ok,2.251136466098999,1.0,1.0,1.0,1.0,1.0,0.025,0.0125,{},plant-joy,joy_node,document/docsource/ellipsoid_axis_only_plant_joy_remaining_0_120_20260504/lift_half
+lift_off,ok,2.424933074901112,1.0,1.0,1.0,1.0,1.0,0.0,0.0,{},plant-joy,joy_node,document/docsource/ellipsoid_axis_only_plant_joy_remaining_0_120_20260504/lift_off
+angular_p25,ok,2.446932917975597,1.0,1.0,1.0,1.0,1.25,,,{},plant-joy,joy_node,document/docsource/ellipsoid_axis_only_plant_joy_remaining_0_120_20260504/angular_p25
+blunt_p20_slender_m20,ok,2.4958595194446276,1.0,1.0,1.2,0.8,1.0,,,{},plant-joy,joy_node,document/docsource/ellipsoid_axis_only_plant_joy_remaining_0_120_20260504/blunt_p20_slender_m20
+lift_stronger,ok,2.5984447722796387,1.0,1.0,1.0,1.0,1.0,0.075,0.0375,{},plant-joy,joy_node,document/docsource/ellipsoid_axis_only_plant_joy_remaining_0_120_20260504/lift_stronger
+angular_p15,ok,2.602279047164788,1.0,1.0,1.0,1.0,1.15,,,{},plant-joy,joy_node,document/docsource/ellipsoid_axis_only_plant_joy_remaining_0_120_20260504/angular_p15
+split_m20_ang_p15,ok,2.6843268923762307,1.0,1.0,0.8,1.2,1.15,,,{},plant-joy,joy_node,document/docsource/ellipsoid_axis_only_plant_joy_remaining_0_120_20260504/split_m20_ang_p15
+split_m20_ang_m15,ok,2.694058860667101,1.0,1.0,0.8,1.2,0.85,,,{},plant-joy,joy_node,document/docsource/ellipsoid_axis_only_plant_joy_remaining_0_120_20260504/split_m20_ang_m15
+blunt_m20_slender_p20,ok,2.726802268290838,1.0,1.0,0.8,1.2,1.0,,,{},plant-joy,joy_node,document/docsource/ellipsoid_axis_only_plant_joy_remaining_0_120_20260504/blunt_m20_slender_p20
+blunt_m35_slender_p35,ok,2.8668450312910236,1.0,1.0,0.65,1.35,1.0,,,{},plant-joy,joy_node,document/docsource/ellipsoid_axis_only_plant_joy_remaining_0_120_20260504/blunt_m35_slender_p35

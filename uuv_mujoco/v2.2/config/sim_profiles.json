@@ -1,0 +1,377 @@
+{
+  "legacy": {
+    "half_height": 0.147,
+    "buoyancy_model": "ellipsoid",
+    "buoyancy_scale": 1.003,
+    "buoyancy_slope_scale": 1.2,
+    "surface_heave_damping": 18.0,
+    "heave_damping_scale": 1.2,
+    "cob_torque_scale": 0.2,
+    "buoyancy_point_blend": 1.0,
+    "cob_x_offset": -0.003,
+    "cob_z_offset": 0.01,
+    "thruster_voltage": 20.0,
+    "thruster_force_max": 45.0,
+    "linear_drag": 1.1,
+    "angular_drag": 0.32,
+    "linear_damping_linear": [
+      1.1,
+      1.32,
+      1.54
+    ],
+    "linear_damping_angular": [
+      0.32,
+      0.36,
+      0.28
+    ],
+    "quadratic_damping_linear": [
+      1.4,
+      2.0,
+      2.4
+    ],
+    "quadratic_damping_angular": [
+      0.1,
+      0.12,
+      0.08
+    ],
+    "added_mass_linear": [
+      1.8,
+      2.3,
+      3.0
+    ],
+    "added_mass_angular": [
+      0.1,
+      0.12,
+      0.08
+    ],
+    "current_world": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "body_inertia_scale_xyz": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "body_components": [
+      {
+        "name": "center_enclosure",
+        "shape": "ellipsoid",
+        "size": [
+          0.22,
+          0.12,
+          0.11
+        ],
+        "mass": 6.0,
+        "mass_pos": [
+          -0.005,
+          0.0,
+          0.075
+        ],
+        "buoyancy_pos": [
+          -0.005,
+          0.0,
+          0.06
+        ],
+        "buoyancy_share": 0.2
+      },
+      {
+        "name": "port_lower_body",
+        "shape": "ellipsoid",
+        "size": [
+          0.38,
+          0.09,
+          0.09
+        ],
+        "mass": 4.5,
+        "mass_pos": [
+          0.0,
+          0.208,
+          -0.005
+        ],
+        "buoyancy_pos": [
+          0.0,
+          0.208,
+          0.04
+        ],
+        "buoyancy_share": 0.4
+      },
+      {
+        "name": "starboard_lower_body",
+        "shape": "ellipsoid",
+        "size": [
+          0.38,
+          0.09,
+          0.09
+        ],
+        "mass": 4.5,
+        "mass_pos": [
+          0.0,
+          -0.208,
+          -0.005
+        ],
+        "buoyancy_pos": [
+          0.0,
+          -0.208,
+          0.04
+        ],
+        "buoyancy_share": 0.4
+      }
+    ],
+    "buoyancy_points": [
+      {
+        "name": "buoy_ver_lf",
+        "pos": [
+          0.149,
+          0.2346,
+          0.04
+        ],
+        "share": 0.25,
+        "half_height": 0.09
+      },
+      {
+        "name": "buoy_ver_lr",
+        "pos": [
+          -0.171,
+          0.2346,
+          0.04
+        ],
+        "share": 0.25,
+        "half_height": 0.09
+      },
+      {
+        "name": "buoy_ver_rf",
+        "pos": [
+          0.149,
+          -0.2344,
+          0.04
+        ],
+        "share": 0.25,
+        "half_height": 0.09
+      },
+      {
+        "name": "buoy_ver_rr",
+        "pos": [
+          -0.171,
+          -0.2344,
+          0.04
+        ],
+        "share": 0.25,
+        "half_height": 0.09
+      }
+    ],
+    "spin_gain": 22.0,
+    "yaw_torque_scale": 1.0,
+    "validation_timestep": 0.004,
+    "validation_iterations": 20,
+    "validation_ls_iterations": 8,
+    "validation_step_start": 0.5,
+    "validation_step_end": 1.4,
+    "validation_total_time": 3.2,
+    "validation_step_amp_ratio": 0.35
+  },
+  "current": {
+    "buoyancy_model": "ellipsoid",
+    "buoyancy_scale": 1.0005,
+    "buoyancy_slope_scale": 1.2,
+    "surface_heave_damping": 10.0,
+    "heave_damping_scale": 6.0,
+    "cob_torque_scale": 0.6,
+    "buoyancy_point_blend": 1.0,
+    "cob_x_offset": 0.01,
+    "cob_z_offset": 0.02,
+    "thruster_voltage": 16.0,
+    "thruster_force_max": 21.0,
+    "linear_drag": 0.93,
+    "angular_drag": 0.72,
+    "current_world": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "body_inertia_scale_xyz": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "body_components": [
+      {
+        "name": "center_enclosure",
+        "shape": "ellipsoid",
+        "size": [
+          0.22,
+          0.12,
+          0.11
+        ],
+        "mass": 6.0,
+        "mass_pos": [
+          -0.005,
+          0.0,
+          0.075
+        ],
+        "buoyancy_pos": [
+          -0.005,
+          0.0,
+          0.06
+        ],
+        "buoyancy_share": 0.2
+      },
+      {
+        "name": "port_lower_body",
+        "shape": "ellipsoid",
+        "size": [
+          0.38,
+          0.09,
+          0.09
+        ],
+        "mass": 4.5,
+        "mass_pos": [
+          0.0,
+          0.208,
+          -0.005
+        ],
+        "buoyancy_pos": [
+          0.0,
+          0.208,
+          0.04
+        ],
+        "buoyancy_share": 0.4
+      },
+      {
+        "name": "starboard_lower_body",
+        "shape": "ellipsoid",
+        "size": [
+          0.38,
+          0.09,
+          0.09
+        ],
+        "mass": 4.5,
+        "mass_pos": [
+          0.0,
+          -0.208,
+          -0.005
+        ],
+        "buoyancy_pos": [
+          0.0,
+          -0.208,
+          0.04
+        ],
+        "buoyancy_share": 0.4
+      }
+    ],
+    "buoyancy_points": [
+      {
+        "name": "buoy_ver_lf",
+        "pos": [
+          0.149,
+          0.2346,
+          0.04
+        ],
+        "share": 0.25,
+        "half_height": 0.09
+      },
+      {
+        "name": "buoy_ver_lr",
+        "pos": [
+          -0.171,
+          0.2346,
+          0.04
+        ],
+        "share": 0.25,
+        "half_height": 0.09
+      },
+      {
+        "name": "buoy_ver_rf",
+        "pos": [
+          0.149,
+          -0.2344,
+          0.04
+        ],
+        "share": 0.25,
+        "half_height": 0.09
+      },
+      {
+        "name": "buoy_ver_rr",
+        "pos": [
+          -0.171,
+          -0.2344,
+          0.04
+        ],
+        "share": 0.25,
+        "half_height": 0.09
+      }
+    ],
+    "ellipsoid_model": {
+      "active": true,
+      "semi_axes": [
+        0.16,
+        0.106,
+        0.147
+      ],
+      "use_shape_volume": false,
+      "effective_cd_linear": [
+        0.06,
+        0.057,
+        0.087
+      ],
+      "effective_cd_angular": [
+        1.62,
+        0.78,
+        0.003
+      ],
+      "added_mass_scale_linear": [
+        0.45,
+        0.28,
+        0.65
+      ],
+      "added_mass_scale_angular": [
+        1.0,
+        0.92,
+        1.02
+      ],
+      "linear_damping_ratio_linear": 2.0,
+      "linear_damping_ratio_angular": 4.2,
+      "reference_speed_linear": 0.3,
+      "reference_speed_angular": 0.6
+    },
+    "spin_gain": 22.0,
+    "yaw_torque_scale": 1.0,
+    "validation_timestep": 0.005,
+    "validation_iterations": 20,
+    "validation_ls_iterations": 8,
+    "validation_step_start": 0.5,
+    "validation_step_end": 1.4,
+    "validation_total_time": 3.2,
+    "validation_step_amp_ratio": 0.3,
+    "mujoco_fluidcoef_scale": [
+      1.0,
+      1.0,
+      2.0,
+      1.0,
+      1.0
+    ],
+    "linear_damping_linear": [
+      1.1,
+      1.32,
+      1.54
+    ],
+    "linear_damping_angular": [
+      0.32,
+      0.36,
+      0.28
+    ],
+    "quadratic_damping_linear": [
+      1.4,
+      2.0,
+      2.4
+    ],
+    "quadratic_damping_angular": [
+      0.1,
+      0.12,
+      0.08
+    ],
+    "air_linear_drag": 0.03,
+    "air_angular_drag": 0.03
+  }
+}

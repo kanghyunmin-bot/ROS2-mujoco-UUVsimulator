@@ -1,0 +1,55 @@
+# Python / macOS local cache
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# Local dependency caches and packaged desktop binaries
+.geographiclib/
+QGroundControl.app/
+dist/
+dist2/
+
+# MuJoCo/SITL runtime logs
+uuv_mujoco/v2.2/logs/
+uuv_mujoco/v2.2/config/*.bak_*
+log/
+
+# ROS/colcon generated outputs
+rospkg/build/
+rospkg/install/
+rospkg/log/
+rospkg/*.zip
+
+# Closed-loop replay, autotune, and one-off generated analysis outputs
+document/docsource/closed_loop*/
+document/docsource/real_bag_*/
+document/docsource/gui_autotune_*/
+document/docsource/gui_replay*/
+document/docsource/ellipsoid5*/
+document/docsource/joy_node*/
+document/docsource/measurements/
+document/measurements/
+document/docsource/*overlay_20260429/
+document/docsource/real_vs_sim_analysis*/
+document/docsource/sensor_sign_plots_20260429/
+document/docsource/thrust_command_comparison_20260430/
+document/docsource/rcout_*_20260430/
+document/docsource/post_reverse_mapping_rcout_eval_20260430/
+document/docsource/depth_hold_neutral_alt_only_70s/
+document/docsource/**/sim_bag/
+document/docsource/**/*.log
+*.npz
+
+# Large runtime captures should stay local unless explicitly versioned with LFS.
+real_robot_ros_bag/
+*.db3
+*.bag
+*.mcap
+
+# LaTeX build byproducts. Keep .tex/.pdf sources and deliverables.
+document/docsource/*.aux
+document/docsource/*.log
+document/docsource/*.nav
+document/docsource/*.out
+document/docsource/*.snm
+document/docsource/*.toc

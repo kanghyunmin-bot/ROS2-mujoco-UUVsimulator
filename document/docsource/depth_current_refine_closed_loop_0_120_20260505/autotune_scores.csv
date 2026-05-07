@@ -1,0 +1,3 @@
+candidate,status,score,fluid_linear_scale,fluid_rot_scale,fluid_blunt_scale,fluid_slender_scale,fluid_angular_scale,fluid_kutta,fluid_magnus,profile_updates,tune_mode,command_source,out_dir
+buoy_p020_heave_p20,ok,1.2561124444849274,1.0,1.0,1.0,1.0,1.0,,,"{""buoyancy_scale"": 1.04, ""surface_heave_damping"": 15.8, ""heave_damping_scale"": 5.2}",closed-loop,,document/docsource/depth_current_refine_closed_loop_0_120_20260505/buoy_p020_heave_p20
+baseline,ok,1.3146483173119226,1.0,1.0,1.0,1.0,1.0,,,{},closed-loop,,document/docsource/depth_current_refine_closed_loop_0_120_20260505/baseline

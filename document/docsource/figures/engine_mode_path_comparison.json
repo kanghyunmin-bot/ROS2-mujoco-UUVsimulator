@@ -1,0 +1,34 @@
+{
+  "custom_label": "custom",
+  "ellipsoid_label": "ellipsoid",
+  "modes": {
+    "manual": {
+      "forward_distance_delta_m": -1.2572568922538452,
+      "right_distance_delta_m": -0.23833218336549378,
+      "pitch_delta_deg": -76.16368014526752,
+      "yaw_delta_deg_custom": 149.48255338906262,
+      "yaw_delta_deg_ellipsoid": -96.77356409380972
+    },
+    "stabilize": {
+      "forward_distance_delta_m": -0.5117741398411447,
+      "right_distance_delta_m": -3.0745546362310856,
+      "pitch_delta_deg": -8.966071935645818,
+      "yaw_delta_deg_custom": -75.40631644087901,
+      "yaw_delta_deg_ellipsoid": -75.9965019362788
+    },
+    "alt_hold": {
+      "forward_distance_delta_m": 0.43804352699349763,
+      "right_distance_delta_m": -0.5258526310176987,
+      "pitch_delta_deg": -11.116477752388429,
+      "yaw_delta_deg_custom": -66.21861617731071,
+      "yaw_delta_deg_ellipsoid": -69.80179706227624
+    },
+    "poshold": {
+      "forward_distance_delta_m": 0.008224121952015405,
+      "right_distance_delta_m": 0.015613262976117634,
+      "pitch_delta_deg": -4.355932014092551,
+      "yaw_delta_deg_custom": -84.15032728166943,
+      "yaw_delta_deg_ellipsoid": -77.2416650903813
+    }
+  }
+}

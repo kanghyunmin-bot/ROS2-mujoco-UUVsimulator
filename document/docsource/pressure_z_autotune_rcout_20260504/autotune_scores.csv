@@ -1,0 +1,17 @@
+candidate,status,score,fluid_linear_scale,fluid_rot_scale,fluid_blunt_scale,fluid_slender_scale,fluid_angular_scale,fluid_kutta,fluid_magnus,profile_updates,tune_mode,command_source,out_dir
+heave_damping_p25,ok,3.2211018259751505,1.0,1.0,1.0,1.0,1.0,,,"{""surface_heave_damping"": 15.0, ""heave_damping_scale"": 5.0}",plant-rc-out,rc_out,document/docsource/pressure_z_autotune_rcout_20260504/heave_damping_p25
+heave_damping_p10,ok,3.2537020537352004,1.0,1.0,1.0,1.0,1.0,,,"{""surface_heave_damping"": 13.2, ""heave_damping_scale"": 4.4}",plant-rc-out,rc_out,document/docsource/pressure_z_autotune_rcout_20260504/heave_damping_p10
+z_drag_damp_p10,ok,3.2537020537352004,1.0,1.0,1.0,1.0,1.0,,,"{""surface_heave_damping"": 13.2, ""heave_damping_scale"": 4.4, ""ellipsoid_model.effective_cd_linear[2]"": 0.096}",plant-rc-out,rc_out,document/docsource/pressure_z_autotune_rcout_20260504/z_drag_damp_p10
+buoyancy_p003,ok,3.271498187719781,1.0,1.0,1.0,1.0,1.0,,,"{""buoyancy_scale"": 1.007}",plant-rc-out,rc_out,document/docsource/pressure_z_autotune_rcout_20260504/buoyancy_p003
+baseline,ok,3.2820749788380126,1.0,1.0,1.0,1.0,1.0,,,{},plant-rc-out,rc_out,document/docsource/pressure_z_autotune_rcout_20260504/baseline
+vertical_cd_m20,ok,3.2820749788380126,1.0,1.0,1.0,1.0,1.0,,,"{""ellipsoid_model.effective_cd_linear[2]"": 0.07}",plant-rc-out,rc_out,document/docsource/pressure_z_autotune_rcout_20260504/vertical_cd_m20
+vertical_cd_m10,ok,3.2820749788380126,1.0,1.0,1.0,1.0,1.0,,,"{""ellipsoid_model.effective_cd_linear[2]"": 0.078}",plant-rc-out,rc_out,document/docsource/pressure_z_autotune_rcout_20260504/vertical_cd_m10
+vertical_cd_p10,ok,3.2820749788380126,1.0,1.0,1.0,1.0,1.0,,,"{""ellipsoid_model.effective_cd_linear[2]"": 0.096}",plant-rc-out,rc_out,document/docsource/pressure_z_autotune_rcout_20260504/vertical_cd_p10
+vertical_cd_p25,ok,3.2820749788380126,1.0,1.0,1.0,1.0,1.0,,,"{""ellipsoid_model.effective_cd_linear[2]"": 0.109}",plant-rc-out,rc_out,document/docsource/pressure_z_autotune_rcout_20260504/vertical_cd_p25
+added_z_m20,ok,3.2820749788380126,1.0,1.0,1.0,1.0,1.0,,,"{""ellipsoid_model.added_mass_scale_linear[2]"": 0.52}",plant-rc-out,rc_out,document/docsource/pressure_z_autotune_rcout_20260504/added_z_m20
+added_z_p20,ok,3.2820749788380126,1.0,1.0,1.0,1.0,1.0,,,"{""ellipsoid_model.added_mass_scale_linear[2]"": 0.78}",plant-rc-out,rc_out,document/docsource/pressure_z_autotune_rcout_20260504/added_z_p20
+buoyancy_p006,ok,3.2829123409583736,1.0,1.0,1.0,1.0,1.0,,,"{""buoyancy_scale"": 1.01}",plant-rc-out,rc_out,document/docsource/pressure_z_autotune_rcout_20260504/buoyancy_p006
+heave_damping_m10,ok,3.2951881547934607,1.0,1.0,1.0,1.0,1.0,,,"{""surface_heave_damping"": 10.8, ""heave_damping_scale"": 3.6}",plant-rc-out,rc_out,document/docsource/pressure_z_autotune_rcout_20260504/heave_damping_m10
+z_drag_damp_m10,ok,3.2951881547934607,1.0,1.0,1.0,1.0,1.0,,,"{""surface_heave_damping"": 10.8, ""heave_damping_scale"": 3.6, ""ellipsoid_model.effective_cd_linear[2]"": 0.078}",plant-rc-out,rc_out,document/docsource/pressure_z_autotune_rcout_20260504/z_drag_damp_m10
+buoyancy_m003,ok,3.295308467255365,1.0,1.0,1.0,1.0,1.0,,,"{""buoyancy_scale"": 1.001}",plant-rc-out,rc_out,document/docsource/pressure_z_autotune_rcout_20260504/buoyancy_m003
+heave_damping_m20,ok,3.320635076331741,1.0,1.0,1.0,1.0,1.0,,,"{""surface_heave_damping"": 9.6, ""heave_damping_scale"": 3.2}",plant-rc-out,rc_out,document/docsource/pressure_z_autotune_rcout_20260504/heave_damping_m20

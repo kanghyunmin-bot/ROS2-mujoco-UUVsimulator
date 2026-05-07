@@ -1,0 +1,1771 @@
+{
+  "best": {
+    "candidate": "heave_damping_p10",
+    "returncode": 0,
+    "out_dir": "document/docsource/pressure_z_autotune_20260504/heave_damping_p10",
+    "profile_updates": {
+      "surface_heave_damping": 13.2,
+      "heave_damping_scale": 4.4
+    },
+    "fluid_linear_scale": 1.0,
+    "fluid_rot_scale": 1.0,
+    "fluid_blunt_scale": 1.0,
+    "fluid_slender_scale": 1.0,
+    "fluid_angular_scale": 1.0,
+    "fluid_kutta": null,
+    "fluid_magnus": null,
+    "tune_mode": "plant-joy",
+    "command_source": "joy_node",
+    "score": 2.944329584554425,
+    "status": "ok",
+    "axis_scores": {
+      "dvl_x": {
+        "count": 1031,
+        "rmse": 0.508815352401896,
+        "real_rms": 0.28982185145587464,
+        "sim_rms": 0.5230998421210994,
+        "normalized_rmse": 1.755614181076899,
+        "correlation": -0.14047762927570884,
+        "axis_score": 2.1293094763462364
+      },
+      "dvl_z": {
+        "count": 1031,
+        "rmse": 0.16220788083514132,
+        "real_rms": 0.045093237740857724,
+        "sim_rms": 0.15176072306601368,
+        "normalized_rmse": 3.597166425868979,
+        "correlation": 0.04683715802797617,
+        "axis_score": 4.0174930554787975
+      },
+      "dvl_y": {
+        "count": 1045,
+        "rmse": 0.1036152738261249,
+        "real_rms": 0.055361996964664664,
+        "sim_rms": 0.10135091957436512,
+        "normalized_rmse": 1.8715956704426389,
+        "correlation": 0.2894991867384061,
+        "axis_score": 2.1399252082251587
+      },
+      "gyro_z": {
+        "count": 2300,
+        "rmse": 0.45749404549634765,
+        "real_rms": 0.44200948408350504,
+        "sim_rms": 0.5363534318106334,
+        "normalized_rmse": 1.0350321926800947,
+        "correlation": 0.5505646338516523,
+        "axis_score": 1.1764103330811801
+      },
+      "gyro_x": {
+        "count": 2276,
+        "rmse": 0.15978051072224025,
+        "real_rms": 0.03721403622869116,
+        "sim_rms": 0.15504633110697827,
+        "normalized_rmse": 4.293554983940527,
+        "correlation": -0.050187078684245115,
+        "axis_score": 4.770157449791673
+      },
+      "gyro_y": {
+        "count": 2300,
+        "rmse": 0.18270790056543457,
+        "real_rms": 0.04006686095692726,
+        "sim_rms": 0.1877408168535773,
+        "normalized_rmse": 4.560075239281897,
+        "correlation": 0.22846118092633427,
+        "axis_score": 4.984636863343324
+      },
+      "bar30_depth": {
+        "count": 228,
+        "rmse": 0.7630826982854485,
+        "real_rms": 0.2517054098189131,
+        "sim_rms": 0.9785259362933745,
+        "normalized_rmse": 3.0316499706321,
+        "correlation": 0.12643543203247873,
+        "axis_score": 3.4537092972682246
+      },
+      "bar30_depth_shape": {
+        "count": 228,
+        "rmse": 0.33727845269486045,
+        "real_rms": 0.2517054098189131,
+        "sim_rms": 0.9785259362933745,
+        "normalized_rmse": 1.3399729983456137,
+        "correlation": 0.12643543203247873,
+        "axis_score": 1.762032324981738
+      },
+      "bar30_depth_rate": {
+        "count": 230,
+        "rmse": 0.0879127397161188,
+        "real_rms": 0.03630526177433372,
+        "sim_rms": 0.08397728829315719,
+        "normalized_rmse": 2.4214875590917617,
+        "correlation": 0.10050861449959658,
+        "axis_score": 2.7721479607061315
+      }
+    },
+    "summary_json": "document/docsource/pressure_z_autotune_20260504/heave_damping_p10/comparison/closed_loop_real_vs_sim_summary.json"
+  },
+  "results": [
+    {
+      "candidate": "baseline",
+      "returncode": 0,
+      "out_dir": "document/docsource/pressure_z_autotune_20260504/baseline",
+      "profile_updates": {},
+      "fluid_linear_scale": 1.0,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "plant-joy",
+      "command_source": "joy_node",
+      "score": 2.987859237403732,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 1048,
+          "rmse": 0.38712501154009055,
+          "real_rms": 0.29009901307891084,
+          "sim_rms": 0.40701590873896876,
+          "normalized_rmse": 1.3344582162876484,
+          "correlation": 0.1832488997310594,
+          "axis_score": 1.5894404888605207
+        },
+        "dvl_z": {
+          "count": 1040,
+          "rmse": 0.1412158395233144,
+          "real_rms": 0.04496847116796379,
+          "sim_rms": 0.13523082884028134,
+          "normalized_rmse": 3.1403300102387885,
+          "correlation": 0.09364028866565213,
+          "axis_score": 3.5320731717854157
+        },
+        "dvl_y": {
+          "count": 1045,
+          "rmse": 0.10091678393373896,
+          "real_rms": 0.055361996964664664,
+          "sim_rms": 0.09902160686632933,
+          "normalized_rmse": 1.8228530303585342,
+          "correlation": 0.33374629443900733,
+          "axis_score": 2.0766331609236164
+        },
+        "gyro_z": {
+          "count": 2300,
+          "rmse": 0.45032985949393706,
+          "real_rms": 0.44200948408350504,
+          "sim_rms": 0.487303022875289,
+          "normalized_rmse": 1.0188239748467933,
+          "correlation": 0.528704037627804,
+          "axis_score": 1.1512811875540918
+        },
+        "gyro_x": {
+          "count": 2275,
+          "rmse": 0.21037678048298458,
+          "real_rms": 0.03722167464770994,
+          "sim_rms": 0.20597707034822366,
+          "normalized_rmse": 5.65199665179299,
+          "correlation": -0.07248884967881371,
+          "axis_score": 6.176749905739914
+        },
+        "gyro_y": {
+          "count": 2296,
+          "rmse": 0.23246147999731562,
+          "real_rms": 0.04009814576533602,
+          "sim_rms": 0.23957980684858723,
+          "normalized_rmse": 5.797312458230264,
+          "correlation": 0.2565740127549994,
+          "axis_score": 6.251302428709059
+        },
+        "bar30_depth": {
+          "count": 228,
+          "rmse": 0.7465780331321266,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9631122668951665,
+          "normalized_rmse": 2.9660786141594833,
+          "correlation": 0.15274290763783674,
+          "axis_score": 3.379179475800913
+        },
+        "bar30_depth_shape": {
+          "count": 228,
+          "rmse": 0.33219737744611966,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9631122668951665,
+          "normalized_rmse": 1.3197864030221507,
+          "correlation": 0.15274290763783674,
+          "axis_score": 1.7328872646635802
+        },
+        "bar30_depth_rate": {
+          "count": 230,
+          "rmse": 0.0850957131126534,
+          "real_rms": 0.03630526177433372,
+          "sim_rms": 0.08155570864837054,
+          "normalized_rmse": 2.3438947676948705,
+          "correlation": 0.11821990964844882,
+          "axis_score": 2.6857383370641377
+        }
+      },
+      "summary_json": "document/docsource/pressure_z_autotune_20260504/baseline/comparison/closed_loop_real_vs_sim_summary.json"
+    },
+    {
+      "candidate": "buoyancy_m003",
+      "returncode": 0,
+      "out_dir": "document/docsource/pressure_z_autotune_20260504/buoyancy_m003",
+      "profile_updates": {
+        "buoyancy_scale": 1.001
+      },
+      "fluid_linear_scale": 1.0,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "plant-joy",
+      "command_source": "joy_node",
+      "score": 3.0173377209656094,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 1048,
+          "rmse": 0.38835374200943146,
+          "real_rms": 0.29009901307891084,
+          "sim_rms": 0.40770643394852835,
+          "normalized_rmse": 1.3386937717840288,
+          "correlation": 0.18087403455237136,
+          "axis_score": 1.5945240283960773
+        },
+        "dvl_z": {
+          "count": 1041,
+          "rmse": 0.1406347209075155,
+          "real_rms": 0.044948217147563,
+          "sim_rms": 0.13495164924016526,
+          "normalized_rmse": 3.128816443282232,
+          "correlation": 0.09702726468913137,
+          "axis_score": 3.5194704466186773
+        },
+        "dvl_y": {
+          "count": 1045,
+          "rmse": 0.10144623373868672,
+          "real_rms": 0.055361996964664664,
+          "sim_rms": 0.09952246590170905,
+          "normalized_rmse": 1.8324164463112804,
+          "correlation": 0.3301651399114663,
+          "axis_score": 2.0878486648790746
+        },
+        "gyro_z": {
+          "count": 2300,
+          "rmse": 0.44950735847937767,
+          "real_rms": 0.44200948408350504,
+          "sim_rms": 0.4891758310473653,
+          "normalized_rmse": 1.01696315275094,
+          "correlation": 0.531998408307601,
+          "axis_score": 1.1491721494472558
+        },
+        "gyro_x": {
+          "count": 2266,
+          "rmse": 0.2119230024132431,
+          "real_rms": 0.03729001629924225,
+          "sim_rms": 0.20776584799616243,
+          "normalized_rmse": 5.683102970849317,
+          "correlation": -0.06651241395542351,
+          "axis_score": 6.207383986865869
+        },
+        "gyro_y": {
+          "count": 2295,
+          "rmse": 0.2308387142679274,
+          "real_rms": 0.04010598421517826,
+          "sim_rms": 0.23804410055464062,
+          "normalized_rmse": 5.755717476709264,
+          "correlation": 0.259210425075985,
+          "axis_score": 6.208054430061829
+        },
+        "bar30_depth": {
+          "count": 230,
+          "rmse": 0.7563186670948222,
+          "real_rms": 0.25171589437048486,
+          "sim_rms": 0.9724879067471409,
+          "normalized_rmse": 3.004652006526231,
+          "correlation": 0.10954757509184135,
+          "axis_score": 3.4299986015489643
+        },
+        "bar30_depth_shape": {
+          "count": 230,
+          "rmse": 0.32476217886985137,
+          "real_rms": 0.25171589437048486,
+          "sim_rms": 0.9724879067471409,
+          "normalized_rmse": 1.2901933732951096,
+          "correlation": 0.10954757509184135,
+          "axis_score": 1.715539968317843
+        },
+        "bar30_depth_rate": {
+          "count": 230,
+          "rmse": 0.09247734129282047,
+          "real_rms": 0.03630526177433372,
+          "sim_rms": 0.0888893305620695,
+          "normalized_rmse": 2.5472159343634875,
+          "correlation": 0.09772795300777938,
+          "axis_score": 2.9070983614988597
+        }
+      },
+      "summary_json": "document/docsource/pressure_z_autotune_20260504/buoyancy_m003/comparison/closed_loop_real_vs_sim_summary.json"
+    },
+    {
+      "candidate": "buoyancy_p003",
+      "returncode": 0,
+      "out_dir": "document/docsource/pressure_z_autotune_20260504/buoyancy_p003",
+      "profile_updates": {
+        "buoyancy_scale": 1.007
+      },
+      "fluid_linear_scale": 1.0,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "plant-joy",
+      "command_source": "joy_node",
+      "score": 2.9793044055186795,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 1048,
+          "rmse": 0.3859268086355299,
+          "real_rms": 0.29009901307891084,
+          "sim_rms": 0.4061832029014075,
+          "normalized_rmse": 1.3303278923274124,
+          "correlation": 0.18418902494740688,
+          "axis_score": 1.5847679371974241
+        },
+        "dvl_z": {
+          "count": 1040,
+          "rmse": 0.1444978529050245,
+          "real_rms": 0.04496847116796379,
+          "sim_rms": 0.13912397516740818,
+          "normalized_rmse": 3.21331477704243,
+          "correlation": 0.09931746482101504,
+          "axis_score": 3.607895986807414
+        },
+        "dvl_y": {
+          "count": 1045,
+          "rmse": 0.10288559508663524,
+          "real_rms": 0.055361996964664664,
+          "sim_rms": 0.10098640937751975,
+          "normalized_rmse": 1.85841553281221,
+          "correlation": 0.3289628367721514,
+          "axis_score": 2.1163387082448417
+        },
+        "gyro_z": {
+          "count": 2300,
+          "rmse": 0.45198608781236127,
+          "real_rms": 0.44200948408350504,
+          "sim_rms": 0.4916526581291128,
+          "normalized_rmse": 1.0225710173381064,
+          "correlation": 0.5310009706988978,
+          "axis_score": 1.1557869469697506
+        },
+        "gyro_x": {
+          "count": 2274,
+          "rmse": 0.20653653700729957,
+          "real_rms": 0.037229304270963014,
+          "sim_rms": 0.2021019028765462,
+          "normalized_rmse": 5.547687260123947,
+          "correlation": -0.07280618269424648,
+          "axis_score": 6.0696401817222165
+        },
+        "gyro_y": {
+          "count": 2296,
+          "rmse": 0.23420012292180797,
+          "real_rms": 0.04009814576533602,
+          "sim_rms": 0.24158525898171115,
+          "normalized_rmse": 5.840672142108599,
+          "correlation": 0.2624162755227408,
+          "axis_score": 6.294451926788893
+        },
+        "bar30_depth": {
+          "count": 228,
+          "rmse": 0.734253186503197,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9519990281695663,
+          "normalized_rmse": 2.9171132516835776,
+          "correlation": 0.19255184183349142,
+          "axis_score": 3.3185209840643806
+        },
+        "bar30_depth_shape": {
+          "count": 228,
+          "rmse": 0.33076029903220805,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9519990281695663,
+          "normalized_rmse": 1.3140770366046968,
+          "correlation": 0.19255184183349142,
+          "axis_score": 1.7154847689855
+        },
+        "bar30_depth_rate": {
+          "count": 230,
+          "rmse": 0.08337419952546014,
+          "real_rms": 0.03630526177433372,
+          "sim_rms": 0.07975402011402437,
+          "normalized_rmse": 2.296477024286385,
+          "correlation": 0.12080496542101364,
+          "axis_score": 2.6343234528492143
+        }
+      },
+      "summary_json": "document/docsource/pressure_z_autotune_20260504/buoyancy_p003/comparison/closed_loop_real_vs_sim_summary.json"
+    },
+    {
+      "candidate": "buoyancy_p006",
+      "returncode": 0,
+      "out_dir": "document/docsource/pressure_z_autotune_20260504/buoyancy_p006",
+      "profile_updates": {
+        "buoyancy_scale": 1.01
+      },
+      "fluid_linear_scale": 1.0,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "plant-joy",
+      "command_source": "joy_node",
+      "score": 2.974338312313206,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 1048,
+          "rmse": 0.38679090871093563,
+          "real_rms": 0.29009901307891084,
+          "sim_rms": 0.4064875887722294,
+          "normalized_rmse": 1.3333065307799696,
+          "correlation": 0.1795467713551464,
+          "axis_score": 1.5890195040628254
+        },
+        "dvl_z": {
+          "count": 1040,
+          "rmse": 0.1459414507369072,
+          "real_rms": 0.04496847116796379,
+          "sim_rms": 0.14019697759130975,
+          "normalized_rmse": 3.245417221141333,
+          "correlation": 0.09123037679973192,
+          "axis_score": 3.6431726488968796
+        },
+        "dvl_y": {
+          "count": 1045,
+          "rmse": 0.10080668631015165,
+          "real_rms": 0.055361996964664664,
+          "sim_rms": 0.0990357666899552,
+          "normalized_rmse": 1.820864344443581,
+          "correlation": 0.3396885770831916,
+          "axis_score": 2.073180352410967
+        },
+        "gyro_z": {
+          "count": 2300,
+          "rmse": 0.4504702637656555,
+          "real_rms": 0.44200948408350504,
+          "sim_rms": 0.49024652498251803,
+          "normalized_rmse": 1.01914162475426,
+          "correlation": 0.5317225599411454,
+          "axis_score": 1.151747540430781
+        },
+        "gyro_x": {
+          "count": 2266,
+          "rmse": 0.20740758521051142,
+          "real_rms": 0.03729001629924225,
+          "sim_rms": 0.20300622339095403,
+          "normalized_rmse": 5.56201379871014,
+          "correlation": -0.0721761812255627,
+          "axis_score": 6.084234494674332
+        },
+        "gyro_y": {
+          "count": 2294,
+          "rmse": 0.2315654078977164,
+          "real_rms": 0.040114464373890615,
+          "sim_rms": 0.23904310818238567,
+          "normalized_rmse": 5.7726162248955735,
+          "correlation": 0.2656551681303654,
+          "axis_score": 6.223938472029897
+        },
+        "bar30_depth": {
+          "count": 227,
+          "rmse": 0.7207886841175609,
+          "real_rms": 0.2517700554732275,
+          "sim_rms": 0.9400019718168519,
+          "normalized_rmse": 2.8628848762922385,
+          "correlation": 0.23614891894151158,
+          "axis_score": 3.2514525135974357
+        },
+        "bar30_depth_shape": {
+          "count": 227,
+          "rmse": 0.3272793000549715,
+          "real_rms": 0.2517700554732275,
+          "sim_rms": 0.9400019718168519,
+          "normalized_rmse": 1.299913524028172,
+          "correlation": 0.23614891894151158,
+          "axis_score": 1.6884811613333692
+        },
+        "bar30_depth_rate": {
+          "count": 230,
+          "rmse": 0.08580110479258485,
+          "real_rms": 0.03630526177433372,
+          "sim_rms": 0.08254671685062945,
+          "normalized_rmse": 2.363324229030696,
+          "correlation": 0.12431295193896458,
+          "axis_score": 2.7054562482512714
+        }
+      },
+      "summary_json": "document/docsource/pressure_z_autotune_20260504/buoyancy_p006/comparison/closed_loop_real_vs_sim_summary.json"
+    },
+    {
+      "candidate": "heave_damping_m20",
+      "returncode": 0,
+      "out_dir": "document/docsource/pressure_z_autotune_20260504/heave_damping_m20",
+      "profile_updates": {
+        "surface_heave_damping": 9.6,
+        "heave_damping_scale": 3.2
+      },
+      "fluid_linear_scale": 1.0,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "plant-joy",
+      "command_source": "joy_node",
+      "score": 3.041786832180157,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 1048,
+          "rmse": 0.3873237301796915,
+          "real_rms": 0.29009901307891084,
+          "sim_rms": 0.4072654832330372,
+          "normalized_rmse": 1.3351432190992467,
+          "correlation": 0.18377602202737808,
+          "axis_score": 1.590085660086808
+        },
+        "dvl_z": {
+          "count": 1040,
+          "rmse": 0.14201066508911603,
+          "real_rms": 0.04496847116796379,
+          "sim_rms": 0.13612624780013438,
+          "normalized_rmse": 3.158005184536639,
+          "correlation": 0.09165568194913046,
+          "axis_score": 3.5512344356931482
+        },
+        "dvl_y": {
+          "count": 1045,
+          "rmse": 0.10070558983559132,
+          "real_rms": 0.055361996964664664,
+          "sim_rms": 0.0984218799123137,
+          "normalized_rmse": 1.8190382456736096,
+          "correlation": 0.32983617652958247,
+          "axis_score": 2.0728846645175585
+        },
+        "gyro_z": {
+          "count": 2300,
+          "rmse": 0.44977388710212407,
+          "real_rms": 0.44200948408350504,
+          "sim_rms": 0.4858241456440796,
+          "normalized_rmse": 1.0175661457462124,
+          "correlation": 0.526971457477621,
+          "axis_score": 1.1500005882466078
+        },
+        "gyro_x": {
+          "count": 2265,
+          "rmse": 0.2100106797086443,
+          "real_rms": 0.03729709346507688,
+          "sim_rms": 0.20587637613147,
+          "normalized_rmse": 5.630751895058196,
+          "correlation": -0.06601391277568698,
+          "axis_score": 6.15350944410552
+        },
+        "gyro_y": {
+          "count": 2295,
+          "rmse": 0.23858658016188103,
+          "real_rms": 0.04010598421517826,
+          "sim_rms": 0.2457345941298112,
+          "normalized_rmse": 5.948902260615438,
+          "correlation": 0.2551083363270704,
+          "axis_score": 6.407034153391859
+        },
+        "bar30_depth": {
+          "count": 228,
+          "rmse": 0.7409724791707327,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9584248712290945,
+          "normalized_rmse": 2.943808318239238,
+          "correlation": 0.1745733203815659,
+          "axis_score": 3.350719755559851
+        },
+        "bar30_depth_shape": {
+          "count": 228,
+          "rmse": 0.32866416273059157,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9584248712290945,
+          "normalized_rmse": 1.3057493002118852,
+          "correlation": 0.1745733203815659,
+          "axis_score": 1.712660737532498
+        },
+        "bar30_depth_rate": {
+          "count": 230,
+          "rmse": 0.09876102856215904,
+          "real_rms": 0.03630526177433372,
+          "sim_rms": 0.09643224448946358,
+          "normalized_rmse": 2.7202951785897573,
+          "correlation": 0.11877804447334503,
+          "axis_score": 3.0871323598013842
+        }
+      },
+      "summary_json": "document/docsource/pressure_z_autotune_20260504/heave_damping_m20/comparison/closed_loop_real_vs_sim_summary.json"
+    },
+    {
+      "candidate": "heave_damping_m10",
+      "returncode": 0,
+      "out_dir": "document/docsource/pressure_z_autotune_20260504/heave_damping_m10",
+      "profile_updates": {
+        "surface_heave_damping": 10.8,
+        "heave_damping_scale": 3.6
+      },
+      "fluid_linear_scale": 1.0,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "plant-joy",
+      "command_source": "joy_node",
+      "score": 3.0171557676260026,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 1048,
+          "rmse": 0.38676238299657933,
+          "real_rms": 0.29009901307891084,
+          "sim_rms": 0.4069641423268463,
+          "normalized_rmse": 1.3332081998202965,
+          "correlation": 0.18427991251881537,
+          "axis_score": 1.5879136401983633
+        },
+        "dvl_z": {
+          "count": 1040,
+          "rmse": 0.14277154935626757,
+          "real_rms": 0.04496847116796379,
+          "sim_rms": 0.136972074985424,
+          "normalized_rmse": 3.1749255789238426,
+          "correlation": 0.09417562864927033,
+          "axis_score": 3.568453992161526
+        },
+        "dvl_y": {
+          "count": 1044,
+          "rmse": 0.10276873821712523,
+          "real_rms": 0.05538451822599251,
+          "sim_rms": 0.10044196751096966,
+          "normalized_rmse": 1.8555499173574979,
+          "correlation": 0.3216778274431003,
+          "axis_score": 2.1144224639050027
+        },
+        "gyro_z": {
+          "count": 2300,
+          "rmse": 0.45103212745108995,
+          "real_rms": 0.44200948408350504,
+          "sim_rms": 0.4905104243921467,
+          "normalized_rmse": 1.0204127822874505,
+          "correlation": 0.5308551805843174,
+          "axis_score": 1.1533162659883163
+        },
+        "gyro_x": {
+          "count": 2274,
+          "rmse": 0.21035301921520472,
+          "real_rms": 0.037229304270963014,
+          "sim_rms": 0.20604612211166407,
+          "normalized_rmse": 5.650200113443149,
+          "correlation": -0.06955438871794598,
+          "axis_score": 6.174239286185849
+        },
+        "gyro_y": {
+          "count": 2293,
+          "rmse": 0.2376419901099565,
+          "real_rms": 0.04012316809284445,
+          "sim_rms": 0.24488644225554404,
+          "normalized_rmse": 5.922812215627048,
+          "correlation": 0.25765302179454214,
+          "axis_score": 6.379725061682841
+        },
+        "bar30_depth": {
+          "count": 228,
+          "rmse": 0.7443228201488985,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9612044875338857,
+          "normalized_rmse": 2.9571188822854224,
+          "correlation": 0.16104007931420167,
+          "axis_score": 3.367848029081469
+        },
+        "bar30_depth_shape": {
+          "count": 228,
+          "rmse": 0.33063458715530714,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9612044875338857,
+          "normalized_rmse": 1.3135775961000553,
+          "correlation": 0.16104007931420167,
+          "axis_score": 1.724306742896102
+        },
+        "bar30_depth_rate": {
+          "count": 230,
+          "rmse": 0.08924735947832729,
+          "real_rms": 0.03630526177433372,
+          "sim_rms": 0.0860441872613708,
+          "normalized_rmse": 2.458248615120065,
+          "correlation": 0.11607076424802891,
+          "axis_score": 2.8086656670238037
+        }
+      },
+      "summary_json": "document/docsource/pressure_z_autotune_20260504/heave_damping_m10/comparison/closed_loop_real_vs_sim_summary.json"
+    },
+    {
+      "candidate": "heave_damping_p10",
+      "returncode": 0,
+      "out_dir": "document/docsource/pressure_z_autotune_20260504/heave_damping_p10",
+      "profile_updates": {
+        "surface_heave_damping": 13.2,
+        "heave_damping_scale": 4.4
+      },
+      "fluid_linear_scale": 1.0,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "plant-joy",
+      "command_source": "joy_node",
+      "score": 2.944329584554425,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 1031,
+          "rmse": 0.508815352401896,
+          "real_rms": 0.28982185145587464,
+          "sim_rms": 0.5230998421210994,
+          "normalized_rmse": 1.755614181076899,
+          "correlation": -0.14047762927570884,
+          "axis_score": 2.1293094763462364
+        },
+        "dvl_z": {
+          "count": 1031,
+          "rmse": 0.16220788083514132,
+          "real_rms": 0.045093237740857724,
+          "sim_rms": 0.15176072306601368,
+          "normalized_rmse": 3.597166425868979,
+          "correlation": 0.04683715802797617,
+          "axis_score": 4.0174930554787975
+        },
+        "dvl_y": {
+          "count": 1045,
+          "rmse": 0.1036152738261249,
+          "real_rms": 0.055361996964664664,
+          "sim_rms": 0.10135091957436512,
+          "normalized_rmse": 1.8715956704426389,
+          "correlation": 0.2894991867384061,
+          "axis_score": 2.1399252082251587
+        },
+        "gyro_z": {
+          "count": 2300,
+          "rmse": 0.45749404549634765,
+          "real_rms": 0.44200948408350504,
+          "sim_rms": 0.5363534318106334,
+          "normalized_rmse": 1.0350321926800947,
+          "correlation": 0.5505646338516523,
+          "axis_score": 1.1764103330811801
+        },
+        "gyro_x": {
+          "count": 2276,
+          "rmse": 0.15978051072224025,
+          "real_rms": 0.03721403622869116,
+          "sim_rms": 0.15504633110697827,
+          "normalized_rmse": 4.293554983940527,
+          "correlation": -0.050187078684245115,
+          "axis_score": 4.770157449791673
+        },
+        "gyro_y": {
+          "count": 2300,
+          "rmse": 0.18270790056543457,
+          "real_rms": 0.04006686095692726,
+          "sim_rms": 0.1877408168535773,
+          "normalized_rmse": 4.560075239281897,
+          "correlation": 0.22846118092633427,
+          "axis_score": 4.984636863343324
+        },
+        "bar30_depth": {
+          "count": 228,
+          "rmse": 0.7630826982854485,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9785259362933745,
+          "normalized_rmse": 3.0316499706321,
+          "correlation": 0.12643543203247873,
+          "axis_score": 3.4537092972682246
+        },
+        "bar30_depth_shape": {
+          "count": 228,
+          "rmse": 0.33727845269486045,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9785259362933745,
+          "normalized_rmse": 1.3399729983456137,
+          "correlation": 0.12643543203247873,
+          "axis_score": 1.762032324981738
+        },
+        "bar30_depth_rate": {
+          "count": 230,
+          "rmse": 0.0879127397161188,
+          "real_rms": 0.03630526177433372,
+          "sim_rms": 0.08397728829315719,
+          "normalized_rmse": 2.4214875590917617,
+          "correlation": 0.10050861449959658,
+          "axis_score": 2.7721479607061315
+        }
+      },
+      "summary_json": "document/docsource/pressure_z_autotune_20260504/heave_damping_p10/comparison/closed_loop_real_vs_sim_summary.json"
+    },
+    {
+      "candidate": "heave_damping_p25",
+      "returncode": 0,
+      "out_dir": "document/docsource/pressure_z_autotune_20260504/heave_damping_p25",
+      "profile_updates": {
+        "surface_heave_damping": 15.0,
+        "heave_damping_scale": 5.0
+      },
+      "fluid_linear_scale": 1.0,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "plant-joy",
+      "command_source": "joy_node",
+      "score": 2.9665175501600127,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 1031,
+          "rmse": 0.5084554294815695,
+          "real_rms": 0.28982185145587464,
+          "sim_rms": 0.524067961396219,
+          "normalized_rmse": 1.7543723046672408,
+          "correlation": -0.1364713519483417,
+          "axis_score": 2.1273433843051723
+        },
+        "dvl_z": {
+          "count": 1048,
+          "rmse": 0.16458578764354895,
+          "real_rms": 0.04480656135679701,
+          "sim_rms": 0.15085146103657188,
+          "normalized_rmse": 3.67325192247947,
+          "correlation": -0.041173628603309344,
+          "axis_score": 4.1156364891349435
+        },
+        "dvl_y": {
+          "count": 1044,
+          "rmse": 0.10544928310556632,
+          "real_rms": 0.05538451822599251,
+          "sim_rms": 0.10331410350972026,
+          "normalized_rmse": 1.9039487294136634,
+          "correlation": 0.2846262590728383,
+          "axis_score": 2.1763132340652405
+        },
+        "gyro_z": {
+          "count": 2300,
+          "rmse": 0.4593175938995777,
+          "real_rms": 0.44200948408350504,
+          "sim_rms": 0.541777913876347,
+          "normalized_rmse": 1.0391577792769777,
+          "correlation": 0.5561055870611722,
+          "axis_score": 1.180660106325027
+        },
+        "gyro_x": {
+          "count": 2300,
+          "rmse": 0.16211852158632192,
+          "real_rms": 0.03704480697339076,
+          "sim_rms": 0.16200536019179781,
+          "normalized_rmse": 4.376281990152397,
+          "correlation": 0.0760023098387346,
+          "axis_score": 4.828606599147486
+        },
+        "gyro_y": {
+          "count": 2298,
+          "rmse": 0.19177895651479687,
+          "real_rms": 0.040083349493737694,
+          "sim_rms": 0.19683920736830668,
+          "normalized_rmse": 4.784504262667942,
+          "correlation": 0.22412148878436314,
+          "axis_score": 5.217187815329882
+        },
+        "bar30_depth": {
+          "count": 228,
+          "rmse": 0.7613783322736517,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9760360510307657,
+          "normalized_rmse": 3.024878697765843,
+          "correlation": 0.10798841118355526,
+          "axis_score": 3.451167614204413
+        },
+        "bar30_depth_shape": {
+          "count": 228,
+          "rmse": 0.33817817210899365,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9760360510307657,
+          "normalized_rmse": 1.3435474920951938,
+          "correlation": 0.10798841118355526,
+          "axis_score": 1.7698364085337637
+        },
+        "bar30_depth_rate": {
+          "count": 229,
+          "rmse": 0.08265697533201068,
+          "real_rms": 0.036375538249646004,
+          "sim_rms": 0.07845140869408752,
+          "normalized_rmse": 2.2723230860457457,
+          "correlation": 0.10804384639934556,
+          "axis_score": 2.610599561392826
+        }
+      },
+      "summary_json": "document/docsource/pressure_z_autotune_20260504/heave_damping_p25/comparison/closed_loop_real_vs_sim_summary.json"
+    },
+    {
+      "candidate": "vertical_cd_m20",
+      "returncode": 0,
+      "out_dir": "document/docsource/pressure_z_autotune_20260504/vertical_cd_m20",
+      "profile_updates": {
+        "ellipsoid_model.effective_cd_linear[2]": 0.07
+      },
+      "fluid_linear_scale": 1.0,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "plant-joy",
+      "command_source": "joy_node",
+      "score": 2.987859237403732,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 1048,
+          "rmse": 0.38712501154009055,
+          "real_rms": 0.29009901307891084,
+          "sim_rms": 0.40701590873896876,
+          "normalized_rmse": 1.3344582162876484,
+          "correlation": 0.1832488997310594,
+          "axis_score": 1.5894404888605207
+        },
+        "dvl_z": {
+          "count": 1040,
+          "rmse": 0.1412158395233144,
+          "real_rms": 0.04496847116796379,
+          "sim_rms": 0.13523082884028134,
+          "normalized_rmse": 3.1403300102387885,
+          "correlation": 0.09364028866565213,
+          "axis_score": 3.5320731717854157
+        },
+        "dvl_y": {
+          "count": 1045,
+          "rmse": 0.10091678393373896,
+          "real_rms": 0.055361996964664664,
+          "sim_rms": 0.09902160686632933,
+          "normalized_rmse": 1.8228530303585342,
+          "correlation": 0.33374629443900733,
+          "axis_score": 2.0766331609236164
+        },
+        "gyro_z": {
+          "count": 2300,
+          "rmse": 0.45032985949393706,
+          "real_rms": 0.44200948408350504,
+          "sim_rms": 0.487303022875289,
+          "normalized_rmse": 1.0188239748467933,
+          "correlation": 0.528704037627804,
+          "axis_score": 1.1512811875540918
+        },
+        "gyro_x": {
+          "count": 2275,
+          "rmse": 0.21037678048298458,
+          "real_rms": 0.03722167464770994,
+          "sim_rms": 0.20597707034822366,
+          "normalized_rmse": 5.65199665179299,
+          "correlation": -0.07248884967881371,
+          "axis_score": 6.176749905739914
+        },
+        "gyro_y": {
+          "count": 2296,
+          "rmse": 0.23246147999731562,
+          "real_rms": 0.04009814576533602,
+          "sim_rms": 0.23957980684858723,
+          "normalized_rmse": 5.797312458230264,
+          "correlation": 0.2565740127549994,
+          "axis_score": 6.251302428709059
+        },
+        "bar30_depth": {
+          "count": 228,
+          "rmse": 0.7465780331321266,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9631122668951665,
+          "normalized_rmse": 2.9660786141594833,
+          "correlation": 0.15274290763783674,
+          "axis_score": 3.379179475800913
+        },
+        "bar30_depth_shape": {
+          "count": 228,
+          "rmse": 0.33219737744611966,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9631122668951665,
+          "normalized_rmse": 1.3197864030221507,
+          "correlation": 0.15274290763783674,
+          "axis_score": 1.7328872646635802
+        },
+        "bar30_depth_rate": {
+          "count": 230,
+          "rmse": 0.0850957131126534,
+          "real_rms": 0.03630526177433372,
+          "sim_rms": 0.08155570864837054,
+          "normalized_rmse": 2.3438947676948705,
+          "correlation": 0.11821990964844882,
+          "axis_score": 2.6857383370641377
+        }
+      },
+      "summary_json": "document/docsource/pressure_z_autotune_20260504/vertical_cd_m20/comparison/closed_loop_real_vs_sim_summary.json"
+    },
+    {
+      "candidate": "vertical_cd_m10",
+      "returncode": 0,
+      "out_dir": "document/docsource/pressure_z_autotune_20260504/vertical_cd_m10",
+      "profile_updates": {
+        "ellipsoid_model.effective_cd_linear[2]": 0.078
+      },
+      "fluid_linear_scale": 1.0,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "plant-joy",
+      "command_source": "joy_node",
+      "score": 2.987859237403732,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 1048,
+          "rmse": 0.38712501154009055,
+          "real_rms": 0.29009901307891084,
+          "sim_rms": 0.40701590873896876,
+          "normalized_rmse": 1.3344582162876484,
+          "correlation": 0.1832488997310594,
+          "axis_score": 1.5894404888605207
+        },
+        "dvl_z": {
+          "count": 1040,
+          "rmse": 0.1412158395233144,
+          "real_rms": 0.04496847116796379,
+          "sim_rms": 0.13523082884028134,
+          "normalized_rmse": 3.1403300102387885,
+          "correlation": 0.09364028866565213,
+          "axis_score": 3.5320731717854157
+        },
+        "dvl_y": {
+          "count": 1045,
+          "rmse": 0.10091678393373896,
+          "real_rms": 0.055361996964664664,
+          "sim_rms": 0.09902160686632933,
+          "normalized_rmse": 1.8228530303585342,
+          "correlation": 0.33374629443900733,
+          "axis_score": 2.0766331609236164
+        },
+        "gyro_z": {
+          "count": 2300,
+          "rmse": 0.45032985949393706,
+          "real_rms": 0.44200948408350504,
+          "sim_rms": 0.487303022875289,
+          "normalized_rmse": 1.0188239748467933,
+          "correlation": 0.528704037627804,
+          "axis_score": 1.1512811875540918
+        },
+        "gyro_x": {
+          "count": 2275,
+          "rmse": 0.21037678048298458,
+          "real_rms": 0.03722167464770994,
+          "sim_rms": 0.20597707034822366,
+          "normalized_rmse": 5.65199665179299,
+          "correlation": -0.07248884967881371,
+          "axis_score": 6.176749905739914
+        },
+        "gyro_y": {
+          "count": 2296,
+          "rmse": 0.23246147999731562,
+          "real_rms": 0.04009814576533602,
+          "sim_rms": 0.23957980684858723,
+          "normalized_rmse": 5.797312458230264,
+          "correlation": 0.2565740127549994,
+          "axis_score": 6.251302428709059
+        },
+        "bar30_depth": {
+          "count": 228,
+          "rmse": 0.7465780331321266,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9631122668951665,
+          "normalized_rmse": 2.9660786141594833,
+          "correlation": 0.15274290763783674,
+          "axis_score": 3.379179475800913
+        },
+        "bar30_depth_shape": {
+          "count": 228,
+          "rmse": 0.33219737744611966,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9631122668951665,
+          "normalized_rmse": 1.3197864030221507,
+          "correlation": 0.15274290763783674,
+          "axis_score": 1.7328872646635802
+        },
+        "bar30_depth_rate": {
+          "count": 230,
+          "rmse": 0.0850957131126534,
+          "real_rms": 0.03630526177433372,
+          "sim_rms": 0.08155570864837054,
+          "normalized_rmse": 2.3438947676948705,
+          "correlation": 0.11821990964844882,
+          "axis_score": 2.6857383370641377
+        }
+      },
+      "summary_json": "document/docsource/pressure_z_autotune_20260504/vertical_cd_m10/comparison/closed_loop_real_vs_sim_summary.json"
+    },
+    {
+      "candidate": "vertical_cd_p10",
+      "returncode": 0,
+      "out_dir": "document/docsource/pressure_z_autotune_20260504/vertical_cd_p10",
+      "profile_updates": {
+        "ellipsoid_model.effective_cd_linear[2]": 0.096
+      },
+      "fluid_linear_scale": 1.0,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "plant-joy",
+      "command_source": "joy_node",
+      "score": 2.987859237403732,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 1048,
+          "rmse": 0.38712501154009055,
+          "real_rms": 0.29009901307891084,
+          "sim_rms": 0.40701590873896876,
+          "normalized_rmse": 1.3344582162876484,
+          "correlation": 0.1832488997310594,
+          "axis_score": 1.5894404888605207
+        },
+        "dvl_z": {
+          "count": 1040,
+          "rmse": 0.1412158395233144,
+          "real_rms": 0.04496847116796379,
+          "sim_rms": 0.13523082884028134,
+          "normalized_rmse": 3.1403300102387885,
+          "correlation": 0.09364028866565213,
+          "axis_score": 3.5320731717854157
+        },
+        "dvl_y": {
+          "count": 1045,
+          "rmse": 0.10091678393373896,
+          "real_rms": 0.055361996964664664,
+          "sim_rms": 0.09902160686632933,
+          "normalized_rmse": 1.8228530303585342,
+          "correlation": 0.33374629443900733,
+          "axis_score": 2.0766331609236164
+        },
+        "gyro_z": {
+          "count": 2300,
+          "rmse": 0.45032985949393706,
+          "real_rms": 0.44200948408350504,
+          "sim_rms": 0.487303022875289,
+          "normalized_rmse": 1.0188239748467933,
+          "correlation": 0.528704037627804,
+          "axis_score": 1.1512811875540918
+        },
+        "gyro_x": {
+          "count": 2275,
+          "rmse": 0.21037678048298458,
+          "real_rms": 0.03722167464770994,
+          "sim_rms": 0.20597707034822366,
+          "normalized_rmse": 5.65199665179299,
+          "correlation": -0.07248884967881371,
+          "axis_score": 6.176749905739914
+        },
+        "gyro_y": {
+          "count": 2296,
+          "rmse": 0.23246147999731562,
+          "real_rms": 0.04009814576533602,
+          "sim_rms": 0.23957980684858723,
+          "normalized_rmse": 5.797312458230264,
+          "correlation": 0.2565740127549994,
+          "axis_score": 6.251302428709059
+        },
+        "bar30_depth": {
+          "count": 228,
+          "rmse": 0.7465780331321266,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9631122668951665,
+          "normalized_rmse": 2.9660786141594833,
+          "correlation": 0.15274290763783674,
+          "axis_score": 3.379179475800913
+        },
+        "bar30_depth_shape": {
+          "count": 228,
+          "rmse": 0.33219737744611966,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9631122668951665,
+          "normalized_rmse": 1.3197864030221507,
+          "correlation": 0.15274290763783674,
+          "axis_score": 1.7328872646635802
+        },
+        "bar30_depth_rate": {
+          "count": 230,
+          "rmse": 0.0850957131126534,
+          "real_rms": 0.03630526177433372,
+          "sim_rms": 0.08155570864837054,
+          "normalized_rmse": 2.3438947676948705,
+          "correlation": 0.11821990964844882,
+          "axis_score": 2.6857383370641377
+        }
+      },
+      "summary_json": "document/docsource/pressure_z_autotune_20260504/vertical_cd_p10/comparison/closed_loop_real_vs_sim_summary.json"
+    },
+    {
+      "candidate": "vertical_cd_p25",
+      "returncode": 0,
+      "out_dir": "document/docsource/pressure_z_autotune_20260504/vertical_cd_p25",
+      "profile_updates": {
+        "ellipsoid_model.effective_cd_linear[2]": 0.109
+      },
+      "fluid_linear_scale": 1.0,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "plant-joy",
+      "command_source": "joy_node",
+      "score": 2.987859237403732,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 1048,
+          "rmse": 0.38712501154009055,
+          "real_rms": 0.29009901307891084,
+          "sim_rms": 0.40701590873896876,
+          "normalized_rmse": 1.3344582162876484,
+          "correlation": 0.1832488997310594,
+          "axis_score": 1.5894404888605207
+        },
+        "dvl_z": {
+          "count": 1040,
+          "rmse": 0.1412158395233144,
+          "real_rms": 0.04496847116796379,
+          "sim_rms": 0.13523082884028134,
+          "normalized_rmse": 3.1403300102387885,
+          "correlation": 0.09364028866565213,
+          "axis_score": 3.5320731717854157
+        },
+        "dvl_y": {
+          "count": 1045,
+          "rmse": 0.10091678393373896,
+          "real_rms": 0.055361996964664664,
+          "sim_rms": 0.09902160686632933,
+          "normalized_rmse": 1.8228530303585342,
+          "correlation": 0.33374629443900733,
+          "axis_score": 2.0766331609236164
+        },
+        "gyro_z": {
+          "count": 2300,
+          "rmse": 0.45032985949393706,
+          "real_rms": 0.44200948408350504,
+          "sim_rms": 0.487303022875289,
+          "normalized_rmse": 1.0188239748467933,
+          "correlation": 0.528704037627804,
+          "axis_score": 1.1512811875540918
+        },
+        "gyro_x": {
+          "count": 2275,
+          "rmse": 0.21037678048298458,
+          "real_rms": 0.03722167464770994,
+          "sim_rms": 0.20597707034822366,
+          "normalized_rmse": 5.65199665179299,
+          "correlation": -0.07248884967881371,
+          "axis_score": 6.176749905739914
+        },
+        "gyro_y": {
+          "count": 2296,
+          "rmse": 0.23246147999731562,
+          "real_rms": 0.04009814576533602,
+          "sim_rms": 0.23957980684858723,
+          "normalized_rmse": 5.797312458230264,
+          "correlation": 0.2565740127549994,
+          "axis_score": 6.251302428709059
+        },
+        "bar30_depth": {
+          "count": 228,
+          "rmse": 0.7465780331321266,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9631122668951665,
+          "normalized_rmse": 2.9660786141594833,
+          "correlation": 0.15274290763783674,
+          "axis_score": 3.379179475800913
+        },
+        "bar30_depth_shape": {
+          "count": 228,
+          "rmse": 0.33219737744611966,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9631122668951665,
+          "normalized_rmse": 1.3197864030221507,
+          "correlation": 0.15274290763783674,
+          "axis_score": 1.7328872646635802
+        },
+        "bar30_depth_rate": {
+          "count": 230,
+          "rmse": 0.0850957131126534,
+          "real_rms": 0.03630526177433372,
+          "sim_rms": 0.08155570864837054,
+          "normalized_rmse": 2.3438947676948705,
+          "correlation": 0.11821990964844882,
+          "axis_score": 2.6857383370641377
+        }
+      },
+      "summary_json": "document/docsource/pressure_z_autotune_20260504/vertical_cd_p25/comparison/closed_loop_real_vs_sim_summary.json"
+    },
+    {
+      "candidate": "added_z_m20",
+      "returncode": 0,
+      "out_dir": "document/docsource/pressure_z_autotune_20260504/added_z_m20",
+      "profile_updates": {
+        "ellipsoid_model.added_mass_scale_linear[2]": 0.52
+      },
+      "fluid_linear_scale": 1.0,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "plant-joy",
+      "command_source": "joy_node",
+      "score": 2.987859237403732,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 1048,
+          "rmse": 0.38712501154009055,
+          "real_rms": 0.29009901307891084,
+          "sim_rms": 0.40701590873896876,
+          "normalized_rmse": 1.3344582162876484,
+          "correlation": 0.1832488997310594,
+          "axis_score": 1.5894404888605207
+        },
+        "dvl_z": {
+          "count": 1040,
+          "rmse": 0.1412158395233144,
+          "real_rms": 0.04496847116796379,
+          "sim_rms": 0.13523082884028134,
+          "normalized_rmse": 3.1403300102387885,
+          "correlation": 0.09364028866565213,
+          "axis_score": 3.5320731717854157
+        },
+        "dvl_y": {
+          "count": 1045,
+          "rmse": 0.10091678393373896,
+          "real_rms": 0.055361996964664664,
+          "sim_rms": 0.09902160686632933,
+          "normalized_rmse": 1.8228530303585342,
+          "correlation": 0.33374629443900733,
+          "axis_score": 2.0766331609236164
+        },
+        "gyro_z": {
+          "count": 2300,
+          "rmse": 0.45032985949393706,
+          "real_rms": 0.44200948408350504,
+          "sim_rms": 0.487303022875289,
+          "normalized_rmse": 1.0188239748467933,
+          "correlation": 0.528704037627804,
+          "axis_score": 1.1512811875540918
+        },
+        "gyro_x": {
+          "count": 2275,
+          "rmse": 0.21037678048298458,
+          "real_rms": 0.03722167464770994,
+          "sim_rms": 0.20597707034822366,
+          "normalized_rmse": 5.65199665179299,
+          "correlation": -0.07248884967881371,
+          "axis_score": 6.176749905739914
+        },
+        "gyro_y": {
+          "count": 2296,
+          "rmse": 0.23246147999731562,
+          "real_rms": 0.04009814576533602,
+          "sim_rms": 0.23957980684858723,
+          "normalized_rmse": 5.797312458230264,
+          "correlation": 0.2565740127549994,
+          "axis_score": 6.251302428709059
+        },
+        "bar30_depth": {
+          "count": 228,
+          "rmse": 0.7465780331321266,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9631122668951665,
+          "normalized_rmse": 2.9660786141594833,
+          "correlation": 0.15274290763783674,
+          "axis_score": 3.379179475800913
+        },
+        "bar30_depth_shape": {
+          "count": 228,
+          "rmse": 0.33219737744611966,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9631122668951665,
+          "normalized_rmse": 1.3197864030221507,
+          "correlation": 0.15274290763783674,
+          "axis_score": 1.7328872646635802
+        },
+        "bar30_depth_rate": {
+          "count": 230,
+          "rmse": 0.0850957131126534,
+          "real_rms": 0.03630526177433372,
+          "sim_rms": 0.08155570864837054,
+          "normalized_rmse": 2.3438947676948705,
+          "correlation": 0.11821990964844882,
+          "axis_score": 2.6857383370641377
+        }
+      },
+      "summary_json": "document/docsource/pressure_z_autotune_20260504/added_z_m20/comparison/closed_loop_real_vs_sim_summary.json"
+    },
+    {
+      "candidate": "added_z_p20",
+      "returncode": 0,
+      "out_dir": "document/docsource/pressure_z_autotune_20260504/added_z_p20",
+      "profile_updates": {
+        "ellipsoid_model.added_mass_scale_linear[2]": 0.78
+      },
+      "fluid_linear_scale": 1.0,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "plant-joy",
+      "command_source": "joy_node",
+      "score": 2.987859237403732,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 1048,
+          "rmse": 0.38712501154009055,
+          "real_rms": 0.29009901307891084,
+          "sim_rms": 0.40701590873896876,
+          "normalized_rmse": 1.3344582162876484,
+          "correlation": 0.1832488997310594,
+          "axis_score": 1.5894404888605207
+        },
+        "dvl_z": {
+          "count": 1040,
+          "rmse": 0.1412158395233144,
+          "real_rms": 0.04496847116796379,
+          "sim_rms": 0.13523082884028134,
+          "normalized_rmse": 3.1403300102387885,
+          "correlation": 0.09364028866565213,
+          "axis_score": 3.5320731717854157
+        },
+        "dvl_y": {
+          "count": 1045,
+          "rmse": 0.10091678393373896,
+          "real_rms": 0.055361996964664664,
+          "sim_rms": 0.09902160686632933,
+          "normalized_rmse": 1.8228530303585342,
+          "correlation": 0.33374629443900733,
+          "axis_score": 2.0766331609236164
+        },
+        "gyro_z": {
+          "count": 2300,
+          "rmse": 0.45032985949393706,
+          "real_rms": 0.44200948408350504,
+          "sim_rms": 0.487303022875289,
+          "normalized_rmse": 1.0188239748467933,
+          "correlation": 0.528704037627804,
+          "axis_score": 1.1512811875540918
+        },
+        "gyro_x": {
+          "count": 2275,
+          "rmse": 0.21037678048298458,
+          "real_rms": 0.03722167464770994,
+          "sim_rms": 0.20597707034822366,
+          "normalized_rmse": 5.65199665179299,
+          "correlation": -0.07248884967881371,
+          "axis_score": 6.176749905739914
+        },
+        "gyro_y": {
+          "count": 2296,
+          "rmse": 0.23246147999731562,
+          "real_rms": 0.04009814576533602,
+          "sim_rms": 0.23957980684858723,
+          "normalized_rmse": 5.797312458230264,
+          "correlation": 0.2565740127549994,
+          "axis_score": 6.251302428709059
+        },
+        "bar30_depth": {
+          "count": 228,
+          "rmse": 0.7465780331321266,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9631122668951665,
+          "normalized_rmse": 2.9660786141594833,
+          "correlation": 0.15274290763783674,
+          "axis_score": 3.379179475800913
+        },
+        "bar30_depth_shape": {
+          "count": 228,
+          "rmse": 0.33219737744611966,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9631122668951665,
+          "normalized_rmse": 1.3197864030221507,
+          "correlation": 0.15274290763783674,
+          "axis_score": 1.7328872646635802
+        },
+        "bar30_depth_rate": {
+          "count": 230,
+          "rmse": 0.0850957131126534,
+          "real_rms": 0.03630526177433372,
+          "sim_rms": 0.08155570864837054,
+          "normalized_rmse": 2.3438947676948705,
+          "correlation": 0.11821990964844882,
+          "axis_score": 2.6857383370641377
+        }
+      },
+      "summary_json": "document/docsource/pressure_z_autotune_20260504/added_z_p20/comparison/closed_loop_real_vs_sim_summary.json"
+    },
+    {
+      "candidate": "z_drag_damp_m10",
+      "returncode": 0,
+      "out_dir": "document/docsource/pressure_z_autotune_20260504/z_drag_damp_m10",
+      "profile_updates": {
+        "surface_heave_damping": 10.8,
+        "heave_damping_scale": 3.6,
+        "ellipsoid_model.effective_cd_linear[2]": 0.078
+      },
+      "fluid_linear_scale": 1.0,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "plant-joy",
+      "command_source": "joy_node",
+      "score": 3.0171557676260026,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 1048,
+          "rmse": 0.38676238299657933,
+          "real_rms": 0.29009901307891084,
+          "sim_rms": 0.4069641423268463,
+          "normalized_rmse": 1.3332081998202965,
+          "correlation": 0.18427991251881537,
+          "axis_score": 1.5879136401983633
+        },
+        "dvl_z": {
+          "count": 1040,
+          "rmse": 0.14277154935626757,
+          "real_rms": 0.04496847116796379,
+          "sim_rms": 0.136972074985424,
+          "normalized_rmse": 3.1749255789238426,
+          "correlation": 0.09417562864927033,
+          "axis_score": 3.568453992161526
+        },
+        "dvl_y": {
+          "count": 1044,
+          "rmse": 0.10276873821712523,
+          "real_rms": 0.05538451822599251,
+          "sim_rms": 0.10044196751096966,
+          "normalized_rmse": 1.8555499173574979,
+          "correlation": 0.3216778274431003,
+          "axis_score": 2.1144224639050027
+        },
+        "gyro_z": {
+          "count": 2300,
+          "rmse": 0.45103212745108995,
+          "real_rms": 0.44200948408350504,
+          "sim_rms": 0.4905104243921467,
+          "normalized_rmse": 1.0204127822874505,
+          "correlation": 0.5308551805843174,
+          "axis_score": 1.1533162659883163
+        },
+        "gyro_x": {
+          "count": 2274,
+          "rmse": 0.21035301921520472,
+          "real_rms": 0.037229304270963014,
+          "sim_rms": 0.20604612211166407,
+          "normalized_rmse": 5.650200113443149,
+          "correlation": -0.06955438871794598,
+          "axis_score": 6.174239286185849
+        },
+        "gyro_y": {
+          "count": 2293,
+          "rmse": 0.2376419901099565,
+          "real_rms": 0.04012316809284445,
+          "sim_rms": 0.24488644225554404,
+          "normalized_rmse": 5.922812215627048,
+          "correlation": 0.25765302179454214,
+          "axis_score": 6.379725061682841
+        },
+        "bar30_depth": {
+          "count": 228,
+          "rmse": 0.7443228201488985,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9612044875338857,
+          "normalized_rmse": 2.9571188822854224,
+          "correlation": 0.16104007931420167,
+          "axis_score": 3.367848029081469
+        },
+        "bar30_depth_shape": {
+          "count": 228,
+          "rmse": 0.33063458715530714,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9612044875338857,
+          "normalized_rmse": 1.3135775961000553,
+          "correlation": 0.16104007931420167,
+          "axis_score": 1.724306742896102
+        },
+        "bar30_depth_rate": {
+          "count": 230,
+          "rmse": 0.08924735947832729,
+          "real_rms": 0.03630526177433372,
+          "sim_rms": 0.0860441872613708,
+          "normalized_rmse": 2.458248615120065,
+          "correlation": 0.11607076424802891,
+          "axis_score": 2.8086656670238037
+        }
+      },
+      "summary_json": "document/docsource/pressure_z_autotune_20260504/z_drag_damp_m10/comparison/closed_loop_real_vs_sim_summary.json"
+    },
+    {
+      "candidate": "z_drag_damp_p10",
+      "returncode": 0,
+      "out_dir": "document/docsource/pressure_z_autotune_20260504/z_drag_damp_p10",
+      "profile_updates": {
+        "surface_heave_damping": 13.2,
+        "heave_damping_scale": 4.4,
+        "ellipsoid_model.effective_cd_linear[2]": 0.096
+      },
+      "fluid_linear_scale": 1.0,
+      "fluid_rot_scale": 1.0,
+      "fluid_blunt_scale": 1.0,
+      "fluid_slender_scale": 1.0,
+      "fluid_angular_scale": 1.0,
+      "fluid_kutta": null,
+      "fluid_magnus": null,
+      "tune_mode": "plant-joy",
+      "command_source": "joy_node",
+      "score": 2.944329584554425,
+      "status": "ok",
+      "axis_scores": {
+        "dvl_x": {
+          "count": 1031,
+          "rmse": 0.508815352401896,
+          "real_rms": 0.28982185145587464,
+          "sim_rms": 0.5230998421210994,
+          "normalized_rmse": 1.755614181076899,
+          "correlation": -0.14047762927570884,
+          "axis_score": 2.1293094763462364
+        },
+        "dvl_z": {
+          "count": 1031,
+          "rmse": 0.16220788083514132,
+          "real_rms": 0.045093237740857724,
+          "sim_rms": 0.15176072306601368,
+          "normalized_rmse": 3.597166425868979,
+          "correlation": 0.04683715802797617,
+          "axis_score": 4.0174930554787975
+        },
+        "dvl_y": {
+          "count": 1045,
+          "rmse": 0.1036152738261249,
+          "real_rms": 0.055361996964664664,
+          "sim_rms": 0.10135091957436512,
+          "normalized_rmse": 1.8715956704426389,
+          "correlation": 0.2894991867384061,
+          "axis_score": 2.1399252082251587
+        },
+        "gyro_z": {
+          "count": 2300,
+          "rmse": 0.45749404549634765,
+          "real_rms": 0.44200948408350504,
+          "sim_rms": 0.5363534318106334,
+          "normalized_rmse": 1.0350321926800947,
+          "correlation": 0.5505646338516523,
+          "axis_score": 1.1764103330811801
+        },
+        "gyro_x": {
+          "count": 2276,
+          "rmse": 0.15978051072224025,
+          "real_rms": 0.03721403622869116,
+          "sim_rms": 0.15504633110697827,
+          "normalized_rmse": 4.293554983940527,
+          "correlation": -0.050187078684245115,
+          "axis_score": 4.770157449791673
+        },
+        "gyro_y": {
+          "count": 2300,
+          "rmse": 0.18270790056543457,
+          "real_rms": 0.04006686095692726,
+          "sim_rms": 0.1877408168535773,
+          "normalized_rmse": 4.560075239281897,
+          "correlation": 0.22846118092633427,
+          "axis_score": 4.984636863343324
+        },
+        "bar30_depth": {
+          "count": 228,
+          "rmse": 0.7630826982854485,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9785259362933745,
+          "normalized_rmse": 3.0316499706321,
+          "correlation": 0.12643543203247873,
+          "axis_score": 3.4537092972682246
+        },
+        "bar30_depth_shape": {
+          "count": 228,
+          "rmse": 0.33727845269486045,
+          "real_rms": 0.2517054098189131,
+          "sim_rms": 0.9785259362933745,
+          "normalized_rmse": 1.3399729983456137,
+          "correlation": 0.12643543203247873,
+          "axis_score": 1.762032324981738
+        },
+        "bar30_depth_rate": {
+          "count": 230,
+          "rmse": 0.0879127397161188,
+          "real_rms": 0.03630526177433372,
+          "sim_rms": 0.08397728829315719,
+          "normalized_rmse": 2.4214875590917617,
+          "correlation": 0.10050861449959658,
+          "axis_score": 2.7721479607061315
+        }
+      },
+      "summary_json": "document/docsource/pressure_z_autotune_20260504/z_drag_damp_p10/comparison/closed_loop_real_vs_sim_summary.json"
+    }
+  ],
+  "tune_mode": "plant-joy",
+  "candidate_set": "pressure-z",
+  "include_depth": true,
+  "depth_weights": {
+    "absolute_depth": 1.4,
+    "offset_removed_shape": 0.7,
+    "depth_rate": 1.1
+  },
+  "score_definition": "Weighted normalized RMSE plus correlation/amplitude penalties over DVL x/y/z, IMU gyro x/y/z, and Bar30 static-pressure-derived depth/depth-rate when depth is enabled. Lower is better."
+}

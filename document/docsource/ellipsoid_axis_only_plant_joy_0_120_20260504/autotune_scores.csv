@@ -1,0 +1,10 @@
+candidate,status,score,fluid_linear_scale,fluid_rot_scale,fluid_blunt_scale,fluid_slender_scale,fluid_angular_scale,fluid_kutta,fluid_magnus,profile_updates,tune_mode,command_source,out_dir
+linear_p15,ok,2.478712673093366,1.15,1.0,1.0,1.0,1.0,,,{},plant-joy,joy_node,document/docsource/ellipsoid_axis_only_plant_joy_0_120_20260504/linear_p15
+blunt_p20,ok,2.4871795426284304,1.0,1.0,1.2,1.0,1.0,,,{},plant-joy,joy_node,document/docsource/ellipsoid_axis_only_plant_joy_0_120_20260504/blunt_p20
+angular_m25,ok,2.4994658058795367,1.0,1.0,1.0,1.0,0.75,,,{},plant-joy,joy_node,document/docsource/ellipsoid_axis_only_plant_joy_0_120_20260504/angular_m25
+angular_m15,ok,2.535383337633115,1.0,1.0,1.0,1.0,0.85,,,{},plant-joy,joy_node,document/docsource/ellipsoid_axis_only_plant_joy_0_120_20260504/angular_m15
+slender_m20,ok,2.5672419327783427,1.0,1.0,1.0,0.8,1.0,,,{},plant-joy,joy_node,document/docsource/ellipsoid_axis_only_plant_joy_0_120_20260504/slender_m20
+slender_p20,ok,2.57674607682403,1.0,1.0,1.0,1.2,1.0,,,{},plant-joy,joy_node,document/docsource/ellipsoid_axis_only_plant_joy_0_120_20260504/slender_p20
+baseline,ok,2.6036669831632646,1.0,1.0,1.0,1.0,1.0,,,{},plant-joy,joy_node,document/docsource/ellipsoid_axis_only_plant_joy_0_120_20260504/baseline
+linear_m15,ok,2.7239833287464768,0.85,1.0,1.0,1.0,1.0,,,{},plant-joy,joy_node,document/docsource/ellipsoid_axis_only_plant_joy_0_120_20260504/linear_m15
+blunt_m20,ok,2.7354678765202456,1.0,1.0,0.8,1.0,1.0,,,{},plant-joy,joy_node,document/docsource/ellipsoid_axis_only_plant_joy_0_120_20260504/blunt_m20

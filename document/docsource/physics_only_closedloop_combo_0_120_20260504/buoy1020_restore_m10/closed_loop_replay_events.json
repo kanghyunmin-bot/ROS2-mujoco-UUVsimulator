@@ -1,0 +1,151 @@
+{
+  "script": "replay_april1_rc_override_closed_loop.py",
+  "bag": "/Users/kanghyunmin/Desktop/uuv_sim/real_robot_ros_bag/extracted_2026_04_01/bag_2026-04-01_20-08-11/bag_2026-04-01_20-08-11_0.db3",
+  "topic": "/mavros/rc/override",
+  "command_source": "joy-node",
+  "bag_name": "bag_2026-04-01_20-08-11",
+  "rc_origin_s": 0.33263785,
+  "sample_count": 4399,
+  "replay_duration_s": 119.66713935400001,
+  "rate_scale": 1.0,
+  "max_publish_hz": 50.0,
+  "mode_from_bag": true,
+  "skip_initial_mode_event": true,
+  "force_initial_mode": "ALT_HOLD",
+  "initial_mode_settle_s": 2.0,
+  "mode_events": [
+    {
+      "t": 18.057883844,
+      "mode": "MANUAL"
+    },
+    {
+      "t": 23.723117796,
+      "mode": "ALT_HOLD"
+    },
+    {
+      "t": 35.097072471000004,
+      "mode": "MANUAL"
+    },
+    {
+      "t": 69.05372391300001,
+      "mode": "ALT_HOLD"
+    }
+  ],
+  "events": [
+    {
+      "t": 0.006407416993170045,
+      "type": "state",
+      "connected": true,
+      "armed": false,
+      "mode": "MANUAL"
+    },
+    {
+      "t": 5.049398375005694,
+      "type": "arm",
+      "value": true,
+      "ok": true
+    },
+    {
+      "t": 5.100925833001384,
+      "type": "state",
+      "connected": true,
+      "armed": true,
+      "mode": "MANUAL"
+    },
+    {
+      "t": 7.051362832993618,
+      "type": "set_mode",
+      "mode": "ALT_HOLD",
+      "ok": true
+    },
+    {
+      "t": 7.11066762500559,
+      "type": "state",
+      "connected": true,
+      "armed": true,
+      "mode": "ALT_HOLD"
+    },
+    {
+      "t": 9.054656249994878,
+      "type": "replay_start",
+      "bag": "bag_2026-04-01_20-08-11",
+      "topic": "joy-node:/joy",
+      "samples": 4399,
+      "rate_scale": 1.0,
+      "mode_events": [
+        {
+          "t": 18.057883844,
+          "mode": "MANUAL"
+        },
+        {
+          "t": 23.723117796,
+          "mode": "ALT_HOLD"
+        },
+        {
+          "t": 35.097072471000004,
+          "mode": "MANUAL"
+        },
+        {
+          "t": 69.05372391300001,
+          "mode": "ALT_HOLD"
+        }
+      ]
+    },
+    {
+      "t": 27.133880291992682,
+      "type": "set_mode",
+      "mode": "MANUAL",
+      "ok": true
+    },
+    {
+      "t": 27.17445950000547,
+      "type": "state",
+      "connected": true,
+      "armed": true,
+      "mode": "MANUAL"
+    },
+    {
+      "t": 32.80214241700014,
+      "type": "set_mode",
+      "mode": "ALT_HOLD",
+      "ok": true
+    },
+    {
+      "t": 32.823110541998176,
+      "type": "state",
+      "connected": true,
+      "armed": true,
+      "mode": "ALT_HOLD"
+    },
+    {
+      "t": 44.175619832996745,
+      "type": "set_mode",
+      "mode": "MANUAL",
+      "ok": true
+    },
+    {
+      "t": 44.219513707997976,
+      "type": "state",
+      "connected": true,
+      "armed": true,
+      "mode": "MANUAL"
+    },
+    {
+      "t": 78.13034262499423,
+      "type": "set_mode",
+      "mode": "ALT_HOLD",
+      "ok": true
+    },
+    {
+      "t": 78.14437241699488,
+      "type": "state",
+      "connected": true,
+      "armed": true,
+      "mode": "ALT_HOLD"
+    },
+    {
+      "t": 128.72795233299257,
+      "type": "replay_end"
+    }
+  ]
+}

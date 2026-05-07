@@ -1,0 +1,14 @@
+candidate,status,score,fluid_linear_scale,fluid_rot_scale,fluid_blunt_scale,fluid_slender_scale,fluid_angular_scale,fluid_kutta,fluid_magnus,profile_updates,tune_mode,command_source,out_dir
+lift_half_angular_p25,ok,2.1757612255678827,1.0,1.0,1.0,1.0,1.25,0.025,0.0125,{},plant-joy,joy_node,document/docsource/ellipsoid_lift_refine_plant_joy_0_120_20260504/lift_half_angular_p25
+lift_half_angular_p15,ok,2.2101977577341017,1.0,1.0,1.0,1.0,1.15,0.025,0.0125,{},plant-joy,joy_node,document/docsource/ellipsoid_lift_refine_plant_joy_0_120_20260504/lift_half_angular_p15
+lift_half,ok,2.251136466098999,1.0,1.0,1.0,1.0,1.0,0.025,0.0125,{},plant-joy,joy_node,document/docsource/ellipsoid_lift_refine_plant_joy_0_120_20260504/lift_half
+lift_quarter,ok,2.2647721034034625,1.0,1.0,1.0,1.0,1.0,0.0125,0.00625,{},plant-joy,joy_node,document/docsource/ellipsoid_lift_refine_plant_joy_0_120_20260504/lift_quarter
+lift_3quarter,ok,2.401369755806051,1.0,1.0,1.0,1.0,1.0,0.0375,0.01875,{},plant-joy,joy_node,document/docsource/ellipsoid_lift_refine_plant_joy_0_120_20260504/lift_3quarter
+lift_half_blunt_p20,ok,2.4038667028259244,1.0,1.0,1.2,1.0,1.0,0.025,0.0125,{},plant-joy,joy_node,document/docsource/ellipsoid_lift_refine_plant_joy_0_120_20260504/lift_half_blunt_p20
+lift_half_linear_p15,ok,2.4305923978629207,1.15,1.0,1.0,1.0,1.0,0.025,0.0125,{},plant-joy,joy_node,document/docsource/ellipsoid_lift_refine_plant_joy_0_120_20260504/lift_half_linear_p15
+lift_half_linear_p10_angular_p15,ok,2.431317336532326,1.1,1.0,1.0,1.0,1.15,0.025,0.0125,{},plant-joy,joy_node,document/docsource/ellipsoid_lift_refine_plant_joy_0_120_20260504/lift_half_linear_p10_angular_p15
+lift_half_blunt_p10_angular_p15,ok,2.456513245424738,1.0,1.0,1.1,1.0,1.15,0.025,0.0125,{},plant-joy,joy_node,document/docsource/ellipsoid_lift_refine_plant_joy_0_120_20260504/lift_half_blunt_p10_angular_p15
+lift_half_blunt_p10,ok,2.4568541908610215,1.0,1.0,1.1,1.0,1.0,0.025,0.0125,{},plant-joy,joy_node,document/docsource/ellipsoid_lift_refine_plant_joy_0_120_20260504/lift_half_blunt_p10
+lift_half_linear_p10,ok,2.4925123032906007,1.1,1.0,1.0,1.0,1.0,0.025,0.0125,{},plant-joy,joy_node,document/docsource/ellipsoid_lift_refine_plant_joy_0_120_20260504/lift_half_linear_p10
+baseline,ok,2.6036669831632646,1.0,1.0,1.0,1.0,1.0,,,{},plant-joy,joy_node,document/docsource/ellipsoid_lift_refine_plant_joy_0_120_20260504/baseline
+lift_half_angular_m15,ok,2.6390958592333096,1.0,1.0,1.0,1.0,0.85,0.025,0.0125,{},plant-joy,joy_node,document/docsource/ellipsoid_lift_refine_plant_joy_0_120_20260504/lift_half_angular_m15
