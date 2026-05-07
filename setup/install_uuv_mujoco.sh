@@ -15,6 +15,8 @@ SKIP_ARDUPILOT=0
 SKIP_PIP=0
 RECREATE_VENV=0
 NONINTERACTIVE=0
+RUN_AFTER_INSTALL=0
+RUN_MODE="auto"
 PYTHON_VERSION=""
 VENV_ROOT=""
 ARDUPILOT_DIR=""
@@ -39,6 +41,9 @@ Options:
   --skip-pip          Pass --skip-pip to step 3
   --recreate-venv     Pass --recreate-venv to step 3
   --noninteractive    Pass --noninteractive to step 1
+  --run-after-install Start SITL + MuJoCo immediately after a successful install
+  --run-headless      With --run-after-install, force headless MuJoCo
+  --run-gui           With --run-after-install, force MuJoCo viewer
   --python-version V  Forward python version to steps 1 and 3
   --venv-root PATH    Forward venv path to step 3
   --ardupilot-dir P   Forward ardupilot path to step 2
@@ -82,6 +87,20 @@ while [[ $# -gt 0 ]]; do
       NONINTERACTIVE=1
       shift
       ;;
+    --run-after-install)
+      RUN_AFTER_INSTALL=1
+      shift
+      ;;
+    --run-headless)
+      RUN_AFTER_INSTALL=1
+      RUN_MODE="headless"
+      shift
+      ;;
+    --run-gui)
+      RUN_AFTER_INSTALL=1
+      RUN_MODE="gui"
+      shift
+      ;;
     --python-version)
       [[ $# -ge 2 ]] || { echo "[error] --python-version requires a value" >&2; exit 2; }
       PYTHON_VERSION="$2"
@@ -122,6 +141,67 @@ run_step() {
   echo
   echo "==> $*"
   "$@"
+}
+
+run_simulator_after_install() {
+  local start_script
+  local run_headless=0
+  local start_args=()
+  local mujoco_args=()
+
+  start_script="${WORKSPACE_DIR}/uuv_mujoco/v2.2/start_sitl_mujoco_mj311.sh"
+  [[ -x "$start_script" ]] || {
+    echo "[error] simulator start script missing or not executable: $start_script" >&2
+    exit 1
+  }
+
+  if [[ -f "${WORKSPACE_DIR}/.uuv_mujoco_env.sh" ]]; then
+    # shellcheck source=/dev/null
+    source "${WORKSPACE_DIR}/.uuv_mujoco_env.sh"
+  fi
+
+  if [[ "$WITH_ROS2" -eq 1 ]]; then
+    start_args+=(--ros2)
+  else
+    start_args+=(--no-ros2)
+  fi
+
+  case "$RUN_MODE" in
+    headless)
+      run_headless=1
+      ;;
+    gui)
+      run_headless=0
+      ;;
+    auto)
+      if [[ "$(uname -s)" == "Linux" && -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]]; then
+        run_headless=1
+        echo "[install] no DISPLAY/WAYLAND_DISPLAY found; starting MuJoCo headless"
+      fi
+      ;;
+    *)
+      echo "[error] invalid RUN_MODE: $RUN_MODE" >&2
+      exit 2
+      ;;
+  esac
+
+  if [[ "$run_headless" -eq 1 ]]; then
+    mujoco_args+=(--headless)
+  fi
+
+  cat <<EOF
+
+==> install complete; starting simulator
+    script: ${start_script}
+    mode:   $([[ "$run_headless" -eq 1 ]] && printf 'headless' || printf 'viewer')
+
+EOF
+
+  if ((${#mujoco_args[@]} > 0)); then
+    run_step "$start_script" "${start_args[@]}" -- "${mujoco_args[@]}"
+  else
+    run_step "$start_script" "${start_args[@]}"
+  fi
 }
 
 STEP1_ARGS=()
@@ -173,4 +253,8 @@ if ((${#STEP4_ARGS[@]} > 0)); then
   run_step "$STEP4" "${STEP4_ARGS[@]}"
 else
   run_step "$STEP4"
+fi
+
+if [[ "$RUN_AFTER_INSTALL" -eq 1 ]]; then
+  run_simulator_after_install
 fi

@@ -58,6 +58,24 @@ Run the full installer:
 ./setup/install_uuv_mujoco.sh --with-ros2
 ```
 
+One-command install and run:
+
+```bash
+./install_and_run.sh
+```
+
+Install and start the simulator immediately:
+
+```bash
+./setup/install_uuv_mujoco.sh --with-ros2 --run-after-install
+```
+
+On a headless Ubuntu machine, force headless startup:
+
+```bash
+./setup/install_uuv_mujoco.sh --with-ros2 --run-headless
+```
+
 Useful options:
 
 ```bash
