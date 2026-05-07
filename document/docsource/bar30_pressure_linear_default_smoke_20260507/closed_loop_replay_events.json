@@ -1,0 +1,65 @@
+{
+  "script": "replay_april1_rc_override_closed_loop.py",
+  "bag": "/Users/kanghyunmin/Desktop/uuv_sim/real_robot_ros_bag/extracted_2026_04_01/bag_2026-04-01_20-08-11/bag_2026-04-01_20-08-11_0.db3",
+  "topic": "/mavros/rc/override",
+  "command_source": "rc-override",
+  "bag_name": "bag_2026-04-01_20-08-11",
+  "rc_origin_s": 203.00046025900002,
+  "sample_count": 300,
+  "replay_duration_s": 7.987602437999982,
+  "rate_scale": 1.0,
+  "max_publish_hz": 50.0,
+  "mode_from_bag": true,
+  "skip_initial_mode_event": true,
+  "force_initial_mode": "ALT_HOLD",
+  "initial_mode_settle_s": 2.0,
+  "mode_events": [],
+  "events": [
+    {
+      "t": 0.0225801250198856,
+      "type": "state",
+      "connected": true,
+      "armed": false,
+      "mode": "MANUAL"
+    },
+    {
+      "t": 5.062279000005219,
+      "type": "arm",
+      "value": true,
+      "ok": true
+    },
+    {
+      "t": 5.119035834009992,
+      "type": "state",
+      "connected": true,
+      "armed": true,
+      "mode": "MANUAL"
+    },
+    {
+      "t": 7.0644233750062995,
+      "type": "set_mode",
+      "mode": "ALT_HOLD",
+      "ok": true
+    },
+    {
+      "t": 7.117173209000612,
+      "type": "state",
+      "connected": true,
+      "armed": true,
+      "mode": "ALT_HOLD"
+    },
+    {
+      "t": 9.065501792007126,
+      "type": "replay_start",
+      "bag": "bag_2026-04-01_20-08-11",
+      "topic": "/mavros/rc/override",
+      "samples": 300,
+      "rate_scale": 1.0,
+      "mode_events": []
+    },
+    {
+      "t": 17.054936083994107,
+      "type": "replay_end"
+    }
+  ]
+}

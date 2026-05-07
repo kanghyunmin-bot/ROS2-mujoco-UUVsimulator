@@ -181,15 +181,21 @@ class Ros2Bridge:
         self._mavros_last_rc_out = None
 
         # Physics / pressure model.
-        self._bar30_surface_pressure_pa = self._env_to_clamped_float("ROS2_UUV_BAR30_SURFACE_PRESSURE_PA", 101325.0, 80000.0, 120000.0)
+        self._bar30_surface_pressure_pa = self._env_to_clamped_float("ROS2_UUV_BAR30_SURFACE_PRESSURE_PA", 101900.0, 80000.0, 120000.0)
         self._bar30_water_density = self._env_to_clamped_float("ROS2_UUV_BAR30_WATER_DENSITY", float(self.model.opt.density), 900.0, 1200.0)
         self._bar30_gravity = self._env_to_clamped_float("ROS2_UUV_BAR30_GRAVITY", 9.80665, 9.5, 10.0)
         self._gravity_enu = np.array([0.0, 0.0, -self._bar30_gravity], dtype=np.float64)
         self._imu_acc_clip_mps2 = 16.0 * self._bar30_gravity
-        self._static_pressure_source = str(os.environ.get("ROS2_UUV_STATIC_PRESSURE_SOURCE", "internal")).strip().lower()
+        self._static_pressure_source = str(os.environ.get("ROS2_UUV_STATIC_PRESSURE_SOURCE", "external")).strip().lower()
         if self._static_pressure_source not in {"internal", "external"}:
             self._static_pressure_source = "internal"
         self._internal_pressure_pa = float(self._env_to_float("ROS2_UUV_INTERNAL_PRESSURE_PA", self._bar30_surface_pressure_pa))
+        self._sitl_vertical_source = str(os.environ.get("ROS2_UUV_SITL_VERTICAL_SOURCE", "base")).strip().lower()
+        if self._sitl_vertical_source not in {"base", "bar30", "bar30_relative"}:
+            self._sitl_vertical_source = "base"
+        self._sitl_bar30_zero_depth_m = None
+        self._sitl_bar30_prev_depth_m = None
+        self._sitl_bar30_prev_t = None
 
         # DVL filtering.
         self._dvl_filter_alpha = self._env_to_clamped_float("ROS2_UUV_DVL_LPF_ALPHA", 1.0, 0.0, 1.0)
@@ -1348,6 +1354,58 @@ class Ros2Bridge:
         pressure_pa = self._pressure_abs_from_depth_m(depth_m, self._bar30_surface_pressure_pa, self._bar30_water_density, self._bar30_gravity)
         return VerticalEstimate(depth_m=depth_m, pressure_pa=pressure_pa, pos_ned=pos_ned, vel_ned=vel_ned, alt_m=-depth_m)
 
+    def _site_world_pos_enu(self, data: mujoco.MjData, site_id: int, fallback_pos_enu: np.ndarray) -> np.ndarray:
+        if site_id < 0:
+            return fallback_pos_enu
+        try:
+            pos_enu = np.array(data.site_xpos[site_id], dtype=np.float64)
+            if np.all(np.isfinite(pos_enu)):
+                return pos_enu
+        except Exception:
+            pass
+        return fallback_pos_enu
+
+    def _estimate_sitl_vertical(
+        self,
+        base_vertical: VerticalEstimate,
+        bar30_pos_enu: np.ndarray,
+        sim_t: float,
+    ) -> VerticalEstimate:
+        if self._sitl_vertical_source == "base":
+            return base_vertical
+
+        bar30_abs_depth_m = float(max(0.0, -bar30_pos_enu[2]))
+        if self._sitl_vertical_source == "bar30_relative":
+            if self._sitl_bar30_zero_depth_m is None:
+                self._sitl_bar30_zero_depth_m = bar30_abs_depth_m
+            depth_m = bar30_abs_depth_m - float(self._sitl_bar30_zero_depth_m)
+        else:
+            depth_m = bar30_abs_depth_m
+
+        vel_d = float(base_vertical.vel_ned[2])
+        prev_depth = self._sitl_bar30_prev_depth_m
+        prev_t = self._sitl_bar30_prev_t
+        if prev_depth is not None and prev_t is not None:
+            dt = sim_t - float(prev_t)
+            if 1.0e-4 <= dt <= 0.2:
+                candidate = (depth_m - float(prev_depth)) / dt
+                if np.isfinite(candidate):
+                    vel_d = float(np.clip(candidate, -5.0, 5.0))
+        self._sitl_bar30_prev_depth_m = depth_m
+        self._sitl_bar30_prev_t = sim_t
+
+        pos_ned = base_vertical.pos_ned.copy()
+        vel_ned = base_vertical.vel_ned.copy()
+        pos_ned[2] = depth_m
+        vel_ned[2] = vel_d
+        pressure_pa = self._pressure_abs_from_depth_m(
+            bar30_abs_depth_m,
+            self._bar30_surface_pressure_pa,
+            self._bar30_water_density,
+            self._bar30_gravity,
+        )
+        return VerticalEstimate(depth_m=depth_m, pressure_pa=pressure_pa, pos_ned=pos_ned, vel_ned=vel_ned, alt_m=-depth_m)
+
     def _imu_vectors_in_body(self, data: mujoco.MjData, gyro: np.ndarray | None) -> np.ndarray | None:
         gyro_bmj = np.array(gyro, dtype=np.float64) if gyro is not None else None
         if self._base_id < 0 or self._imu_site_id < 0 or gyro_bmj is None:
@@ -1518,7 +1576,9 @@ class Ros2Bridge:
         acc_bmj = self._specific_force_body(data, acc_sensor_bmj, base_vel_enu, sim_t)
         dvl_vel_body_bmj = self._dvl_velocity_body(data, dvl_vel_sensor, gyro_bmj)
         vertical_est = self._estimate_vertical_truth(base_pos_enu, base_vel_enu)
-        bar30_pressure_pa = float(vertical_est.pressure_pa)
+        bar30_pos_enu = self._site_world_pos_enu(data, self._bar30_site_id, base_pos_enu)
+        sitl_vertical_est = self._estimate_sitl_vertical(vertical_est, bar30_pos_enu, sim_t)
+        bar30_pressure_pa = float(sitl_vertical_est.pressure_pa)
 
         if self._sitl_transport is not None and gyro_bmj is not None and acc_bmj is not None:
             gyro_frd = self._bmj_to_frd @ gyro_bmj
@@ -1529,7 +1589,7 @@ class Ros2Bridge:
                 sim_t,
                 gyro_frd,
                 acc_frd,
-                vertical_est,
+                sitl_vertical_est,
                 quat_ned_bfrd,
                 rangefinder_distance_m=dvl_altitude_m,
                 pressure_pa=bar30_pressure_pa,

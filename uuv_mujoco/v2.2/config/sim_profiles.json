@@ -176,7 +176,7 @@
     "buoyancy_scale": 1.0005,
     "buoyancy_slope_scale": 1.2,
     "surface_heave_damping": 10.0,
-    "heave_damping_scale": 6.0,
+    "heave_damping_scale": 150.0,
     "cob_torque_scale": 0.6,
     "buoyancy_point_blend": 1.0,
     "cob_x_offset": 0.01,
