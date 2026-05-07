@@ -334,6 +334,9 @@ if [[ -x "${MJ311_ROOT}/bin/python" ]]; then
   if run_clean_env "${MJ311_ROOT}/bin/python" - <<'PY'
 import mujoco
 import numpy
+import matplotlib
+import rosbags
+import pptx
 import pymavlink
 import MAVProxy
 import pexpect
@@ -359,27 +362,31 @@ fi
 
 if has_cmd ros2; then
   pass "ROS2 command available in current environment: $(command -v ros2)"
-  if ros2 pkg prefix mavros >/dev/null 2>&1; then
-    pass "ROS2 package available: mavros"
-  else
-    warn "ROS2 package missing: mavros"
-  fi
-  if ros2 pkg prefix mavros_msgs >/dev/null 2>&1; then
-    pass "ROS2 package available: mavros_msgs"
-  else
-    warn "ROS2 package missing: mavros_msgs"
-  fi
-  if ros2 pkg prefix rviz2 >/dev/null 2>&1; then
-    pass "ROS2 package available: rviz2"
-  else
-    warn "ROS2 package missing: rviz2"
-  fi
+  for pkg in \
+    rclpy rclcpp std_msgs std_srvs geometry_msgs sensor_msgs nav_msgs \
+    tf2 tf2_ros tf2_msgs tf2_geometry_msgs mavros mavros_msgs \
+    rosbag2_py rosbag2_storage_default_plugins rviz2 rqt_image_view \
+    image_transport robot_state_publisher
+  do
+    if ros2 pkg prefix "$pkg" >/dev/null 2>&1; then
+      pass "ROS2 package available: ${pkg}"
+    else
+      warn "ROS2 package missing: ${pkg}"
+    fi
+  done
   if [[ -x "${MJ311_ROOT}/bin/python" ]]; then
     if "${MJ311_ROOT}/bin/python" - <<'PY'
 import rclpy
-from geometry_msgs.msg import TwistStamped
+import rosbag2_py
+from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, TransformStamped, TwistStamped
+from mavros_msgs.msg import OverrideRCIn, PositionTarget, State, VfrHud
+from mavros_msgs.srv import CommandBool, CommandLong, SetMode, VehicleInfoGet
 from nav_msgs.msg import Odometry
-from sensor_msgs.msg import Imu
+from rosidl_runtime_py.utilities import get_message
+from sensor_msgs.msg import BatteryState, FluidPressure, Image, Imu, LaserScan, Range
+from std_msgs.msg import Float32, String
+from std_srvs.srv import Trigger
+from tf2_msgs.msg import TFMessage
 print('ros2 python bridge imports ok')
 PY
     then
@@ -390,27 +397,31 @@ PY
   fi
 elif [[ -f "/opt/ros/${ROS_DISTRO}/setup.bash" ]]; then
   pass "ROS2 setup exists: /opt/ros/${ROS_DISTRO}/setup.bash"
-  if bash -lc "source /opt/ros/${ROS_DISTRO}/setup.bash && ros2 pkg prefix mavros >/dev/null 2>&1"; then
-    pass "ROS2 package available: mavros"
-  else
-    warn "ROS2 package missing: mavros"
-  fi
-  if bash -lc "source /opt/ros/${ROS_DISTRO}/setup.bash && ros2 pkg prefix mavros_msgs >/dev/null 2>&1"; then
-    pass "ROS2 package available: mavros_msgs"
-  else
-    warn "ROS2 package missing: mavros_msgs"
-  fi
-  if bash -lc "source /opt/ros/${ROS_DISTRO}/setup.bash && ros2 pkg prefix rviz2 >/dev/null 2>&1"; then
-    pass "ROS2 package available: rviz2"
-  else
-    warn "ROS2 package missing: rviz2"
-  fi
+  for pkg in \
+    rclpy rclcpp std_msgs std_srvs geometry_msgs sensor_msgs nav_msgs \
+    tf2 tf2_ros tf2_msgs tf2_geometry_msgs mavros mavros_msgs \
+    rosbag2_py rosbag2_storage_default_plugins rviz2 rqt_image_view \
+    image_transport robot_state_publisher
+  do
+    if bash -lc "source /opt/ros/${ROS_DISTRO}/setup.bash && ros2 pkg prefix '${pkg}' >/dev/null 2>&1"; then
+      pass "ROS2 package available: ${pkg}"
+    else
+      warn "ROS2 package missing: ${pkg}"
+    fi
+  done
   if [[ -x "${MJ311_ROOT}/bin/python" ]]; then
     if bash -lc "source /opt/ros/${ROS_DISTRO}/setup.bash && '${MJ311_ROOT}/bin/python' - <<'PY'
 import rclpy
-from geometry_msgs.msg import TwistStamped
+import rosbag2_py
+from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, TransformStamped, TwistStamped
+from mavros_msgs.msg import OverrideRCIn, PositionTarget, State, VfrHud
+from mavros_msgs.srv import CommandBool, CommandLong, SetMode, VehicleInfoGet
 from nav_msgs.msg import Odometry
-from sensor_msgs.msg import Imu
+from rosidl_runtime_py.utilities import get_message
+from sensor_msgs.msg import BatteryState, FluidPressure, Image, Imu, LaserScan, Range
+from std_msgs.msg import Float32, String
+from std_srvs.srv import Trigger
+from tf2_msgs.msg import TFMessage
 print('ros2 python bridge imports ok')
 PY"; then
       pass "ROS2 Python bridge imports successfully in the MuJoCo venv"

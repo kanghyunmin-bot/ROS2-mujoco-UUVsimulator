@@ -42,11 +42,13 @@ git submodule update --init --recursive
 
 The setup scripts target an Ubuntu 22.04 style ROS 2 Humble environment. The simulator also expects:
 
-- Python 3.11 compatible virtual environment for MuJoCo
-- MuJoCo Python package
+- Python 3 virtual environment for MuJoCo
+- MuJoCo, MAVProxy, pymavlink, DroneCAN, matplotlib, rosbags, and support Python packages
 - ArduPilot SITL dependencies
-- ROS 2 Humble and colcon when using ROS 2 bridge features
-- QGroundControl installed locally when using the QGC workflow
+- ROS 2 Humble, MAVROS, rosbag2 Python bindings, RViz/rqt image viewers, and colcon when using ROS 2 bridge features
+- Tkinter for the control GUI
+- SocketCAN helpers when using the DroneCAN battery bridge
+- QGroundControl plus AppImage/FUSE/Qt runtime libraries when using the QGC workflow
 
 Large local binaries and captures such as `QGroundControl.app`, `dist/`, `real_robot_ros_bag/`, `*.db3`, `*.bag`, and generated runtime logs are intentionally ignored.
 

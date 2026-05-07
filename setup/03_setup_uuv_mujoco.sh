@@ -208,7 +208,7 @@ What it does:
   - if uuv_mujoco.zip exists in the workspace, extracts it automatically
   - if uuv_mujoco/ already exists, reuses it
   - creates the MuJoCo python virtualenv
-  - installs MuJoCo/MAVLink/DroneCAN python dependencies
+  - installs MuJoCo/MAVLink/DroneCAN/replay/analysis python dependencies
   - checks the QGroundControl app path if present
   - writes .uuv_mujoco_env.sh in the workspace root
 
@@ -452,11 +452,15 @@ install_python_deps() {
   [[ -x "$venv_python" ]] || die "virtualenv python not found: $venv_python"
   run_clean_env "$venv_python" -m pip install -U pip "setuptools<81" wheel
   run_clean_env "$venv_python" -m pip install \
-    numpy mujoco pymavlink MAVProxy pexpect pillow future dronecan gnureadline \
+    numpy matplotlib rosbags python-pptx \
+    mujoco pymavlink MAVProxy pexpect pillow future dronecan gnureadline \
     "empy==3.3.4"
   env -u PYTHONPATH -u PYTHONHOME "$venv_python" - <<'PY'
 import mujoco
 import numpy
+import matplotlib
+import rosbags
+import pptx
 import pymavlink
 import MAVProxy
 import pexpect

@@ -16,9 +16,9 @@ Run this first from the workspace root on Ubuntu 22.04 native.
 
 What it installs:
   - Ubuntu system packages used by uuv_mujoco
-  - Python runtime packages needed for venv creation
-  - AppImage/FUSE support for QGroundControl
-  - Optional ROS2-side extras for MAVROS/RViz/joy integration
+  - Python runtime, dev headers, Tkinter, and plotting basics
+  - OpenGL/headless, GStreamer, AppImage/FUSE, and Qt/XCB runtime helpers
+  - Optional ROS2-side extras for MAVROS, rosbag2, RViz, rqt_image_view, and joy integration
 
 Options:
   --with-ros2         Install ROS2-side extras if apt packages are available
@@ -95,6 +95,26 @@ apt_package_exists() {
   apt-cache show "$1" >/dev/null 2>&1
 }
 
+apt_install_available() {
+  local label="$1"
+  shift
+  local installable=()
+  local pkg
+
+  for pkg in "$@"; do
+    if apt_package_exists "$pkg"; then
+      installable+=("$pkg")
+    else
+      log "warning: apt package not available, skipped: ${pkg}"
+    fi
+  done
+
+  if ((${#installable[@]} > 0)); then
+    log "installing ${label}"
+    apt_install "${installable[@]}"
+  fi
+}
+
 ensure_ros_apt_repo() {
   local distro_codename arch keyring repo_file repo_line
 
@@ -128,12 +148,33 @@ apt_install \
   git curl unzip ffmpeg \
   ca-certificates gnupg lsb-release software-properties-common \
   build-essential ccache gawk make cmake pkg-config \
-  python3 python3-venv python3-pip \
+  python3 python3-venv python3-pip python3-dev python3-tk \
+  python3-numpy python3-matplotlib \
+  jq xz-utils file lsof iproute2 \
   libgl1 libegl1 libglfw3 libxrender1 libxext6 libxi6 libxrandr2 \
   libxxf86vm1 libxinerama1 libxcursor1
 
+apt_install_available "optional OpenGL/headless helpers" \
+  libglvnd0 libglx0 libopengl0 libgl1-mesa-dri mesa-utils libosmesa6
+
+apt_install_available "QGroundControl Qt/AppImage helpers" \
+  libxcb-xinerama0 libxkbcommon-x11-0 libxcb-cursor0 libxcb-cursor-dev \
+  libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 \
+  libxcb-randr0 libxcb-shape0 libxcb-xfixes0 libxcb-sync1 \
+  libxcb-shm0 libxcb-render0 libxcb-glx0
+
+apt_install_available "GStreamer video helpers" \
+  gstreamer1.0-plugins-bad gstreamer1.0-libav gstreamer1.0-gl \
+  python3-gi python3-gst-1.0
+
+apt_install_available "diagnostic tools" ripgrep net-tools can-utils
+
 if apt_package_exists "python${PYTHON_VERSION}" && apt_package_exists "python${PYTHON_VERSION}-venv"; then
-  apt_install "python${PYTHON_VERSION}" "python${PYTHON_VERSION}-venv"
+  PYTHON_PKGS=("python${PYTHON_VERSION}" "python${PYTHON_VERSION}-venv")
+  if apt_package_exists "python${PYTHON_VERSION}-dev"; then
+    PYTHON_PKGS+=("python${PYTHON_VERSION}-dev")
+  fi
+  apt_install "${PYTHON_PKGS[@]}"
 else
   log "python${PYTHON_VERSION} apt package not found; later steps will fall back to python3"
 fi
@@ -156,11 +197,37 @@ if [[ "$WITH_ROS2" -eq 1 ]]; then
     "python3-colcon-common-extensions"
     "geographiclib-tools"
     "ros-${ROS_DISTRO}-ros-base"
+    "ros-${ROS_DISTRO}-ament-cmake"
+    "ros-${ROS_DISTRO}-ament-index-python"
+    "ros-${ROS_DISTRO}-rclcpp"
+    "ros-${ROS_DISTRO}-rclpy"
+    "ros-${ROS_DISTRO}-launch"
+    "ros-${ROS_DISTRO}-launch-ros"
+    "ros-${ROS_DISTRO}-ros2launch"
+    "ros-${ROS_DISTRO}-std-msgs"
+    "ros-${ROS_DISTRO}-std-srvs"
+    "ros-${ROS_DISTRO}-geometry-msgs"
+    "ros-${ROS_DISTRO}-sensor-msgs"
+    "ros-${ROS_DISTRO}-nav-msgs"
+    "ros-${ROS_DISTRO}-tf2"
+    "ros-${ROS_DISTRO}-tf2-ros"
+    "ros-${ROS_DISTRO}-tf2-msgs"
+    "ros-${ROS_DISTRO}-tf2-geometry-msgs"
     "ros-${ROS_DISTRO}-joy"
     "ros-${ROS_DISTRO}-mavros"
     "ros-${ROS_DISTRO}-mavros-msgs"
+    "ros-${ROS_DISTRO}-mavros-extras"
+    "ros-${ROS_DISTRO}-rosbag2"
+    "ros-${ROS_DISTRO}-rosbag2-py"
+    "ros-${ROS_DISTRO}-rosbag2-storage-default-plugins"
+    "ros-${ROS_DISTRO}-rosidl-runtime-py"
     "ros-${ROS_DISTRO}-rviz2"
-    "ros-${ROS_DISTRO}-tf2-geometry-msgs"
+    "ros-${ROS_DISTRO}-rqt-bag"
+    "ros-${ROS_DISTRO}-rqt-image-view"
+    "ros-${ROS_DISTRO}-image-transport"
+    "ros-${ROS_DISTRO}-robot-state-publisher"
+    "ros-${ROS_DISTRO}-xacro"
+    "ros-${ROS_DISTRO}-dvl-msgs"
   )
   INSTALLABLE_PKGS=()
   for pkg in "${ROS_PKGS[@]}"; do
