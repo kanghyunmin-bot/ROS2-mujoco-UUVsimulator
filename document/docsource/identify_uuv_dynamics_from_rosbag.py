@@ -551,7 +551,19 @@ def current_profile_reference(replay: OfflineUuvReplay) -> dict[str, Any]:
         "effective_cob_minus_com_z_m": dz,
         "small_angle_restoring_k_n_m_per_rad": restoring,
         "buoyancy_point_center_body_m": [float(v) for v in center] if center is not None else None,
-        "note": "MuJoCo built-in ellipsoid fluid force is active but not exposed as an explicit coefficient here.",
+        "mujoco_fluidcoef_scale": (
+            [float(v) for v in replay.applied_mujoco_fluidcoef_scale]
+            if replay.applied_mujoco_fluidcoef_scale is not None
+            else None
+        ),
+        "thruster_performance_active": bool(replay.perf_cfg.active),
+        "thruster_voltage_v": float(replay.active_thruster_voltage),
+        "rc_out_scale": float(replay.rc_out_scale),
+        "note": (
+            "MuJoCo built-in ellipsoid fluid force is active. This reference records the "
+            "runtime geom_fluid scale, but MuJoCo does not expose a per-axis closed-form "
+            "coefficient, so the script estimates aggregate equivalents by sampling qfrc_fluid."
+        ),
     }
 
 
@@ -597,10 +609,7 @@ def build_identification(
     dvl = interp_matrix(real.dvl_t, real.dvl_vel, t, 3) * velocity_signs.reshape(1, 3)
     gyro = interp_matrix(real.imu_t, real.imu_gyro, t, 3) * gyro_signs.reshape(1, 3)
     rpy = unwrap_rpy(interp_matrix(real.imu_t, real.imu_rpy, t, 3)) * attitude_signs.reshape(1, 3)
-    pressure_depth = interp_scalar(real.pressure_depth_t, real.pressure_depth, t)
-    depth = pressure_depth
-    if not np.any(np.isfinite(depth)) and real.depth.size:
-        depth = interp_scalar(real.depth_t, real.depth, t)
+    depth = interp_scalar(real.depth_t, real.depth, t) if real.depth.size else np.full(t.size, np.nan)
 
     nu = np.column_stack([dvl, gyro])
     nu_smooth = moving_average(nu, smooth_samples)
@@ -677,7 +686,7 @@ def build_identification(
             "rc_out": int(real.rc_out_t.size),
             "rc_override": int(real.rc_override_t.size),
             "joy": int(real.joy_t.size),
-            "pressure_depth": int(real.pressure_depth_t.size),
+            "bar30_depth": int(real.depth_t.size),
         },
         "thruster_force_scale": {
             "note": "Applied by scaling per-thruster gain_scale before computing tau_thruster.",
@@ -1324,6 +1333,8 @@ def main() -> int:
     parser.add_argument("--attitude-signs", type=lambda s: parse_vec3(s, default=(1.0, 1.0, 1.0)), default=np.ones(3))
     parser.add_argument("--horizontal-force-scale", type=float, default=1.0)
     parser.add_argument("--vertical-force-scale", type=float, default=1.0)
+    parser.add_argument("--rc-out-scale", type=float, default=1.0)
+    parser.add_argument("--disable-thruster-perf", action="store_true")
     parser.add_argument("--ridge", type=float, default=1.0e-6)
     parser.add_argument("--auto-segments", action="store_true", help="write dominant-axis segment fit report")
     args = parser.parse_args()
@@ -1337,7 +1348,7 @@ def main() -> int:
     print(
         "[identify] series counts: "
         f"dvl={real.dvl_t.size}, imu={real.imu_t.size}, rc_out={real.rc_out_t.size}, "
-        f"rc_override={real.rc_override_t.size}, pressure_depth={real.pressure_depth_t.size}",
+        f"rc_override={real.rc_override_t.size}, bar30_depth={real.depth_t.size}",
         flush=True,
     )
 
@@ -1350,6 +1361,8 @@ def main() -> int:
         profile_name=args.profile,
         fluid_model=args.fluid_model,
         thruster_dt_mode="current-code",
+        rc_out_scale=float(args.rc_out_scale),
+        disable_thruster_perf=bool(args.disable_thruster_perf),
         thruster_param_overrides=thruster_param_overrides,
     )
     replay.ident_horizontal_force_scale = float(args.horizontal_force_scale)

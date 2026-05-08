@@ -111,6 +111,16 @@ def default_candidates(include_sign_checks: bool) -> list[Candidate]:
             note="stronger MuJoCo ellipsoid angular damping only",
         ),
         Candidate(
+            "ellipsoid_angular_p300",
+            fluid_angular_scale=3.00,
+            note="increase MuJoCo ellipsoid angular damping 3x",
+        ),
+        Candidate(
+            "ellipsoid_angular_p500",
+            fluid_angular_scale=5.00,
+            note="increase MuJoCo ellipsoid angular damping 5x",
+        ),
+        Candidate(
             "near_neutral_ellipsoid_p50",
             {
                 "buoyancy_scale": 1.0005,
@@ -289,6 +299,23 @@ def stddev(values: list[float]) -> float:
     return statistics.pstdev(values)
 
 
+def unwrap_rad(values: list[float]) -> list[float]:
+    if not values:
+        return []
+    out = [values[0]]
+    offset = 0.0
+    prev = values[0]
+    for value in values[1:]:
+        delta = value - prev
+        if delta > math.pi:
+            offset -= 2.0 * math.pi
+        elif delta < -math.pi:
+            offset += 2.0 * math.pi
+        out.append(value + offset)
+        prev = value
+    return out
+
+
 class StabilityProbe(Node):
     def __init__(self) -> None:
         super().__init__("uuv_roll_stability_probe")
@@ -352,13 +379,26 @@ class StabilityProbe(Node):
             }
         )
 
-    def publish_rc(self, *, forward: float = 0.0, sway: float = 0.0, yaw: float = 0.0, heave: float = 0.0) -> None:
+    def publish_rc(
+        self,
+        *,
+        roll: float = 0.0,
+        pitch: float = 0.0,
+        forward: float = 0.0,
+        sway: float = 0.0,
+        yaw: float = 0.0,
+        heave: float = 0.0,
+    ) -> None:
         msg = OverrideRCIn()
         for idx in range(len(msg.channels)):
             msg.channels[idx] = 0
         for idx in range(min(8, len(msg.channels))):
             msg.channels[idx] = 1500
         if len(msg.channels) >= 6:
+            # ArduSub defaults: RC1=pitch, RC2=roll, RC3=heave, RC4=yaw,
+            # RC5=forward, RC6=lateral.
+            msg.channels[0] = int(round(1500 + 300.0 * max(-1.0, min(1.0, pitch))))
+            msg.channels[1] = int(round(1500 + 300.0 * max(-1.0, min(1.0, roll))))
             msg.channels[2] = int(round(1500 + 300.0 * max(-1.0, min(1.0, heave))))
             msg.channels[3] = int(round(1500 + 300.0 * max(-1.0, min(1.0, yaw))))
             msg.channels[4] = int(round(1500 + 300.0 * max(-1.0, min(1.0, forward))))
@@ -375,6 +415,8 @@ class StabilityProbe(Node):
         self,
         duration: float,
         *,
+        roll: float = 0.0,
+        pitch: float = 0.0,
         forward: float = 0.0,
         sway: float = 0.0,
         yaw: float = 0.0,
@@ -384,7 +426,7 @@ class StabilityProbe(Node):
         end_t = time.monotonic() + duration
         dt = 1.0 / hz
         while time.monotonic() < end_t:
-            self.publish_rc(forward=forward, sway=sway, yaw=yaw, heave=heave)
+            self.publish_rc(roll=roll, pitch=pitch, forward=forward, sway=sway, yaw=yaw, heave=heave)
             rclpy.spin_once(self, timeout_sec=min(0.05, dt))
             remaining = end_t - time.monotonic()
             if remaining > 0:
@@ -446,7 +488,15 @@ class StabilityProbe(Node):
             raise RuntimeError(f"arming({value}) failed")
         raise RuntimeError(f"state did not report armed={value}")
 
-    def run_probe(self, settle_s: float, measure_s: float, stimulus: str, hold_mode: str) -> dict[str, Any]:
+    def run_probe(
+        self,
+        settle_s: float,
+        measure_s: float,
+        stimulus: str,
+        hold_mode: str,
+        axis_command: float,
+        pulse_s_override: float | None,
+    ) -> dict[str, Any]:
         self.wait_for_stack()
         self.spin_neutral(1.5)
         self.set_mode("MANUAL")
@@ -461,22 +511,31 @@ class StabilityProbe(Node):
         self.depth_samples.clear()
         self.rc_samples.clear()
         self.sample_enabled = True
+        pulse_s_used = 0.0
         if stimulus == "neutral":
             self.spin_neutral(measure_s)
         elif stimulus == "heave-pulse":
-            pulse_s = min(0.35, max(0.05, measure_s * 0.08))
+            pulse_s = pulse_s_override if pulse_s_override is not None else min(0.35, max(0.05, measure_s * 0.08))
+            pulse_s_used = pulse_s
             self.spin_rc(pulse_s, heave=-0.25)
             self.spin_neutral(max(0.0, measure_s - pulse_s))
         elif stimulus == "forward-pulse":
-            pulse_s = min(0.60, max(0.10, measure_s * 0.10))
+            pulse_s = pulse_s_override if pulse_s_override is not None else min(0.60, max(0.10, measure_s * 0.10))
+            pulse_s_used = pulse_s
             self.spin_rc(pulse_s, forward=0.20)
+            self.spin_neutral(max(0.0, measure_s - pulse_s))
+        elif stimulus in ("roll-pulse", "pitch-pulse", "yaw-pulse", "sway-pulse"):
+            pulse_s = pulse_s_override if pulse_s_override is not None else min(0.60, max(0.10, measure_s * 0.10))
+            pulse_s_used = pulse_s
+            kwargs = {stimulus.removesuffix("-pulse"): axis_command}
+            self.spin_rc(pulse_s, **kwargs)
             self.spin_neutral(max(0.0, measure_s - pulse_s))
         else:
             raise RuntimeError(f"unknown stimulus: {stimulus}")
         self.sample_enabled = False
         self.arm(False)
         self.spin_neutral(0.5)
-        return compute_metrics(self.samples, self.depth_samples, self.rc_samples, measure_s)
+        return compute_metrics(self.samples, self.depth_samples, self.rc_samples, measure_s, pulse_s_used)
 
 
 def compute_metrics(
@@ -484,6 +543,7 @@ def compute_metrics(
     depth_samples: list[tuple[float, float]],
     rc_samples: list[tuple[float, list[int]]],
     measure_s: float,
+    pulse_s: float,
 ) -> dict[str, Any]:
     if len(samples) < max(8, measure_s * 2):
         raise RuntimeError(f"too few pose samples collected: {len(samples)}")
@@ -492,11 +552,17 @@ def compute_metrics(
     pitch = [float(s["pitch_deg"]) for s in samples]
     gyro_x = [float(s["gyro_x"]) for s in samples if math.isfinite(float(s["gyro_x"]))]
     gyro_y = [float(s["gyro_y"]) for s in samples if math.isfinite(float(s["gyro_y"]))]
+    gyro_z = [float(s["gyro_z"]) for s in samples if math.isfinite(float(s["gyro_z"]))]
+    yaw = [float(s["yaw_deg"]) for s in samples]
     z = [float(s["z_m"]) for s in samples]
     depths = [float(value) for _, value in depth_samples if math.isfinite(float(value))]
 
     vertical_rc = []
+    horizontal_rc = []
+    all_rc = []
     roll_mix = []
+    pitch_mix = []
+    yaw_mix = []
     rc_valid_samples = 0
     rc_min = [math.nan] * 8
     rc_max = [math.nan] * 8
@@ -507,13 +573,27 @@ def compute_metrics(
                 value = int(channels[idx])
                 rc_min[idx] = value if math.isnan(rc_min[idx]) else min(rc_min[idx], value)
                 rc_max[idx] = value if math.isnan(rc_max[idx]) else max(rc_max[idx], value)
+                all_rc.append(float(value - 1500))
+            horizontal_devs = [channels[idx] - 1500 for idx in range(4)]
+            horizontal_rc.extend(float(v) for v in horizontal_devs)
+            yaw_mix.append(float((channels[0] + channels[3]) - (channels[1] + channels[2])))
         if len(channels) >= 8 and all(900 <= channels[idx] <= 2100 for idx in range(4, 8)):
             devs = [channels[idx] - 1500 for idx in range(4, 8)]
             vertical_rc.extend(float(v) for v in devs)
             roll_mix.append(float((channels[5] + channels[6]) - (channels[4] + channels[7])))
+            pitch_mix.append(float((channels[6] + channels[7]) - (channels[4] + channels[5])))
 
     depth_drift = float(depths[-1] - depths[0]) if len(depths) >= 2 else float("nan")
     z_drift = float(z[-1] - z[0]) if len(z) >= 2 else float("nan")
+    yaw_delta = 0.0
+    if len(yaw) >= 2:
+        yaw_unwrapped = [math.degrees(v) for v in unwrap_rad([math.radians(v) for v in yaw])]
+        yaw_delta = float(yaw_unwrapped[-1] - yaw_unwrapped[0])
+    sample_t0 = float(samples[0]["t"])
+    post_samples = [s for s in samples if float(s["t"]) - sample_t0 >= pulse_s + 0.25]
+    post_gyro_z = [float(s["gyro_z"]) for s in post_samples if math.isfinite(float(s["gyro_z"]))]
+    post_roll = [float(s["roll_deg"]) for s in post_samples]
+    post_pitch = [float(s["pitch_deg"]) for s in post_samples]
 
     metrics: dict[str, Any] = {
         "pose_samples": len(samples),
@@ -526,12 +606,22 @@ def compute_metrics(
         "pitch_peak_deg": max(abs(v) for v in pitch),
         "gyro_x_rms_rad_s": rms(gyro_x),
         "gyro_y_rms_rad_s": rms(gyro_y),
+        "gyro_z_rms_rad_s": rms(gyro_z),
+        "yaw_delta_deg": yaw_delta,
+        "yaw_peak_rate_rad_s": max((abs(v) for v in gyro_z), default=float("nan")),
+        "post_gyro_z_rms_rad_s": rms(post_gyro_z),
+        "post_roll_rms_deg": rms(post_roll),
+        "post_pitch_rms_deg": rms(post_pitch),
         "depth_mean_m": statistics.fmean(depths) if depths else float("nan"),
         "depth_std_m": stddev(depths),
         "depth_drift_m": depth_drift,
         "z_drift_m": z_drift,
+        "servo_delta_rms_pwm": rms(all_rc),
+        "horizontal_rc_rms_pwm": rms(horizontal_rc),
         "vertical_rc_rms_pwm": rms(vertical_rc),
         "roll_mix_rms_pwm": rms(roll_mix),
+        "pitch_mix_rms_pwm": rms(pitch_mix),
+        "yaw_mix_rms_pwm": rms(yaw_mix),
         "rc_valid_samples": rc_valid_samples,
         "rc_min_ch1_8": rc_min,
         "rc_max_ch1_8": rc_max,
@@ -582,6 +672,8 @@ def run_candidate(
     measure_s: float,
     stimulus: str,
     hold_mode: str,
+    axis_command: float,
+    pulse_s_override: float | None,
     wait_ready: bool,
 ) -> dict[str, Any]:
     cand_dir = out_dir / candidate.name
@@ -611,15 +703,22 @@ def run_candidate(
         rclpy.init(args=None)
         node = StabilityProbe()
         try:
-            metrics = node.run_probe(settle_s=settle_s, measure_s=measure_s, stimulus=stimulus, hold_mode=hold_mode)
+            metrics = node.run_probe(
+                settle_s=settle_s,
+                measure_s=measure_s,
+                stimulus=stimulus,
+                hold_mode=hold_mode,
+                axis_command=axis_command,
+                pulse_s_override=pulse_s_override,
+            )
             if int(metrics.get("rc_valid_samples", 0)) <= 0:
                 raise RuntimeError("invalid_no_servo_output: /mavros/rc/out produced no valid 8-channel PWM samples")
             if stimulus != "neutral":
-                vertical_pwm = float(metrics.get("vertical_rc_rms_pwm", float("nan")))
-                if not math.isfinite(vertical_pwm) or vertical_pwm < 2.0:
+                servo_pwm = float(metrics.get("servo_delta_rms_pwm", float("nan")))
+                if not math.isfinite(servo_pwm) or servo_pwm < 2.0:
                     raise RuntimeError(
-                        "invalid_no_active_vertical_servo_output: "
-                        f"vertical_rc_rms_pwm={vertical_pwm}"
+                        "invalid_no_active_servo_output: "
+                        f"servo_delta_rms_pwm={servo_pwm}"
                     )
         finally:
             node.destroy_node()
@@ -650,6 +749,8 @@ def run_candidate(
         "launcher_log": str(launch_log),
         "stimulus": stimulus,
         "hold_mode": hold_mode,
+        "axis_command": axis_command,
+        "pulse_s_override": pulse_s_override,
         "wait_ready": wait_ready,
         **metrics,
     }
@@ -666,13 +767,26 @@ def write_summary(out_dir: Path, results: list[dict[str, Any]]) -> None:
         "roll_peak_deg",
         "pitch_rms_deg",
         "gyro_x_rms_rad_s",
+        "gyro_y_rms_rad_s",
+        "gyro_z_rms_rad_s",
+        "yaw_delta_deg",
+        "yaw_peak_rate_rad_s",
+        "post_gyro_z_rms_rad_s",
+        "post_roll_rms_deg",
+        "post_pitch_rms_deg",
         "depth_std_m",
         "depth_drift_m",
+        "servo_delta_rms_pwm",
+        "horizontal_rc_rms_pwm",
         "vertical_rc_rms_pwm",
         "roll_mix_rms_pwm",
+        "pitch_mix_rms_pwm",
+        "yaw_mix_rms_pwm",
         "rc_valid_samples",
         "stimulus",
         "hold_mode",
+        "axis_command",
+        "pulse_s_override",
         "wait_ready",
         "note",
         "error",
@@ -695,7 +809,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-candidates", type=int, default=0, help="0 means all")
     parser.add_argument("--candidate", action="append", default=[])
     parser.add_argument("--include-sign-checks", action="store_true")
-    parser.add_argument("--stimulus", choices=("neutral", "heave-pulse", "forward-pulse"), default="neutral")
+    parser.add_argument(
+        "--stimulus",
+        choices=("neutral", "heave-pulse", "forward-pulse", "sway-pulse", "roll-pulse", "pitch-pulse", "yaw-pulse"),
+        default="neutral",
+    )
+    parser.add_argument("--axis-command", type=float, default=0.20)
+    parser.add_argument("--pulse-s", type=float, default=None)
     parser.add_argument("--hold-mode", choices=("ALT_HOLD", "MANUAL"), default="ALT_HOLD")
     parser.add_argument("--skip-launcher-ready", action="store_true")
     parser.add_argument("--out-dir", type=Path)
@@ -736,6 +856,8 @@ def main() -> int:
                 measure_s=args.measure_s,
                 stimulus=args.stimulus,
                 hold_mode=args.hold_mode,
+                axis_command=args.axis_command,
+                pulse_s_override=args.pulse_s,
                 wait_ready=not args.skip_launcher_ready,
             )
             results.append(result)

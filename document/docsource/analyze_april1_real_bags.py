@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import sqlite3
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -13,9 +12,11 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 try:
+    import rosbag2_py
     from rclpy.serialization import deserialize_message
     from rosidl_runtime_py.utilities import get_message
 except ModuleNotFoundError:
+    rosbag2_py = None
     deserialize_message = None
     get_message = None
 try:
@@ -246,22 +247,71 @@ def discover_bags(root: Path) -> list[Path]:
     return sorted(root.glob("bag_*/**/*.db3"))
 
 
-def read_sqlite_metadata(db_path: Path) -> tuple[dict[str, str], dict[str, int], int, int]:
-    conn = sqlite3.connect(str(db_path))
-    try:
-        topics = {row[0]: row[1] for row in conn.execute("select name, type from topics")}
-        counts = {
-            row[0]: int(row[1])
-            for row in conn.execute(
-                "select topics.name, count(messages.id) "
-                "from topics left join messages on topics.id=messages.topic_id "
-                "group by topics.id"
-            )
-        }
-        t0, t1 = conn.execute("select min(timestamp), max(timestamp) from messages").fetchone()
-    finally:
-        conn.close()
-    return topics, counts, int(t0 or 0), int(t1 or 0)
+def resolve_bag_db3(path: Path) -> Path:
+    path = Path(path)
+    if path.is_file() and path.suffix == ".db3":
+        return path
+    if path.is_dir():
+        candidates = sorted(path.glob("*.db3")) or sorted(path.glob("**/*.db3"))
+        if candidates:
+            return candidates[0]
+    raise FileNotFoundError(f"No .db3 rosbag storage found at {path}")
+
+
+def open_rosbag2_reader(path: Path) -> tuple[Any, Path]:
+    if rosbag2_py is None:
+        raise ModuleNotFoundError("rosbag2_py is required to read ROS 2 bags")
+    db_path = resolve_bag_db3(path)
+    reader = rosbag2_py.SequentialReader()
+    reader.open(
+        rosbag2_py.StorageOptions(uri=str(db_path.parent), storage_id="sqlite3"),
+        rosbag2_py.ConverterOptions("", ""),
+    )
+    return reader, db_path
+
+
+def read_bag_metadata(db_path: Path) -> tuple[dict[str, str], dict[str, int], int, int]:
+    reader, _ = open_rosbag2_reader(db_path)
+    topics = {str(topic.name): str(topic.type) for topic in reader.get_all_topics_and_types()}
+    counts = {name: 0 for name in topics}
+    t0_ns: int | None = None
+    t1_ns: int | None = None
+    while reader.has_next():
+        topic, _raw, timestamp_ns = reader.read_next()
+        topic = str(topic)
+        timestamp_ns = int(timestamp_ns)
+        counts[topic] = counts.get(topic, 0) + 1
+        if t0_ns is None or timestamp_ns < t0_ns:
+            t0_ns = timestamp_ns
+        if t1_ns is None or timestamp_ns > t1_ns:
+            t1_ns = timestamp_ns
+    return topics, counts, int(t0_ns or 0), int(t1_ns or 0)
+
+
+def read_string_topic_events(db_path: Path, topic: str) -> list[tuple[float, str]]:
+    if deserialize_message is None or get_message is None:
+        raise ModuleNotFoundError("rclpy.serialization.deserialize_message is required")
+    topics, _, t0_ns, _ = read_bag_metadata(db_path)
+    type_name = topics.get(topic)
+    if type_name is None:
+        return []
+    msg_cls = get_message(type_name)
+    reader, _ = open_rosbag2_reader(db_path)
+    events: list[tuple[float, str]] = []
+    while reader.has_next():
+        msg_topic, raw, timestamp_ns = reader.read_next()
+        if msg_topic != topic:
+            continue
+        msg = deserialize_message(raw, msg_cls)
+        events.append(((int(timestamp_ns) - int(t0_ns)) * 1.0e-9, str(getattr(msg, "data", ""))))
+    return events
+
+
+def first_string_time_in_bag(db_path: Path, topic: str, value: str) -> float | None:
+    for t, event_value in read_string_topic_events(db_path, topic):
+        if event_value == value:
+            return float(t)
+    return None
 
 
 def maybe_record_header(data: BagData, topic: str, msg: Any, timestamp_ns: int) -> None:
@@ -501,10 +551,11 @@ def decode_rc_out(raw: bytes) -> SimpleNamespace:
 def read_bag_with_rosbags(db_path: Path) -> BagData:
     if AnyReader is None or Stores is None or get_typestore is None:
         raise ModuleNotFoundError("Neither rclpy nor rosbags is available for rosbag decoding")
-    topics, counts, t0_ns, t1_ns = read_sqlite_metadata(db_path)
-    data = BagData(name=db_path.parent.name, db_path=db_path, topics=topics, topic_counts=counts, t0_ns=t0_ns, t1_ns=t1_ns)
+    resolved_db_path = resolve_bag_db3(db_path)
+    topics, counts, t0_ns, t1_ns = read_bag_metadata(resolved_db_path)
+    data = BagData(name=resolved_db_path.parent.name, db_path=resolved_db_path, topics=topics, topic_counts=counts, t0_ns=t0_ns, t1_ns=t1_ns)
     typestore = get_typestore(Stores.ROS2_HUMBLE)
-    with AnyReader([db_path.parent], default_typestore=typestore) as reader:
+    with AnyReader([resolved_db_path.parent], default_typestore=typestore) as reader:
         target_connections = [conn for conn in reader.connections if conn.topic in TARGET_TOPICS]
         for conn, timestamp_ns, raw in reader.messages(connections=target_connections):
             timestamp_ns = int(timestamp_ns)
@@ -525,35 +576,31 @@ def read_bag_with_rosbags(db_path: Path) -> BagData:
 
 
 def read_bag(db_path: Path) -> BagData:
-    if deserialize_message is None or get_message is None:
+    if rosbag2_py is None or deserialize_message is None or get_message is None:
         return read_bag_with_rosbags(db_path)
-    topics, counts, t0_ns, t1_ns = read_sqlite_metadata(db_path)
-    data = BagData(name=db_path.parent.name, db_path=db_path, topics=topics, topic_counts=counts, t0_ns=t0_ns, t1_ns=t1_ns)
-    target_topic_ids: dict[int, tuple[str, Any]] = {}
-    conn = sqlite3.connect(str(db_path))
-    try:
-        for topic_id, name, type_name in conn.execute("select id, name, type from topics"):
-            if name not in TARGET_TOPICS:
-                continue
-            try:
-                msg_cls = get_message(type_name)
-            except Exception as exc:
-                data.skipped_topics[name] = f"{type_name}: {exc}"
-                continue
-            target_topic_ids[int(topic_id)] = (name, msg_cls)
+    resolved_db_path = resolve_bag_db3(db_path)
+    topics, counts, t0_ns, t1_ns = read_bag_metadata(resolved_db_path)
+    data = BagData(name=resolved_db_path.parent.name, db_path=resolved_db_path, topics=topics, topic_counts=counts, t0_ns=t0_ns, t1_ns=t1_ns)
+    target_msg_types: dict[str, Any] = {}
+    for name, type_name in sorted(topics.items()):
+        if name not in TARGET_TOPICS:
+            continue
+        try:
+            target_msg_types[name] = get_message(type_name)
+        except Exception as exc:
+            data.skipped_topics[name] = f"{type_name}: {exc}"
 
-        for topic_id, (name, msg_cls) in sorted(target_topic_ids.items(), key=lambda item: item[1][0]):
-            for timestamp_ns, blob in conn.execute(
-                "select timestamp, data from messages where topic_id = ? order by timestamp",
-                (topic_id,),
-            ):
-                timestamp_ns = int(timestamp_ns)
-                t = (timestamp_ns - t0_ns) * 1e-9
-                msg = deserialize_message(bytes(blob), msg_cls)
-                maybe_record_header(data, name, msg, timestamp_ns)
-                handle_message(data, name, msg, t)
-    finally:
-        conn.close()
+    reader, _ = open_rosbag2_reader(resolved_db_path)
+    while reader.has_next():
+        name, raw, timestamp_ns = reader.read_next()
+        msg_cls = target_msg_types.get(str(name))
+        if msg_cls is None:
+            continue
+        timestamp_ns = int(timestamp_ns)
+        t = (timestamp_ns - t0_ns) * 1e-9
+        msg = deserialize_message(raw, msg_cls)
+        maybe_record_header(data, str(name), msg, timestamp_ns)
+        handle_message(data, str(name), msg, t)
     return data
 
 
@@ -850,7 +897,7 @@ def plot_bag(data: BagData, out_dir: Path) -> list[str]:
         fig.suptitle(data.name)
         fig.tight_layout()
         path = out_dir / f"{data.name}_depth_dvl_rc.png"
-        fig.savefig(path, dpi=150)
+        plt.savefig(path, dpi=150)
         plt.close(fig)
         paths.append(str(path))
 
@@ -879,7 +926,7 @@ def plot_bag(data: BagData, out_dir: Path) -> list[str]:
         fig.suptitle(f"{data.name} trajectory estimates")
         fig.tight_layout()
         path = out_dir / f"{data.name}_trajectory.png"
-        fig.savefig(path, dpi=150)
+        plt.savefig(path, dpi=150)
         plt.close(fig)
         paths.append(str(path))
 
@@ -903,7 +950,7 @@ def plot_bag(data: BagData, out_dir: Path) -> list[str]:
         fig.suptitle(f"{data.name} MAVROS IMU")
         fig.tight_layout()
         path = out_dir / f"{data.name}_imu.png"
-        fig.savefig(path, dpi=150)
+        plt.savefig(path, dpi=150)
         plt.close(fig)
         paths.append(str(path))
 

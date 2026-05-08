@@ -103,6 +103,19 @@ def default_candidates(candidate_set: str) -> list[Candidate]:
             Candidate("drag_p18_angular_p10", fluid_linear_scale=1.18, fluid_angular_scale=1.10),
             Candidate("drag_p20_angular_p12", fluid_linear_scale=1.20, fluid_angular_scale=1.12),
         ]
+    if candidate_set == "rosbag-yaw":
+        return [
+            Candidate("baseline"),
+            Candidate("drag_all_p12", fluid_linear_scale=1.12),
+            Candidate("yaw_p05", {"yaw_torque_scale": 1.05}),
+            Candidate("yaw_p10", {"yaw_torque_scale": 1.10}),
+            Candidate("drag_p12_yaw_p05", {"yaw_torque_scale": 1.05}, fluid_linear_scale=1.12),
+            Candidate("drag_p12_yaw_p10", {"yaw_torque_scale": 1.10}, fluid_linear_scale=1.12),
+            Candidate("angular_m05", fluid_angular_scale=0.95),
+            Candidate("angular_m10", fluid_angular_scale=0.90),
+            Candidate("drag_p12_angular_m05", fluid_linear_scale=1.12, fluid_angular_scale=0.95),
+            Candidate("drag_p12_angular_m10", fluid_linear_scale=1.12, fluid_angular_scale=0.90),
+        ]
     if candidate_set == "closed-loop-refine":
         return [
             Candidate("baseline"),
@@ -172,6 +185,68 @@ def default_candidates(candidate_set: str) -> list[Candidate]:
                 "angular_drag_high",
                 {"angular_drag": 0.92},
                 fluid_rot_scale=1.15,
+            ),
+        ]
+    if candidate_set == "rosbag-axis":
+        return [
+            Candidate("baseline"),
+            Candidate(
+                "xy_drag_xup_ylow",
+                {
+                    "linear_damping_linear": [1.30, 0.90, 1.54],
+                    "quadratic_damping_linear": [1.80, 1.20, 2.40],
+                },
+            ),
+            Candidate(
+                "y_drag_low",
+                {
+                    "linear_damping_linear": [1.10, 0.80, 1.54],
+                    "quadratic_damping_linear": [1.40, 1.10, 2.40],
+                },
+            ),
+            Candidate(
+                "z_drag_low",
+                {
+                    "linear_damping_linear": [1.10, 1.32, 0.90],
+                    "quadratic_damping_linear": [1.40, 2.00, 1.20],
+                    "surface_heave_damping": 4.0,
+                    "heave_damping_scale": 2.5,
+                },
+            ),
+            Candidate(
+                "xyz_drag_shaped",
+                {
+                    "linear_damping_linear": [1.30, 0.85, 0.95],
+                    "quadratic_damping_linear": [1.80, 1.15, 1.25],
+                    "surface_heave_damping": 4.0,
+                    "heave_damping_scale": 2.8,
+                },
+            ),
+            Candidate(
+                "x_drag_up_only",
+                {
+                    "linear_damping_linear": [1.35, 1.32, 1.54],
+                    "quadratic_damping_linear": [1.90, 2.00, 2.40],
+                },
+            ),
+        ]
+    if candidate_set == "physics-ls-current":
+        return [
+            Candidate("baseline"),
+            Candidate(
+                "ls_heave_yaw",
+                {
+                    "heave_damping_scale": 1.0,
+                    "yaw_torque_scale": 1.25,
+                },
+            ),
+            Candidate(
+                "ls_heave_yaw_buoy",
+                {
+                    "buoyancy_scale": 1.012,
+                    "heave_damping_scale": 1.0,
+                    "yaw_torque_scale": 1.25,
+                },
             ),
         ]
     return [
@@ -749,9 +824,12 @@ def parse_args() -> argparse.Namespace:
             "ellipsoid5",
             "ellipsoid5-refine",
             "ellipsoid5-final",
+            "rosbag-yaw",
             "closed-loop-refine",
             "lift-refine",
             "broad",
+            "rosbag-axis",
+            "physics-ls-current",
         ),
         default="micro",
         help="micro uses small axis-separated perturbations; ellipsoid5 tunes the five MuJoCo fluidcoef terms.",

@@ -23,7 +23,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from analyze_april1_real_bags import read_bag, read_sqlite_metadata  # noqa: E402
+from analyze_april1_real_bags import read_bag, read_bag_metadata  # noqa: E402
 
 
 DEFAULT_BAG = Path(
@@ -233,7 +233,7 @@ def load_mode_sequence(
     else:
         db_file = db_path
         bag_uri = db_path.parent
-    topics, _, t0_ns, _ = read_sqlite_metadata(db_file)
+    topics, _, t0_ns, _ = read_bag_metadata(db_file)
     if topic not in topics:
         return ModeSequence(topic, [])
 

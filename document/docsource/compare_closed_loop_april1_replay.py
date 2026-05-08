@@ -2,26 +2,19 @@ from __future__ import annotations
 
 import argparse
 import json
-import sqlite3
 import sys
 from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
-try:
-    from rclpy.serialization import deserialize_message
-    from rosidl_runtime_py.utilities import get_message
-except ModuleNotFoundError:
-    deserialize_message = None
-    get_message = None
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from analyze_april1_real_bags import read_bag, scalar_stats, vector_stats  # noqa: E402
+from analyze_april1_real_bags import first_string_time_in_bag, read_bag, scalar_stats, vector_stats  # noqa: E402
 
 
 DEFAULT_REAL_BAG = Path(
@@ -54,26 +47,10 @@ def first_array(data, keys: list[str], dims: int | None = None) -> tuple[np.ndar
 
 
 def first_string_time(db_path: Path, topic: str, value: str) -> float | None:
-    if deserialize_message is None or get_message is None:
-        return None
-    conn = sqlite3.connect(str(db_path))
     try:
-        row = conn.execute("select id, type from topics where name = ?", (topic,)).fetchone()
-        if row is None:
-            return None
-        topic_id, type_name = row
-        msg_cls = get_message(str(type_name))
-        t0_ns = conn.execute("select min(timestamp) from messages").fetchone()[0]
-        for timestamp_ns, blob in conn.execute(
-            "select timestamp, data from messages where topic_id = ? order by timestamp",
-            (int(topic_id),),
-        ):
-            msg = deserialize_message(bytes(blob), msg_cls)
-            if str(getattr(msg, "data", "")) == value:
-                return (int(timestamp_ns) - int(t0_ns or 0)) * 1.0e-9
-    finally:
-        conn.close()
-    return None
+        return first_string_time_in_bag(db_path, topic, value)
+    except Exception:
+        return None
 
 
 def rc_start_alignment(
@@ -427,7 +404,7 @@ def plot_overlay(
     axes[2].set_xlabel("bag time s")
     axes[2].legend(loc="upper right", fontsize=8)
     fig.tight_layout()
-    fig.savefig(out_path, dpi=160)
+    plt.savefig(out_path, dpi=160)
     plt.close(fig)
 
 

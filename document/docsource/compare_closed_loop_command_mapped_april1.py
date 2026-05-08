@@ -2,26 +2,22 @@ from __future__ import annotations
 
 import argparse
 import json
-import sqlite3
 import sys
 from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
-from rclpy.serialization import deserialize_message
-from rosidl_runtime_py.utilities import get_message
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 ROOT = Path(__file__).resolve().parents[2]
 
-from analyze_april1_real_bags import read_bag, scalar_stats, vector_stats  # noqa: E402
+from analyze_april1_real_bags import read_bag, read_string_topic_events, scalar_stats, vector_stats  # noqa: E402
 from compare_closed_loop_april1_replay import (  # noqa: E402
     fit_gain_offset,
     operational_confidence_no_depth,
-    pressure_depth_from_static,
     velocity_gyro_score_no_depth,
 )
 from replay_april1_rc_override_closed_loop import (  # noqa: E402
@@ -68,28 +64,13 @@ def parse_signs(raw: str) -> np.ndarray:
 
 
 def phase_changes(db_path: Path, topic: str = "/measurement/phase") -> list[tuple[float, str]]:
-    conn = sqlite3.connect(str(db_path))
-    try:
-        row = conn.execute("select id, type from topics where name = ?", (topic,)).fetchone()
-        if row is None:
-            return []
-        topic_id, type_name = row
-        msg_cls = get_message(str(type_name))
-        t0_ns = conn.execute("select min(timestamp) from messages").fetchone()[0]
-        last_value: str | None = None
-        changes: list[tuple[float, str]] = []
-        for timestamp_ns, blob in conn.execute(
-            "select timestamp, data from messages where topic_id = ? order by timestamp",
-            (int(topic_id),),
-        ):
-            msg = deserialize_message(bytes(blob), msg_cls)
-            value = str(getattr(msg, "data", ""))
-            if value != last_value:
-                changes.append(((int(timestamp_ns) - int(t0_ns or 0)) * 1.0e-9, value))
-                last_value = value
-        return changes
-    finally:
-        conn.close()
+    last_value: str | None = None
+    changes: list[tuple[float, str]] = []
+    for t, value in read_string_topic_events(db_path, topic):
+        if value != last_value:
+            changes.append((float(t), str(value)))
+            last_value = str(value)
+    return changes
 
 
 def closed_loop_phase_span(changes: list[tuple[float, str]]) -> tuple[float, float]:
@@ -362,6 +343,61 @@ def rc_out_metrics(
     return out
 
 
+def pressure_depth_from_static(
+    pressure_t: np.ndarray,
+    pressure_pa: np.ndarray,
+    depth_t: np.ndarray,
+    depth_m: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
+    pressure_t = np.asarray(pressure_t, dtype=float).reshape(-1)
+    pressure_pa = np.asarray(pressure_pa, dtype=float).reshape(-1)
+    depth_t = np.asarray(depth_t, dtype=float).reshape(-1)
+    depth_m = np.asarray(depth_m, dtype=float).reshape(-1)
+    n = min(pressure_t.size, pressure_pa.size)
+    pressure_t = pressure_t[:n]
+    pressure_pa = pressure_pa[:n]
+    finite = np.isfinite(pressure_t) & np.isfinite(pressure_pa)
+    pressure_t = pressure_t[finite]
+    pressure_pa = pressure_pa[finite]
+    if pressure_t.size < 3:
+        return np.empty(0, dtype=float), np.empty(0, dtype=float), {"status": "no_pressure"}
+
+    calibration: dict[str, Any] = {"status": "default_surface_pressure"}
+    slope_pa_per_m = 997.0 * 9.80665
+    surface_pressure_pa = float(np.median(pressure_pa[: min(20, pressure_pa.size)]))
+    if depth_t.size >= 3 and depth_m.size >= 3:
+        m = min(depth_t.size, depth_m.size)
+        depth_t = depth_t[:m]
+        depth_m = depth_m[:m]
+        depth_ok = np.isfinite(depth_t) & np.isfinite(depth_m)
+        depth_t = depth_t[depth_ok]
+        depth_m = depth_m[depth_ok]
+        overlap = (
+            (pressure_t >= max(float(pressure_t[0]), float(depth_t[0])))
+            & (pressure_t <= min(float(pressure_t[-1]), float(depth_t[-1])))
+            if depth_t.size
+            else np.zeros(pressure_t.shape, dtype=bool)
+        )
+        if np.sum(overlap) >= 10:
+            depth_interp = np.interp(pressure_t[overlap], depth_t, depth_m)
+            p_fit = pressure_pa[overlap]
+            if np.ptp(depth_interp) > 0.03 and np.ptp(p_fit) > 30.0:
+                slope_pa_per_m, surface_pressure_pa = [float(v) for v in np.polyfit(depth_interp, p_fit, 1)]
+                calibration = {
+                    "status": "fit_to_depth_topic",
+                    "sample_count": int(np.sum(overlap)),
+                    "slope_pa_per_m": slope_pa_per_m,
+                    "surface_pressure_pa": surface_pressure_pa,
+                }
+    if abs(slope_pa_per_m) < 100.0:
+        slope_pa_per_m = 997.0 * 9.80665
+        calibration["status"] = "fallback_bad_slope"
+    depth = (pressure_pa - surface_pressure_pa) / slope_pa_per_m
+    calibration.setdefault("slope_pa_per_m", float(slope_pa_per_m))
+    calibration.setdefault("surface_pressure_pa", float(surface_pressure_pa))
+    return pressure_t, depth, calibration
+
+
 def depth_from_pressure_or_pose(data, *, prefer_static_pressure: bool) -> tuple[np.ndarray, np.ndarray, str, dict[str, Any]]:
     depth_t, depth, depth_key = first_array(data, ["/depth/pose:depth_positive_m", "/depth:depth_positive_m"])
     depth = depth.reshape(-1) if depth.size else depth
@@ -407,7 +443,7 @@ def plot_command_alignment(
     axes[4].set_xlabel("real bag time s")
     axes[4].grid(True, alpha=0.25)
     fig.tight_layout()
-    fig.savefig(out_path, dpi=160)
+    plt.savefig(out_path, dpi=160)
     plt.close(fig)
 
 
@@ -478,7 +514,7 @@ def plot_window_overlay(
         ax.set_xlim(start, end)
     fig.suptitle(f"Command-index mapped real vs sim, {start:.0f}-{end:.0f}s")
     fig.tight_layout()
-    fig.savefig(out_path, dpi=170)
+    plt.savefig(out_path, dpi=170)
     plt.close(fig)
 
 
@@ -502,7 +538,7 @@ def plot_confidence_summary(out_path: Path, summary: dict[str, Any]) -> None:
     fig.colorbar(im, ax=ax, label="operational confidence %")
     ax.set_title("Depth-excluded confidence by window")
     fig.tight_layout()
-    fig.savefig(out_path, dpi=170)
+    plt.savefig(out_path, dpi=170)
     plt.close(fig)
 
 

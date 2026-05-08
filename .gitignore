@@ -29,6 +29,9 @@ rospkg/*_backup_*/
 
 # Closed-loop replay, autotune, and one-off generated analysis outputs
 document/docsource/closed_loop*/
+document/docsource/autotune_*/
+document/docsource/physics_*/
+document/docsource/rosbag_match_*/
 document/docsource/real_bag_*/
 document/docsource/gui_autotune_*/
 document/docsource/gui_replay*/

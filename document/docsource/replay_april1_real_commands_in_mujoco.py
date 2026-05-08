@@ -483,6 +483,7 @@ class OfflineUuvReplay:
         fluid_model: str,
         thruster_dt_mode: str = "current-code",
         rc_out_scale: float = 1.0,
+        disable_thruster_perf: bool = False,
         profile_overrides: dict[str, Any] | None = None,
         thruster_param_overrides: dict[str, Any] | None = None,
     ) -> None:
@@ -491,6 +492,7 @@ class OfflineUuvReplay:
         self.fluid_model = str(fluid_model)
         self.thruster_dt_mode = thruster_dt_mode
         self.rc_out_scale = float(rc_out_scale)
+        self.disable_thruster_perf = bool(disable_thruster_perf)
         self.thruster_param_overrides = thruster_param_overrides or {}
 
         profiles, warning = load_sim_profiles(PROFILE_PATH)
@@ -501,13 +503,43 @@ class OfflineUuvReplay:
             self.sim_profile.update(profile_overrides)
         self.active_thruster_voltage = float(self.sim_profile.get("thruster_voltage", 16.0))
         self.perf_cfg, perf_msg = load_thruster_performance(THRUSTER_PERF_PATH, self.active_thruster_voltage)
-        if perf_msg:
+        if self.disable_thruster_perf:
+            self.perf_cfg = type(self.perf_cfg)(
+                False,
+                self.active_thruster_voltage,
+                None,
+                np.array([], dtype=np.float64),
+                np.array([], dtype=np.float64),
+            )
+            print("[thruster perf] disabled for offline replay", flush=True)
+        elif perf_msg:
             print(perf_msg, flush=True)
 
         self.model = mujoco.MjModel.from_xml_path(str(self.scene))
         self.data = mujoco.MjData(self.model)
         self.scene_fluid_density = float(self.model.opt.density)
         self.scene_fluid_viscosity = float(self.model.opt.viscosity)
+        self.applied_mujoco_fluidcoef_scale = None
+        fluidcoef_scale = self.sim_profile.get("mujoco_fluidcoef_scale")
+        if isinstance(fluidcoef_scale, list) and len(fluidcoef_scale) == 5:
+            try:
+                scale = np.clip(np.asarray([float(v) for v in fluidcoef_scale], dtype=np.float64), 0.0, 10.0)
+            except (TypeError, ValueError):
+                scale = None
+            if scale is not None and np.all(np.isfinite(scale)):
+                fluid_geom_mask = (self.model.geom_fluid[:, 0] > 0.5) & np.any(
+                    np.abs(self.model.geom_fluid[:, 1:6]) > 1e-12,
+                    axis=1,
+                )
+                if np.any(fluid_geom_mask):
+                    self.model.geom_fluid[fluid_geom_mask, 1:6] *= scale.reshape(1, 5)
+                    self.applied_mujoco_fluidcoef_scale = scale.copy()
+                    print(
+                        "[physics] MuJoCo fluidcoef scale applied offline: "
+                        f"count={int(np.sum(fluid_geom_mask))}, "
+                        f"scale={np.array2string(scale, precision=3)}",
+                        flush=True,
+                    )
         mujoco.mj_forward(self.model, self.data)
 
         self.base_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "base_link")

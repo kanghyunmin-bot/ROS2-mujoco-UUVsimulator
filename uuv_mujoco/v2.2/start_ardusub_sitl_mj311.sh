@@ -308,6 +308,11 @@ append_param_if_not_overridden "SERVO5_FUNCTION" "37"
 append_param_if_not_overridden "SERVO6_FUNCTION" "38"
 append_param_if_not_overridden "SERVO7_FUNCTION" "39"
 append_param_if_not_overridden "SERVO8_FUNCTION" "40"
+# The real rosbag RCOUT channels are bounded by 1100..1900us. ArduSub motor
+# functions use MOT_PWM_* for SERVO_OUTPUT_RAW limits, so keep SITL on the same
+# PWM envelope instead of the SITL default 1000..2000us.
+append_param_if_not_overridden "MOT_PWM_MIN" "1100"
+append_param_if_not_overridden "MOT_PWM_MAX" "1900"
 # Match the real vehicle's QGC Motor Config reverse setup used by the rosbag.
 # ArduSub's 6DOF motor mixer applies these MOT_*_DIRECTION parameters before
 # writing SERVO_OUTPUT_RAW. SERVO*_REVERSED is intentionally not used here:

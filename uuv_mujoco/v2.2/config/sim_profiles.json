@@ -173,14 +173,14 @@
   },
   "current": {
     "buoyancy_model": "ellipsoid",
-    "buoyancy_scale": 1.02,
+    "buoyancy_scale": 1.01,
     "buoyancy_slope_scale": 1.2,
-    "surface_heave_damping": 5.8,
-    "heave_damping_scale": 5.2,
-    "cob_torque_scale": 1.25,
+    "surface_heave_damping": 6.0,
+    "heave_damping_scale": 1.0,
+    "cob_torque_scale": 1.2,
     "buoyancy_point_blend": 1.0,
     "cob_x_offset": 0.01,
-    "cob_z_offset": 0.035,
+    "cob_z_offset": 0.033,
     "thruster_voltage": 16.0,
     "thruster_force_max": 21.0,
     "linear_drag": 0.93,
@@ -191,8 +191,8 @@
       0.0
     ],
     "body_inertia_scale_xyz": [
-      1.0,
-      1.0,
+      0.95,
+      0.95,
       1.0
     ],
     "body_components": [
@@ -336,7 +336,7 @@
       "reference_speed_angular": 0.6
     },
     "spin_gain": 22.0,
-    "yaw_torque_scale": 1.0,
+    "yaw_torque_scale": 1.25,
     "validation_timestep": 0.005,
     "validation_iterations": 20,
     "validation_ls_iterations": 8,
@@ -345,9 +345,9 @@
     "validation_total_time": 3.2,
     "validation_step_amp_ratio": 0.3,
     "mujoco_fluidcoef_scale": [
-      1.0,
-      1.0,
-      1.0,
+      1.254,
+      1.434,
+      0.92,
       1.0,
       1.0
     ],
