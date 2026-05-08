@@ -15,6 +15,7 @@ The current primary branch is `uuv_sim`.
 ```text
 .
 |-- ardupilot/                 # ArduPilot submodule
+|-- dist2/ubuntu22.04/         # Ubuntu 22.04 distribution packaging workflow
 |-- rospkg/kmu26_auv/          # KMU26 AUV ROS 2 package submodule
 |-- setup/                     # Install and verification scripts
 |-- uuv_mujoco/v2.2/           # MuJoCo runtime, bridge, scenes, configs
@@ -94,6 +95,26 @@ Run verification only:
 ./setup/04_verify_uuv_stack.sh
 ```
 
+## Ubuntu 22.04 Dist2 Package
+
+The native Ubuntu distribution is built from the pushed `uuv_sim` branch, not
+from a dirty local workspace:
+
+```bash
+./dist2/ubuntu22.04/package_from_github.sh --branch uuv_sim
+```
+
+For deliberate local validation only:
+
+```bash
+./dist2/ubuntu22.04/package_dist2.sh --allow-dirty --out-dir /tmp/uuvdist2_check
+./dist2/ubuntu22.04/verify_package.sh /tmp/uuvdist2_check/uuv_sim_ubuntu22.04_dist2.zip
+```
+
+Release rules and failure notes live in
+`dist2/ubuntu22.04/DIST_GUIDE.md`. Upload release zips as GitHub Release assets;
+do not commit generated zip files.
+
 ## Environment
 
 The helper script resolves workspace paths and common runtime locations:
@@ -170,6 +191,20 @@ Reset QGroundControl as well:
 ```bash
 ./uuv_mujoco/v2.2/reset_uuv_sim.sh --with-qgc-stop
 ```
+
+## Analysis And Tuning
+
+The `document/docsource` scripts support real-bag comparison, closed-loop replay,
+and parameter sweeps. Current tuning helpers include:
+
+```bash
+python3 document/docsource/analyze_april1_real_bags.py --help
+python3 document/docsource/run_uuv_param_autotune.py --help
+python3 uuv_mujoco/v2.2/tools/roll_stability_sweep.py --help
+```
+
+Large generated result folders such as `autotune_*`, `physics_*`,
+`rosbag_match_*`, and raw bag files are local artifacts and are ignored by git.
 
 ## Notes
 
