@@ -42,4 +42,4 @@ elif [[ -f "${ROS_WORKSPACE_DIR:-${ROOT_DIR}/rospkg}/install/setup.bash" ]]; the
 fi
 
 export PYTHONNOUSERSITE=1
-exec python3 "${ROOT_DIR}/uuv_control_gui.py" "$@"
+exec python3 "${ROOT_DIR}/uuv_mujoco/v2.2/gui/uuv_control_gui.py" "$@"

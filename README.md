@@ -18,8 +18,9 @@ The current primary branch is `uuv_sim`.
 |-- rospkg/kmu26_auv/          # KMU26 AUV ROS 2 package submodule
 |-- setup/                     # Install and verification scripts
 |-- uuv_mujoco/v2.2/           # MuJoCo runtime, bridge, scenes, configs
+|   `-- gui/                   # Control and tuning GUI implementation
 |-- document/                  # Reports, analysis scripts, figures
-|-- uuv_control_gui.py         # Control and tuning GUI entry point
+|-- uuv_control_gui.py         # Compatibility wrapper for the GUI entry point
 |-- run_control_gui.sh         # GUI launcher with environment setup
 `-- .uuv_mujoco_env.sh         # Workspace environment resolver
 ```
@@ -136,6 +137,27 @@ Launch the control GUI:
 ```bash
 ./run_control_gui.sh
 ```
+
+For native Ubuntu distribution packages, use the stricter launcher that only
+uses system ROS plus the local rospkg install:
+
+```bash
+./run_control_gui_ubuntu.sh
+```
+
+The canonical GUI implementation is
+`uuv_mujoco/v2.2/gui/uuv_control_gui.py`; the root `uuv_control_gui.py`
+is kept as a compatibility wrapper.
+
+GUI internals are split by responsibility: `app.py` for the Tk application
+shell, `layout_mixin.py` for widget layout, `ros_process_mixin.py` for
+ROS/RViz/Ping360/simulator process controls, `autotune_mixin.py` for
+autotune workflow, `physics_mixin.py` for parameter editing,
+`replay_mixin.py` for RC replay, `control_display_mixin.py` for manual
+control and telemetry drawing, `node.py` for the ROS node, `runtime.py` for
+ROS imports, `ros_tools.py` for ROS/RViz helpers, `helpers.py` for
+RC/math/rosbag helpers, `models.py` for dataclasses, `widgets.py` for reusable
+Tk widgets, and `config.py` for paths and constants.
 
 Reset local simulator processes and ports:
 
