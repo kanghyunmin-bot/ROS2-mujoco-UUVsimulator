@@ -7,10 +7,16 @@ __pycache__/
 .geographiclib/
 QGroundControl.app/
 dist/
-dist2/
+dist2/**
+!dist2/
+!dist2/ubuntu22.04/
+!dist2/ubuntu22.04/**
+dist2/ubuntu22.04/out/
+dist2/ubuntu22.04/out/**
 
 # MuJoCo/SITL runtime logs
 uuv_mujoco/v2.2/logs/
+uuv_mujoco/v2.2/generated/
 uuv_mujoco/v2.2/config/*.bak_*
 log/
 
@@ -19,6 +25,7 @@ rospkg/build/
 rospkg/install/
 rospkg/log/
 rospkg/*.zip
+rospkg/*_backup_*/
 
 # Closed-loop replay, autotune, and one-off generated analysis outputs
 document/docsource/closed_loop*/
@@ -26,6 +33,11 @@ document/docsource/real_bag_*/
 document/docsource/gui_autotune_*/
 document/docsource/gui_replay*/
 document/docsource/ellipsoid5*/
+document/docsource/ellipsoid_*/
+document/docsource/depth_*/
+document/docsource/current_*/
+document/docsource/yaw_*/
+document/docsource/mujoco_plant_*/
 document/docsource/joy_node*/
 document/docsource/measurements/
 document/measurements/
