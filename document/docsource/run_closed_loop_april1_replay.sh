@@ -325,6 +325,7 @@ BAG_RECORD_LOG="${OUT_DIR}/bag_record.log"
 
 if [[ ! -f "${BAG_PATH}" ]]; then
   echo "[closed-loop] bag not found: ${BAG_PATH}"
+  echo "[closed-loop] sample real-robot bags are not bundled with dist2; pass --bag /path/to/bag_0.db3 on a new machine."
   exit 1
 fi
 

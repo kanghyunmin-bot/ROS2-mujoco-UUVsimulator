@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from pathlib import Path
 
 from pptx import Presentation
@@ -11,14 +12,24 @@ from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE, PP_ALIGN
 from pptx.util import Inches, Pt
 
 
-ROOT = Path("/Users/kanghyunmin/Desktop/uuv_sim")
+ROOT = Path(__file__).resolve().parents[2]
 DOC_DIR = ROOT / "document"
 FIG_DIR = DOC_DIR / "figures"
 OUT_PATH = DOC_DIR / "uuv_mujoco_presentation_kr.pptx"
 SUMMARY_PATH = DOC_DIR / "measurement_summary_latest.json"
 
-FONT = "Apple SD Gothic Neo"
-FONT_FILE = "/System/Library/Fonts/AppleSDGothicNeo.ttc"
+FONT = os.environ.get("UUV_DOC_FONT", "Apple SD Gothic Neo")
+FONT_FILE = os.environ.get("UUV_DOC_FONT_FILE", "")
+if not FONT_FILE:
+    for candidate in (
+        "/System/Library/Fonts/AppleSDGothicNeo.ttc",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    ):
+        if Path(candidate).exists():
+            FONT_FILE = candidate
+            break
+FONT_FILE = FONT_FILE or None
 COLOR_BG = RGBColor(255, 255, 255)
 COLOR_TEXT = RGBColor(24, 31, 38)
 COLOR_MUTED = RGBColor(89, 101, 114)

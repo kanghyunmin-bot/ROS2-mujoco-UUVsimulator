@@ -15,6 +15,7 @@ from rosidl_runtime_py.utilities import get_message
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
+ROOT = Path(__file__).resolve().parents[2]
 
 from analyze_april1_real_bags import read_bag, scalar_stats, vector_stats  # noqa: E402
 from compare_closed_loop_april1_replay import (  # noqa: E402
@@ -32,15 +33,15 @@ from fit_thruster_params_from_april1 import normalize_rc_out, rc_out_thruster_co
 
 
 DEFAULT_REAL_BAG = Path(
-    "/Users/kanghyunmin/Desktop/uuv_sim/real_robot_ros_bag/extracted_2026_04_01/"
+    ROOT / "real_robot_ros_bag/extracted_2026_04_01/"
     "bag_2026-04-01_20-08-11/bag_2026-04-01_20-08-11_0.db3"
 )
 DEFAULT_SIM_BAG = Path(
-    "/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/"
+    ROOT / "document/docsource/"
     "closed_loop_bar30_external_from_start_20260504/sim_bag/sim_bag_0.db3"
 )
 DEFAULT_OUT = Path(
-    "/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/"
+    ROOT / "document/docsource/"
     "closed_loop_bar30_external_from_start_20260504/command_mapped_diagnostics"
 )
 

@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, Ellipse, FancyArrowPatch, FancyBboxPatch
 
 
-ROOT = Path("/Users/kanghyunmin/Desktop/uuv_sim")
+ROOT = Path(__file__).resolve().parents[2]
 DOC_DIR = ROOT / "document"
 FIG_DIR = DOC_DIR / "figures"
 OUT_PATH = FIG_DIR / "equivalent_ellipsoid_hydrodynamics.png"

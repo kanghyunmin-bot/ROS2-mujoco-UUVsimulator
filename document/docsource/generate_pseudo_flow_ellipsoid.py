@@ -8,7 +8,7 @@ import numpy as np
 from matplotlib.patches import Ellipse, FancyArrowPatch, FancyBboxPatch
 
 
-ROOT = Path("/Users/kanghyunmin/Desktop/uuv_sim")
+ROOT = Path(__file__).resolve().parents[2]
 DOC_DIR = ROOT / "document"
 FIG_DIR = DOC_DIR / "figures"
 OUT_PATH = FIG_DIR / "pseudo_flow_equivalent_ellipsoid.png"

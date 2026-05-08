@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="/Users/kanghyunmin/Desktop/uuv_sim"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 DOC_DIR="${ROOT_DIR}/document"
 DOCSRC_DIR="${DOC_DIR}/docsource"
 SIM_DIR="${ROOT_DIR}/uuv_mujoco/v2.2"
@@ -16,11 +17,46 @@ LAUNCH_LOG="${OUT_DIR}/launcher.log"
 mkdir -p "${OUT_DIR}"
 mkdir -p "${FIG_DIR}"
 
-set +u
-source "${HOME}/miniconda3/etc/profile.d/conda.sh"
-unset PYTHONPATH PYTHONHOME
-conda activate ros2_h311
-set -u
+source_setup_safely() {
+  local setup_file="$1"
+  local restore_nounset=0
+  if [[ $- == *u* ]]; then
+    restore_nounset=1
+    set +u
+  fi
+  # shellcheck source=/dev/null
+  source "${setup_file}"
+  if [[ "${restore_nounset}" -eq 1 ]]; then
+    set -u
+  fi
+}
+
+activate_ros_environment() {
+  if [[ -n "${ROS_ENV_SETUP:-}" && -f "${ROS_ENV_SETUP}" ]]; then
+    source_setup_safely "${ROS_ENV_SETUP}"
+  elif command -v ros2 >/dev/null 2>&1; then
+    return 0
+  elif [[ -f "/opt/ros/${ROS_DISTRO:-humble}/setup.bash" ]]; then
+    source_setup_safely "/opt/ros/${ROS_DISTRO:-humble}/setup.bash"
+  elif [[ -f "${HOME}/miniconda3/etc/profile.d/conda.sh" ]]; then
+    unset PYTHONPATH PYTHONHOME
+    source_setup_safely "${HOME}/miniconda3/etc/profile.d/conda.sh"
+    local restore_nounset=0
+    if [[ $- == *u* ]]; then
+      restore_nounset=1
+      set +u
+    fi
+    conda activate "${ROS_CONDA_ENV:-ros2_h311}"
+    if [[ "${restore_nounset}" -eq 1 ]]; then
+      set -u
+    fi
+  else
+    echo "[measurement] ROS2 environment not found; source ROS first or set ROS_ENV_SETUP." >&2
+    exit 1
+  fi
+}
+
+activate_ros_environment
 
 cleanup() {
   if [[ -n "${BAG_PID:-}" ]]; then
