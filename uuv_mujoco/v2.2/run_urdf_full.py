@@ -707,7 +707,10 @@ def main() -> None:
                     "/tf, /tf_static, /robot_description"
                 )
                 if not args.no_ping360:
-                    bridge_topics += ", /ping360/image, /ping360/scan, /ping360/status, /ping360/config"
+                    bridge_topics += (
+                        ", /ping360/image, /ping360/scan_image, /ping360/scan, /ping360/scan_echo, "
+                        "/ping360/echo, /ping360/status, /ping360/config"
+                    )
                 if args.ros2_real_pkg_compat:
                     bridge_topics += ", mavros_surface=compat-only, /mavros/vfr_hud"
                 else:

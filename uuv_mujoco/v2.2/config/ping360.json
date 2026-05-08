@@ -27,5 +27,6 @@
   "image_display_gain": 12.0,
   "publish_image": true,
   "publish_scan": true,
+  "publish_echo": true,
   "publish_status": true
 }

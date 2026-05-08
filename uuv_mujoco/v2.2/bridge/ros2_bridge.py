@@ -22,7 +22,11 @@ Core / simulator-facing:
   /dvl/data
   /dvl/position
   /rovio/odometry
+  /sim/odom
   /mujoco/ground_truth/pose
+  /ping360/scan_image
+  /ping360/scan_echo
+  /ping360/echo
   /tf
   /tf_static
   /robot_description
@@ -321,6 +325,10 @@ class Ros2Bridge:
                 DVLMsg = None
                 DVLDRMsg = None
             try:
+                from ping360_sonar_msgs.msg import SonarEcho
+            except Exception:
+                SonarEcho = None
+            try:
                 from rclpy.signals import SignalHandlerOptions
             except Exception:
                 SignalHandlerOptions = None
@@ -360,6 +368,7 @@ class Ros2Bridge:
         self.MavrosSetMode = MavrosSetMode
         self.DVLMsg = DVLMsg
         self.DVLDRMsg = DVLDRMsg
+        self.SonarEcho = SonarEcho
 
         self._ros_context = Context()
         init_kwargs = {"args": None, "context": self._ros_context}
@@ -391,9 +400,21 @@ class Ros2Bridge:
         self.pub_dvl_altitude = self.node.create_publisher(self.Range, "/dvl/altitude", q10)
         self.pub_dvl_odometry = self.node.create_publisher(self.Odometry, "/dvl/odometry", q10)
         self.pub_rovio_odometry = self.node.create_publisher(self.Odometry, "/rovio/odometry", q10)
+        self.pub_sim_odometry = self.node.create_publisher(self.Odometry, "/sim/odom", q10)
         self.pub_ground_truth = self.node.create_publisher(self.PoseStamped, "/mujoco/ground_truth/pose", q10)
         self.pub_ping360_image = self.node.create_publisher(self.Image, "/ping360/image", q1)
+        self.pub_ping360_scan_image = self.node.create_publisher(self.Image, "/ping360/scan_image", q1)
         self.pub_ping360_scan = self.node.create_publisher(self.LaserScan, "/ping360/scan", q10)
+        self.pub_ping360_echo = (
+            self.node.create_publisher(self.SonarEcho, "/ping360/scan_echo", q10)
+            if self.SonarEcho
+            else None
+        )
+        self.pub_ping360_echo_alias = (
+            self.node.create_publisher(self.SonarEcho, "/ping360/echo", q10)
+            if self.SonarEcho
+            else None
+        )
         self.pub_ping360_status = self.node.create_publisher(self.String, "/ping360/status", q10)
 
         # MAVROS-compatible surface.
@@ -469,8 +490,9 @@ class Ros2Bridge:
         if self._mavros_surface_enabled:
             self.node.get_logger().info(
                 "ROS2 bridge active (lightweight real-robot interface, full MAVROS surface): "
-                "/cmd_vel(TwistStamped), /imu/data, /dvl/*, /rovio/odometry, "
-                "/ping360/image, /ping360/scan, /ping360/status, /ping360/config, "
+                "/cmd_vel(TwistStamped), /imu/data, /dvl/*, /rovio/odometry, /sim/odom, "
+                "/ping360/image, /ping360/scan_image, /ping360/scan, /ping360/scan_echo, /ping360/echo, "
+                "/ping360/status, /ping360/config, "
                 "/mavros/state, /mavros/imu/*, /mavros/vfr_hud, /mavros/local_position/*, "
                 "/mavros/vision_pose/pose, /mavros/battery, /mavros/rc/in, /mavros/rc/out, "
                 "/mavros/rc/override, /tf, /robot_description"
@@ -478,9 +500,16 @@ class Ros2Bridge:
         else:
             self.node.get_logger().info(
                 "ROS2 bridge active (lightweight real-robot interface, compat MAVROS surface): "
-                "/cmd_vel(TwistStamped), /imu/data, /dvl/*, /rovio/odometry, "
-                "/ping360/image, /ping360/scan, /ping360/status, /ping360/config, "
+                "/cmd_vel(TwistStamped), /imu/data, /dvl/*, /rovio/odometry, /sim/odom, "
+                "/ping360/image, /ping360/scan_image, /ping360/scan, /ping360/scan_echo, /ping360/echo, "
+                "/ping360/status, /ping360/config, "
                 "/mavros/vfr_hud, /tf, /robot_description"
+            )
+        if self._ping360_config.publish_echo and self.SonarEcho is None:
+            self.node.get_logger().warn(
+                "ping360_sonar_msgs/msg/SonarEcho is not installed; "
+                "/ping360/scan_echo and /ping360/echo are disabled. "
+                "Build/source rospkg/ping360_sonar_msgs or the upstream ping360_sonar workspace."
             )
         if self._legacy_image_request:
             self.node.get_logger().warn(
@@ -835,7 +864,16 @@ class Ros2Bridge:
         msg.pose.covariance[14] = 0.05
         return msg
 
-    def _build_odom(self, stamp, frame_id: str, child_frame: str, pos: np.ndarray, quat: np.ndarray, vel: np.ndarray):
+    def _build_odom(
+        self,
+        stamp,
+        frame_id: str,
+        child_frame: str,
+        pos: np.ndarray,
+        quat: np.ndarray,
+        vel: np.ndarray,
+        angular_vel: np.ndarray | None = None,
+    ):
         msg = self.Odometry()
         msg.header.stamp = stamp
         msg.header.frame_id = frame_id
@@ -850,6 +888,10 @@ class Ros2Bridge:
         msg.twist.twist.linear.x = float(vel[0])
         msg.twist.twist.linear.y = float(vel[1])
         msg.twist.twist.linear.z = float(vel[2])
+        if angular_vel is not None:
+            msg.twist.twist.angular.x = float(angular_vel[0])
+            msg.twist.twist.angular.y = float(angular_vel[1])
+            msg.twist.twist.angular.z = float(angular_vel[2])
         return msg
 
     def _build_pressure(self, stamp, pressure_pa: float, frame_id: str = "base_link"):
@@ -900,6 +942,19 @@ class Ros2Bridge:
         ranges = np.where(np.isfinite(ranges), ranges, np.inf).astype(np.float32, copy=False)
         msg.ranges = ranges.tolist()
         msg.intensities = np.asarray(sample.intensities, dtype=np.float32).tolist()
+        return msg
+
+    def _build_ping360_echo(self, stamp, sample: Ping360Sample):
+        msg = self.SonarEcho()
+        msg.header.stamp = stamp
+        msg.header.frame_id = self._ping360_config.frame_id
+        msg.angle = float(2.0 * np.pi * float(sample.angle_grad) / float(PING360_GRADS_PER_REV))
+        msg.gain = int(np.clip(sample.settings.gain_setting, 0, 255))
+        msg.number_of_samples = int(np.clip(sample.settings.number_of_samples, 0, 65535))
+        msg.transmit_frequency = int(np.clip(sample.settings.transmit_frequency_khz, 0, 65535))
+        msg.speed_of_sound = int(np.clip(round(sample.settings.speed_of_sound_mps), 0, 65535))
+        msg.range = int(np.clip(round(sample.settings.effective_range_m), 0, 255))
+        msg.intensities = array("B", np.asarray(sample.profile, dtype=np.uint8).tobytes())
         return msg
 
     def _build_ping360_status(self, stamp, sample: Ping360Sample):
@@ -1124,7 +1179,7 @@ class Ros2Bridge:
         return specs
 
     def _load_robot_description_text(self) -> str:
-        workspace_root = Path(__file__).resolve().parents[2]
+        workspace_root = Path(__file__).resolve().parents[3]
         urdf_candidates = (
             workspace_root / "rospkg" / "kmu26_auv" / "urdf" / "rov.urdf",
             workspace_root / "kmu26_auv" / "urdf" / "rov.urdf",
@@ -1612,6 +1667,7 @@ class Ros2Bridge:
 
         # Derived ROS-frame values.
         quat_ros = self._rotmat_to_quat_wxyz(base_rot_enu @ self._bmj_to_flu.T)
+        base_vel_body_ros = self._bmj_to_flu @ (base_rot_enu.T @ base_vel_enu)
         gyro_ros = self._bmj_to_flu @ gyro_bmj if gyro_bmj is not None else np.zeros(3, dtype=np.float64)
         acc_ros = self._bmj_to_flu @ acc_bmj if acc_bmj is not None else np.zeros(3, dtype=np.float64)
         dvl_vel_body_ros = self._bmj_to_flu @ dvl_vel_body_bmj if dvl_vel_body_bmj is not None else None
@@ -1658,12 +1714,14 @@ class Ros2Bridge:
         mavros_vision_pose_msg = None
         odom_local_msg = None
         rovio_odom_msg = None
+        sim_odom_msg = None
         dvl_data_msg = None
         dvl_pos_msg = None
         tf_msg = None
         ping360_sample = None
         ping360_image_msg = None
         ping360_scan_msg = None
+        ping360_echo_msg = None
         ping360_status_msg = None
 
         def get_imu_msg():
@@ -1822,6 +1880,23 @@ class Ros2Bridge:
                 )
             return rovio_odom_msg
 
+        def get_sim_odom_msg():
+            nonlocal sim_odom_msg
+            if sim_odom_msg is None:
+                # MuJoCo base_link body position is the simulated robot center.
+                # Pose is expressed in map/world ENU, while twist remains in
+                # base_link FLU like nav_msgs/Odometry expects.
+                sim_odom_msg = self._build_odom(
+                    stamp,
+                    "map",
+                    "base_link",
+                    base_pos_enu,
+                    quat_ros,
+                    base_vel_body_ros,
+                    gyro_ros,
+                )
+            return sim_odom_msg
+
         def get_dvl_data_msg():
             nonlocal dvl_data_msg
             if dvl_data_msg is None:
@@ -1872,6 +1947,15 @@ class Ros2Bridge:
                 ping360_scan_msg = self._build_ping360_scan(stamp, sample)
             return ping360_scan_msg
 
+        def get_ping360_echo_msg():
+            nonlocal ping360_echo_msg
+            sample = get_ping360_sample()
+            if sample is None:
+                return None
+            if ping360_echo_msg is None:
+                ping360_echo_msg = self._build_ping360_echo(stamp, sample)
+            return ping360_echo_msg
+
         def get_ping360_status_msg():
             nonlocal ping360_status_msg
             sample = get_ping360_sample()
@@ -1889,8 +1973,12 @@ class Ros2Bridge:
         jobs.add(self.pub_ground_truth, "/mujoco/ground_truth/pose", get_ground_truth_msg, on_demand=True)
         if self._ping360_config.publish_image:
             jobs.add(self.pub_ping360_image, "/ping360/image", get_ping360_image_msg, on_demand=True)
+            jobs.add(self.pub_ping360_scan_image, "/ping360/scan_image", get_ping360_image_msg, on_demand=True)
         if self._ping360_config.publish_scan:
             jobs.add(self.pub_ping360_scan, "/ping360/scan", get_ping360_scan_msg, on_demand=True)
+        if self._ping360_config.publish_echo and self.pub_ping360_echo is not None:
+            jobs.add(self.pub_ping360_echo, "/ping360/scan_echo", get_ping360_echo_msg, on_demand=True)
+            jobs.add(self.pub_ping360_echo_alias, "/ping360/echo", get_ping360_echo_msg, on_demand=True)
         if self._ping360_config.publish_status:
             jobs.add(self.pub_ping360_status, "/ping360/status", get_ping360_status_msg, on_demand=True)
 
@@ -1922,6 +2010,7 @@ class Ros2Bridge:
 
         # /rovio/odometry compatibility.
         jobs.add(self.pub_rovio_odometry, "/rovio/odometry", get_rovio_odom_msg, on_demand=True)
+        jobs.add(self.pub_sim_odometry, "/sim/odom", get_sim_odom_msg, on_demand=True)
 
         if self._mavros_surface_enabled and self._mavros_last_rc_override is not None:
             jobs.add(self.pub_mavros_rc_in, "/mavros/rc/in", self._mavros_last_rc_override, on_demand=True)

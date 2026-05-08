@@ -47,6 +47,7 @@ class Ping360Config:
     image_display_gain: float = 12.0
     publish_image: bool = True
     publish_scan: bool = True
+    publish_echo: bool = True
     publish_status: bool = True
 
     # Firmware / physical limits, kept close to Ping-Viewer and Ping Protocol.
