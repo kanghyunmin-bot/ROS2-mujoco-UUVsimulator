@@ -72,6 +72,7 @@ Before packaging, audit these files and directories directly.
 | Path | Required rule | Concrete failure to prevent |
 | --- | --- | --- |
 | `dist2/ubuntu22.04/install_uuv_sim_ubuntu22.sh` | Native Python default, ROS duplicate-source cleanup, optional package checks, non-root ArduPilot flow, post-ArduPilot `setuptools<80`, valid env file generation. | Installer works on the developer machine but fails on a fresh Ubuntu host. |
+| `rospkg/dvl_msgs` | Must be packaged as `dvl_msgs.zip`, extracted by the installer, and built before `hit25_auv_ros2`. Do not rely on `ros-humble-dvl-msgs`; it is not available in the standard Humble apt repo used during validation. | `hit25_auv_ros2` fails at `find_package(dvl_msgs REQUIRED)`. |
 | `rospkg/ping360_sonar_msgs` | Must be packaged as `ping360_sonar_msgs.zip`, extracted by the installer, and built before/with `hit25_auv_ros2`. | `/ping360/scan_echo` and `/ping360/echo` silently disappear because `SonarEcho` is unavailable. |
 | `dist2/ubuntu22.04/package_dist2.sh` | Include this guide, `PORTABILITY_AUDIT.md`, manifest, installer, GUI entrypoints, nested runtime zips; exclude generated and local files recursively. | Zip contains stale backup files or misses required release docs. |
 | `dist2/ubuntu22.04/verify_package.sh` | Check required top-level files, nested required runtime files, syntax, forbidden paths, backup/cache files, and user-site blocking env. | A bad package passes local packaging because only top-level files were checked. |
@@ -536,6 +537,20 @@ python3 -m pip install --user 'setuptools<80'
 During validation, the ArduPilot prereq step upgraded setuptools to a newer
 version, then `colcon build` warned about setuptools compatibility. The installer
 must restore the `<80` pin before building `hit25_auv_ros2`.
+
+`dvl_msgs` is not optional for `hit25_auv_ros2`. The apt package
+`ros-humble-dvl-msgs` was unavailable during Docker validation, so the dist must
+bundle a source zip for `rospkg/dvl_msgs` and extract it into the same colcon
+workspace before `kmu26_auv`. The build package set must include:
+
+```bash
+colcon build --symlink-install --packages-select \
+  dvl_msgs ping360_sonar_msgs hit25_auv_ros2
+```
+
+It is acceptable for the installer to warn and continue when the apt package is
+missing, but it is not acceptable for the final colcon workspace to lack
+`dvl_msgs`.
 
 ## ModemManager
 
@@ -1579,6 +1594,12 @@ Ubuntu/ROS apt repositories. The installer must not abort because one optional
 ROS package is absent. Use availability checks, install packages that exist, and
 log clear warnings for missing optional packages.
 
+Important correction from the Docker install test: the apt package is optional,
+but the message interface itself is not optional because `hit25_auv_ros2`
+contains `find_package(dvl_msgs REQUIRED)` and `dvl_to_twist_bridge.cpp`
+includes `<dvl_msgs/msg/dvl.hpp>`. Therefore the distribution must carry
+`rospkg/dvl_msgs.zip` and build it locally whenever the apt package is absent.
+
 ### 2026-05-08 ArduPilot Prereqs Cannot Run As Root
 
 The first Docker attempt failed because ArduPilot's upstream prereq script
@@ -1685,6 +1706,7 @@ Use the first real error in the log, not the final cascade.
 | Error or symptom | Most likely cause | Required fix |
 | --- | --- | --- |
 | `Please do not run this script as root; don't sudo it!` | ArduPilot prereq script ran as UID `0`. | Run installer as a normal user with sudo access; Docker must create and switch to a non-root user. |
+| `Could not find a package configuration file provided by "dvl_msgs"` | `ros-humble-dvl-msgs` was unavailable and the dist did not bundle/build `dvl_msgs`. | Include `rospkg/dvl_msgs.zip`, extract it before `kmu26_auv`, and build `dvl_msgs` in the same colcon workspace. |
 | `run_urdf_full.py: error: unrecognized arguments:` | Empty optional shell array forwarded as a blank CLI arg. | Replace `"${ARRAY[@]-}"` with command-array construction and length checks. |
 | `ModuleNotFoundError: No module named 'mujoco'` after install | Wrong interpreter, user-site blocked, or env not sourced. | Source `.uuv_mujoco_env.sh`; verify native `/usr/bin/python3`; remove `PYTHONNOUSERSITE=1`; reinstall pip deps with `--user`. |
 | `MJ311_MJPYTHON` path not executable | Env file exported non-existent `mjpython`. | In native mode unset it; in venv mode export only when executable exists. |
@@ -1749,6 +1771,8 @@ Check these first if Ubuntu installation fails:
     intentionally not bundled.
 18. Package output and verifier input point to different zip files because a
     relative `--out-dir` was interpreted from a changed working directory.
+19. `dvl_msgs` is treated as an apt-only dependency even though Humble apt did
+    not provide `ros-humble-dvl-msgs` during validation.
 
 When debugging, capture the exact failing command and the 30-50 log lines above
 the first error. Later cascading errors are usually less useful.

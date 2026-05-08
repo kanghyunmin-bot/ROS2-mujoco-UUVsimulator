@@ -553,6 +553,20 @@ setup_real_ros_pkg() {
     log "bundled kmu26_auv.zip not found; skipping real ROS helper package"
     return 0
   fi
+  local dvl_zip=""
+  for candidate in \
+    "${SCRIPT_DIR}/rospkg/dvl_msgs.zip" \
+    "${SCRIPT_DIR}/dvl_msgs.zip" \
+    "${INSTALL_ROOT}/rospkg/dvl_msgs.zip"
+  do
+    if [[ -f "$candidate" ]]; then
+      dvl_zip="$candidate"
+      break
+    fi
+  done
+  if [[ -z "$dvl_zip" ]]; then
+    log "bundled dvl_msgs.zip not found; expecting dvl_msgs to be installed externally"
+  fi
   local ping360_zip=""
   for candidate in \
     "${SCRIPT_DIR}/rospkg/ping360_sonar_msgs.zip" \
@@ -598,6 +612,7 @@ setup_real_ros_pkg() {
     trap - RETURN
   }
 
+  extract_ros_pkg_zip "dvl_msgs" "$dvl_zip"
   extract_ros_pkg_zip "ping360_sonar_msgs" "$ping360_zip"
   extract_ros_pkg_zip "kmu26_auv" "$kmu26_zip"
 
@@ -608,10 +623,14 @@ setup_real_ros_pkg() {
     source "/opt/ros/${ROS_DISTRO}/setup.bash"
     set -u
     cd "$ros_ws"
-    local packages=(hit25_auv_ros2)
-    if [[ -d "${ros_ws}/ping360_sonar_msgs" ]]; then
-      packages=(ping360_sonar_msgs "${packages[@]}")
+    local packages=()
+    if [[ -d "${ros_ws}/dvl_msgs" ]]; then
+      packages+=(dvl_msgs)
     fi
+    if [[ -d "${ros_ws}/ping360_sonar_msgs" ]]; then
+      packages+=(ping360_sonar_msgs)
+    fi
+    packages+=(hit25_auv_ros2)
     colcon build --symlink-install --packages-select "${packages[@]}"
   )
 }

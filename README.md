@@ -17,6 +17,7 @@ The current primary branch is `uuv_sim`.
 |-- ardupilot/                 # ArduPilot submodule
 |-- dist2/ubuntu22.04/         # Ubuntu 22.04 distribution packaging workflow
 |-- rospkg/kmu26_auv/          # KMU26 AUV ROS 2 package submodule
+|-- rospkg/dvl_msgs/           # Bundled DVL message package for dist2 builds
 |-- setup/                     # Install and verification scripts
 |-- uuv_mujoco/v2.2/           # MuJoCo runtime, bridge, scenes, configs
 |   `-- gui/                   # Control and tuning GUI implementation

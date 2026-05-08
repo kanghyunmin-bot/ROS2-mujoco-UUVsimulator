@@ -9,6 +9,7 @@ STAGE_DIR="${OUT_DIR}/${PACKAGE_NAME}"
 ARCHIVE_PATH="${OUT_DIR}/${PACKAGE_NAME}.zip"
 UUV_ZIP_PATH="${STAGE_DIR}/uuv_mujoco.zip"
 ROSPKG_ZIP_PATH="${STAGE_DIR}/rospkg/kmu26_auv.zip"
+DVL_MSG_ZIP_PATH="${STAGE_DIR}/rospkg/dvl_msgs.zip"
 PING360_MSG_ZIP_PATH="${STAGE_DIR}/rospkg/ping360_sonar_msgs.zip"
 ALLOW_DIRTY=0
 
@@ -88,6 +89,7 @@ STAGE_DIR="${OUT_DIR}/${PACKAGE_NAME}"
 ARCHIVE_PATH="${OUT_DIR}/${PACKAGE_NAME}.zip"
 UUV_ZIP_PATH="${STAGE_DIR}/uuv_mujoco.zip"
 ROSPKG_ZIP_PATH="${STAGE_DIR}/rospkg/kmu26_auv.zip"
+DVL_MSG_ZIP_PATH="${STAGE_DIR}/rospkg/dvl_msgs.zip"
 PING360_MSG_ZIP_PATH="${STAGE_DIR}/rospkg/ping360_sonar_msgs.zip"
 
 source_remote="$(git -C "${ROOT_DIR}" config --get remote.origin.url 2>/dev/null || printf 'unknown')"
@@ -115,6 +117,7 @@ require_file "dist2/ubuntu22.04/DIST_GUIDE.md"
 require_file "dist2/ubuntu22.04/PORTABILITY_AUDIT.md"
 require_dir "uuv_mujoco/v2.2"
 require_dir "rospkg/kmu26_auv"
+require_dir "rospkg/dvl_msgs"
 require_dir "rospkg/ping360_sonar_msgs"
 
 for file in "${DOCSOURCE_FILES[@]}"; do
@@ -176,6 +179,16 @@ chmod +x "${STAGE_DIR}/document/docsource/"*.py "${STAGE_DIR}/document/docsource
 
 (
   cd "${ROOT_DIR}/rospkg"
+  zip -qr "${DVL_MSG_ZIP_PATH}" dvl_msgs \
+    -x '*/.git/*' '*/.git' \
+    -x '*/.DS_Store' '.DS_Store' \
+    -x '*/__pycache__/*' '*/__pycache__' \
+    -x '*.pyc' '*.pyo' \
+    -x '*.bak' '*.bak_*' '*~' '*.orig'
+)
+
+(
+  cd "${ROOT_DIR}/rospkg"
   zip -qr "${PING360_MSG_ZIP_PATH}" ping360_sonar_msgs \
     -x '*/.git/*' '*/.git' \
     -x '*/.DS_Store' '.DS_Store' \
@@ -221,6 +234,7 @@ Included:
 - install_and_run wrapper
 - MuJoCo UUV runtime zip
 - ROS2 helper package zip
+- DVL message package zip
 - Ping360 SonarEcho message package zip
 - control GUI
 - Ubuntu-native GUI launcher

@@ -49,6 +49,7 @@ for path in \
   "cleanup_generated_artifacts.sh" \
   "uuv_mujoco.zip" \
   "rospkg/kmu26_auv.zip" \
+  "rospkg/dvl_msgs.zip" \
   "rospkg/ping360_sonar_msgs.zip" \
   "document/docsource/run_uuv_param_autotune.py" \
   "document/docsource/replay_april1_real_commands_in_mujoco.py" \
@@ -89,6 +90,7 @@ for marker in \
   "ros-\${ROS_DISTRO}-rqt-image-view" \
   "python-pptx" \
   "rosbags" \
+  "dvl_msgs" \
   "ping360_sonar_msgs"
 do
   if ! grep -Fq -- "$marker" "${ROOT}/install_uuv_sim_ubuntu22.sh"; then
@@ -114,6 +116,12 @@ if zipinfo -1 "${ROOT}/rospkg/kmu26_auv.zip" | grep -E '(^|/)(\.git|__pycache__)
 fi
 pass "kmu26_auv.zip excludes git/generated/cache/backup files"
 
+if zipinfo -1 "${ROOT}/rospkg/dvl_msgs.zip" | grep -E '(^|/)(\.git|__pycache__)(/|$)|\.py[co]$|(^|/)\.DS_Store$|(\.bak($|_)|~$|\.orig$)' >/dev/null; then
+  zipinfo -1 "${ROOT}/rospkg/dvl_msgs.zip" | grep -E '(^|/)(\.git|__pycache__)(/|$)|\.py[co]$|(^|/)\.DS_Store$|(\.bak($|_)|~$|\.orig$)' | sed -n '1,40p'
+  fail "dvl_msgs.zip contains git/generated/cache/backup files"
+fi
+pass "dvl_msgs.zip excludes git/generated/cache/backup files"
+
 if zipinfo -1 "${ROOT}/rospkg/ping360_sonar_msgs.zip" | grep -E '(^|/)(\.git|__pycache__)(/|$)|\.py[co]$|(^|/)\.DS_Store$|(\.bak($|_)|~$|\.orig$)' >/dev/null; then
   zipinfo -1 "${ROOT}/rospkg/ping360_sonar_msgs.zip" | grep -E '(^|/)(\.git|__pycache__)(/|$)|\.py[co]$|(^|/)\.DS_Store$|(\.bak($|_)|~$|\.orig$)' | sed -n '1,40p'
   fail "ping360_sonar_msgs.zip contains git/generated/cache/backup files"
@@ -128,6 +136,7 @@ pass "dist2 archive excludes large external assets"
 
 unzip -q "${ROOT}/uuv_mujoco.zip" -d "${TMP_DIR}/runtime"
 unzip -q "${ROOT}/rospkg/kmu26_auv.zip" -d "${TMP_DIR}/rospkg"
+unzip -q "${ROOT}/rospkg/dvl_msgs.zip" -d "${TMP_DIR}/rospkg"
 unzip -q "${ROOT}/rospkg/ping360_sonar_msgs.zip" -d "${TMP_DIR}/rospkg"
 
 if grep -RIlE --exclude='DIST_GUIDE.md' --exclude='PORTABILITY_AUDIT.md' '/Users/kanghyunmin|PYTHONNOUSERSITE=1' "${ROOT}" "${TMP_DIR}/runtime" "${TMP_DIR}/rospkg" | sed -n '1,40p' | grep -q .; then
@@ -149,6 +158,10 @@ for path in \
   "${TMP_DIR}/runtime/uuv_mujoco/v2.2/scenes/tank_current_scene.xml" \
   "${TMP_DIR}/rospkg/kmu26_auv/package.xml" \
   "${TMP_DIR}/rospkg/kmu26_auv/CMakeLists.txt" \
+  "${TMP_DIR}/rospkg/dvl_msgs/package.xml" \
+  "${TMP_DIR}/rospkg/dvl_msgs/CMakeLists.txt" \
+  "${TMP_DIR}/rospkg/dvl_msgs/msg/DVL.msg" \
+  "${TMP_DIR}/rospkg/dvl_msgs/msg/ConfigCommand.msg" \
   "${TMP_DIR}/rospkg/ping360_sonar_msgs/package.xml" \
   "${TMP_DIR}/rospkg/ping360_sonar_msgs/CMakeLists.txt" \
   "${TMP_DIR}/rospkg/ping360_sonar_msgs/msg/SonarEcho.msg"

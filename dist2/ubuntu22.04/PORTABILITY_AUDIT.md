@@ -94,12 +94,22 @@ Packaging scripts:
 - `dist2/ubuntu22.04/package_dist2.sh`
 - `dist2/ubuntu22.04/verify_package.sh`
 
+Bundled ROS message packages:
+
+- `rospkg/dvl_msgs` must be included as `rospkg/dvl_msgs.zip`; Ubuntu/ROS
+  Humble apt did not provide `ros-humble-dvl-msgs` during validation, and
+  `hit25_auv_ros2` cannot build without it.
+- `rospkg/ping360_sonar_msgs` must be included as
+  `rospkg/ping360_sonar_msgs.zip`.
+
 The verifier should reject:
 
 - local backup files such as `*.bak`, `*.bak_*`, `*.orig`, and `*~`
 - `__pycache__`, `.pyc`, `.pyo`, `.git`, logs, and macOS metadata
 - developer-machine host paths in packaged runtime files
 - `PYTHONNOUSERSITE=1` in packaged runtime files
+- a missing `rospkg/dvl_msgs.zip` or missing nested
+  `rospkg/dvl_msgs/msg/DVL.msg`
 
 ## Runtime Argument Portability
 

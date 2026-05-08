@@ -9,6 +9,7 @@ ROS 2/MAVROS helper nodes, QGroundControl, and the control GUI.
 
 - `uuv_mujoco.zip`: MuJoCo runtime and assets
 - `rospkg/kmu26_auv.zip`: ROS 2 helper package
+- `rospkg/dvl_msgs.zip`: Water Linked DVL message package required by `hit25_auv_ros2`
 - `rospkg/ping360_sonar_msgs.zip`: Ping360 `SonarEcho` message package
 - `uuv_control_gui.py`
 - `run_control_gui.sh` (Ubuntu-native launcher)
@@ -103,8 +104,9 @@ For a server or SSH session without a display:
 
 The installer includes the current runtime dependencies for Python/Tk,
 MuJoCo/OpenGL/headless rendering, QGroundControl AppImage/Qt/GStreamer,
-SocketCAN/DroneCAN, ROS 2 Humble, MAVROS, rosbag2, RViz/rqt image tools, and
-the Python replay/report packages.
+SocketCAN/DroneCAN, ROS 2 Humble, MAVROS, rosbag2, RViz/rqt image tools,
+the vendored `dvl_msgs` and Ping360 message packages, and the Python
+replay/report packages.
 
 Optional venv mode is still available when explicitly requested:
 

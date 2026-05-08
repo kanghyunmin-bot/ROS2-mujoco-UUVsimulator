@@ -41,5 +41,7 @@ READY_WAIT_SECS=60 SITL_WAIT_SECS=360 ./start_sitl_mujoco_mj311.sh -- --headless
 Notes:
 - No sample rosbag is bundled. Replay/autotune tools work after you choose a
   local rosbag path in the GUI or pass `--bag` explicitly.
+- `dvl_msgs` is bundled as a source package because `ros-humble-dvl-msgs` is
+  not available from the standard ROS 2 Humble apt repository.
 - The installer clones upstream ArduPilot and downloads QGroundControl AppImage.
 - Use `--python-mode venv` only if you specifically want a MuJoCo virtualenv.
