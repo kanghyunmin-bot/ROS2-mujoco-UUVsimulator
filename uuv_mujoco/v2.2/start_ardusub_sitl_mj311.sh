@@ -343,9 +343,15 @@ append_param_if_not_overridden "MAV_GCS_SYSID_HI" "255"
 # Make QGC joystick center error much less likely to bias ALT_HOLD into a
 # sink/climb command during mode transitions. Keep RC3 trim pinned to center
 # and widen the neutral band substantially for the simple debug model.
-append_param_if_not_overridden "THR_DZ" "300"
+append_param_if_not_overridden "THR_DZ" "400"
+append_param_if_not_overridden "RC3_MIN" "1000"
+append_param_if_not_overridden "RC3_MAX" "2000"
 append_param_if_not_overridden "RC3_DZ" "150"
 append_param_if_not_overridden "RC3_TRIM" "1500"
+append_param_if_not_overridden "JS_GAIN_DEFAULT" "0.8333333"
+append_param_if_not_overridden "PILOT_SPEED_UP" "180"
+append_param_if_not_overridden "PILOT_SPEED_DN" "140"
+append_param_if_not_overridden "PILOT_ACCEL_Z" "220"
 # Make yaw stick enter rate control sooner in assisted modes. ArduSub uses the
 # yaw channel deadzone for get_pilot_desired_yaw_rate() in ALT_HOLD/POSHOLD.
 append_param_if_not_overridden "RC4_DZ" "10"
@@ -480,16 +486,21 @@ if [[ "$USE_DIRECT_MAVLINK" -eq 1 ]]; then
   echo "  MAVROS   -> serial2 udpclient:127.0.0.1:14551"
   echo "  MuJoCo   -> serial3 udpclient:127.0.0.1:14660"
   SIM_ARGS+=(--no-mavproxy --udp)
-  exec "$MJ311_PYTHON" "$SIM_VEHICLE" \
+  SITL_CMD=("$MJ311_PYTHON" "$SIM_VEHICLE" \
     -L RATBeach \
     -v ArduSub \
     -f vectored_6dof \
     --model JSON \
     -A "--serial1=udpclient:127.0.0.1:14550" \
     -A "--serial2=udpclient:127.0.0.1:14551" \
-    -A "--serial3=udpclient:127.0.0.1:14660" \
-    "${SIM_ARGS[@]-}" \
-    "${USER_ARGS[@]-}"
+    -A "--serial3=udpclient:127.0.0.1:14660")
+  if ((${#SIM_ARGS[@]})); then
+    SITL_CMD+=("${SIM_ARGS[@]}")
+  fi
+  if ((${#USER_ARGS[@]})); then
+    SITL_CMD+=("${USER_ARGS[@]}")
+  fi
+  exec "${SITL_CMD[@]}"
 fi
 
 echo "[start-sitl] transport mode: legacy MAVProxy fan-out"
@@ -501,12 +512,17 @@ if [[ "$USER_SET_MAVPROXY_ARGS" -eq 0 && -n "${SITL_MAVPROXY_ARGS:-}" ]]; then
 fi
 # sim_vehicle.py already adds the default GCS output (127.0.0.1:14550).
 # Avoid duplicating 14550 to keep QGC link/message flow clean.
-exec "$MJ311_PYTHON" "$SIM_VEHICLE" \
+SITL_CMD=("$MJ311_PYTHON" "$SIM_VEHICLE" \
   -L RATBeach \
   -v ArduSub \
   -f vectored_6dof \
   --model JSON \
   --out=udp:127.0.0.1:14551 \
-  --out=udp:127.0.0.1:14660 \
-  "${SIM_ARGS[@]-}" \
-  "${USER_ARGS[@]-}"
+  --out=udp:127.0.0.1:14660)
+if ((${#SIM_ARGS[@]})); then
+  SITL_CMD+=("${SIM_ARGS[@]}")
+fi
+if ((${#USER_ARGS[@]})); then
+  SITL_CMD+=("${USER_ARGS[@]}")
+fi
+exec "${SITL_CMD[@]}"

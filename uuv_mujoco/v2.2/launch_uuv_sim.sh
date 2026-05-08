@@ -13,6 +13,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "$SCRIPT_DIR"
 HOST_OS="$(uname -s)"
 ROS_DISTRO="${ROS_DISTRO:-humble}"
@@ -29,6 +30,7 @@ MJ311_ROOT="${MJ311_ROOT:-$DEFAULT_MJ311_ROOT}"
 MJ311_PYTHON="${MJ311_PYTHON:-}"
 MJ311_MJPYTHON="${MJ311_MJPYTHON:-}"
 ROS_ENV_SETUP="${ROS_ENV_SETUP:-}"
+ROS_WORKSPACE_SETUP="${ROS_WORKSPACE_SETUP:-${PROJECT_ROOT}/rospkg/install/setup.bash}"
 
 resolve_python() {
     local candidate
@@ -306,7 +308,7 @@ SCENE_LABEL="$(basename "$SCENE_PATH")"
 extra_arg_present() {
     local needle="$1"
     local token
-    for token in "${EXTRA_ARGS[@]-}"; do
+    for token in "${EXTRA_ARGS[@]}"; do
         if [[ "$token" == "$needle" || "$token" == "$needle="* ]]; then
             return 0
         fi
@@ -483,11 +485,16 @@ echo "[launch] Fluid model: ${FLUID_MODEL}"
 echo "[launch] Python launcher: ${MJ311_MJPYTHON}"
 if [ "$ROS2_REQUESTED" = true ]; then
     echo "[launch] Source ROS2 environment for --ros2 topics."
+    ROS_SETUP_FILE=""
     if ROS_SETUP_FILE="$(resolve_ros_setup_for_bash)"; then
         echo "[launch] ROS2 setup: ${ROS_SETUP_FILE}"
         source_setup_bash_safely "$ROS_SETUP_FILE"
     else
         echo "[launch] ROS2 setup file not found; relying on current shell environment."
+    fi
+    if [[ -f "$ROS_WORKSPACE_SETUP" && "$ROS_WORKSPACE_SETUP" != "$ROS_SETUP_FILE" ]]; then
+        echo "[launch] ROS2 workspace setup: ${ROS_WORKSPACE_SETUP}"
+        source_setup_bash_safely "$ROS_WORKSPACE_SETUP"
     fi
 fi
 echo "[launch] Bridge:"
@@ -501,7 +508,8 @@ if [ "$ROS2_REQUESTED" = true ]; then
     fi
     echo "    Output: /imu/data, /dvl/velocity, /dvl/twist, /dvl/odometry, /dvl/altitude"
     echo "            /dvl/data, /dvl/position, /depth, /depth/pose, /bar30/pressure_pa"
-    echo "            /rovio/odometry, /tf, /tf_static, /robot_description"
+    echo "            /rovio/odometry, /sim/odom, /tf, /tf_static, /robot_description"
+    echo "            /ping360/image, /ping360/scan_image, /ping360/scan, /ping360/scan_echo, /ping360/echo"
     echo "    Debug:  /mujoco/ground_truth/pose"
     if [[ "$REAL_PKG_COMPAT" == true ]]; then
         echo "    MAVROS: compat-only in simulator (/mavros/vfr_hud only; external MAVROS expected)"
@@ -637,6 +645,8 @@ fi
 if [[ -n "$HEADLESS_ARG" ]]; then
     RUN_ARGS+=("$HEADLESS_ARG")
 fi
-RUN_ARGS+=("${EXTRA_ARGS[@]-}")
+if ((${#EXTRA_ARGS[@]})); then
+    RUN_ARGS+=("${EXTRA_ARGS[@]}")
+fi
 
 "$MJ311_MJPYTHON" run_urdf_full.py "${RUN_ARGS[@]}"

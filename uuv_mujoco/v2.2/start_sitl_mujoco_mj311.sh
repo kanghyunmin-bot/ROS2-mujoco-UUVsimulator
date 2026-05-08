@@ -3,8 +3,8 @@ set -euo pipefail
 
 # One-shot launcher:
 # 1) reset running stack
-# 2) start ArduSub SITL (Python venv)
-# 3) start MuJoCo UUV sim (Python venv)
+# 2) start ArduSub SITL with the configured Python interpreter
+# 3) start MuJoCo UUV sim with the configured Python interpreter
 
 WITH_QGC_STOP=0
 WIPE_EEPROM=1
@@ -43,7 +43,7 @@ Environment:
   WORKSPACE_DIR     Workspace root containing ardupilot/ and optional QGC app
   ARDUPILOT_DIR     Explicit ArduPilot checkout path passed through to child scripts
   QGC_APP           Explicit QGroundControl path (.AppImage, .app, or executable)
-  MJ311_ROOT        Preferred Python venv root (optional; falls back to ~/.venvs/mujoco311 if present)
+  MJ311_ROOT        Preferred Python env root (optional; falls back to ~/.venvs/mujoco311 if present)
   MJ311_PYTHON      Explicit Python interpreter (optional)
   MJ311_MJPYTHON    Explicit mjpython path (optional; Linux falls back to python)
 

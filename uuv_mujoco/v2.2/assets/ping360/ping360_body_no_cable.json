@@ -1,5 +1,5 @@
 {
-  "source": "/Users/kanghyunmin/Downloads/PING360_SONAR_BR-100399/PING360-ASM.STL",
+  "source": "PING360_SONAR_BR-100399/PING360-ASM.STL",
   "output": "uuv_mujoco/v2.2/assets/ping360/ping360_body_no_cable.stl",
   "source_triangle_count": 115368,
   "kept_triangle_count": 33084,
