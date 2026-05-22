@@ -1,0 +1,197 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{fontspec}
+\usepackage[margin=18mm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+
+\defaultfontfeatures{Ligatures=TeX,Scale=MatchLowercase}
+\IfFontExistsTF{Noto Sans CJK KR}{
+  \setmainfont{Noto Sans CJK KR}[
+    ItalicFeatures={FakeSlant=0.18},
+    BoldItalicFeatures={FakeSlant=0.18}
+  ]
+  \setsansfont{Noto Sans CJK KR}[
+    ItalicFeatures={FakeSlant=0.18},
+    BoldItalicFeatures={FakeSlant=0.18}
+  ]
+}{
+  \IfFontExistsTF{Apple SD Gothic Neo}{
+    \setmainfont{Apple SD Gothic Neo}[
+      ItalicFeatures={FakeSlant=0.18},
+      BoldItalicFeatures={FakeSlant=0.18}
+    ]
+    \setsansfont{Apple SD Gothic Neo}[
+      ItalicFeatures={FakeSlant=0.18},
+      BoldItalicFeatures={FakeSlant=0.18}
+    ]
+  }{
+    \setmainfont{NanumGothic}[
+      ItalicFeatures={FakeSlant=0.18},
+      BoldItalicFeatures={FakeSlant=0.18}
+    ]
+    \setsansfont{NanumGothic}[
+      ItalicFeatures={FakeSlant=0.18},
+      BoldItalicFeatures={FakeSlant=0.18}
+    ]
+  }
+}
+\IfFontExistsTF{DejaVu Sans Mono}{\setmonofont{DejaVu Sans Mono}}{\setmonofont{Menlo}}
+\XeTeXlinebreaklocale "ko"
+\XeTeXlinebreakskip = 0pt plus 1pt
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  urlcolor=blue!50!black,
+  pdftitle={2026-04-01 UUV MuJoCo replay analysis},
+  pdfauthor={OpenAI Codex}
+}
+\setlength{\parskip}{0.45em}
+\setlength{\parindent}{0pt}
+\renewcommand{\arraystretch}{1.18}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\code}[1]{\texttt{#1}}
+\captionsetup{font=small,labelfont=bf,justification=raggedright,singlelinecheck=false}
+
+\title{2026-04-01 실제 로봇 rosbag 기반 UUV MuJoCo Replay 분석\\
+\large 그래프 중심 진단 보고서}
+\author{}
+\date{2026-04-28}
+
+\begin{document}
+\maketitle
+
+\section{분석 파이프라인}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.98\linewidth]{real_bag_2026_04_01_replay/latex_figures/april1_replay_pipeline.png}
+  \caption{4월 1일 실제 rosbag을 읽어 RC 입력을 정규화하고, current/legacy MuJoCo 모델에 replay한 뒤 DVL, IMU, depth, pressure, odometry metric을 계산한 구조. ArduPilot package는 수정하지 않았다.}
+\end{figure}
+
+\section{실제 bag 센서 구성}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.94\linewidth]{real_bag_2026_04_01_replay/latex_figures/april1_sensor_rates.png}
+  \caption{실제 bag의 주요 센서 rate. IMU는 약 20 Hz, DVL은 약 10 Hz, depth/static pressure는 약 2 Hz로 확인된다. 20:06 bag에는 DVL twist가 없다.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.94\linewidth]{real_bag_2026_04_01_replay/latex_figures/april1_pressure_semantics.png}
+  \caption{실제 pressure topic 의미. \code{/mavros/imu/static\_pressure}는 depth 변화와 함께 변하고, \code{/mavros/imu/atm\_pressure}는 0.24 근처 상수다. 이 결과에 맞춰 bridge 기본값을 수정했다.}
+\end{figure}
+
+\section{RC override 명령-응답 구조}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.94\linewidth]{real_bag_2026_04_01_replay/latex_figures/april1_command_mapping.png}
+  \caption{실제 bag에서 RC override와 센서 응답의 상관/지연. ch5는 DVL x, ch6는 DVL y, ch4는 yaw rate, ch3는 depth rate 후보로 해석된다. 단, ch3/heave는 두 bag 모두 식별력이 약하다.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}{0.49\linewidth}
+    \includegraphics[width=\linewidth]{real_bag_2026_04_01_command_response/bag_2026-04-01_20-08-11_command_response.png}
+    \caption{20:08 command-response overlay}
+  \end{subfigure}
+  \begin{subfigure}{0.49\linewidth}
+    \includegraphics[width=\linewidth]{real_bag_2026_04_01_command_response/bag_2026-04-01_20-20-30_command_response.png}
+    \caption{20:20 command-response overlay}
+  \end{subfigure}
+  \caption{실제 RC override와 DVL/gyro/depth 응답의 시간축 비교. surge와 yaw는 비교 가능한 수준으로 명령-응답 구조가 보이고, heave는 분리된 step이 부족하다.}
+\end{figure}
+
+\section{MuJoCo replay 정확도}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.98\linewidth]{real_bag_2026_04_01_replay/latex_figures/april1_replay_rmse.png}
+  \caption{real-vs-sim replay RMSE. current RC override는 DVL x와 yaw rate의 형태는 일부 맞지만 속도/각속도 scale이 크다. legacy RC override는 현재 실제 bag 기준으로 훨씬 크게 발산한다.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.98\linewidth]{real_bag_2026_04_01_replay/latex_figures/april1_corr_gain_heatmap.png}
+  \caption{상관계수와 real/sim gain heatmap. DVL x, DVL y, gyro z 모두 current RC override에서 일부 형태가 맞지만 gain이 1보다 훨씬 작다. 이는 sim response amplitude가 실제보다 크다는 뜻이다.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}{0.49\linewidth}
+    \includegraphics[width=\linewidth]{real_bag_2026_04_01_replay/bag_2026-04-01_20-08-11/current_rc_override_overlay.png}
+    \caption{20:08 current RC override replay}
+  \end{subfigure}
+  \begin{subfigure}{0.49\linewidth}
+    \includegraphics[width=\linewidth]{real_bag_2026_04_01_replay/bag_2026-04-01_20-20-30/current_rc_override_overlay.png}
+    \caption{20:20 current RC override replay}
+  \end{subfigure}
+  \caption{실제 센서와 current MuJoCo replay overlay. DVL x/y와 yaw rate는 일부 형태가 맞지만 depth와 trajectory는 controller 생략 및 contact 이후 발산이 크다.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.98\linewidth]{real_bag_2026_04_01_replay/latex_figures/april1_sim_truth_sensor.png}
+  \caption{같은 실제 RC override 명령을 current MuJoCo 모델에 넣었을 때의 MuJoCo 내부 truth와 bridge-corrected MuJoCo 센서 출력 비교. raw DVL site-frame y는 body-frame truth와 부호가 반대지만, bridge 보정 후 실제 \code{/dvl/twist} 비교값은 body truth와 일치한다. 실제 rosbag에는 외부 motion-capture/ground-truth pose가 없으므로 real truth 비교는 불가능하다.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{real_bag_2026_04_01_replay/latex_figures/april1_dvl_frame_validation.png}
+  \caption{DVL y frame-validation. raw MuJoCo DVL sensor는 \code{dvl\_site}의 180도 회전 때문에 body y와 음의 상관을 갖지만, bridge-corrected DVL은 body truth와 corr $\simeq 1$, gain $\simeq 1$로 일치한다. 따라서 이전 negative DVL y 판단은 물리 문제가 아니라 replay 계측 오류였다.}
+\end{figure}
+
+\section{발산 원인 그래프}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.98\linewidth]{real_bag_2026_04_01_replay/latex_figures/april1_depth_contact.png}
+  \caption{current RC override replay의 depth와 contact timeline. 20:08은 약 5.72 s, 20:20은 약 15.18 s에 contact가 발생한다. contact 이후의 trajectory/depth metric은 물리 model fit보다는 발산 결과로 봐야 한다.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.98\linewidth]{real_bag_2026_04_01_replay/latex_figures/april1_thruster_p95.png}
+  \caption{current RC override replay에서 thruster force p95. T200 성능곡선 위에 \code{gain\_scale\_all=2.9}가 다시 곱해져 yaw thruster force가 비현실적으로 커진다.}
+\end{figure}
+
+\section{정량 결론}
+
+\begin{table}[H]
+  \centering
+  \caption{핵심 해석 요약}
+  \begin{tabularx}{\linewidth}{lY}
+    \toprule
+    항목 & 판단 \\
+    \midrule
+    DVL x / surge & current RC override에서 20:08 corr 0.738, 20:20 corr 0.356. 형태는 일부 맞지만 real/sim gain이 0.254, 0.082라 sim 속도가 과하다. \\
+    DVL y / sway & bridge-corrected 비교 후 20:08 corr 0.505, 20:20 corr 0.504로 양의 상관이 확인된다. 단 real/sim gain이 0.150, 0.103이라 sim sway amplitude가 과하다. \\
+    IMU yaw rate & 20:08 corr 0.872로 형태는 좋지만 real/sim gain 0.351. sim yaw rate가 실제보다 약 2.9배 크다. \\
+    Depth / pressure & 실제 depth pressure는 static pressure topic에 있다. bridge pressure semantics는 수정 완료. depth 동역학은 ALT\_HOLD controller 생략 때문에 direct replay로 평가하면 안 된다. \\
+    물리 파라미터 & \code{gain\_scale\_all=2.9}와 \code{body\_inertia\_scale\_xyz=[1e-6,...]}가 가장 먼저 손봐야 할 값이다. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{수정 우선순위}
+
+\begin{enumerate}[leftmargin=2em]
+  \item T200 curve 사용 시 \code{gain\_scale\_all}을 1.0 근처로 되돌리고 bag 기반 thruster gain을 재식별한다.
+  \item current profile의 \code{body\_inertia\_scale\_xyz=[1e-6,...]}를 제거하고 CAD/질량분포 기반 inertia를 사용한다.
+  \item DVL/IMU/depth frame-validation은 regression test로 고정하고, 이후 replay 비교는 bridge-corrected sensor output만 사용한다.
+  \item heave/depth는 RC override direct replay가 아니라 SITL/ALT\_HOLD controller-in-loop replay로 다시 비교한다.
+  \item 그 다음에 damping, added mass, cross-flow drag, DVL dropout/bottom-lock, camera/sonar realism을 추가한다.
+\end{enumerate}
+
+\end{document}

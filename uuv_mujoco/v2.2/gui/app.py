@@ -69,6 +69,7 @@ class UuvControlGui(
         self.depth_source_var = tk.StringVar(value="depth source: unavailable")
         self.mode_var = tk.StringVar(value="mode: UNKNOWN")
         self.status_var = tk.StringVar(value="disconnected")
+        self.command_ready_var = tk.StringVar(value="WAIT: vehicle")
         self.battery_var = tk.StringVar(value="battery: n/a")
         self.pose_var = tk.StringVar(value="pose: n/a")
         self.vel_var = tk.StringVar(value="velocity: n/a")
@@ -76,7 +77,7 @@ class UuvControlGui(
         self.autopilot_var = tk.StringVar(value="autopilot: n/a")
         self.age_var = tk.StringVar(value="state age: n/a")
         self.control_summary_var = tk.StringVar(value="control: idle")
-        self.rc_override_var = tk.StringVar(value="rc override: off")
+        self.rc_override_var = tk.StringVar(value="pilot input: off")
         self.control_var = tk.StringVar(value="setpoint: x=0.00 y=0.00 z=0.00 yaw=0.00")
         self.rc_replay_path_var = tk.StringVar(value=str(DEFAULT_RC_REPLAY_BAG))
         self.rc_replay_rate_var = tk.StringVar(value="1.0")
@@ -92,7 +93,8 @@ class UuvControlGui(
         self.autotune_start_var = tk.StringVar(value="60")
         self.autotune_duration_var = tk.StringVar(value="120")
         self.autotune_candidates_var = tk.StringVar(value="15")
-        self.autotune_servo_scale_var = tk.StringVar(value="0.58")
+        # Legacy polynomial/gain tuned mode used "0.58".
+        self.autotune_servo_scale_var = tk.StringVar(value="1.0")
         self.autotune_mode_var = tk.StringVar(value="plant-rc-out")
         self.autotune_candidate_set_var = tk.StringVar(value="ellipsoid5")
         self.autotune_status_var = tk.StringVar(value="autotune: idle")
@@ -103,6 +105,7 @@ class UuvControlGui(
         self.ros_pkg_fcu_url_var = tk.StringVar(value=ROS_PACKAGE_DEFAULT_FCU_URL)
         self.rviz_status_var = tk.StringVar(value="rviz: stopped")
         self.ping360_view_status_var = tk.StringVar(value="ping360 view: closed")
+        self.ping360_enabled_var = tk.BooleanVar(value=False)
         self.ping360_range_var = tk.StringVar(value="2.0")
         self.ping360_num_steps_var = tk.StringVar(value="1")
         self.ping360_gain_var = tk.StringVar(value="0")
@@ -114,8 +117,12 @@ class UuvControlGui(
 
         self._last_event_top = ""
         self._last_vehicle_info_wall = 0.0
+        self._last_sim_stack_probe_wall = -1.0
+        self._external_sim_stack_running_cached = False
+        self._sim_stack_owned_by_gui = False
         self._guided_control_prev = False
         self._rc_override_prev = False
+        self._pilot_input_release_requested = False
         self._rc_replay_samples: list[RcReplaySample] = []
         self._rc_replay_thread: Optional[threading.Thread] = None
         self._rc_replay_duration_s = 0.0
@@ -157,6 +164,9 @@ class UuvControlGui(
         self.ros2_panel_button: ttk.Button | None = None
         self.mavros_toggle_button: ttk.Button | None = None
         self.rviz_toggle_button: ttk.Button | None = None
+        self.sim_stack_start_button: ttk.Button | None = None
+        self.sim_stack_stop_button: ttk.Button | None = None
+        self.command_ready_label: ttk.Label | None = None
         self.physics_window: tk.Toplevel | None = None
         self.physics_canvas: tk.Canvas | None = None
         self.physics_scroll_frame: ttk.Frame | None = None
@@ -188,7 +198,13 @@ class UuvControlGui(
         self._terminate_process_group(self._ros_pkg_process)
         self._terminate_process_group(self._ros_build_process)
         self._terminate_process_group(self._rviz_process)
+        owned_sim_stack = self._sim_stack_owned_by_gui or (
+            self._sim_stack_process is not None
+            and self._sim_stack_process.poll() is None
+        )
         self._terminate_sim_stack_process()
+        if owned_sim_stack:
+            self._reset_sim_stack_blocking()
         if self._autotune_process is not None and self._autotune_process.poll() is None:
             try:
                 self._terminate_process_group(self._autotune_process)

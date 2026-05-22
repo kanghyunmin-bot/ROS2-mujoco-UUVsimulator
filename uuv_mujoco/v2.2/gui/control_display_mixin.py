@@ -21,21 +21,44 @@ class ControlDisplayMixin:
         self.rc_lateral_var.set(0.0)
         self.rc_heave_var.set(0.0)
         self.rc_yaw_var.set(0.0)
+        self._on_rc_stick_changed()
 
     def _release_rc_override(self) -> None:
         self.rc_override_enabled.set(False)
         self._center_rc_sticks()
+        self._publish_rc_release_and_neutral()
+
+    def _publish_rc_release_and_neutral(self) -> None:
+        self._pilot_input_release_requested = False
+        self._rc_override_prev = False
+        self.node.publish_manual_control(yaw=0.0, heave=0.0, forward=0.0, lateral=0.0)
         self.node.publish_rc_release()
+
+    def _publish_pilot_control(self, commands: ControlCommands) -> None:
+        if GUI_PILOT_CONTROL_MODE == PILOT_CONTROL_RC_OVERRIDE:
+            self.node.publish_rc_override(
+                yaw=commands.rc_yaw,
+                heave=commands.rc_heave,
+                forward=commands.rc_forward,
+                lateral=commands.rc_lateral,
+            )
+            return
+        self.node.publish_manual_control(
+            yaw=commands.rc_yaw,
+            heave=commands.rc_heave,
+            forward=commands.rc_forward,
+            lateral=commands.rc_lateral,
+        )
 
     def _toggle_control_details(self) -> None:
         show = not self.control_details_visible.get()
         self.control_details_visible.set(show)
         if show:
             self.control_details_frame.grid()
-            self.control_details_button.config(text="Hide control details")
+            self.control_details_button.config(text="Hide details")
         else:
             self.control_details_frame.grid_remove()
-            self.control_details_button.config(text="Show control details")
+            self.control_details_button.config(text="Details")
 
     def _toggle_vehicle_details(self) -> None:
         show = not self.vehicle_details_visible.get()
@@ -72,13 +95,19 @@ class ControlDisplayMixin:
                 f"{TELEMETRY_HIDDEN_WIDTH}x{max(self.root.winfo_height(), TELEMETRY_HIDDEN_MINSIZE[1])}"
             )
             self.telemetry_toggle_button.config(text="Show telemetry")
+
     def _on_rc_override_toggle(self) -> None:
         if self.rc_override_enabled.get() and self._rc_replay_running():
             self._stop_rc_replay()
         if self.rc_override_enabled.get():
-            pass
+            commands = self._read_control_commands()
+            self._pilot_input_release_requested = False
+            self._request_initial_depth_release_for_pilot_input(commands)
+            self._publish_pilot_control(commands)
+            self.node.push_event(f"pilot control enabled ({GUI_PILOT_CONTROL_MODE})")
         else:
-            self.node.publish_rc_release()
+            self._publish_rc_release_and_neutral()
+            self.node.push_event("pilot control released")
 
     def _draw_attitude(self, roll_deg: float, pitch_deg: float, yaw_deg: float) -> None:
         canvas = self.attitude_canvas
@@ -220,21 +249,42 @@ class ControlDisplayMixin:
         rc_active = self.rc_override_enabled.get()
 
         if rc_active:
-            self.node.publish_rc_override(
-                yaw=commands.rc_yaw,
-                heave=commands.rc_heave,
-                forward=commands.rc_forward,
-                lateral=commands.rc_lateral,
-            )
+            self._request_initial_depth_release_for_pilot_input(commands)
+            self._publish_pilot_control(commands)
         elif self._rc_override_prev:
-            self.node.publish_rc_release()
+            self._publish_rc_release_and_neutral()
         self._rc_override_prev = rc_active
+
+    def _on_rc_stick_changed(self) -> None:
+        if not self.rc_override_enabled.get():
+            return
+        commands = self._read_control_commands()
+        self._request_initial_depth_release_for_pilot_input(commands)
+        self._publish_pilot_control(commands)
+
+    def _request_initial_depth_release_for_pilot_input(self, commands: ControlCommands) -> None:
+        if getattr(self, "_pilot_input_release_requested", False):
+            return
+        values = (
+            commands.rc_yaw,
+            commands.rc_heave,
+            commands.rc_forward,
+            commands.rc_lateral,
+        )
+        if not any(abs(float(value)) > AXIS_DEADBAND for value in values):
+            return
+        self._pilot_input_release_requested = True
+        self.node.request_initial_depth_release_when_armed("pilot input")
 
     def _update_rc_feedback_bars(self, channels: list[int]) -> None:
         for idx, channel in enumerate(channels[:RC_VISIBLE_CHANNEL_COUNT]):
             value = int(channel)
             self._rc_bars[idx]["value"] = clamp(value - 1100, 0, 800) if value > 0 else 0
             self._rc_labels[idx].config(text=str(value))
+
+    @staticmethod
+    def _has_rc_feedback(channels: list[int]) -> bool:
+        return any(int(value) > 0 for value in channels[:RC_VISIBLE_CHANNEL_COUNT])
 
     def _update_ui(self) -> None:
         if self._closed or not self.root.winfo_exists():
@@ -255,6 +305,10 @@ class ControlDisplayMixin:
         )
         self.status_var.set(state_text)
         self.mode_var.set(f"mode: {mode_display}  (raw={snap.mode}, id={snap.mode_id}, state={snap.system_status})")
+        command_ready_text, command_ready_style = self.node.control_readiness(snap)
+        self.command_ready_var.set(command_ready_text)
+        if self.command_ready_label is not None:
+            self.command_ready_label.configure(style=command_ready_style)
 
         depth_summary = f"{snap.depth_m:.2f} m" if math.isfinite(snap.depth_m) else "n/a"
         vehicle_state = "connected" if snap.connected else "disconnected"
@@ -319,10 +373,12 @@ class ControlDisplayMixin:
         )
         ping360_age = format_age(snap.ping360_age_s)
         self.ping360_summary_var.set(f"{snap.ping360_summary}  age={ping360_age}")
+        if snap.ping360_enabled is not None:
+            self.ping360_enabled_var.set(bool(snap.ping360_enabled))
 
         commands = self._read_control_commands()
         if self.rc_override_enabled.get():
-            control_mode = "RC override"
+            control_mode = "pilot control"
         elif self._rc_replay_running():
             control_mode = "RC replay"
         else:
@@ -335,13 +391,19 @@ class ControlDisplayMixin:
             f"heave={commands.rc_heave:+.2f}  yaw={commands.rc_yaw:+.2f}"
         )
         self.rc_override_var.set(
-            "rc override: "
+            "pilot input: "
             f"{'on' if self.rc_override_enabled.get() else 'off'}  "
+            f"{GUI_PILOT_CONTROL_MODE}  "
             f"{rc_mapping_summary}  "
-            f"heave={axis_to_pwm(commands.rc_heave)}  yaw={axis_to_pwm(commands.rc_yaw)}  "
+            f"heave={pilot_heave_axis_summary(commands.rc_heave)[0]} "
+            f"target_vz={pilot_heave_axis_summary(commands.rc_heave)[1]:+.1f}cm/s  "
+            f"yaw={axis_to_pwm(commands.rc_yaw)}  "
             f"forward={axis_to_pwm(commands.rc_forward)}  lateral={axis_to_pwm(commands.rc_lateral)}  "
+            f"rcin3={snap.rc_in[2] if len(snap.rc_in) > 2 else 0}  "
+            f"rcout5-8={tuple(snap.rc_out[4:8])}  "
             f"feedback={snap.rc_feedback_source}"
         )
+        self._refresh_sim_stack_status()
         self._refresh_ros2_buttons()
 
         self._publish_active_controls(commands)
@@ -350,6 +412,7 @@ class ControlDisplayMixin:
         self._draw_depth(snap.depth_m, snap.depth_source)
         self._update_events(snap.events)
 
-        self._update_rc_feedback_bars(snap.rc_out)
+        feedback_channels = snap.rc_in if self._has_rc_feedback(snap.rc_in) else snap.rc_out
+        self._update_rc_feedback_bars(feedback_channels)
 
         self._schedule_update()

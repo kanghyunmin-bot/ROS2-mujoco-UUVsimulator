@@ -420,7 +420,8 @@ class AutoTuneMixin:
         start_s = self._read_float_var(self.autotune_start_var, 60.0, 0.0, 10000.0)
         duration_s = self._read_float_var(self.autotune_duration_var, 120.0, 10.0, 600.0)
         max_candidates = self._read_int_var(self.autotune_candidates_var, 15, 1, 30)
-        servo_scale = self._read_float_var(self.autotune_servo_scale_var, 0.58, 0.1, 2.0)
+        # Legacy polynomial/gain tuned mode used fallback 0.58.
+        servo_scale = self._read_float_var(self.autotune_servo_scale_var, 1.0, 0.1, 2.0)
         tune_mode = self.autotune_mode_var.get().strip() or "plant-rc-out"
         candidate_set = self.autotune_candidate_set_var.get().strip() or "ellipsoid5"
         stamp = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")

@@ -124,3 +124,17 @@ READY_WAIT_SECS=60 SITL_WAIT_SECS=360 ./start_sitl_mujoco_mj311.sh -- --headless
 
 Replay/autotune require a user-provided rosbag path because sample bags are not
 bundled in this runtime package.
+
+## Performance Notes
+
+The default SITL profile is the normal-use profile: ROS2 sensor publish 120 Hz,
+thruster loop 80 Hz, SITL MAVLink servo request 25 Hz, Ping360 status 2 Hz,
+QGC direct video off, and heavy MuJoCo viewer debug overlays off.
+
+Use these only when needed:
+
+```bash
+./uuv_mujoco/v2.2/start_sitl_mujoco_mj311.sh -- --viewer-debug
+./uuv_mujoco/v2.2/start_sitl_mujoco_mj311.sh -- --qgc-video
+./uuv_mujoco/v2.2/start_sitl_mujoco_mj311.sh -- --enable-viewer-pause
+```

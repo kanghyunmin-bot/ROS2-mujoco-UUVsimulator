@@ -170,6 +170,24 @@ do
 done
 pass "nested runtime paths exist"
 
+python3 - \
+  "${TMP_DIR}/runtime/uuv_mujoco/v2.2/scenes/tank_current_scene.xml" \
+  "${TMP_DIR}/runtime/uuv_mujoco/v2.2/scenes/tank_legacy_scene.xml" <<'PY'
+import sys
+import xml.etree.ElementTree as ET
+
+for scene_path in sys.argv[1:]:
+    root = ET.parse(scene_path).getroot()
+    by_name = {geom.get("name"): geom for geom in root.iter("geom") if geom.get("name")}
+    for name in ("water_vis", "water_surface"):
+        geom = by_name.get(name)
+        if geom is None:
+            raise SystemExit(f"{scene_path}: missing {name}")
+        if geom.get("group") != "5":
+            raise SystemExit(f"{scene_path}: {name} must be group=5 for Ping360 raycast exclusion")
+PY
+pass "Ping360 water visual raycast exclusions ok"
+
 bash -n \
   "${TMP_DIR}/runtime/uuv_mujoco/v2.2/launch_uuv_sim.sh" \
   "${TMP_DIR}/runtime/uuv_mujoco/v2.2/start_sitl_mujoco_mj311.sh" \

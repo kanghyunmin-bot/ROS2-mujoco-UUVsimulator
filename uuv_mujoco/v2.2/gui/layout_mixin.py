@@ -193,18 +193,20 @@ class LayoutMixin:
         stack_row.columnconfigure(0, weight=1)
         stack_buttons = ttk.Frame(stack_row)
         stack_buttons.grid(row=0, column=0, sticky="ew")
-        ttk.Button(
+        self.sim_stack_start_button = ttk.Button(
             stack_buttons,
             text="Start SITL/MuJoCo",
             style="Success.TButton",
             command=self._start_sim_stack,
-        ).pack(side=tk.LEFT)
-        ttk.Button(
+        )
+        self.sim_stack_start_button.pack(side=tk.LEFT)
+        self.sim_stack_stop_button = ttk.Button(
             stack_buttons,
             text="Stop/Reset",
             style="Danger.TButton",
             command=self._stop_sim_stack,
-        ).pack(side=tk.LEFT, padx=(4, 0))
+        )
+        self.sim_stack_stop_button.pack(side=tk.LEFT, padx=(4, 0))
         ttk.Button(
             stack_buttons,
             text="Ping360 panel",
@@ -276,6 +278,13 @@ class LayoutMixin:
         ttk.Button(arm_row, text="Disarm", style="Danger.TButton", command=lambda: self.node.arm(False)).pack(
             side=tk.LEFT
         )
+        self.command_ready_label = ttk.Label(
+            arm_row,
+            textvariable=self.command_ready_var,
+            style="NotReady.TLabel",
+            anchor="center",
+        )
+        self.command_ready_label.pack(side=tk.LEFT, padx=(8, 0), fill=tk.X, expand=True)
 
         mode_row = ttk.LabelFrame(control_box, text="Modes", padding=INNER_PADDING)
         mode_row.grid(row=5, column=0, sticky="ew", pady=(0, 4))
@@ -422,25 +431,39 @@ class LayoutMixin:
         ).pack(side=tk.LEFT, padx=(10, 0))
         self.autotune_frame.grid_remove()
 
-        rc_box = ttk.LabelFrame(control_box, text="RC Override Joysticks", padding=INNER_PADDING)
+        rc_box = ttk.LabelFrame(control_box, text="Pilot Control", padding=INNER_PADDING)
         rc_box.grid(row=10, column=0, sticky="ew", pady=(0, 4))
         rc_box.columnconfigure(0, weight=1)
 
-        rc_header = ttk.Frame(rc_box)
-        rc_header.grid(row=0, column=0, sticky="ew", pady=(0, 3))
+        rc_header = ttk.Frame(rc_box, style="PilotHeader.TFrame")
+        rc_header.grid(row=0, column=0, sticky="ew", pady=(0, 5))
+        rc_header.columnconfigure(1, weight=1)
         ttk.Checkbutton(
             rc_header,
-            text="Enable RC override",
+            text="Pilot input",
             variable=self.rc_override_enabled,
             command=self._on_rc_override_toggle,
-        ).pack(side=tk.LEFT)
-        ttk.Button(rc_header, text="Center", command=self._center_rc_sticks).pack(side=tk.RIGHT)
-        ttk.Button(
+            style="Pilot.TCheckbutton",
+        ).grid(row=0, column=0, sticky="w")
+        ttk.Label(
             rc_header,
-            text="Release RC",
-            style="Danger.TButton",
+            textvariable=self.control_summary_var,
+            style="PilotHint.TLabel",
+        ).grid(row=0, column=1, sticky="w", padx=(8, 0))
+        button_row = ttk.Frame(rc_header, style="PilotHeader.TFrame")
+        button_row.grid(row=0, column=2, sticky="e")
+        ttk.Button(
+            button_row,
+            text="Center sticks",
+            style="Compact.TButton",
+            command=self._center_rc_sticks,
+        ).pack(side=tk.LEFT)
+        ttk.Button(
+            button_row,
+            text="Release input",
+            style="CompactDanger.TButton",
             command=self._release_rc_override,
-        ).pack(side=tk.RIGHT, padx=(0, 6))
+        ).pack(side=tk.LEFT, padx=(5, 0))
 
         stick_row = ttk.Frame(rc_box)
         stick_row.grid(row=1, column=0, sticky="ew")
@@ -454,6 +477,7 @@ class LayoutMixin:
             y_var=self.rc_heave_var,
             x_label="yaw",
             y_label="heave",
+            on_change=self._on_rc_stick_changed,
         )
         self.left_stick.grid(row=0, column=0, sticky="nsew", padx=(0, 3))
 
@@ -464,6 +488,7 @@ class LayoutMixin:
             y_var=self.rc_forward_var,
             x_label="lateral",
             y_label="forward",
+            on_change=self._on_rc_stick_changed,
         )
         self.right_stick.grid(row=0, column=1, sticky="nsew", padx=(3, 0))
 
@@ -471,7 +496,8 @@ class LayoutMixin:
         details_row.grid(row=12, column=0, sticky="ew", pady=(4, 0))
         self.control_details_button = ttk.Button(
             details_row,
-            text="Show control details",
+            text="Details",
+            style="Compact.TButton",
             command=self._toggle_control_details,
         )
         self.control_details_button.pack(side=tk.RIGHT)

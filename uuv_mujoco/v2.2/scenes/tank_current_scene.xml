@@ -44,8 +44,8 @@
     <geom name="pool_wall_nx" type="box" pos="-11.03 0 -0.66" size="0.05 5.53 0.66" rgba="0.7 0.7 0.7 1" />
     <geom name="pool_wall_py" type="box" pos="0 5.53 -0.66" size="11.08 0.05 0.66" rgba="0.7 0.7 0.7 1" />
     <geom name="pool_wall_ny" type="box" pos="0 -5.53 -0.66" size="11.08 0.05 0.66" rgba="0.7 0.7 0.7 1" />
-    <geom name="water_vis" type="box" pos="0 0 -0.66" size="10.98 5.48 0.66" rgba="0.05 0.45 0.95 0.16" contype="0" conaffinity="0" group="0" />
-    <geom name="water_surface" type="box" pos="0 0 0.004" size="10.98 5.48 0.004" rgba="0.45 0.85 1.00 0.46" contype="0" conaffinity="0" group="0" />
+    <geom name="water_vis" type="box" pos="0 0 -0.66" size="10.98 5.48 0.66" rgba="0.05 0.45 0.95 0.16" contype="0" conaffinity="0" group="5" />
+    <geom name="water_surface" type="box" pos="0 0 0.004" size="10.98 5.48 0.004" rgba="0.45 0.85 1.00 0.46" contype="0" conaffinity="0" group="5" />
 
     <body name="base_link" pos="-2.0 0.9 -0.45" quat="1 0 0 0">
       <inertial pos="-0.0015 0 0.03" quat="1 0 0 0" mass="15" diaginertia="0.001 0.001 0.001" />
@@ -62,35 +62,85 @@
       <geom
         name="fluid_center_enclosure"
         type="ellipsoid"
-        pos="-0.005 0 0.020"
-        size="0.205 0.115 0.13"
+        pos="-0.005 0 0.010"
+        size="0.208 0.113 0.108"
         rgba="0.15 0.90 1.00 0.5"
         contype="0"
         conaffinity="0"
         fluidshape="ellipsoid"
-        fluidcoef="0.424 0.120 2.732 0.050 0.025"
+        fluidcoef="0.424 0.120 3.415 0.050 0.025"
       />
       <geom
         name="fluid_port_lower_body"
         type="ellipsoid"
-        pos="0 0.208 0.020"
-        size="0.37 0.080 0.12"
+        pos="-0.004 0.248 -0.082"
+        size="0.355 0.048 0.061"
         rgba="0.10 0.70 1.00 0.5"
         contype="0"
         conaffinity="0"
         fluidshape="ellipsoid"
-        fluidcoef="0.356 0.103 2.146 0.050 0.025"
+        fluidcoef="0.356 0.103 2.683 0.050 0.025"
       />
       <geom
         name="fluid_starboard_lower_body"
         type="ellipsoid"
-        pos="0 -0.208 0.020"
-        size="0.37 0.080 0.12"
+        pos="-0.004 -0.248 -0.082"
+        size="0.355 0.048 0.061"
         rgba="0.10 0.70 1.00 0.5"
         contype="0"
         conaffinity="0"
         fluidshape="ellipsoid"
-        fluidcoef="0.356 0.103 2.146 0.050 0.025"
+        fluidcoef="0.356 0.103 2.683 0.050 0.025"
+      />
+      <!-- Flat hydro plates around the lower side hulls.
+           fluidcoef order: blunt drag, slender drag, angular drag, Kutta lift, Magnus lift. -->
+      <geom
+        name="fluid_port_lower_top_plate"
+        type="box"
+        pos="-0.040 0.226 -0.024"
+        size="0.254 0.026 0.003"
+        rgba="0.05 0.95 1.00 0.35"
+        contype="0"
+        conaffinity="0"
+        density="0"
+        fluidshape="ellipsoid"
+        fluidcoef="1.000 0.320 4.800 1.300 0.080"
+      />
+      <geom
+        name="fluid_port_lower_bottom_plate"
+        type="box"
+        pos="-0.044 0.232 -0.140"
+        size="0.251 0.032 0.003"
+        rgba="0.05 0.95 1.00 0.35"
+        contype="0"
+        conaffinity="0"
+        density="0"
+        fluidshape="ellipsoid"
+        fluidcoef="1.000 0.320 4.800 1.300 0.080"
+      />
+      <geom
+        name="fluid_starboard_lower_top_plate"
+        type="box"
+        pos="-0.040 -0.226 -0.024"
+        size="0.254 0.026 0.003"
+        rgba="0.05 0.95 1.00 0.35"
+        contype="0"
+        conaffinity="0"
+        density="0"
+        fluidshape="ellipsoid"
+        fluidcoef="1.000 0.320 4.800 1.300 0.080"
+      />
+      <geom
+        name="fluid_starboard_lower_bottom_plate"
+        type="box"
+        pos="-0.044 -0.232 -0.140"
+        size="0.251 0.032 0.003"
+        rgba="0.05 0.95 1.00 0.35"
+        contype="0"
+        conaffinity="0"
+        density="0"
+        fluidshape="ellipsoid"
+        fluidcoef="1.000 0.320 4.800 1.300 0.080"
       />
 
       <geom type="mesh" mesh="base_link_part0" material="frame_grey" pos="-0.1807 0.1826 0.15" quat="0.7071068 -0.7071068 0 0" />
@@ -143,36 +193,36 @@
 
       <body name="prop_ver_lf" pos="0.16 0.2345 -0.078408" quat="0 -1 0 0">
         <joint name="prop_ver_lf_j" type="hinge" axis="0 0 1" damping="0.01" />
-        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="1" />
       </body>
       <body name="prop_ver_lr" pos="-0.16 0.2345 -0.078408" quat="0 -1 0 0">
         <joint name="prop_ver_lr_j" type="hinge" axis="0 0 1" damping="0.01" />
-        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="1" />
       </body>
       <body name="prop_ver_rf" pos="0.16 -0.2345 -0.078408" quat="0 -1 0 0">
         <joint name="prop_ver_rf_j" type="hinge" axis="0 0 1" damping="0.01" />
-        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="1" />
       </body>
       <body name="prop_ver_rr" pos="-0.16 -0.2345 -0.078408" quat="0 -1 0 0">
         <joint name="prop_ver_rr_j" type="hinge" axis="0 0 1" damping="0.01" />
-        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="1" />
       </body>
 
       <body name="prop_yaw_lf" pos="0.09015 0.183144 0.03" quat="0.2837635 -0.2837635 0.6476714 -0.6476714">
         <joint name="prop_yaw_lf_j" type="hinge" axis="0 0 1" damping="0.01" />
-        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="1" />
       </body>
       <body name="prop_yaw_lr" pos="-0.09015 0.183144 0.03" quat="0.6532818 -0.6532818 0.2705974 -0.2705974">
         <joint name="prop_yaw_lr_j" type="hinge" axis="0 0 1" damping="0.01" />
-        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="1" />
       </body>
       <body name="prop_yaw_rf" pos="0.09015 -0.183144 0.03" quat="0.6532818 -0.6532818 0.2705974 -0.2705974">
         <joint name="prop_yaw_rf_j" type="hinge" axis="0 0 1" damping="0.01" />
-        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="1" />
       </body>
       <body name="prop_yaw_rr" pos="-0.09015 -0.183144 0.03" quat="0.2697839 -0.2697839 0.6536181 -0.6536181">
         <joint name="prop_yaw_rr_j" type="hinge" axis="0 0 1" damping="0.01" />
-        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="1" />
       </body>
     </body>
   </worldbody>
@@ -183,10 +233,10 @@
     <motor name="ver_rf" site="thr_ver_rf" gear="0 0 -1 0 0 0" ctrlrange="-1200 1200" />
     <motor name="ver_rr" site="thr_ver_rr" gear="0 0 -1 0 0 0" ctrlrange="-1200 1200" />
 
-    <motor name="yaw_lf" site="thr_yaw_lf" gear="0.7071068 -0.7071068 0 0 0 0" ctrlrange="-1200 1200" />
-    <motor name="yaw_lr" site="thr_yaw_lr" gear="-0.7071068 -0.7071068 0 0 0 0" ctrlrange="-1200 1200" />
-    <motor name="yaw_rf" site="thr_yaw_rf" gear="0.7071068 0.7071068 0 0 0 0" ctrlrange="-1200 1200" />
-    <motor name="yaw_rr" site="thr_yaw_rr" gear="-0.7071068 0.7071068 0 0 0 0" ctrlrange="-1200 1200" />
+    <motor name="yaw_lf" site="thr_yaw_lf" gear="0.8660254 -0.5000000 0 0 0 0" ctrlrange="-1200 1200" />
+    <motor name="yaw_lr" site="thr_yaw_lr" gear="-0.8660254 -0.5000000 0 0 0 0" ctrlrange="-1200 1200" />
+    <motor name="yaw_rf" site="thr_yaw_rf" gear="0.8660254 0.5000000 0 0 0 0" ctrlrange="-1200 1200" />
+    <motor name="yaw_rr" site="thr_yaw_rr" gear="-0.8660254 0.5000000 0 0 0 0" ctrlrange="-1200 1200" />
   </actuator>
 
   <sensor>

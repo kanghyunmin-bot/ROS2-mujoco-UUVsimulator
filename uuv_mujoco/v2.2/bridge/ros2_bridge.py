@@ -62,9 +62,9 @@ Notes
 - This bridge does *not* try to emulate every MAVROS plugin topic.
 - Stereo camera image publishing was removed for performance. Ping360 publishes
   a lightweight on-demand sonar image only when a subscriber is present.
-- /mavros/imu/static_pressure defaults to an "internal" pressure stream to
-  mimic the real robot behavior you observed. /mavros/imu/atm_pressure carries
-  the external depth/Bar30-derived pressure used by your compatibility node.
+- /mavros/imu/static_pressure and /mavros/imu/atm_pressure default to the
+  external Bar30-derived pressure so ALT_HOLD validation bags expose the same
+  depth-coupled pressure trend as the real robot.
 - /dvl/data and /dvl/position are published on a best-effort basis using the
   installed dvl_msgs definitions, if present. Unknown fields are ignored safely.
 """
@@ -133,6 +133,8 @@ class Ros2Bridge:
         self.sensor_dt = 1.0 / max(float(sensor_hz), 1e-6)
         self.next_sensor_t = 0.0
         self.last_pub_t = -1.0
+        self._ros_spin_period_s = 1.0 / max(self._env_to_float("ROS2_UUV_SPIN_HZ", 100.0), 1.0)
+        self._ros_next_spin_wall = 0.0
         self.enable_sitl = bool(enable_sitl)
         self._enable_ros = bool(enable_ros)
         self._mavros_surface_enabled = bool(enable_mavros_surface)
@@ -147,6 +149,11 @@ class Ros2Bridge:
         self._cmd_filter_t = -1.0
         self._cmd_deadband_norm = float(np.clip(self._env_to_float("ROS2_UUV_CMD_DEADBAND", 0.0), 0.0, 0.2))
         self._cmd_slew_rate_norm = float(np.clip(self._env_to_float("ROS2_UUV_CMD_SLEW_RATE", 200.0), 0.0, 200.0))
+        self._mavros_forward_arm_mode = bool(self._env_to_int("ROS2_UUV_MAVROS_FORWARD_ARM_MODE", 1))
+        self._startup_wall = time.monotonic()
+        self._arm_mode_boot_guard_s = float(
+            np.clip(self._env_to_float("ROS2_UUV_ARM_MODE_BOOT_GUARD_S", 4.0), 0.0, 120.0)
+        )
 
         # RC mapping.
         self._mavros_rc_forward_channel = self._clamp_rc_channel(self._env_to_int("ROS2_UUV_MAVROS_RC_CH_FORWARD", 5) - 1)
@@ -159,8 +166,12 @@ class Ros2Bridge:
         self._mavros_rc_heave_invert = bool(self._env_to_int("ROS2_UUV_MAVROS_RC_INV_HEAVE", 1))
         self._mavros_rc_pwm_span = float(np.clip(self._env_to_float("ROS2_UUV_MAVROS_RC_PWM_SPAN", 300.0), 50.0, 700.0))
         self._mavros_rc_override_local_fallback = bool(
-            self._env_to_int("ROS2_UUV_MAVROS_RC_OVERRIDE_LOCAL_FALLBACK", 1)
+            self._env_to_int("ROS2_UUV_MAVROS_RC_OVERRIDE_LOCAL_FALLBACK", 0)
         )
+        self._sitl_cmd_vel_setpoint_enabled = bool(
+            self._env_to_int("ROS2_UUV_SITL_CMD_VEL_SETPOINT_ENABLE", 0)
+        )
+        self._sitl_cmd_vel_blocked_warned = False
 
         # Setpoint emulation.
         self._mavros_setpoint_enabled = bool(self._env_to_int("ROS2_UUV_MAVROS_SETPOINT_ENABLE", 1))
@@ -192,18 +203,53 @@ class Ros2Bridge:
         self._imu_acc_clip_mps2 = 16.0 * self._bar30_gravity
         self._static_pressure_source = str(os.environ.get("ROS2_UUV_STATIC_PRESSURE_SOURCE", "external")).strip().lower()
         if self._static_pressure_source not in {"internal", "external"}:
-            self._static_pressure_source = "internal"
+            self._static_pressure_source = "external"
         self._internal_pressure_pa = float(self._env_to_float("ROS2_UUV_INTERNAL_PRESSURE_PA", self._bar30_surface_pressure_pa))
-        self._sitl_vertical_source = str(os.environ.get("ROS2_UUV_SITL_VERTICAL_SOURCE", "base")).strip().lower()
-        if self._sitl_vertical_source not in {"base", "bar30", "bar30_relative"}:
-            self._sitl_vertical_source = "base"
-        self._sitl_bar30_zero_depth_m = None
+        self._sitl_depth_sensor_bias_m = self._env_to_clamped_float("ROS2_UUV_SITL_DEPTH_SENSOR_BIAS_M", 0.0, -10.0, 10.0)
+        self._ros_depth_sensor_bias_m = self._env_to_clamped_float("ROS2_UUV_DEPTH_SENSOR_BIAS_M", 0.0, -10.0, 10.0)
+        self._ros_bar30_depth_sensor_bias_m = self._env_to_clamped_float(
+            "ROS2_UUV_BAR30_DEPTH_SENSOR_BIAS_M",
+            self._ros_depth_sensor_bias_m,
+            -10.0,
+            10.0,
+        )
+        requested_vertical_source = str(os.environ.get("ROS2_UUV_SITL_VERTICAL_SOURCE", "bar30")).strip().lower()
+        if requested_vertical_source not in {"", "bar30"}:
+            print(
+                f"[sitl] ignoring ROS2_UUV_SITL_VERTICAL_SOURCE={requested_vertical_source!r}; "
+                "SITL vertical feedback is fixed to Bar30 depth/down-velocity.",
+                flush=True,
+            )
+        print("[sitl] vertical feedback contract: Bar30 depth + NED down velocity", flush=True)
         self._sitl_bar30_prev_depth_m = None
         self._sitl_bar30_prev_t = None
+        self._sitl_initial_depth_hold_active = False
+        # Debug gates only. Default closed-loop validation must publish true
+        # Bar30/IMU motion instead of masking release or disarmed transients.
+        self._sitl_zero_vertical_feedback_while_disarmed = self._env_flag(
+            "ROS2_UUV_SITL_ZERO_VERTICAL_FEEDBACK_WHILE_DISARMED",
+            False,
+        )
+        self._sitl_zero_vertical_feedback_after_hold_release_s = self._env_to_clamped_float(
+            "ROS2_UUV_SITL_ZERO_VERTICAL_FEEDBACK_AFTER_HOLD_RELEASE_S",
+            0.0,
+            0.0,
+            5.0,
+        )
+        self._sitl_zero_vertical_feedback_until_wall = -1.0
+        self._sitl_zero_vertical_feedback_last_log_wall = -1.0
 
         # DVL filtering.
         self._dvl_filter_alpha = self._env_to_clamped_float("ROS2_UUV_DVL_LPF_ALPHA", 1.0, 0.0, 1.0)
         self._dvl_vel_body_filt = None
+        self._dvl_frame_roll_deg = self._env_to_clamped_float("ROS2_UUV_DVL_FRAME_ROLL_DEG", 0.0, -20.0, 20.0)
+        self._dvl_frame_pitch_deg = self._env_to_clamped_float("ROS2_UUV_DVL_FRAME_PITCH_DEG", 4.75, -20.0, 20.0)
+        self._dvl_frame_yaw_deg = self._env_to_clamped_float("ROS2_UUV_DVL_FRAME_YAW_DEG", -3.75, -20.0, 20.0)
+        self._dvl_body_frd_to_dvl_frd = self._rpy_deg_to_rotmat(
+            self._dvl_frame_roll_deg,
+            self._dvl_frame_pitch_deg,
+            self._dvl_frame_yaw_deg,
+        )
         self._odom_pos = np.array([0.0, 0.0, 0.0], dtype=np.float64)
         self._last_odom_time = -1.0
 
@@ -241,9 +287,15 @@ class Ros2Bridge:
         self._ping360 = Ping360Simulator(self.model, self._ping360_config) if self._ping360_config.enabled else None
         self._ping360_image_lookup_key = None
         self._ping360_image_lookup = None
+        self._ping360_status_period_s = float(
+            np.clip(self._env_to_float("ROS2_UUV_PING360_STATUS_HZ", 2.0), 0.2, 20.0)
+        )
+        self._ping360_status_period_s = 1.0 / self._ping360_status_period_s
+        self._ping360_status_next_t = 0.0
 
         # SITL transport.
         self._sitl_transport = None
+        self._sitl_cmd_vel_warned = False
         self._sitl_prev_vel_sim_t = None
         self._sitl_prev_vel_enu = None
         if self.enable_sitl:
@@ -275,7 +327,9 @@ class Ros2Bridge:
         self.RCOut = None
         self.DVLMsg = None
         self.DVLDRMsg = None
-        self._publisher_demand = PublisherDemandCache(default_probe_period_s=0.25)
+        self._publisher_demand = PublisherDemandCache(
+            default_probe_period_s=self._env_to_float("ROS2_UUV_DEMAND_PROBE_PERIOD_S", 1.0)
+        )
         self._static_context_publisher = None
         self._static_tf_published = False
         self._robot_description_text = self._load_robot_description_text()
@@ -306,7 +360,7 @@ class Ros2Bridge:
             from sensor_msgs.msg import BatteryState, FluidPressure, Image, Imu, LaserScan, Range
             from std_msgs.msg import Float32, String
             from tf2_msgs.msg import TFMessage
-            from mavros_msgs.msg import OverrideRCIn, PositionTarget, VfrHud
+            from mavros_msgs.msg import ManualControl, OverrideRCIn, PositionTarget, RCIn, VfrHud
             from mavros_msgs.msg import State as MavrosState
             from mavros_msgs.srv import CommandBool as MavrosCommandBool
             from mavros_msgs.srv import CommandLong as MavrosCommandLong
@@ -332,6 +386,25 @@ class Ros2Bridge:
                 from rclpy.signals import SignalHandlerOptions
             except Exception:
                 SignalHandlerOptions = None
+
+            def optional_msg_type(label: str, msg_cls):
+                if msg_cls is None:
+                    return None
+                try:
+                    import_type_support = getattr(msg_cls, "__import_type_support__", None)
+                    if callable(import_type_support):
+                        import_type_support()
+                    if getattr(msg_cls, "_TYPE_SUPPORT", None) is None:
+                        raise RuntimeError("typesupport is unavailable")
+                    return msg_cls
+                except Exception as exc:
+                    print(f"[ros2] optional message {label} disabled: {exc}", flush=True)
+                    return None
+
+            RCOut = optional_msg_type("mavros_msgs/RCOut", RCOut)
+            DVLMsg = optional_msg_type("dvl_msgs/DVL", DVLMsg)
+            DVLDRMsg = optional_msg_type("dvl_msgs/DVLDR", DVLDRMsg)
+            SonarEcho = optional_msg_type("ping360_sonar_msgs/SonarEcho", SonarEcho)
         except ImportError as exc:
             raise RuntimeError(
                 "ROS2 packages not found. Install rclpy + sensor_msgs + geometry_msgs + nav_msgs + mavros_msgs."
@@ -358,7 +431,9 @@ class Ros2Bridge:
         self.Float32 = Float32
         self.String = String
         self.TFMessage = TFMessage
+        self.ManualControl = ManualControl
         self.OverrideRCIn = OverrideRCIn
+        self.RCIn = RCIn
         self.PositionTarget = PositionTarget
         self.RCOut = RCOut
         self.VfrHud = VfrHud
@@ -430,7 +505,7 @@ class Ros2Bridge:
             self.pub_mavros_local_vel = self.node.create_publisher(self.TwistStamped, "/mavros/local_position/velocity_local", q10)
             self.pub_mavros_vision_pose = self.node.create_publisher(self.PoseStamped, "/mavros/vision_pose/pose", q10)
             self.pub_mavros_battery = self.node.create_publisher(self.BatteryState, "/mavros/battery", q10)
-            self.pub_mavros_rc_in = self.node.create_publisher(self.OverrideRCIn, "/mavros/rc/in", q10)
+            self.pub_mavros_rc_in = self.node.create_publisher(self.RCIn, "/mavros/rc/in", q10)
             self.pub_mavros_rc_out = self.node.create_publisher(self.RCOut, "/mavros/rc/out", q10) if self.RCOut else None
         else:
             self.pub_mavros_state = None
@@ -460,9 +535,27 @@ class Ros2Bridge:
         self.sub_ping360_config = self.node.create_subscription(self.String, "/ping360/config", self._on_ping360_config, q10)
         if self._mavros_surface_enabled:
             self.sub_mavros_rc_override = self.node.create_subscription(self.OverrideRCIn, "/mavros/rc/override", self._on_mavros_rc_override, q10)
+            self.sub_replay_rcout_override = (
+                self.node.create_subscription(
+                    self.RCOut,
+                    "/uuv_mujoco/rc/out_override",
+                    self._on_replay_rcout_override,
+                    q10,
+                )
+                if self.RCOut
+                else None
+            )
+            self.sub_mavros_manual_control = self.node.create_subscription(
+                self.ManualControl,
+                "/mavros/manual_control/send",
+                self._on_mavros_manual_control,
+                q10,
+            )
             self.sub_mavros_setpoint = self.node.create_subscription(self.PositionTarget, "/mavros/setpoint_raw/local", self._on_mavros_setpoint, q10)
         else:
             self.sub_mavros_rc_override = None
+            self.sub_replay_rcout_override = None
+            self.sub_mavros_manual_control = None
             self.sub_mavros_setpoint = None
 
         # Services.
@@ -539,6 +632,13 @@ class Ros2Bridge:
             return float(value)
         except ValueError:
             return float(default)
+
+    @staticmethod
+    def _env_flag(env_name: str, default: bool) -> bool:
+        value = os.getenv(env_name)
+        if value is None or value == "":
+            return bool(default)
+        return value.strip().lower() in {"1", "true", "yes", "on", "enable", "enabled"}
 
     def _env_to_clamped_float(self, env_name: str, default: float, min_value: float, max_value: float) -> float:
         return float(np.clip(self._env_to_float(env_name, default), min_value, max_value))
@@ -703,6 +803,17 @@ class Ros2Bridge:
         depth = float(max(0.0, depth_m))
         return float(surface_pressure_pa + rho * gravity * depth)
 
+    @staticmethod
+    def _rpy_deg_to_rotmat(roll_deg: float, pitch_deg: float, yaw_deg: float) -> np.ndarray:
+        roll, pitch, yaw = np.deg2rad([roll_deg, pitch_deg, yaw_deg])
+        cr, sr = np.cos(roll), np.sin(roll)
+        cp, sp = np.cos(pitch), np.sin(pitch)
+        cy, sy = np.cos(yaw), np.sin(yaw)
+        rx = np.array([[1.0, 0.0, 0.0], [0.0, cr, -sr], [0.0, sr, cr]], dtype=np.float64)
+        ry = np.array([[cp, 0.0, sp], [0.0, 1.0, 0.0], [-sp, 0.0, cp]], dtype=np.float64)
+        rz = np.array([[cy, -sy, 0.0], [sy, cy, 0.0], [0.0, 0.0, 1.0]], dtype=np.float64)
+        return rz @ ry @ rx
+
     # ---------------------------------------------------------------------
     # DVL best-effort compatibility builders
     # ---------------------------------------------------------------------
@@ -722,7 +833,7 @@ class Ros2Bridge:
                 setattr(msg, name, value)
                 return
 
-    def _build_dvl_msg(self, stamp, vel_body_flu: np.ndarray | None, altitude_m: float | None) -> object | None:
+    def _build_dvl_msg(self, stamp, vel_dvl_frd: np.ndarray | None, altitude_m: float | None) -> object | None:
         if self.DVLMsg is None:
             return None
         msg = self.DVLMsg()
@@ -731,12 +842,12 @@ class Ros2Bridge:
             header.stamp = stamp
             if hasattr(header, "frame_id"):
                 header.frame_id = "dvl_link"
-        if vel_body_flu is not None:
-            self._set_nested_xyz(msg, "velocity", vel_body_flu)
-            self._set_nested_xyz(msg, "vel", vel_body_flu)
-            self._set_first_attr(msg, ("velocity_x", "vx", "surge_velocity"), float(vel_body_flu[0]))
-            self._set_first_attr(msg, ("velocity_y", "vy", "sway_velocity"), float(vel_body_flu[1]))
-            self._set_first_attr(msg, ("velocity_z", "vz", "heave_velocity"), float(vel_body_flu[2]))
+        if vel_dvl_frd is not None:
+            self._set_nested_xyz(msg, "velocity", vel_dvl_frd)
+            self._set_nested_xyz(msg, "vel", vel_dvl_frd)
+            self._set_first_attr(msg, ("velocity_x", "vx", "surge_velocity"), float(vel_dvl_frd[0]))
+            self._set_first_attr(msg, ("velocity_y", "vy", "sway_velocity"), float(vel_dvl_frd[1]))
+            self._set_first_attr(msg, ("velocity_z", "vz", "heave_velocity"), float(vel_dvl_frd[2]))
         if altitude_m is not None and np.isfinite(altitude_m):
             self._set_first_attr(msg, ("altitude", "range", "height"), float(altitude_m))
         self._set_first_attr(msg, ("valid", "is_valid", "bottom_lock"), True)
@@ -957,10 +1068,8 @@ class Ros2Bridge:
         msg.intensities = array("B", np.asarray(sample.profile, dtype=np.uint8).tobytes())
         return msg
 
-    def _build_ping360_status(self, stamp, sample: Ping360Sample):
+    def _build_ping360_status(self, stamp, payload: dict):
         msg = self.String()
-        payload = sample.status_dict()
-        payload["updated"] = bool(sample.updated)
         payload["stamp"] = {
             "sec": int(getattr(stamp, "sec", 0)),
             "nanosec": int(getattr(stamp, "nanosec", 0)),
@@ -1038,8 +1147,14 @@ class Ros2Bridge:
         sweep_mask = mask & (rr > 0.04) & (grad_distance(angle_idx, int(sample.angle_grad)) <= 1)
         out[sweep_mask] = np.maximum(out[sweep_mask], 145)
 
-        center_mask = mask & (rr <= 0.018)
-        out[center_mask] = 180
+        blind_radius = float(sample.settings.blind_bins) / max(float(raw.shape[1] - 1), 1.0)
+        if blind_radius > 0.0:
+            out[mask & (rr <= blind_radius)] = 0
+            blind_fade_width = max(4.0 / max(float(size), 1.0), 0.035)
+            fade_mask = mask & (rr > blind_radius) & (rr <= blind_radius + blind_fade_width)
+            if np.any(fade_mask):
+                fade = (rr[fade_mask] - blind_radius) / blind_fade_width
+                out[fade_mask] = np.clip(out[fade_mask].astype(np.float32) * fade, 0.0, 255.0).astype(np.uint8)
         out[~mask] = 0
         return out
 
@@ -1061,27 +1176,34 @@ class Ros2Bridge:
             header.stamp = stamp
             if hasattr(header, "frame_id"):
                 header.frame_id = "base_link"
+        armed = bool(self._mavros_armed)
+        mode = str(self._mavros_mode)
+        connected = True
+        if self._sitl_transport is not None:
+            connected = bool(getattr(self._sitl_transport, "mavlink_connected", False))
+            armed = bool(getattr(self._sitl_transport, "vehicle_armed", armed))
+            actual_mode = str(getattr(self._sitl_transport, "vehicle_mode", "") or "")
+            if actual_mode:
+                mode = actual_mode
         if hasattr(msg, "connected"):
-            msg.connected = True
+            msg.connected = bool(connected)
         if hasattr(msg, "armed"):
-            msg.armed = bool(self._mavros_armed)
+            msg.armed = armed
         if hasattr(msg, "guided"):
-            msg.guided = self._mavros_mode == "GUIDED"
+            msg.guided = mode == "GUIDED"
         if hasattr(msg, "manual_input"):
             msg.manual_input = True
         if hasattr(msg, "mode"):
-            msg.mode = str(self._mavros_mode)
+            msg.mode = str(mode)
         if hasattr(msg, "system_status"):
             msg.system_status = 0
         return msg
 
-    def _build_vfr_hud(self, stamp, compatibility_altitude: float):
+    def _build_vfr_hud(self, stamp, depth_m: float):
         msg = self.VfrHud()
         if hasattr(msg, "header"):
             msg.header.stamp = stamp
             msg.header.frame_id = "base_link"
-        # Real robot compatibility quirk: vfr_hud.altitude is used downstream
-        # as a pressure-like passthrough input by vfr2atm_pressure.
         if hasattr(msg, "airspeed"):
             msg.airspeed = 0.0
         if hasattr(msg, "groundspeed"):
@@ -1091,7 +1213,9 @@ class Ros2Bridge:
         if hasattr(msg, "throttle"):
             msg.throttle = 0.0
         if hasattr(msg, "altitude"):
-            msg.altitude = float(compatibility_altitude)
+            # The real ArduSub/MAVROS bag exposes a small meter-scale value
+            # here. Keep this as depth/altitude in meters, not Bar30 pressure.
+            msg.altitude = float(depth_m)
         if hasattr(msg, "climb"):
             msg.climb = 0.0
         return msg
@@ -1246,8 +1370,10 @@ class Ros2Bridge:
         self._ping360_image_lookup = None
         if self.node is not None:
             settings = self._ping360.settings.as_dict() if self._ping360 is not None else {}
+            state = "on" if next_config.enabled else "off"
             self.node.get_logger().info(
                 "updated /ping360/config "
+                f"enabled={state} "
                 f"range={settings.get('effective_range_m', next_config.requested_range_m):.3f}m "
                 f"steps={settings.get('num_steps', next_config.num_steps)} "
                 f"sector={settings.get('start_angle_grad', next_config.start_angle_grad)}.."
@@ -1261,9 +1387,36 @@ class Ros2Bridge:
         up = float(np.clip(getattr(twist.linear, "z", 0.0), -1.0, 1.0))
         yaw = float(np.clip(getattr(twist.angular, "z", 0.0), -1.0, 1.0))
         if self._sitl_transport is not None:
+            if not self._sitl_cmd_vel_setpoint_enabled:
+                if not self._sitl_cmd_vel_blocked_warned and self.node is not None:
+                    self._sitl_cmd_vel_blocked_warned = True
+                    self.node.get_logger().warn(
+                        "/cmd_vel ignored in SITL closed-loop mode. "
+                        "Use /mavros/rc/override for ALT_HOLD validation, or set "
+                        "ROS2_UUV_SITL_CMD_VEL_SETPOINT_ENABLE=1 for guided-setpoint smoke tests."
+                    )
+                return
+            if not self._sitl_cmd_vel_warned and self.node is not None:
+                self._sitl_cmd_vel_warned = True
+                self.node.get_logger().warn(
+                    "/cmd_vel is forwarded as MAVLink body-velocity setpoint; "
+                    "ArduSub only accepts it in guided setpoint modes. "
+                    "Use /mavros/rc/override for ALT_HOLD replay."
+                )
             self._sitl_transport.send_body_velocity_setpoint(forward_mps=fwd, left_mps=left, up_mps=up, yaw_rate_rad_s=yaw)
             return
         self._handle_normalized_cmd(fwd, left, -yaw, -up)
+
+    def _on_mavros_manual_control(self, msg) -> None:
+        x = float(np.clip(getattr(msg, "x", 0.0), -1.0, 1.0))
+        y = float(np.clip(getattr(msg, "y", 0.0), -1.0, 1.0))
+        z = float(np.clip(getattr(msg, "z", 0.0), -1.0, 1.0))
+        r = float(np.clip(getattr(msg, "r", 0.0), -1.0, 1.0))
+        buttons = int(getattr(msg, "buttons", 0))
+        if self._sitl_transport is not None:
+            self._sitl_transport.send_manual_control(x=x, y=y, z=z, r=r, buttons=buttons)
+            return
+        self._handle_normalized_cmd(x, y, r, z)
 
     def _on_mavros_rc_override(self, msg) -> None:
         channels = getattr(msg, "channels", None)
@@ -1281,12 +1434,32 @@ class Ros2Bridge:
         if self._sitl_transport is None or self._mavros_rc_override_local_fallback:
             self._handle_normalized_cmd(fwd, sway, yaw, heave)
         try:
-            rc_in = self.OverrideRCIn()
-            for i in range(18):
-                rc_in.channels[i] = int(channels[i]) if i < len(channels) else 0
+            rc_in = self.RCIn()
+            header = getattr(rc_in, "header", None)
+            if header is not None and self.node is not None:
+                header.stamp = self.node.get_clock().now().to_msg()
+                if hasattr(header, "frame_id"):
+                    header.frame_id = "fcu"
+            rc_in.channels = [int(v) for v in list(channels)[:18]]
             self._mavros_last_rc_override = rc_in
         except Exception:
             self._mavros_last_rc_override = None
+
+    def _on_replay_rcout_override(self, msg) -> None:
+        if self._sitl_transport is None:
+            return
+        channels = [int(v) for v in list(getattr(msg, "channels", []))[:8]]
+        if len(channels) < 8:
+            return
+        try:
+            injector = getattr(self._sitl_transport, "inject_servo_pwm_values", None)
+            if callable(injector):
+                injector(channels, hold_s=1.0, source="replay_rcout")
+        except Exception as exc:
+            now = time.monotonic()
+            if now - self._mavros_last_rc_override_warn_wall > 3.0:
+                print(f"[ros2] replay RCOUT override rejected: {exc}", flush=True)
+                self._mavros_last_rc_override_warn_wall = now
 
     def _on_sitl_servo_output_for_ros(self, pwm_values: list[int]) -> None:
         if not self._mavros_surface_enabled or self.RCOut is None:
@@ -1337,6 +1510,29 @@ class Ros2Bridge:
 
     def _on_mavros_cmd_arming(self, request, response):
         arm_value = bool(getattr(request, "value", False))
+        guard_left_s = self._arm_mode_boot_guard_s - (time.monotonic() - self._startup_wall)
+        if arm_value and guard_left_s > 0.0:
+            print(
+                f"[bridge] /mavros/cmd/arming ignored during boot guard "
+                f"({guard_left_s:.1f}s left, requested armed=True)",
+                flush=True,
+            )
+            if hasattr(response, "success"):
+                response.success = False
+            if hasattr(response, "result"):
+                response.result = 1
+            return response
+        if not self._mavros_forward_arm_mode:
+            print(
+                f"[bridge] /mavros/cmd/arming ignored by ROS2_UUV_MAVROS_FORWARD_ARM_MODE=0 "
+                f"(requested armed={arm_value})",
+                flush=True,
+            )
+            if hasattr(response, "success"):
+                response.success = False
+            if hasattr(response, "result"):
+                response.result = 1
+            return response
         forward_ok = True
         if self._sitl_transport is not None:
             forward_ok = bool(self._sitl_transport.send_arm_command(arm_value))
@@ -1350,6 +1546,29 @@ class Ros2Bridge:
 
     def _on_mavros_set_mode(self, request, response):
         mode = str(getattr(request, "custom_mode", ""))
+        guard_left_s = self._arm_mode_boot_guard_s - (time.monotonic() - self._startup_wall)
+        if mode and mode.upper() not in {"", "MANUAL"} and guard_left_s > 0.0:
+            print(
+                f"[bridge] /mavros/set_mode ignored during boot guard "
+                f"({guard_left_s:.1f}s left, requested mode={mode!r})",
+                flush=True,
+            )
+            if hasattr(response, "mode_sent"):
+                response.mode_sent = False
+            if hasattr(response, "success"):
+                response.success = False
+            return response
+        if not self._mavros_forward_arm_mode:
+            print(
+                f"[bridge] /mavros/set_mode ignored by ROS2_UUV_MAVROS_FORWARD_ARM_MODE=0 "
+                f"(requested mode={mode!r})",
+                flush=True,
+            )
+            if hasattr(response, "mode_sent"):
+                response.mode_sent = False
+            if hasattr(response, "success"):
+                response.success = False
+            return response
         forward_ok = True
         if mode:
             if self._sitl_transport is not None:
@@ -1386,6 +1605,46 @@ class Ros2Bridge:
     # ---------------------------------------------------------------------
     # State estimation helpers
     # ---------------------------------------------------------------------
+    def set_sitl_initial_depth_hold_active(self, active: bool) -> None:
+        active = bool(active)
+        previous = bool(self._sitl_initial_depth_hold_active)
+        self._sitl_initial_depth_hold_active = active
+        if previous != active:
+            self._sitl_bar30_prev_depth_m = None
+            self._sitl_bar30_prev_t = None
+            self._sitl_prev_vel_sim_t = None
+            self._sitl_prev_vel_enu = None
+            if not active and self._sitl_zero_vertical_feedback_after_hold_release_s > 0.0:
+                self._sitl_zero_vertical_feedback_until_wall = max(
+                    self._sitl_zero_vertical_feedback_until_wall,
+                    time.monotonic() + self._sitl_zero_vertical_feedback_after_hold_release_s,
+                )
+
+    def _sitl_vertical_feedback_zero_reason(self) -> str:
+        if self._sitl_initial_depth_hold_active:
+            return "initial_depth_hold"
+        if time.monotonic() < self._sitl_zero_vertical_feedback_until_wall:
+            return "post_initial_depth_release"
+        if (
+            self._sitl_zero_vertical_feedback_while_disarmed
+            and self._sitl_transport is not None
+            and not self._sitl_transport.vehicle_armed
+        ):
+            return "disarmed"
+        return ""
+
+    def _log_sitl_vertical_feedback_zero(self, reason: str) -> None:
+        if not reason:
+            return
+        now = time.monotonic()
+        if now - self._sitl_zero_vertical_feedback_last_log_wall < 2.0:
+            return
+        self._sitl_zero_vertical_feedback_last_log_wall = now
+        print(
+            f"[ros2_bridge] SITL vertical velocity feedback zeroed: reason={reason}",
+            flush=True,
+        )
+
     def _estimate_base_accel_enu(self, sim_t: float, base_vel_enu: np.ndarray) -> np.ndarray:
         accel_enu = np.zeros(3, dtype=np.float64)
         prev_t = self._sitl_prev_vel_sim_t
@@ -1409,6 +1668,15 @@ class Ros2Bridge:
         pressure_pa = self._pressure_abs_from_depth_m(depth_m, self._bar30_surface_pressure_pa, self._bar30_water_density, self._bar30_gravity)
         return VerticalEstimate(depth_m=depth_m, pressure_pa=pressure_pa, pos_ned=pos_ned, vel_ned=vel_ned, alt_m=-depth_m)
 
+    def _estimate_bar30_pressure_pa(self, bar30_pos_enu: np.ndarray, depth_bias_m: float = 0.0) -> float:
+        bar30_depth_m = float(max(0.0, -bar30_pos_enu[2] + float(depth_bias_m)))
+        return self._pressure_abs_from_depth_m(
+            bar30_depth_m,
+            self._bar30_surface_pressure_pa,
+            self._bar30_water_density,
+            self._bar30_gravity,
+        )
+
     def _site_world_pos_enu(self, data: mujoco.MjData, site_id: int, fallback_pos_enu: np.ndarray) -> np.ndarray:
         if site_id < 0:
             return fallback_pos_enu
@@ -1420,41 +1688,83 @@ class Ros2Bridge:
             pass
         return fallback_pos_enu
 
+    def _body_cvel_world_linear_velocity_enu(
+        self,
+        data: mujoco.MjData,
+        body_id: int,
+        body_rot_enu: np.ndarray,
+    ) -> np.ndarray:
+        try:
+            cvel = np.array(data.cvel[body_id], dtype=np.float64)
+            if cvel.size >= 6:
+                lin_local = cvel[3:6].copy()
+                if np.all(np.isfinite(lin_local)):
+                    return body_rot_enu @ lin_local
+        except Exception:
+            pass
+        return np.zeros(3, dtype=np.float64)
+
+    def _object_world_linear_velocity_enu(
+        self,
+        data: mujoco.MjData,
+        obj_type: int,
+        obj_id: int,
+        fallback_vel_enu: np.ndarray,
+    ) -> np.ndarray:
+        if obj_id >= 0:
+            try:
+                vel6 = np.zeros(6, dtype=np.float64)
+                mujoco.mj_objectVelocity(self.model, data, obj_type, obj_id, vel6, 0)
+                lin_enu = vel6[3:6].copy()
+                if np.all(np.isfinite(lin_enu)):
+                    return lin_enu
+            except Exception:
+                pass
+        return np.array(fallback_vel_enu, dtype=np.float64).copy()
+
     def _estimate_sitl_vertical(
         self,
-        base_vertical: VerticalEstimate,
+        base_pos_enu: np.ndarray,
+        base_vel_enu: np.ndarray,
         bar30_pos_enu: np.ndarray,
+        bar30_vel_enu: np.ndarray | None,
         sim_t: float,
     ) -> VerticalEstimate:
-        if self._sitl_vertical_source == "base":
-            return base_vertical
+        """Canonical vertical state for ArduSub SITL.
 
-        bar30_abs_depth_m = float(max(0.0, -bar30_pos_enu[2]))
-        if self._sitl_vertical_source == "bar30_relative":
-            if self._sitl_bar30_zero_depth_m is None:
-                self._sitl_bar30_zero_depth_m = bar30_abs_depth_m
-            depth_m = bar30_abs_depth_m - float(self._sitl_bar30_zero_depth_m)
-        else:
-            depth_m = bar30_abs_depth_m
+        ArduSub expects both JSON SITL velocity.z and ExternalNav VELZ in
+        local NED, where positive Z is down. POSZ is Baro on the real robot,
+        and the JSON backend derives its simulated water barometer from
+        position.z, so the Bar30 site depth is the only vertical position
+        source here.
+        """
+        bar30_abs_depth_m = float(max(0.0, -float(bar30_pos_enu[2])))
+        depth_m = float(max(0.0, bar30_abs_depth_m + self._sitl_depth_sensor_bias_m))
 
-        vel_d = float(base_vertical.vel_ned[2])
+        vel_d = float("nan")
+        if bar30_vel_enu is not None and np.all(np.isfinite(bar30_vel_enu)):
+            vel_d = float(-float(bar30_vel_enu[2]))
+
         prev_depth = self._sitl_bar30_prev_depth_m
         prev_t = self._sitl_bar30_prev_t
         if prev_depth is not None and prev_t is not None:
             dt = sim_t - float(prev_t)
-            if 1.0e-4 <= dt <= 0.2:
+            if 1.0e-4 <= dt <= 0.2 and (not np.isfinite(vel_d)):
                 candidate = (depth_m - float(prev_depth)) / dt
                 if np.isfinite(candidate):
                     vel_d = float(np.clip(candidate, -5.0, 5.0))
         self._sitl_bar30_prev_depth_m = depth_m
         self._sitl_bar30_prev_t = sim_t
 
-        pos_ned = base_vertical.pos_ned.copy()
-        vel_ned = base_vertical.vel_ned.copy()
+        if not np.isfinite(vel_d):
+            vel_d = float(-float(base_vel_enu[2]))
+
+        pos_ned = self._enu_to_ned @ np.asarray(base_pos_enu, dtype=np.float64)
+        vel_ned = self._enu_to_ned @ np.asarray(base_vel_enu, dtype=np.float64)
         pos_ned[2] = depth_m
         vel_ned[2] = vel_d
         pressure_pa = self._pressure_abs_from_depth_m(
-            bar30_abs_depth_m,
+            depth_m,
             self._bar30_surface_pressure_pa,
             self._bar30_water_density,
             self._bar30_gravity,
@@ -1481,13 +1791,17 @@ class Ros2Bridge:
         except Exception:
             return None
 
-        if acc_sensor_bmj is not None and np.all(np.isfinite(acc_sensor_bmj)):
-            specific_force_bmj = np.asarray(acc_sensor_bmj, dtype=np.float64)
-        else:
-            lin_acc_enu = self._estimate_base_accel_enu(sim_t, base_vel_enu)
-            lin_acc_bmj = base_rot_enu.T @ lin_acc_enu
-            gravity_bmj = base_rot_enu.T @ self._gravity_enu
-            specific_force_bmj = lin_acc_bmj - gravity_bmj
+        gravity_bmj = base_rot_enu.T @ self._gravity_enu
+        # Do not feed MuJoCo's accelerometer sensor directly into ArduPilot.
+        # Around artificial hold/release transitions the sensor can expose a
+        # solver qacc spike while the vehicle pose/velocity are still nearly
+        # static. ArduPilot's JSON backend expects accelerometer specific force,
+        # so derive it from the base_link velocity that is sent in the same JSON
+        # packet and subtract gravity. This keeps JSON velocity and IMU delta-v
+        # mutually consistent for EKF3.
+        lin_acc_enu = self._estimate_base_accel_enu(sim_t, base_vel_enu)
+        lin_acc_bmj = base_rot_enu.T @ lin_acc_enu
+        specific_force_bmj = lin_acc_bmj - gravity_bmj
         return np.nan_to_num(np.clip(specific_force_bmj, -self._imu_acc_clip_mps2, self._imu_acc_clip_mps2), nan=0.0, posinf=0.0, neginf=0.0)
 
     def _dvl_velocity_body(self, data: mujoco.MjData, dvl_vel_sensor: np.ndarray | None, gyro_bmj: np.ndarray | None) -> np.ndarray | None:
@@ -1568,6 +1882,10 @@ class Ros2Bridge:
             if self.cmd_active and (time.monotonic() - self.last_cmd_wall > self.cmd_timeout_s):
                 self._clear_cmd()
             return
+        now = time.monotonic()
+        if now + 1.0e-9 < self._ros_next_spin_wall:
+            return
+        self._ros_next_spin_wall = now + self._ros_spin_period_s
         try:
             if self._executor is None:
                 return
@@ -1602,11 +1920,24 @@ class Ros2Bridge:
             quat_base = np.array(data.xquat[self._base_id], dtype=np.float64)
         except Exception:
             return
-        try:
-            cvel = np.array(data.cvel[self._base_id], dtype=np.float64)
-            base_vel_enu = cvel[3:6].copy() if cvel.size >= 6 else np.zeros(3, dtype=np.float64)
-        except Exception:
+        cvel_fallback_enu = self._body_cvel_world_linear_velocity_enu(data, self._base_id, base_rot_enu)
+        base_vel_enu = self._object_world_linear_velocity_enu(
+            data,
+            mujoco.mjtObj.mjOBJ_BODY,
+            self._base_id,
+            cvel_fallback_enu,
+        )
+        zero_vertical_reason = self._sitl_vertical_feedback_zero_reason()
+        if self._sitl_initial_depth_hold_active:
             base_vel_enu = np.zeros(3, dtype=np.float64)
+            self._sitl_prev_vel_sim_t = sim_t
+            self._sitl_prev_vel_enu = base_vel_enu.copy()
+        elif zero_vertical_reason:
+            base_vel_enu = np.asarray(base_vel_enu, dtype=np.float64).copy()
+            base_vel_enu[2] = 0.0
+            self._sitl_prev_vel_sim_t = sim_t
+            self._sitl_prev_vel_enu = base_vel_enu.copy()
+            self._log_sitl_vertical_feedback_zero(zero_vertical_reason)
 
         gyro = self._sensor_slice(self.model, self.sensor_ids, "imu_gyro", data)
         acc_sensor = self._sensor_slice(self.model, self.sensor_ids, "imu_acc", data)
@@ -1629,11 +1960,50 @@ class Ros2Bridge:
             except Exception:
                 pass
         acc_bmj = self._specific_force_body(data, acc_sensor_bmj, base_vel_enu, sim_t)
+        if zero_vertical_reason:
+            if self._sitl_initial_depth_hold_active:
+                gyro_bmj = np.zeros(3, dtype=np.float64)
+            gravity_bmj = base_rot_enu.T @ self._gravity_enu
+            acc_bmj = -gravity_bmj
         dvl_vel_body_bmj = self._dvl_velocity_body(data, dvl_vel_sensor, gyro_bmj)
-        vertical_est = self._estimate_vertical_truth(base_pos_enu, base_vel_enu)
+        if self._sitl_initial_depth_hold_active:
+            dvl_vel_body_bmj = np.zeros(3, dtype=np.float64)
+        elif zero_vertical_reason and dvl_vel_body_bmj is not None:
+            dvl_vel_body_bmj = np.asarray(dvl_vel_body_bmj, dtype=np.float64).copy()
+            dvl_vel_body_bmj[2] = 0.0
         bar30_pos_enu = self._site_world_pos_enu(data, self._bar30_site_id, base_pos_enu)
-        sitl_vertical_est = self._estimate_sitl_vertical(vertical_est, bar30_pos_enu, sim_t)
-        bar30_pressure_pa = float(sitl_vertical_est.pressure_pa)
+        bar30_vel_enu = self._object_world_linear_velocity_enu(
+            data,
+            mujoco.mjtObj.mjOBJ_SITE,
+            self._bar30_site_id,
+            base_vel_enu,
+        )
+        if zero_vertical_reason:
+            bar30_vel_enu = np.asarray(bar30_vel_enu, dtype=np.float64).copy()
+            if self._sitl_initial_depth_hold_active:
+                bar30_vel_enu[:] = 0.0
+            else:
+                bar30_vel_enu[2] = 0.0
+            self._sitl_bar30_prev_depth_m = float(max(0.0, -bar30_pos_enu[2]))
+            self._sitl_bar30_prev_t = sim_t
+        sitl_vertical_est = self._estimate_sitl_vertical(base_pos_enu, base_vel_enu, bar30_pos_enu, bar30_vel_enu, sim_t)
+        if zero_vertical_reason:
+            sitl_vel_ned = sitl_vertical_est.vel_ned.copy()
+            sitl_vel_ned[2] = 0.0
+            sitl_vertical_est = VerticalEstimate(
+                depth_m=sitl_vertical_est.depth_m,
+                pressure_pa=sitl_vertical_est.pressure_pa,
+                pos_ned=sitl_vertical_est.pos_ned.copy(),
+                vel_ned=sitl_vel_ned,
+                alt_m=sitl_vertical_est.alt_m,
+            )
+        # /depth and /depth/pose represent the external Bar30-derived depth on
+        # the real robot, so publish the Bar30 site depth rather than base_link.
+        ros_bar30_depth_m = float(max(0.0, -bar30_pos_enu[2] + self._ros_depth_sensor_bias_m))
+        ros_depth_m = ros_bar30_depth_m
+        bar30_pressure_pa = float(
+            self._estimate_bar30_pressure_pa(bar30_pos_enu, self._ros_bar30_depth_sensor_bias_m)
+        )
 
         if self._sitl_transport is not None and gyro_bmj is not None and acc_bmj is not None:
             gyro_frd = self._bmj_to_frd @ gyro_bmj
@@ -1672,6 +2042,7 @@ class Ros2Bridge:
         acc_ros = self._bmj_to_flu @ acc_bmj if acc_bmj is not None else np.zeros(3, dtype=np.float64)
         dvl_vel_body_ros = self._bmj_to_flu @ dvl_vel_body_bmj if dvl_vel_body_bmj is not None else None
         dvl_vel_body_frd = self._bmj_to_frd @ dvl_vel_body_bmj if dvl_vel_body_bmj is not None else None
+        dvl_vel_dvl_frd = self._dvl_body_frd_to_dvl_frd @ dvl_vel_body_frd if dvl_vel_body_frd is not None else None
 
         # Integrate DVL odometry.
         if dvl_vel_body_bmj is not None:
@@ -1711,6 +2082,8 @@ class Ros2Bridge:
         mavros_atm_pressure_msg = None
         mavros_battery_msg = None
         mavros_local_pose_msg = None
+        mavros_local_vel_msg = None
+        mavros_local_odom_msg = None
         mavros_vision_pose_msg = None
         odom_local_msg = None
         rovio_odom_msg = None
@@ -1756,13 +2129,13 @@ class Ros2Bridge:
             nonlocal depth_msg
             if depth_msg is None:
                 depth_msg = self.Float32()
-                depth_msg.data = float(vertical_est.depth_m)
+                depth_msg.data = float(ros_depth_m)
             return depth_msg
 
         def get_depth_pose_msg():
             nonlocal depth_pose_msg
             if depth_pose_msg is None:
-                depth_pose_msg = self._build_depth_pose(stamp, vertical_est.depth_m)
+                depth_pose_msg = self._build_depth_pose(stamp, ros_depth_m)
             return depth_pose_msg
 
         def get_baro_msg():
@@ -1788,13 +2161,13 @@ class Ros2Bridge:
 
         def get_dvl_twist_msg():
             nonlocal dvl_twist_msg
-            if dvl_vel_body_frd is None:
+            if dvl_vel_dvl_frd is None:
                 return None
             if dvl_twist_msg is None:
                 dvl_twist_msg = self._build_twist_cov(
                     stamp,
                     "dvl",
-                    dvl_vel_body_frd,
+                    dvl_vel_dvl_frd,
                     linear_cov_diag=(4.696386440627975e-6, 1.173283067146258e-6, 1.566586860235475e-7),
                     angular_cov_diag=(0.0, 0.0, 0.0),
                 )
@@ -1817,7 +2190,7 @@ class Ros2Bridge:
         def get_mavros_vfr_hud_msg():
             nonlocal mavros_vfr_hud_msg
             if mavros_vfr_hud_msg is None:
-                mavros_vfr_hud_msg = self._build_vfr_hud(stamp, bar30_pressure_pa)
+                mavros_vfr_hud_msg = self._build_vfr_hud(stamp, ros_depth_m)
             return mavros_vfr_hud_msg
 
         def get_mavros_static_pressure_msg():
@@ -1843,6 +2216,26 @@ class Ros2Bridge:
             if mavros_local_pose_msg is None:
                 mavros_local_pose_msg = self._build_pose(stamp, "map", base_pos_enu, quat_ros)
             return mavros_local_pose_msg
+
+        def get_mavros_local_vel_msg():
+            nonlocal mavros_local_vel_msg
+            if mavros_local_vel_msg is None:
+                mavros_local_vel_msg = self._build_twist(stamp, "map", base_vel_enu)
+            return mavros_local_vel_msg
+
+        def get_mavros_local_odom_msg():
+            nonlocal mavros_local_odom_msg
+            if mavros_local_odom_msg is None:
+                mavros_local_odom_msg = self._build_odom(
+                    stamp,
+                    "map",
+                    "base_link",
+                    base_pos_enu,
+                    quat_ros,
+                    base_vel_enu,
+                    gyro_ros,
+                )
+            return mavros_local_odom_msg
 
         def get_mavros_vision_pose_msg():
             nonlocal mavros_vision_pose_msg
@@ -1900,7 +2293,7 @@ class Ros2Bridge:
         def get_dvl_data_msg():
             nonlocal dvl_data_msg
             if dvl_data_msg is None:
-                dvl_data_msg = self._build_dvl_msg(stamp, dvl_vel_body_ros, dvl_altitude_m)
+                dvl_data_msg = self._build_dvl_msg(stamp, dvl_vel_dvl_frd, dvl_altitude_m)
             return dvl_data_msg
 
         def get_dvl_pos_msg():
@@ -1957,12 +2350,38 @@ class Ros2Bridge:
             return ping360_echo_msg
 
         def get_ping360_status_msg():
-            nonlocal ping360_status_msg
-            sample = get_ping360_sample()
-            if sample is None:
+            nonlocal ping360_status_msg, ping360_sample
+            if sim_t + 1.0e-9 < self._ping360_status_next_t:
                 return None
+            self._ping360_status_next_t = sim_t + self._ping360_status_period_s
             if ping360_status_msg is None:
-                ping360_status_msg = self._build_ping360_status(stamp, sample)
+                if self._ping360 is None or not self._ping360.active:
+                    payload = {
+                        "sim_time_s": float(sim_t),
+                        "active": False,
+                        "enabled": bool(self._ping360_config.enabled),
+                        "site_present": bool(self._ping360_site_id >= 0),
+                        "updated": False,
+                        "settings": {
+                            "requested_range_m": float(self._ping360_config.requested_range_m),
+                            "num_steps": int(self._ping360_config.num_steps),
+                            "gain_setting": int(self._ping360_config.gain_setting),
+                            "interface_mode": str(self._ping360_config.interface_mode),
+                            "transmit_frequency_khz": int(self._ping360_config.transmit_frequency_khz),
+                            "start_angle_grad": int(self._ping360_config.start_angle_grad),
+                            "stop_angle_grad": int(self._ping360_config.stop_angle_grad),
+                        },
+                    }
+                elif ping360_sample is not None:
+                    payload = ping360_sample.status_dict()
+                    payload["updated"] = bool(ping360_sample.updated)
+                else:
+                    payload = self._ping360.status_dict(sim_t)
+                payload["enabled"] = bool(self._ping360_config.enabled)
+                ping360_status_msg = self._build_ping360_status(
+                    stamp,
+                    payload,
+                )
             return ping360_status_msg
 
         # Core topics.
@@ -1985,8 +2404,6 @@ class Ros2Bridge:
         if dvl_vel_body_ros is not None:
             jobs.add(self.pub_dvl_velocity, "/dvl/velocity", get_dvl_velocity_msg, on_demand=True)
             jobs.add(self.pub_dvl_twist, "/dvl/twist", get_dvl_twist_msg, on_demand=True)
-            if self._mavros_surface_enabled:
-                jobs.add(self.pub_mavros_local_vel, "/mavros/local_position/velocity_local", get_dvl_velocity_msg, on_demand=True)
         if dvl_altitude_m is not None:
             jobs.add(self.pub_dvl_altitude, "/dvl/altitude", get_dvl_altitude_msg, on_demand=True)
 
@@ -2002,11 +2419,12 @@ class Ros2Bridge:
             jobs.add(self.pub_mavros_imu_atm_pressure, "/mavros/imu/atm_pressure", get_mavros_atm_pressure_msg, on_demand=True)
             jobs.add(self.pub_mavros_battery, "/mavros/battery", get_mavros_battery_msg, on_demand=True)
             jobs.add(self.pub_mavros_local_pose, "/mavros/local_position/pose", get_mavros_local_pose_msg, on_demand=True)
+            jobs.add(self.pub_mavros_local_vel, "/mavros/local_position/velocity_local", get_mavros_local_vel_msg, on_demand=True)
             jobs.add(self.pub_mavros_vision_pose, "/mavros/vision_pose/pose", get_mavros_vision_pose_msg, on_demand=True)
 
         jobs.add(self.pub_dvl_odometry, "/dvl/odometry", get_odom_local_msg, on_demand=True)
         if self._mavros_surface_enabled:
-            jobs.add(self.pub_mavros_local_odom, "/mavros/local_position/odom", get_odom_local_msg, on_demand=True)
+            jobs.add(self.pub_mavros_local_odom, "/mavros/local_position/odom", get_mavros_local_odom_msg, on_demand=True)
 
         # /rovio/odometry compatibility.
         jobs.add(self.pub_rovio_odometry, "/rovio/odometry", get_rovio_odom_msg, on_demand=True)

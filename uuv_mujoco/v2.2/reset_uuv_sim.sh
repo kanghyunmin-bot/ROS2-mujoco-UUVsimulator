@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Reset helper for local SITL <-> MuJoCo <-> QGC stack.
+# Reset helper for local SITL <-> MuJoCo stack.
 # - Stops MuJoCo runtime, ArduPilot SITL, MAVProxy.
-# - Optionally stops QGroundControl.
+# - Keeps QGroundControl running so it can reconnect immediately.
 # - Prints remaining listeners on key UDP ports.
 
-WITH_QGC_STOP=0
 WIPE_EEPROM=0
+SIM_ONLY=0
 
 usage() {
   cat <<'USAGE'
 Usage: ./reset_uuv_sim.sh [options]
 
 Options:
-  --with-qgc-stop   Also stop QGroundControl
   --wipe-eeprom     Remove ardupilot/eeprom.bin to reset ArduSub params
+  --sim-only        Stop only MuJoCo/SITL/MAVProxy; keep QGC and ROS/MAVROS nodes
   -h, --help        Show this help
 
 Environment:
@@ -26,12 +26,12 @@ USAGE
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --with-qgc-stop)
-      WITH_QGC_STOP=1
-      shift
-      ;;
     --wipe-eeprom)
       WIPE_EEPROM=1
+      shift
+      ;;
+    --sim-only)
+      SIM_ONLY=1
       shift
       ;;
     -h|--help)
@@ -114,19 +114,21 @@ kill_pattern() {
 echo "[reset] workspace: ${WORKSPACE_DIR}"
 
 kill_pattern "MuJoCo runtime" "run_urdf_full.py"
+kill_pattern "Start wrapper" "start_sitl_mujoco_mj311.sh"
 kill_pattern "Launch wrapper" "launch_uuv_sim.sh"
 kill_pattern "sim_vehicle" "Tools/autotest/sim_vehicle.py"
 kill_pattern "ArduSub SITL" "build/sitl/bin/ardusub"
 kill_pattern "MAVProxy" "mavproxy.py"
-kill_pattern "MAVROS launch" "rov_start.launch.py"
-kill_pattern "mavros_node" "mavros_node"
-kill_pattern "joy2mavros" "joy2mavros"
-kill_pattern "vfr2atm_pressure" "vfr2atm_pressure"
-kill_pattern "odom2mavros" "odom2mavros"
-kill_pattern "dronecan2mavros_battery" "dronecan2mavros_battery"
+kill_pattern "SITL serial0 keepalive" "sitl_serial0_keepalive"
 
-if [[ "${WITH_QGC_STOP}" -eq 1 ]]; then
-  kill_pattern "QGroundControl" "QGroundControl"
+if [[ "${SIM_ONLY}" -eq 0 ]]; then
+  kill_pattern "MAVROS launch" "rov_start.launch.py"
+  kill_pattern "mavros_node" "mavros_node"
+  kill_pattern "joy2mavros" "joy2mavros"
+  kill_pattern "vfr2atm_pressure" "vfr2atm_pressure"
+  kill_pattern "odom2mavros" "odom2mavros"
+  kill_pattern "dronecan2mavros_battery" "dronecan2mavros_battery"
+
 fi
 
 if [[ "${WIPE_EEPROM}" -eq 1 ]]; then
@@ -138,12 +140,12 @@ if [[ "${WIPE_EEPROM}" -eq 1 ]]; then
   fi
 fi
 
-echo "[reset] UDP listener check (14550/14551/14660/9002/9003)"
+echo "[reset] UDP listener check (14550/14551/14660/14661/9002/9003)"
 if command -v lsof >/dev/null 2>&1; then
   if command -v rg >/dev/null 2>&1; then
-    lsof -nP -iUDP | rg '14550|14551|14660|9002|9003' || true
+    lsof -nP -iUDP | rg '14550|14551|14660|14661|9002|9003' || true
   else
-    lsof -nP -iUDP | grep -E '14550|14551|14660|9002|9003' || true
+    lsof -nP -iUDP | grep -E '14550|14551|14660|14661|9002|9003' || true
   fi
 else
   echo "[reset] lsof not found; skipping port check"

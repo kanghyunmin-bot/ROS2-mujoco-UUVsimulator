@@ -1,0 +1,219 @@
+{
+  "measurement_date": "2026-04-06",
+  "actual_bag_paths": {
+    "legacy_mode_path": "/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/metrics/report_inputs/measurement_legacy_mode_path_latest_v30.json",
+    "current_mode_path": "/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/metrics/report_inputs/measurement_current_mode_path_latest_v30.json",
+    "current_step_summary": "/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/metrics/report_inputs/measurement_summary_current_heavefix_latest_v30.json"
+  },
+  "averages": {
+    "legacy": {
+      "path_m": 0.46311124863683983,
+      "horizontal_m": 0.4481151509180989,
+      "pitch_deg": 20.558806532498174,
+      "roll_deg": 0.2861860400140338
+    },
+    "current": {
+      "path_m": 0.12203001994198986,
+      "horizontal_m": 0.02733617476091533,
+      "pitch_deg": 0.08847652891277144,
+      "roll_deg": 0.08094543309745521
+    }
+  },
+  "reductions_percent": {
+    "path_m": 73.64995553418683,
+    "horizontal_m": 93.8997432457017,
+    "pitch_deg": 99.56964170671623,
+    "roll_deg": 71.7157995919417
+  },
+  "scene": {
+    "fluid_geoms": [
+      {
+        "name": "fluid_center_enclosure",
+        "pos": [
+          -0.005,
+          0.0,
+          0.02
+        ],
+        "size": [
+          0.205,
+          0.115,
+          0.13
+        ],
+        "fluidcoef": [
+          0.62,
+          0.175,
+          1.8,
+          0.0,
+          0.0
+        ],
+        "volume_m3": 0.01283759478011909
+      },
+      {
+        "name": "fluid_port_lower_body",
+        "pos": [
+          0.0,
+          0.208,
+          0.02
+        ],
+        "size": [
+          0.37,
+          0.08,
+          0.12
+        ],
+        "fluidcoef": [
+          0.52,
+          0.15,
+          1.3,
+          0.0,
+          0.0
+        ],
+        "volume_m3": 0.01487858280740126
+      },
+      {
+        "name": "fluid_starboard_lower_body",
+        "pos": [
+          0.0,
+          -0.208,
+          0.02
+        ],
+        "size": [
+          0.37,
+          0.08,
+          0.12
+        ],
+        "fluidcoef": [
+          0.52,
+          0.15,
+          1.3,
+          0.0,
+          0.0
+        ],
+        "volume_m3": 0.01487858280740126
+      }
+    ],
+    "proxy_volume_total_m3": 0.04259476039492161,
+    "neutral_volume_m3": 0.015
+  },
+  "runtime_mass_properties": {
+    "legacy": {
+      "mass_kg": 15.0,
+      "com_m": [
+        -0.002,
+        0.0,
+        0.026999999999999993
+      ],
+      "cob_m": [
+        -0.014000000000000009,
+        0.00010000000000000286,
+        0.05
+      ],
+      "inertia_raw_kgm2": [
+        0.4733759999999999,
+        0.37023,
+        0.7393259999999999
+      ],
+      "inertia_scaled_kgm2": [
+        0.4733759999999999,
+        0.37023,
+        0.7393259999999999
+      ]
+    },
+    "current": {
+      "mass_kg": 15.0,
+      "com_m": [
+        -0.002,
+        0.0,
+        0.026999999999999993
+      ],
+      "cob_m": [
+        -0.0020000000000000104,
+        0.00010000000000000286,
+        0.05
+      ],
+      "inertia_raw_kgm2": [
+        0.4733759999999999,
+        0.37023,
+        0.7393259999999999
+      ],
+      "inertia_scaled_kgm2": [
+        4.733759999999999e-07,
+        3.7023e-07,
+        7.393259999999999e-07
+      ]
+    }
+  },
+  "sitl_params": {
+    "AHRS_EKF_TYPE": "10",
+    "GPS1_TYPE": "0",
+    "GPS2_TYPE": "0",
+    "RNGFND1_TYPE": "100",
+    "THR_DZ": "100",
+    "PILOT_SPEED_UP": "180",
+    "PILOT_SPEED_DN": "140",
+    "PILOT_ACCEL_Z": "220"
+  },
+  "current_step_summary": {
+    "manual_forward_step": {
+      "surge_mps": {
+        "mean": 0.4735210995827592,
+        "max": 0.5574627573725487,
+        "min": 7.402147344931021e-05,
+        "final": 0.5566191459356084
+      }
+    },
+    "stabilize_forward_step": {
+      "surge_mps": {
+        "mean": 0.4233749279675259,
+        "max": 0.5574963063395889,
+        "min": 0.004539953629057722,
+        "final": 0.10477933767434731
+      },
+      "roll_rad": {
+        "mean": 0.003414062143398832,
+        "max": 0.014590779019308464,
+        "min": 0.0007376961001957099,
+        "final": 0.014590779019308464
+      },
+      "pitch_rad": {
+        "mean": 0.14325778164649594,
+        "max": 0.23826919047819195,
+        "min": 0.0030500083734468783,
+        "final": 0.20501179331169042
+      }
+    },
+    "alt_hold_forward_step": {
+      "surge_mps": {
+        "mean": 0.004231444120958635,
+        "max": 0.1476533973324192,
+        "min": -0.021779940915549932,
+        "final": -0.006257593521649326
+      }
+    },
+    "manual_yaw_step": {
+      "yaw_rate_rad_s": {
+        "mean": -0.7423330767316285,
+        "max": 0.004046001193924028,
+        "min": -0.7897020246978945,
+        "final": -0.78487451153144
+      }
+    },
+    "alt_hold_heave_step": {
+      "depth_m": {
+        "mean": 0.03998636794643851,
+        "max": 0.0823979601264,
+        "min": 0.016631007194519043,
+        "final": 0.029520399868488312,
+        "delta": -0.05287756025791168
+      }
+    },
+    "manual_heave_step": {
+      "depth_m": {
+        "mean": 0.03991716913424614,
+        "max": 0.07689468562602997,
+        "min": 0.01704574190080166,
+        "final": 0.034400418400764465,
+        "delta": -0.042338959872722626
+      }
+    }
+  }
+}

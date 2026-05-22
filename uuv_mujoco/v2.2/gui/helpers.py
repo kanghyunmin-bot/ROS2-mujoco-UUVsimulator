@@ -94,6 +94,77 @@ def axis_to_pwm(value: float) -> int:
     return int(round(RC_NEUTRAL_PWM + clamp_axis(value) * RC_PWM_SPAN))
 
 
+def effective_js_gain(
+    *,
+    gain_default: float = REAL_JS_GAIN_DEFAULT,
+    gain_min: float = REAL_JS_GAIN_MIN,
+    gain_max: float = REAL_JS_GAIN_MAX,
+    gain_steps: int = REAL_JS_GAIN_STEPS,
+) -> float:
+    """Mirror ArduSub joystick.cpp init_joystick() gain selection."""
+    steps = max(1, int(gain_steps))
+    default = float(gain_default)
+    min_gain = float(gain_min)
+    max_gain = float(gain_max)
+    if steps == 1 or (default < max_gain + 0.01 and default > min_gain - 0.01):
+        gain = clamp(default, min_gain, max_gain)
+    else:
+        gain = min_gain + (steps / 2.0 - 1.0) * (max_gain - min_gain) / float(steps - 1)
+    return clamp(gain, 0.1, 1.0)
+
+
+def manual_heave_axis_to_rc3_pwm(
+    value: float,
+    *,
+    gain: float | None = None,
+    throttle_gain: float = REAL_JS_THR_GAIN,
+) -> int:
+    """Mirror ArduSub MANUAL_CONTROL.z -> RC3 conversion for GUI diagnostics."""
+    gain = effective_js_gain() if gain is None else clamp(float(gain), 0.1, 1.0)
+    throttle_scale = 0.8 * gain * float(throttle_gain)
+    throttle_base = RC_NEUTRAL_PWM - 500.0 * throttle_scale
+    manual_z = 500.0 + clamp_axis(value) * 500.0
+    return int(round(clamp(manual_z * throttle_scale + throttle_base, REAL_RC3_MIN, REAL_RC3_MAX)))
+
+
+def althold_level_climb_rate_from_rc3_pwm(
+    rc3_pwm: float,
+    *,
+    gain: float | None = None,
+    rc_min: int = REAL_RC3_MIN,
+    rc_max: int = REAL_RC3_MAX,
+    rc_trim: int = REAL_RC3_TRIM,
+    rc_deadzone: int = REAL_RC3_DZ,
+    pilot_speed_up: float = REAL_PILOT_SPEED_UP,
+    pilot_speed_dn: float = REAL_PILOT_SPEED_DN,
+) -> float:
+    """Approximate ArduSub ALT_HOLD target climb rate for a level vehicle."""
+    rc3_pwm = float(rc3_pwm)
+    if rc3_pwm < rc_trim:
+        norm = 0.0 if rc_min >= rc_trim else (rc3_pwm - rc_trim) / float(rc_trim - rc_min)
+    else:
+        norm = 0.0 if rc_max <= rc_trim else (rc3_pwm - rc_trim) / float(rc_max - rc_trim)
+    norm = clamp(norm, -1.0, 1.0)
+    earth_z = 2.0 * (-0.5 + norm)
+    throttle_control = 500.0 + float(pilot_speed_up) * earth_z
+    center = (float(rc_max) + float(rc_min)) / 2.0
+    target_climb = throttle_control - center + 1000.0
+    gain = effective_js_gain() if gain is None else clamp(float(gain), 0.1, 1.0)
+    if abs(target_climb) < float(rc_deadzone) * gain:
+        target_climb = 0.0
+    speed_down = abs(float(pilot_speed_dn)) if float(pilot_speed_dn) != 0.0 else abs(float(pilot_speed_up))
+    return clamp(target_climb, -speed_down, float(pilot_speed_up))
+
+
+def pilot_heave_axis_summary(value: float, *, mode: str = GUI_PILOT_CONTROL_MODE) -> tuple[int, float]:
+    """Return expected RC3 PWM and level ALT_HOLD climb target for GUI stick heave."""
+    if mode == PILOT_CONTROL_RC_OVERRIDE:
+        rc3_pwm = axis_to_pwm(value)
+    else:
+        rc3_pwm = manual_heave_axis_to_rc3_pwm(value)
+    return rc3_pwm, althold_level_climb_rate_from_rc3_pwm(rc3_pwm)
+
+
 def gui_rc_to_override_axes(
     *,
     forward: float,

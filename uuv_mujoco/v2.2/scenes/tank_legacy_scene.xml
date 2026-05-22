@@ -44,8 +44,8 @@
     <geom name="pool_wall_nx" type="box" pos="-11.03 0 -0.66" size="0.05 5.53 0.66" rgba="0.7 0.7 0.7 1" />
     <geom name="pool_wall_py" type="box" pos="0 5.53 -0.66" size="11.08 0.05 0.66" rgba="0.7 0.7 0.7 1" />
     <geom name="pool_wall_ny" type="box" pos="0 -5.53 -0.66" size="11.08 0.05 0.66" rgba="0.7 0.7 0.7 1" />
-    <geom name="water_vis" type="box" pos="0 0 -0.66" size="10.98 5.48 0.66" rgba="0.05 0.45 0.95 0.23" contype="0" conaffinity="0" group="0" />
-    <geom name="water_surface" type="box" pos="0 0 0.004" size="10.98 5.48 0.004" rgba="0.45 0.85 1.00 0.38" contype="0" conaffinity="0" group="0" />
+    <geom name="water_vis" type="box" pos="0 0 -0.66" size="10.98 5.48 0.66" rgba="0.05 0.45 0.95 0.23" contype="0" conaffinity="0" group="5" />
+    <geom name="water_surface" type="box" pos="0 0 0.004" size="10.98 5.48 0.004" rgba="0.45 0.85 1.00 0.38" contype="0" conaffinity="0" group="5" />
 
     <body name="base_link" pos="0 0 -0.45" quat="1 0 0 0">
       <inertial pos="-0.0015 0 0.03" quat="1 0 0 0" mass="15" diaginertia="0.524 0.370 0.804" />
@@ -101,36 +101,36 @@
 
       <body name="prop_ver_lf" pos="0.16 0.2345 -0.078408" quat="0 -1 0 0">
         <joint name="prop_ver_lf_j" type="hinge" axis="0 0 1" damping="0.01" />
-        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="1" />
       </body>
       <body name="prop_ver_lr" pos="-0.16 0.2345 -0.078408" quat="0 -1 0 0">
         <joint name="prop_ver_lr_j" type="hinge" axis="0 0 1" damping="0.01" />
-        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="1" />
       </body>
       <body name="prop_ver_rf" pos="0.16 -0.2345 -0.078408" quat="0 -1 0 0">
         <joint name="prop_ver_rf_j" type="hinge" axis="0 0 1" damping="0.01" />
-        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="1" />
       </body>
       <body name="prop_ver_rr" pos="-0.16 -0.2345 -0.078408" quat="0 -1 0 0">
         <joint name="prop_ver_rr_j" type="hinge" axis="0 0 1" damping="0.01" />
-        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="1" />
       </body>
 
       <body name="prop_yaw_lf" pos="0.09015 0.183144 0.03" quat="0.2837635 -0.2837635 0.6476714 -0.6476714">
         <joint name="prop_yaw_lf_j" type="hinge" axis="0 0 1" damping="0.01" />
-        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="1" />
       </body>
       <body name="prop_yaw_lr" pos="-0.09015 0.183144 0.03" quat="0.6532818 -0.6532818 0.2705974 -0.2705974">
         <joint name="prop_yaw_lr_j" type="hinge" axis="0 0 1" damping="0.01" />
-        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="1" />
       </body>
       <body name="prop_yaw_rf" pos="0.09015 -0.183144 0.03" quat="0.6532818 -0.6532818 0.2705974 -0.2705974">
         <joint name="prop_yaw_rf_j" type="hinge" axis="0 0 1" damping="0.01" />
-        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="1" />
       </body>
       <body name="prop_yaw_rr" pos="-0.09015 -0.183144 0.03" quat="0.2697839 -0.2697839 0.6536181 -0.6536181">
         <joint name="prop_yaw_rr_j" type="hinge" axis="0 0 1" damping="0.01" />
-        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="1" />
       </body>
     </body>
   </worldbody>

@@ -1,0 +1,97 @@
+{
+  "current_profile_snapshot": {
+    "thruster_force_max": 32.0,
+    "vertical_thruster_gain_scale": 1.45,
+    "yaw_torque_scale": 1.5,
+    "buoyancy_scale": 1.002,
+    "cob_torque_scale": 1.0,
+    "cob_x_offset": 0.009,
+    "cob_z_offset": 0.01
+  },
+  "thruster_model_snapshot": {
+    "deadzone": 0.002,
+    "tau_up": 0.04,
+    "tau_down": 0.06,
+    "reverse_asymmetry": 0.7,
+    "gain_scale_all": 2.9,
+    "command_limit": 1.0,
+    "forward_poly": [
+      0.0,
+      1.9,
+      4.8,
+      11.8
+    ],
+    "reverse_poly": [
+      0.0,
+      1.4,
+      3.5,
+      9.4
+    ]
+  },
+  "comparison_commands": {
+    "forward_cmd_norm": 0.5,
+    "heave_cmd_norm": 0.023
+  },
+  "actual_reference": {
+    "forward_peak_surge_mps": 0.5574963063395889,
+    "forward_peak_pitch_deg": 13.6518190023991,
+    "forward_peak_roll_deg": 0.8359900576144053,
+    "heave_depth_delta_mm": 42.338959872722626
+  },
+  "variants": {
+    "center": {
+      "variant": "center",
+      "forward_step": {
+        "peak_surge_mps": 0.5856761031484984,
+        "peak_pitch_deg": 67.75141160761937,
+        "peak_roll_deg": 0.3389366660510695,
+        "depth_delta_mm": 133.3985147894466
+      },
+      "heave_step": {
+        "peak_surge_mps": 0.029506161010459206,
+        "peak_pitch_deg": 39.33566476493968,
+        "peak_roll_deg": 0.0851461610489288,
+        "depth_delta_mm": 91.48058389238095
+      },
+      "attitude_release": {
+        "initial_angle_norm_deg": 11.6619037896906,
+        "rms_angle_norm_deg": 31.54273450656323,
+        "settling_time_s": 5.998
+      },
+      "actual_gap_percent": {
+        "surge_gap_pct": 5.054705562792421,
+        "pitch_gap_pct": 396.28120322803204,
+        "roll_gap_pct": 59.4568544250078,
+        "heave_gap_pct": 116.06714989547582
+      },
+      "actual_gap_index_pct": 144.21497827782702
+    },
+    "four_point": {
+      "variant": "four_point",
+      "forward_step": {
+        "peak_surge_mps": 0.6467217497328696,
+        "peak_pitch_deg": 20.11917793156899,
+        "peak_roll_deg": 2.329301278671809,
+        "depth_delta_mm": 179.97603046293077
+      },
+      "heave_step": {
+        "peak_surge_mps": 0.00045564143824229045,
+        "peak_pitch_deg": 0.33253485125061033,
+        "peak_roll_deg": 0.23339190592743825,
+        "depth_delta_mm": 166.19823723542166
+      },
+      "attitude_release": {
+        "initial_angle_norm_deg": 11.6619037896906,
+        "rms_angle_norm_deg": 2.3887649132028663,
+        "settling_time_s": 0.68
+      },
+      "actual_gap_percent": {
+        "surge_gap_pct": 16.00466987469699,
+        "pitch_gap_pct": 47.37360587650153,
+        "roll_gap_pct": 178.6278685321618,
+        "heave_gap_pct": 292.5420882682024
+      },
+      "actual_gap_index_pct": 133.63705813789068
+    }
+  }
+}

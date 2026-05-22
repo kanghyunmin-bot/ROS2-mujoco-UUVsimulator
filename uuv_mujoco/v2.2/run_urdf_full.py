@@ -5,7 +5,9 @@ ROS2 publishing in a single entrypoint so that model tuning is reproducible.
 """
 
 import argparse
+import fnmatch
 import json
+import math
 import os
 import platform
 import threading
@@ -44,6 +46,13 @@ CONFIG_DIR = BASE_DIR / "config"
 MODEL_PATH = SCENES_DIR / "tank_current_scene.xml"
 PROFILE_PATH = CONFIG_DIR / "sim_profiles.json"
 THRUSTER_PERF_PATH = CONFIG_DIR / "thruster_performance.json"
+
+
+def _env_float(name: str, default: float) -> float:
+    try:
+        return float(os.environ.get(name, default))
+    except (TypeError, ValueError):
+        return float(default)
 
 
 def main() -> None:
@@ -89,6 +98,14 @@ def main() -> None:
         "--disable-thruster-perf",
         action="store_true",
         help="Force linear thruster mapping and ignore performance curve JSON",
+    )
+    parser.add_argument(
+        "--thruster-perf-direct",
+        action="store_true",
+        help=(
+            "When the performance curve is active, map raw normalized PWM directly "
+            "to force and bypass legacy command shaping/gain scaling."
+        ),
     )
     parser.add_argument(
         "--fluid-model",
@@ -211,7 +228,7 @@ def main() -> None:
     parser.add_argument(
         "--ros2-sensor-hz",
         type=float,
-        default=120.0,
+        default=_env_float("UUV_ROS2_SENSOR_HZ", 60.0),
         help="ROS2 IMU/DVL publish rate (Hz)",
     )
     parser.add_argument(
@@ -264,7 +281,7 @@ def main() -> None:
     parser.add_argument(
         "--sitl-mavlink-servo-hz",
         type=float,
-        default=50.0,
+        default=_env_float("UUV_SITL_MAVLINK_SERVO_HZ", 25.0),
         help="Requested SERVO_OUTPUT_RAW rate over MAVLink (Hz).",
     )
     parser.add_argument(
@@ -282,8 +299,8 @@ def main() -> None:
     parser.add_argument(
         "--sitl-mavlink-source-sysid",
         type=int,
-        default=200,
-        help="Source sysid for MuJoCo MAVLink listener (use non-255 to avoid GCS collision).",
+        default=255,
+        help="Source sysid for MuJoCo MAVLink control messages. ArduSub accepts pilot input only from SYSID_MYGCS.",
     )
     parser.add_argument(
         "--sitl-mavlink-source-compid",
@@ -294,13 +311,17 @@ def main() -> None:
     parser.add_argument(
         "--sitl-servo-scale",
         type=float,
-        default=0.58,
-        help="Scale applied to direct-thruster normalized command from SITL PWM.",
+        # Legacy polynomial/gain tuned mode used default=0.58.
+        default=1.0,
+        help=(
+            "Scale applied to direct-thruster normalized command from SITL PWM "
+            "(default: 1.0; legacy polynomial/gain mode used 0.58)."
+        ),
     )
     parser.add_argument(
         "--thruster-loop-hz",
         type=float,
-        default=100.0,
+        default=_env_float("UUV_THRUSTER_LOOP_HZ", 80.0),
         help="Thruster force update rate (Hz), decoupled from physics timestep.",
     )
     parser.add_argument(
@@ -310,10 +331,24 @@ def main() -> None:
         help="Set the initial base_link depth below the water surface before runtime starts.",
     )
     parser.add_argument(
+        "--initial-rpy-rad",
+        type=float,
+        nargs=3,
+        metavar=("ROLL", "PITCH", "YAW"),
+        default=None,
+        help=(
+            "Set the initial base_link attitude as ROS/ENU roll, pitch, yaw in radians. "
+            "Useful for rosbag replays that start mid-run instead of from a level vehicle."
+        ),
+    )
+    parser.add_argument(
         "--initial-depth-hold-target-m",
         type=float,
         default=None,
-        help="Depth target used by /mujoco/switch_initial_depth_hold_to_target.",
+        help=(
+            "Deprecated compatibility value. Runtime depth target switching is disabled; "
+            "use --initial-depth-m to set the starting pose before sensors are published."
+        ),
     )
     parser.add_argument(
         "--hold-initial-depth-until-release",
@@ -321,9 +356,37 @@ def main() -> None:
         help="Pin the vehicle at the initial/target depth until /mujoco/release_initial_depth_hold is called.",
     )
     parser.add_argument(
+        "--release-linear-velocity-body",
+        type=float,
+        nargs=3,
+        metavar=("VX", "VY", "VZ"),
+        default=None,
+        help=(
+            "Body-frame linear velocity [m/s] applied when the artificial "
+            "initial-depth hold is released. Use this for rosbag replays that "
+            "start while the real vehicle is already moving."
+        ),
+    )
+    parser.add_argument(
         "--headless",
         action="store_true",
         help="Run real-time simulation loop without GLFW viewer",
+    )
+    parser.add_argument(
+        "--viewer-fps",
+        type=float,
+        default=_env_float("UUV_MUJOCO_VIEWER_FPS", 60.0),
+        help="Maximum passive MuJoCo viewer refresh rate in Hz.",
+    )
+    parser.add_argument(
+        "--viewer-debug",
+        action="store_true",
+        help="Draw heavy viewer debug overlays such as thruster arrows, bubbles, labels, and sensor markers",
+    )
+    parser.add_argument(
+        "--enable-viewer-pause",
+        action="store_true",
+        help="Allow the MuJoCo viewer spacebar/pause state to stop the simulation loop",
     )
     args = parser.parse_args()
 
@@ -393,6 +456,7 @@ def main() -> None:
     # Optional thruster PWM->force profile.
     perf_cfg = {
         "active": False,
+        "direct": bool(args.thruster_perf_direct),
         "requested_voltage": float(active_thruster_voltage),
         "selected_voltage": None,
         "pwm": np.array([], dtype=np.float64),
@@ -479,6 +543,12 @@ def main() -> None:
             f"(requested {requested}V)",
             flush=True,
         )
+        if perf_cfg.get("direct"):
+            print(
+                "[thruster perf] direct mode: raw PWM command -> T200 curve; "
+                "legacy polynomial shaping and thruster gain scaling bypassed",
+                flush=True,
+            )
 
     if not args.disable_thruster_perf:
         _load_thruster_performance(Path(args.thruster_perf_file).expanduser())
@@ -494,6 +564,16 @@ def main() -> None:
     scene_fluid_viscosity = float(model.opt.viscosity)
 
     fluidcoef_scale = _to_float_array(sim_profile.get("mujoco_fluidcoef_scale"))
+    fluid_geom_mask = (model.geom_fluid[:, 0] > 0.5) & np.any(
+        np.abs(model.geom_fluid[:, 1:6]) > 1e-12,
+        axis=1,
+    )
+    fluid_geom_ids = np.flatnonzero(fluid_geom_mask)
+
+    def _fluid_geom_name(geom_id: int) -> str:
+        name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, int(geom_id))
+        return name or f"geom_{geom_id}"
+
     if fluidcoef_scale is not None:
         if fluidcoef_scale.size != 5:
             print(
@@ -503,19 +583,51 @@ def main() -> None:
             )
         else:
             fluidcoef_scale = np.clip(fluidcoef_scale.astype(np.float64, copy=False), 0.0, 10.0)
-            fluid_geom_mask = (model.geom_fluid[:, 0] > 0.5) & np.any(
-                np.abs(model.geom_fluid[:, 1:6]) > 1e-12,
-                axis=1,
-            )
-            if np.any(fluid_geom_mask):
+            if fluid_geom_ids.size:
                 model.geom_fluid[fluid_geom_mask, 1:6] *= fluidcoef_scale.reshape(1, 5)
                 print(
                     "[physics] MuJoCo fluidcoef scale applied: "
-                    f"count={int(np.sum(fluid_geom_mask))}, "
+                    f"count={int(fluid_geom_ids.size)}, "
                     "coeff=(blunt, slender, angular, Kutta, Magnus)="
                     f"{np.array2string(fluidcoef_scale, precision=3)}",
                     flush=True,
                 )
+
+    fluidcoef_geom_scales = sim_profile.get("mujoco_fluidcoef_geom_scales")
+    if isinstance(fluidcoef_geom_scales, dict) and fluid_geom_ids.size:
+        fluid_geom_names = {int(geom_id): _fluid_geom_name(int(geom_id)) for geom_id in fluid_geom_ids}
+        for pattern, raw_scale in fluidcoef_geom_scales.items():
+            geom_scale = _to_float_array(raw_scale)
+            if geom_scale is None or geom_scale.size != 5:
+                print(
+                    "[physics] ignoring mujoco_fluidcoef_geom_scales "
+                    f"for {pattern!r}: expected 5 values "
+                    "(blunt, slender, angular, Kutta, Magnus)",
+                    flush=True,
+                )
+                continue
+            geom_scale = np.clip(geom_scale.astype(np.float64, copy=False), 0.0, 10.0)
+            matching_geom_ids = [
+                geom_id
+                for geom_id, geom_name in fluid_geom_names.items()
+                if fnmatch.fnmatchcase(geom_name, str(pattern))
+            ]
+            if not matching_geom_ids:
+                print(
+                    "[physics] warning: mujoco_fluidcoef_geom_scales pattern "
+                    f"{pattern!r} matched no fluid geoms",
+                    flush=True,
+                )
+                continue
+            model.geom_fluid[np.array(matching_geom_ids, dtype=np.int32), 1:6] *= geom_scale.reshape(1, 5)
+            print(
+                "[physics] MuJoCo fluidcoef per-geom scale applied: "
+                f"pattern={pattern!r}, count={len(matching_geom_ids)}, "
+                f"geoms={', '.join(fluid_geom_names[geom_id] for geom_id in matching_geom_ids)}, "
+                "coeff=(blunt, slender, angular, Kutta, Magnus)="
+                f"{np.array2string(geom_scale, precision=3)}",
+                flush=True,
+            )
 
     # Initialize derived state once before runtime loops so launch start poses
     # and sensor readings use valid base position.
@@ -532,6 +644,27 @@ def main() -> None:
     world_qvel_adr = int(model.jnt_dofadr[world_joint_id])
     water_surface_z = 0.0
 
+    def quat_wxyz_from_rpy_rad(roll: float, pitch: float, yaw: float) -> np.ndarray:
+        cr = math.cos(0.5 * float(roll))
+        sr = math.sin(0.5 * float(roll))
+        cp = math.cos(0.5 * float(pitch))
+        sp = math.sin(0.5 * float(pitch))
+        cy = math.cos(0.5 * float(yaw))
+        sy = math.sin(0.5 * float(yaw))
+        quat = np.array(
+            [
+                cr * cp * cy + sr * sp * sy,
+                sr * cp * cy - cr * sp * sy,
+                cr * sp * cy + sr * cp * sy,
+                cr * cp * sy - sr * sp * cy,
+            ],
+            dtype=np.float64,
+        )
+        norm = float(np.linalg.norm(quat))
+        if norm <= 0.0 or not np.isfinite(norm):
+            return np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        return quat / norm
+
     def base_origin_world() -> np.ndarray:
         """Shared rigid-body reference used by SITL and buoyancy/depth helpers."""
         return data.xpos[base_id].copy()
@@ -544,15 +677,30 @@ def main() -> None:
             data.qacc[world_qvel_adr : world_qvel_adr + 6] = 0.0
         mujoco.mj_forward(model, data)
 
+    def set_base_attitude_rpy(roll: float, pitch: float, yaw: float, reset_velocity: bool = True) -> None:
+        """Set the free body attitude from ROS/ENU roll, pitch, yaw."""
+        data.qpos[world_qpos_adr + 3 : world_qpos_adr + 7] = quat_wxyz_from_rpy_rad(roll, pitch, yaw)
+        if reset_velocity:
+            data.qvel[world_qvel_adr + 3 : world_qvel_adr + 6] = 0.0
+            data.qacc[world_qvel_adr : world_qvel_adr + 6] = 0.0
+        mujoco.mj_forward(model, data)
+
     initial_depth_hold = {
         "active": bool(args.hold_initial_depth_until_release),
         "depth_m": float(args.initial_depth_m) if args.initial_depth_m is not None else None,
-        "target_depth_m": (
-            float(args.initial_depth_hold_target_m)
-            if args.initial_depth_hold_target_m is not None
-            else (float(args.initial_depth_m) if args.initial_depth_m is not None else None)
+        "release_linear_velocity_body": (
+            np.asarray(args.release_linear_velocity_body, dtype=np.float64)
+            if args.release_linear_velocity_body is not None
+            else None
         ),
+        "pose_qpos": None,
     }
+
+    def capture_initial_depth_hold_pose(depth_m: float | None = None) -> None:
+        pose_qpos = data.qpos[world_qpos_adr : world_qpos_adr + 7].copy()
+        if depth_m is not None:
+            pose_qpos[2] = water_surface_z - float(depth_m)
+        initial_depth_hold["pose_qpos"] = pose_qpos
 
     if args.initial_depth_m is not None:
         set_base_depth(float(args.initial_depth_m))
@@ -566,6 +714,17 @@ def main() -> None:
             ),
             flush=True,
         )
+    if args.initial_rpy_rad is not None:
+        initial_rpy = np.asarray(args.initial_rpy_rad, dtype=np.float64)
+        if initial_rpy.shape == (3,) and np.all(np.isfinite(initial_rpy)):
+            set_base_attitude_rpy(float(initial_rpy[0]), float(initial_rpy[1]), float(initial_rpy[2]))
+            print(
+                "[runtime] initial attitude set: "
+                f"roll={initial_rpy[0]:+.4f} pitch={initial_rpy[1]:+.4f} yaw={initial_rpy[2]:+.4f} rad",
+                flush=True,
+            )
+    if args.initial_depth_m is not None:
+        capture_initial_depth_hold_pose(float(args.initial_depth_m))
 
     def apply_initial_depth_hold() -> None:
         if not initial_depth_hold["active"]:
@@ -573,7 +732,39 @@ def main() -> None:
         depth_m = initial_depth_hold["depth_m"]
         if depth_m is None:
             return
+        pose_qpos = initial_depth_hold.get("pose_qpos")
+        if pose_qpos is not None:
+            hold_pose = np.asarray(pose_qpos, dtype=np.float64).copy()
+            if hold_pose.shape == (7,) and np.all(np.isfinite(hold_pose)):
+                hold_pose[2] = water_surface_z - float(depth_m)
+                data.qpos[world_qpos_adr : world_qpos_adr + 7] = hold_pose
+                data.qvel[world_qvel_adr : world_qvel_adr + 6] = 0.0
+                data.qacc[world_qvel_adr : world_qvel_adr + 6] = 0.0
+                mujoco.mj_forward(model, data)
+                return
         set_base_depth(float(depth_m), reset_velocity=True)
+
+    def apply_release_linear_velocity() -> None:
+        velocity_body = initial_depth_hold.get("release_linear_velocity_body")
+        if velocity_body is None:
+            return
+        velocity_body = np.asarray(velocity_body, dtype=np.float64)
+        if velocity_body.shape != (3,) or not np.all(np.isfinite(velocity_body)):
+            return
+        base_rot = data.xmat[base_id].reshape(3, 3)
+        data.qvel[world_qvel_adr : world_qvel_adr + 3] = base_rot @ velocity_body
+        data.qacc[world_qvel_adr : world_qvel_adr + 6] = 0.0
+        mujoco.mj_forward(model, data)
+        print(
+            "[runtime] release linear velocity body set: "
+            f"{np.array2string(velocity_body, precision=4)} m/s",
+            flush=True,
+        )
+
+    def reset_initial_depth_release_state() -> None:
+        data.qvel[world_qvel_adr : world_qvel_adr + 6] = 0.0
+        data.qacc[world_qvel_adr : world_qvel_adr + 6] = 0.0
+        mujoco.mj_forward(model, data)
 
     # Build body-child table once so subtree mass can be computed robustly.
     body_children = [[] for _ in range(model.nbody)]
@@ -613,27 +804,30 @@ def main() -> None:
             2.0,
         )
     )
+    sitl_allow_direct_cmd = bool(int(os.getenv("ROS2_UUV_SITL_ALLOW_DIRECT_CMD", "0")))
+    if args.sitl and not sitl_allow_direct_cmd:
+        print(
+            "[control] SITL closed-loop authority: direct MuJoCo command fallback is disabled. "
+            "Set ROS2_UUV_SITL_ALLOW_DIRECT_CMD=1 only for smoke/debug.",
+            flush=True,
+        )
     cmd_lock = threading.Lock()
     stop_event = threading.Event()
     paused_flag = {"value": False}
-    viewer_control_mode = {"value": True}
-    show_thruster_labels = {"value": True}
+    show_viewer_debug = {"value": bool(args.viewer_debug)}
+    show_thruster_labels = {"value": bool(args.viewer_debug)}
     follow_camera = {"value": False}
     follow_camera_init = {"value": False}
-    show_sensor_overlay = {"value": not (platform.system() == "Darwin" and (args.ros2 or args.qgc_video or args.sitl))}
+    show_sensor_overlay = {"value": bool(args.viewer_debug)}
     camera_mode = {"value": "free"}  # free | follow | stereo_left | stereo_right
 
     def clamp(value: float, max_val: float) -> float:
         return max(-max_val, min(max_val, value))
 
-    def toggle_pause() -> None:
-        paused_flag["value"] = not paused_flag["value"]
-
-    def toggle_mode() -> None:
-        viewer_control_mode["value"] = not viewer_control_mode["value"]
-
     def toggle_thruster_labels() -> None:
         show_thruster_labels["value"] = not show_thruster_labels["value"]
+        if show_thruster_labels["value"]:
+            show_viewer_debug["value"] = True
 
     def toggle_follow_camera() -> None:
         follow_camera["value"] = not follow_camera["value"]
@@ -646,6 +840,8 @@ def main() -> None:
 
     def toggle_sensor_overlay() -> None:
         show_sensor_overlay["value"] = not show_sensor_overlay["value"]
+        if show_sensor_overlay["value"]:
+            show_viewer_debug["value"] = True
 
     def apply_ros_cmd(forward: float, sway: float, yaw: float, heave: float) -> None:
         with cmd_lock:
@@ -655,8 +851,6 @@ def main() -> None:
             cmd["yaw"] = clamp(yaw, max_val)
             cmd["heave"] = clamp(heave, max_val)
         ros_cmd_last_wall["value"] = time.monotonic()
-        # ROS2 command stream should directly drive the robot.
-        viewer_control_mode["value"] = False
 
     ros_bridge = None
     try:
@@ -699,7 +893,6 @@ def main() -> None:
                 ping360_overrides=ping360_overrides,
             )
             if enable_ros2:
-                viewer_control_mode["value"] = False
                 bridge_topics = (
                     "[bridge] enabled: /cmd_vel(TwistStamped) -> control, /imu/data, "
                     "/dvl/velocity, /dvl/twist, /dvl/odometry, /dvl/altitude, /dvl/data, /dvl/position, "
@@ -745,7 +938,6 @@ def main() -> None:
                     f"[bridge] SITL transport enabled (sensor=UDP JSON, servo={sitl_servo_mode}, ROS2 disabled).",
                     flush=True,
                 )
-                viewer_control_mode["value"] = False
     except Exception as exc:
         if args.sitl:
             raise SystemExit(
@@ -755,29 +947,22 @@ def main() -> None:
             print(f"[ros2] bridge init failed: {exc}", flush=True)
 
     initial_depth_services = []
-    if ros_bridge is not None and getattr(ros_bridge, "node", None) is not None:
+    if (
+        initial_depth_hold["active"]
+        and ros_bridge is not None
+        and getattr(ros_bridge, "node", None) is not None
+    ):
         try:
             from std_srvs.srv import Trigger
 
             def _release_initial_depth_hold(_request, response):
                 initial_depth_hold["active"] = False
+                reset_initial_depth_release_state()
+                apply_release_linear_velocity()
+                mujoco.mj_forward(model, data)
                 response.success = True
                 response.message = "initial depth hold released"
                 print("[runtime] initial depth hold released", flush=True)
-                return response
-
-            def _switch_initial_depth_hold_to_target(_request, response):
-                target_depth = initial_depth_hold["target_depth_m"]
-                if target_depth is None:
-                    response.success = False
-                    response.message = "no initial depth hold target configured"
-                    return response
-                initial_depth_hold["depth_m"] = float(target_depth)
-                initial_depth_hold["active"] = True
-                set_base_depth(float(target_depth), reset_velocity=True)
-                response.success = True
-                response.message = f"initial depth hold target set to {float(target_depth):.3f} m"
-                print(f"[runtime] initial depth hold target set: {float(target_depth):.3f} m", flush=True)
                 return response
 
             initial_depth_services.append(
@@ -787,22 +972,13 @@ def main() -> None:
                     _release_initial_depth_hold,
                 )
             )
-            initial_depth_services.append(
-                ros_bridge.node.create_service(
-                    Trigger,
-                    "/mujoco/switch_initial_depth_hold_to_target",
-                    _switch_initial_depth_hold_to_target,
-                )
+            print(
+                "[runtime] initial depth hold service enabled: "
+                "/mujoco/release_initial_depth_hold",
+                flush=True,
             )
-            if args.initial_depth_m is not None or args.hold_initial_depth_until_release:
-                print(
-                    "[runtime] initial depth services enabled: "
-                    "/mujoco/release_initial_depth_hold, "
-                    "/mujoco/switch_initial_depth_hold_to_target",
-                    flush=True,
-                )
         except Exception as exc:
-            print(f"[ros2] initial depth services unavailable: {exc}", flush=True)
+            print(f"[ros2] initial depth hold service unavailable: {exc}", flush=True)
 
     fluid_model = str(args.fluid_model)
     use_custom_hydrodynamics = fluid_model == "legacy"
@@ -830,13 +1006,13 @@ def main() -> None:
 
 
     if args.sitl:
-        print("[runtime] Local terminal/joystick control disabled in SITL mode (QGC remote control only).", flush=True)
+        print("[runtime] Local manual control path removed in SITL mode (QGC remote control only).", flush=True)
     else:
         print("[runtime] Manual keyboard/joystick path removed. Use ROS2 /cmd_vel or SITL/QGC control.", flush=True)
     if args.sitl and args.ros2:
         print(
-            f"[runtime] recent ROS direct commands (/cmd_vel or sim-bridge RC override) "
-            f"override SITL servo inputs for {ros_cmd_timeout_s:.2f}s.",
+            "[runtime] SITL RC override/manual-control topics are forwarded to "
+            "ArduSub; direct MuJoCo override is disabled unless explicitly enabled.",
             flush=True,
         )
 
@@ -1113,9 +1289,17 @@ def main() -> None:
         )
 
     all_thruster_names = list(PHYSICAL_VERTICAL_THRUSTERS + PHYSICAL_YAW_THRUSTERS)
+    thruster_site_ids = {
+        name: mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, f"thr_{name}")
+        for name in all_thruster_names
+    }
     thr_state = {name: 0.0 for name in all_thruster_names}
     thr_target = {name: 0.0 for name in all_thruster_names}
     thruster_scale = {name: 1.0 for name in all_thruster_names}
+    thruster_direct_scale = {name: 1.0 for name in all_thruster_names}
+    thruster_reverse_asymmetry = {name: None for name in all_thruster_names}
+    thruster_tau_up = {name: None for name in all_thruster_names}
+    thruster_tau_down = {name: None for name in all_thruster_names}
     thruster_force_cmd = {name: 0.0 for name in all_thruster_names}
     prop_phase = {name: 0.0 for name in all_thruster_names}
     prop_qpos_adr = {}
@@ -1143,6 +1327,7 @@ def main() -> None:
     }
 
     sitl_servo_cmd_norm = {name: 0.0 for name in all_thruster_names}
+    sitl_servo_pwm_values = [1500] * 8
     sitl_servo_last_wall = {"value": -1.0}
     sitl_servo_timeout_s = 0.8
     sitl_servo_scale = float(np.clip(args.sitl_servo_scale, 0.0, 2.0))
@@ -1158,12 +1343,17 @@ def main() -> None:
         servo_signs = list(ARDUSUB_VECTORED_6DOF_SERVO_SIGNS)
 
         def on_sitl_servo_packet(pwm_values: list[int]) -> None:
+            for idx in range(len(sitl_servo_pwm_values)):
+                sitl_servo_pwm_values[idx] = int(pwm_values[idx]) if idx < len(pwm_values) else 1500
             for thr_name in all_thruster_names:
                 sitl_servo_cmd_norm[thr_name] = 0.0
+            packet_commands = {thr_name: 0.0 for thr_name in all_thruster_names}
             for idx, thr_name in enumerate(raw_map):
                 if idx >= len(pwm_values):
                     break
                 norm = sitl_pwm_to_norm(int(pwm_values[idx])) * servo_signs[idx]
+                packet_commands[thr_name] = float(np.clip(norm, -1.0, 1.0))
+            for thr_name, norm in packet_commands.items():
                 sitl_servo_cmd_norm[thr_name] = float(np.clip(norm, -1.0, 1.0))
             sitl_servo_last_wall["value"] = time.monotonic()
 
@@ -1193,14 +1383,28 @@ def main() -> None:
                 "command_limit": 0.65,
                 "reaction_torque_gain": 0.012,
                 "gain_scale_all": 1.0,
+                "direct_gain_scale_all": 1.0,
             },
-            "per_thruster": {name: {"gain_scale": 1.0} for name in all_thruster_names},
+            "per_thruster": {
+                name: {
+                    "gain_scale": 1.0,
+                    "direct_gain_scale": 1.0,
+                    "reverse_asymmetry": None,
+                    "tau_up": None,
+                    "tau_down": None,
+                }
+                for name in all_thruster_names
+            },
         }
         thruster_params_path.write_text(json.dumps(payload, indent=2))
 
     def load_thruster_params() -> bool:
         for name in all_thruster_names:
             thruster_scale[name] = 1.0
+            thruster_direct_scale[name] = 1.0
+            thruster_reverse_asymmetry[name] = None
+            thruster_tau_up[name] = None
+            thruster_tau_down[name] = None
         if not thruster_params_path.exists():
             return False
         try:
@@ -1210,8 +1414,16 @@ def main() -> None:
         changed = False
         global_cfg = payload.get("global", {})
         global_gain_scale = 1.0
+        global_direct_gain_scale = 1.0
         if isinstance(global_cfg, dict):
-            for key in ("deadzone", "tau_up", "tau_down", "reverse_asymmetry", "command_limit", "reaction_torque_gain"):
+            for key in (
+                "deadzone",
+                "tau_up",
+                "tau_down",
+                "reverse_asymmetry",
+                "command_limit",
+                "reaction_torque_gain",
+            ):
                 value = global_cfg.get(key)
                 if isinstance(value, (int, float)):
                     thruster_global[key] = float(value)
@@ -1219,6 +1431,10 @@ def main() -> None:
             if isinstance(scale_all, (int, float)):
                 global_gain_scale = float(np.clip(float(scale_all), 0.1, 20.0))
                 thruster_global["gain_scale_all"] = global_gain_scale
+            direct_scale_all = global_cfg.get("direct_gain_scale_all")
+            if isinstance(direct_scale_all, (int, float)):
+                global_direct_gain_scale = float(np.clip(float(direct_scale_all), 0.1, 20.0))
+                thruster_global["direct_gain_scale_all"] = global_direct_gain_scale
             for key in ("forward_poly", "reverse_poly"):
                 coeffs = global_cfg.get(key)
                 if isinstance(coeffs, list) and coeffs:
@@ -1245,6 +1461,25 @@ def main() -> None:
             if abs(new_gain - thruster_scale[name]) > 1e-8:
                 changed = True
             thruster_scale[name] = new_gain
+            direct_gain = cfg.get("direct_gain_scale", 1.0)
+            if isinstance(direct_gain, (int, float)):
+                new_direct_gain = float(
+                    np.clip(float(direct_gain), 0.1, 20.0)
+                    * np.clip(global_direct_gain_scale, 0.1, 20.0)
+                )
+                new_direct_gain = float(np.clip(new_direct_gain, 0.1, 20.0))
+                if abs(new_direct_gain - thruster_direct_scale[name]) > 1e-8:
+                    changed = True
+                thruster_direct_scale[name] = new_direct_gain
+            reverse_asym = cfg.get("reverse_asymmetry")
+            if isinstance(reverse_asym, (int, float)):
+                thruster_reverse_asymmetry[name] = float(np.clip(float(reverse_asym), 0.1, 1.5))
+            tau_up = cfg.get("tau_up")
+            if isinstance(tau_up, (int, float)):
+                thruster_tau_up[name] = float(np.clip(float(tau_up), 1.0e-4, 2.0))
+            tau_down = cfg.get("tau_down")
+            if isinstance(tau_down, (int, float)):
+                thruster_tau_down[name] = float(np.clip(float(tau_down), 1.0e-4, 2.0))
         return changed
 
     ensure_thruster_params_file()
@@ -1257,9 +1492,61 @@ def main() -> None:
         f"reverse_asym={thruster_global['reverse_asymmetry']:.3f}, "
         f"command_limit={thruster_global['command_limit']:.3f}, "
         f"reaction_tau_gain={thruster_global['reaction_torque_gain']:.4f}, "
-        f"gain_scale_all={thruster_global['gain_scale_all']:.3f}",
+        f"gain_scale_all={thruster_global['gain_scale_all']:.3f}, "
+        f"direct_gain_scale_all={thruster_global['direct_gain_scale_all']:.3f}",
         flush=True,
     )
+    if perf_cfg.get("active") and perf_cfg.get("direct"):
+        direct_scale_overrides = [
+            f"{name}={float(thruster_direct_scale[name]):.3f}"
+            for name in all_thruster_names
+            if abs(float(thruster_direct_scale[name]) - 1.0) > 1e-8
+        ]
+        if direct_scale_overrides:
+            print(
+                "[thruster perf] direct curve gain overrides: "
+                + ", ".join(direct_scale_overrides),
+                flush=True,
+            )
+    yaw_reverse_asym = [
+        (
+            thruster_reverse_asymmetry[name]
+            if thruster_reverse_asymmetry[name] is not None
+            else thruster_global["reverse_asymmetry"]
+        )
+        for name in PHYSICAL_YAW_THRUSTERS
+    ]
+    if len(set(round(float(value), 6) for value in yaw_reverse_asym)) > 1 or abs(
+        float(yaw_reverse_asym[0]) - float(thruster_global["reverse_asymmetry"])
+    ) > 1e-8:
+        print(
+            "[thruster] yaw reverse asym override: "
+            + ", ".join(
+                f"{name}={float(value):.3f}"
+                for name, value in zip(PHYSICAL_YAW_THRUSTERS, yaw_reverse_asym)
+            ),
+            flush=True,
+        )
+    yaw_tau_pairs = [
+        (
+            thruster_tau_up[name] if thruster_tau_up[name] is not None else thruster_global["tau_up"],
+            thruster_tau_down[name] if thruster_tau_down[name] is not None else thruster_global["tau_down"],
+        )
+        for name in PHYSICAL_YAW_THRUSTERS
+    ]
+    if any(
+        abs(float(up) - float(thruster_global["tau_up"])) > 1e-8
+        or abs(float(down) - float(thruster_global["tau_down"])) > 1e-8
+        for up, down in yaw_tau_pairs
+    ):
+        print(
+            "[thruster] yaw dynamics override: "
+            + ", ".join(
+                f"{name}=up{float(up):.3f}/down{float(down):.3f}s"
+                for name, (up, down) in zip(PHYSICAL_YAW_THRUSTERS, yaw_tau_pairs)
+            ),
+            flush=True,
+        )
 
     # Upgraded underwater model: 6-DOF damping, added mass, current-relative flow,
     # and thruster dynamics layered on top of MuJoCo rigid-body physics.
@@ -1278,7 +1565,11 @@ def main() -> None:
     air_linear_drag = hydro_cfg.air_linear_drag
     air_angular_drag = hydro_cfg.air_angular_drag
     spin_gain = hydro_cfg.spin_gain
-    yaw_torque_scale = float(max(hydro_cfg.yaw_torque_scale, 0.0))
+    yaw_torque_scale_config = float(max(hydro_cfg.yaw_torque_scale, 0.0))
+    if perf_cfg.get("active") and perf_cfg.get("direct"):
+        yaw_torque_scale = 1.0
+    else:
+        yaw_torque_scale = yaw_torque_scale_config
     added_mass_diag = hydro_cfg.added_mass_diag.astype(np.float64, copy=True)
     linear_damping_diag = hydro_cfg.linear_damping_diag.astype(np.float64, copy=True)
     quadratic_damping_diag = hydro_cfg.quadratic_damping_diag.astype(np.float64, copy=True)
@@ -1318,7 +1609,14 @@ def main() -> None:
         f"full_heave_damping={full_heave_damping:.2f}",
         flush=True,
     )
-    print(f"[physics] yaw torque scale: {yaw_torque_scale:.3f}", flush=True)
+    if abs(yaw_torque_scale - yaw_torque_scale_config) > 1e-9:
+        print(
+            f"[physics] yaw torque scale: {yaw_torque_scale:.3f} "
+            f"(direct T200 mode bypassed configured {yaw_torque_scale_config:.3f})",
+            flush=True,
+        )
+    else:
+        print(f"[physics] yaw torque scale: {yaw_torque_scale:.3f}", flush=True)
     if use_custom_hydrodynamics:
         print(
             "[physics] hydro 6dof: "
@@ -1338,8 +1636,11 @@ def main() -> None:
             )
     else:
         print(
-            "[physics] legacy hydrodynamics disabled: profile now only supplies "
-            "hydrostatic buoyancy, CoB torque, and thruster tuning",
+            "[physics] current mode uses MuJoCo built-in fluidcoef; "
+            "profile 6DOF added_mass/linear_damping/quadratic_damping are inactive. "
+            "Active profile knobs here are hydrostatic buoyancy, CoB torque, "
+            "full_heave_damping, thruster tuning, mujoco_fluidcoef_scale, "
+            "and mujoco_fluidcoef_geom_scales.",
             flush=True,
         )
 
@@ -1385,6 +1686,47 @@ def main() -> None:
     last_buoy_point = np.zeros(3, dtype=np.float64)
     prev_rel_nu_body = np.zeros(6, dtype=np.float64)
     thruster_reaction_torque_world = np.zeros(3, dtype=np.float64)
+    last_thruster_force_body = np.zeros(3, dtype=np.float64)
+    last_thruster_torque_body = np.zeros(3, dtype=np.float64)
+    thruster_debug_path = os.environ.get("UUV_MJ_THRUSTER_DEBUG_CSV", "").strip()
+    thruster_debug_file = None
+    thruster_debug_next_t = {"value": 0.0}
+    if thruster_debug_path:
+        try:
+            debug_path = Path(thruster_debug_path).expanduser()
+            debug_path.parent.mkdir(parents=True, exist_ok=True)
+            thruster_debug_file = debug_path.open("w", encoding="utf-8", buffering=1)
+            header = [
+                "wall_mono_s",
+                "sim_time",
+                "lin_vel_body_x",
+                "lin_vel_body_y",
+                "lin_vel_body_z",
+                "ang_vel_body_x",
+                "ang_vel_body_y",
+                "ang_vel_body_z",
+                "thr_force_body_x",
+                "thr_force_body_y",
+                "thr_force_body_z",
+                "thr_torque_body_x",
+                "thr_torque_body_y",
+                "thr_torque_body_z",
+            ]
+            header.extend(f"sitl_ch{idx}_pwm" for idx in range(1, 9))
+            for thr_name in all_thruster_names:
+                header.extend(
+                    [
+                        f"{thr_name}_servo_norm",
+                        f"{thr_name}_target",
+                        f"{thr_name}_state",
+                        f"{thr_name}_force",
+                    ]
+                )
+            thruster_debug_file.write(",".join(header) + "\n")
+            print(f"[debug] thruster CSV: {debug_path}", flush=True)
+        except OSError as exc:
+            print(f"[debug] failed to open thruster CSV {thruster_debug_path}: {exc}", flush=True)
+            thruster_debug_file = None
 
     def body_velocity_local() -> tuple[np.ndarray, np.ndarray]:
         vel6 = np.zeros(6, dtype=np.float64)
@@ -1400,10 +1742,44 @@ def main() -> None:
         lin_local = vel6[3:].copy()
         return lin_local, ang_local
 
-    def force_from_shaped_command(command_shaped: float, gain: float) -> float:
+    def emit_thruster_debug() -> None:
+        if thruster_debug_file is None:
+            return
+        sim_t = float(data.time)
+        if sim_t + 1e-9 < thruster_debug_next_t["value"]:
+            return
+        while sim_t + 1e-9 >= thruster_debug_next_t["value"]:
+            thruster_debug_next_t["value"] += 0.05
+        lin_vel_body, ang_vel_body = body_velocity_local()
+        values: list[float] = [
+            time.monotonic(),
+            sim_t,
+            *lin_vel_body.tolist(),
+            *ang_vel_body.tolist(),
+            *last_thruster_force_body.tolist(),
+            *last_thruster_torque_body.tolist(),
+        ]
+        values.extend(float(value) for value in sitl_servo_pwm_values[:8])
+        for thr_name in all_thruster_names:
+            values.extend(
+                [
+                    float(sitl_servo_cmd_norm.get(thr_name, 0.0)),
+                    float(thr_target.get(thr_name, 0.0)),
+                    float(thr_state.get(thr_name, 0.0)),
+                    float(thruster_force_cmd.get(thr_name, 0.0)),
+                ]
+            )
+        thruster_debug_file.write(",".join(f"{value:.9g}" for value in values) + "\n")
+
+    def force_from_shaped_command(name: str, command_shaped: float, gain: float) -> float:
         if abs(command_shaped) <= 1e-9:
             return 0.0
         if perf_cfg.get("active") and perf_cfg.get("force").size > 0:
+            if perf_cfg.get("direct"):
+                return float(
+                    pwm_to_force_from_perf(command_shaped)
+                    * float(thruster_direct_scale.get(name, 1.0))
+                )
             return float(pwm_to_force_from_perf(command_shaped) * gain)
 
         magnitude = abs(command_shaped)
@@ -1415,9 +1791,10 @@ def main() -> None:
             )
             return float(force_mag * gain)
 
-        reverse_force_max = thruster_force_max * float(
-            np.clip(thruster_global["reverse_asymmetry"], 0.1, 1.5)
-        )
+        reverse_asymmetry = thruster_reverse_asymmetry.get(name)
+        if reverse_asymmetry is None:
+            reverse_asymmetry = thruster_global["reverse_asymmetry"]
+        reverse_force_max = thruster_force_max * float(np.clip(reverse_asymmetry, 0.1, 1.5))
         force_mag = scaled_polynomial_force(
             magnitude,
             thruster_global["reverse_poly"],
@@ -1426,14 +1803,16 @@ def main() -> None:
         return float(-force_mag * gain)
 
     def update_thruster_forces(_dt: float) -> None:
-        nonlocal thruster_reaction_torque_world
+        nonlocal thruster_reaction_torque_world, last_thruster_force_body, last_thruster_torque_body
 
         thruster_reaction_torque_world = np.zeros(3, dtype=np.float64)
+        last_thruster_force_body = np.zeros(3, dtype=np.float64)
+        last_thruster_torque_body = np.zeros(3, dtype=np.float64)
         base_rot = data.xmat[base_id].reshape(3, 3)
         com_body = model.body_ipos[base_id].copy()
         deadzone = float(np.clip(thruster_global["deadzone"], 0.0, 0.95))
-        tau_up = float(max(thruster_global["tau_up"], 1e-4))
-        tau_down = float(max(thruster_global["tau_down"], 1e-4))
+        global_tau_up = float(max(thruster_global["tau_up"], 1e-4))
+        global_tau_down = float(max(thruster_global["tau_down"], 1e-4))
         command_limit = float(np.clip(thruster_global["command_limit"], deadzone + 1e-3, 1.0))
         reaction_torque_gain = float(max(thruster_global["reaction_torque_gain"], 0.0))
 
@@ -1442,23 +1821,31 @@ def main() -> None:
             lo, hi = ctrlrange[aid]
             gain = float(thruster_scale.get(name, 1.0))
             target_norm = float(np.clip(thr_target[name], -1.0, 1.0))
+            tau_up = float(thruster_tau_up[name] if thruster_tau_up[name] is not None else global_tau_up)
+            tau_down = float(thruster_tau_down[name] if thruster_tau_down[name] is not None else global_tau_down)
             thr_state[name] = first_order_response(thr_state[name], target_norm, _dt, tau_up, tau_down)
-            shaped_cmd = shape_thruster_command(thr_state[name], deadzone, command_limit)
-            force = force_from_shaped_command(shaped_cmd, gain)
+            if perf_cfg.get("active") and perf_cfg.get("direct"):
+                shaped_cmd = float(np.clip(thr_state[name], -1.0, 1.0))
+            else:
+                shaped_cmd = shape_thruster_command(thr_state[name], deadzone, command_limit)
+            force = force_from_shaped_command(name, shaped_cmd, gain)
             force = float(np.clip(force, lo, hi))
             data.ctrl[aid] = force
             thruster_force_cmd[name] = force
 
             fdir = model.actuator_gear[aid, :3]
             fdir = fdir / (np.linalg.norm(fdir) + 1e-9)
+            sid = thruster_site_ids.get(name, -1)
+            r_body = model.site_pos[sid].copy() - com_body if sid >= 0 else np.zeros(3, dtype=np.float64)
+            force_body = fdir * force
+            last_thruster_force_body += force_body
+            last_thruster_torque_body += np.cross(r_body, force_body)
             world_dir = base_rot @ fdir
             thruster_reaction_torque_world += (
                 -prop_spin_sign.get(name, 1.0) * world_dir * force * reaction_torque_gain
             )
             if yaw_torque_scale > 1.0 and name in PHYSICAL_YAW_THRUSTERS:
-                sid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, f"thr_{name}")
                 if sid >= 0:
-                    r_body = model.site_pos[sid].copy() - com_body
                     tau_body = np.cross(r_body, fdir * force)
                     extra_tau_body = np.array(
                         [0.0, 0.0, tau_body[2] * (yaw_torque_scale - 1.0)],
@@ -1532,11 +1919,17 @@ def main() -> None:
             weighted_point = np.zeros(3, dtype=np.float64)
             for point in buoyancy_points:
                 share = point.share / max(total_share, 1e-9)
-                point_local = point.pos.copy()
-                point_local[0] += cob_longitudinal_offset
-                point_local[2] += cob_vertical_offset
-                point_world = base_origin + base_rot @ point_local
-                point_depth = water_surface_z - float(point_world[2])
+                volume_point_local = point.pos.copy()
+                volume_point_world = base_origin + base_rot @ volume_point_local
+                force_point_local = point.pos.copy()
+                force_point_local[0] += cob_longitudinal_offset
+                force_point_local[2] += cob_vertical_offset
+                force_point_world = base_origin + base_rot @ force_point_local
+                # CoB offsets are restoring-torque tuning offsets.  They should
+                # not move the volume sample used to decide how much water is
+                # displaced; otherwise a large restoring offset can incorrectly
+                # turn buoyancy off near the surface.
+                point_depth = water_surface_z - float(volume_point_world[2])
                 point_submerged = submerged_fraction(point_depth, point.half_height, buoyancy_model)
                 point_buoyancy_submerged = submerged_fraction(
                     point_depth * buoyancy_slope_scale,
@@ -1555,9 +1948,9 @@ def main() -> None:
                 buoy_force_world += point_force_world
                 weighted_submerged += share * point_submerged
                 weighted_buoyancy_submerged += share * point_buoyancy_submerged
-                weighted_point += point_buoyancy * point_world
+                weighted_point += point_buoyancy * force_point_world
                 if abs(cob_torque_scale) > 1e-9:
-                    buoy_tau_world += np.cross(point_world - com, point_force_world) * cob_torque_scale
+                    buoy_tau_world += np.cross(force_point_world - com, point_force_world) * cob_torque_scale
             submerged = float(np.clip(weighted_submerged, 0.0, 1.0))
             buoyancy_submerged = float(np.clip(weighted_buoyancy_submerged, 0.0, 1.0))
             total_buoyancy = float(np.linalg.norm(buoy_force_world))
@@ -1574,12 +1967,14 @@ def main() -> None:
             weighted_point = np.zeros(3, dtype=np.float64)
             for component in body_components:
                 share = component.buoyancy_share / max(total_share, 1e-9)
-                point_local = component.buoyancy_pos.copy()
-                point_local[0] += cob_longitudinal_offset
-                point_local[2] += cob_vertical_offset
-                point_world = base_origin + base_rot @ point_local
+                volume_point_local = component.buoyancy_pos.copy()
+                volume_point_world = base_origin + base_rot @ volume_point_local
+                force_point_local = component.buoyancy_pos.copy()
+                force_point_local[0] += cob_longitudinal_offset
+                force_point_local[2] += cob_vertical_offset
+                force_point_world = base_origin + base_rot @ force_point_local
                 component_half_height = float(max(component.size[2], 1e-4))
-                component_depth = water_surface_z - float(point_world[2])
+                component_depth = water_surface_z - float(volume_point_world[2])
                 component_submerged = submerged_fraction(component_depth, component_half_height, buoyancy_model)
                 component_buoyancy_submerged = submerged_fraction(
                     component_depth * buoyancy_slope_scale,
@@ -1598,9 +1993,9 @@ def main() -> None:
                 buoy_force_world += component_force_world
                 weighted_submerged += share * component_submerged
                 weighted_buoyancy_submerged += share * component_buoyancy_submerged
-                weighted_point += component_buoyancy * point_world
+                weighted_point += component_buoyancy * force_point_world
                 if abs(cob_torque_scale) > 1e-9:
-                    buoy_tau_world += np.cross(point_world - com, component_force_world) * cob_torque_scale
+                    buoy_tau_world += np.cross(force_point_world - com, component_force_world) * cob_torque_scale
             submerged = float(np.clip(weighted_submerged, 0.0, 1.0))
             buoyancy_submerged = float(np.clip(weighted_buoyancy_submerged, 0.0, 1.0))
             total_buoyancy = float(np.linalg.norm(buoy_force_world))
@@ -1674,13 +2069,12 @@ def main() -> None:
         last_buoy_point = buoy_point
 
     def viewer_key_callback(keycode):
-        # GLFW keycodes for SPACE is 32
-        if keycode == 32:
+        if args.enable_viewer_pause and keycode == 32:
             paused_flag["value"] = not paused_flag["value"]
-        if keycode in (77, 109):  # M or m
-            viewer_control_mode["value"] = not viewer_control_mode["value"]
         if keycode in (76, 108):  # L or l
             show_thruster_labels["value"] = not show_thruster_labels["value"]
+            if show_thruster_labels["value"]:
+                show_viewer_debug["value"] = True
         if keycode in (73, 105):  # I or i
             toggle_sensor_overlay()
         if keycode in (67, 99):  # C or c
@@ -1700,6 +2094,8 @@ def main() -> None:
         if ros_bridge is None:
             return
         try:
+            if hasattr(ros_bridge, "set_sitl_initial_depth_hold_active"):
+                ros_bridge.set_sitl_initial_depth_hold_active(bool(initial_depth_hold["active"]))
             ros_bridge.publish(data)
         except Exception as exc:
             print(f"[ros2] publish failed, disabling bridge: {exc}", flush=True)
@@ -1756,28 +2152,15 @@ def main() -> None:
         if args.sitl:
             return run_sitl_step(is_paused, publish_ros, thruster_due)
 
-        if not viewer_control_mode["value"]:
-            # Remote commands (ROS2/MAVROS)
-            forward, sway, yaw, heave = apply_direct_command_targets()
-
-            thr_dt = model.opt.timestep if not is_paused else 0.0
-            if thruster_due:
-                update_thruster_forces(thr_dt)
-            update_propeller_visuals(thr_dt)
-        else:
-            forward = 0.0
-            yaw = 0.0
-            heave = 0.0
-            sway = 0.0
-            for name in all_thruster_names:
-                thr_target[name] = 0.0
-            thr_dt = model.opt.timestep if not is_paused else 0.0
-            if thruster_due:
-                update_thruster_forces(thr_dt)
-            update_propeller_visuals(thr_dt)
+        forward, sway, yaw, heave = apply_direct_command_targets()
+        thr_dt = model.opt.timestep if not is_paused else 0.0
+        if thruster_due:
+            update_thruster_forces(thr_dt)
+        update_propeller_visuals(thr_dt)
 
         apply_initial_depth_hold()
         apply_underwater_wrench(model.opt.timestep if not is_paused else 0.0)
+        emit_thruster_debug()
 
         if not is_paused:
             mujoco.mj_step(model, data)
@@ -1795,7 +2178,8 @@ def main() -> None:
         if args.sitl:
             now = time.monotonic()
             ros_cmd_active = (
-                ros_cmd_last_wall["value"] > 0.0
+                sitl_allow_direct_cmd
+                and ros_cmd_last_wall["value"] > 0.0
                 and (now - ros_cmd_last_wall["value"]) <= ros_cmd_timeout_s
             )
             if ros_cmd_active:
@@ -1823,6 +2207,7 @@ def main() -> None:
             update_propeller_visuals(thr_dt)
             apply_initial_depth_hold()
             apply_underwater_wrench(model.opt.timestep if not is_paused else 0.0)
+            emit_thruster_debug()
             if not is_paused:
                 mujoco.mj_step(model, data)
                 apply_initial_depth_hold()
@@ -1837,7 +2222,7 @@ def main() -> None:
         target_dt = float(max(model.opt.timestep, 1e-6))
         next_wall = time.perf_counter()
         while not stop_event.is_set():
-            is_paused = paused_flag["value"]
+            is_paused = paused_flag["value"] if args.enable_viewer_pause else False
             run_step(is_paused)
             # Keep real-time pacing without accumulating extra delay from
             # compute time (important for SITL stabilization responsiveness).
@@ -1867,6 +2252,9 @@ def main() -> None:
         sensor_hz = float(max(args.ros2_sensor_hz, 1.0))
         sensor_dt = 1.0 / sensor_hz
         next_sensor_wall = time.perf_counter()
+        viewer_fps = float(np.clip(args.viewer_fps, 10.0, 240.0))
+        viewer_dt = 1.0 / viewer_fps
+        next_viewer_wall = time.perf_counter()
         max_catchup_steps = max(4, int(round(0.10 / target_dt)))
         max_sensor_catchup = max(2, int(round(0.10 / sensor_dt)))
         forward = 0.0
@@ -1874,12 +2262,11 @@ def main() -> None:
         yaw = 0.0
         heave = 0.0
         while viewer.is_running() and not stop_event.is_set():
-            # Respect GUI pause in passive viewer
             paused = False
-            if hasattr(viewer, "is_paused"):
+            if args.enable_viewer_pause and hasattr(viewer, "is_paused"):
                 flag = viewer.is_paused
                 paused = flag() if callable(flag) else bool(flag)
-            is_paused = paused_flag["value"] or paused
+            is_paused = bool(args.enable_viewer_pause and (paused_flag["value"] or paused))
             now_wall = time.perf_counter()
             if is_paused:
                 forward, sway, yaw, heave = run_step(True, publish_ros=False)
@@ -2011,23 +2398,28 @@ def main() -> None:
                     geom.label = text
                     user_scn.ngeom += 1
 
-                # Thruster force vectors (blue): direction includes the force sign.
-                for name in ver_names + yaw_names:
-                    sid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, f"thr_{name}")
-                    start = data.site_xpos[sid].copy()
-                    force = float(data.ctrl[act[name]])
-                    fdir = model.actuator_gear[act[name], :3]
-                    fdir = fdir / (np.linalg.norm(fdir) + 1e-9)
-                    world_dir = base_rot @ fdir
-                    draw_dir = world_dir if force >= 0.0 else -world_dir
-                    add_arrow(start, draw_dir, abs(force), (0.2, 0.6, 1.0, 1.0))
-                    add_bubble_stream(start, -draw_dir, abs(force))
-                    if show_thruster_labels["value"]:
-                        add_label(
-                            f"{name}:{force:+.1f}",
-                            start + np.array([0.0, 0.03, 0.0]),
-                            (0.8, 0.9, 1.0, 1.0),
-                        )
+                # Heavy debug geometry is opt-in; drawing it every viewer frame
+                # dominates runtime on many Ubuntu desktops.
+                if show_viewer_debug["value"] or show_thruster_labels["value"]:
+                    for name in ver_names + yaw_names:
+                        sid = thruster_site_ids.get(name, -1)
+                        if sid < 0:
+                            continue
+                        start = data.site_xpos[sid].copy()
+                        force = float(data.ctrl[act[name]])
+                        fdir = model.actuator_gear[act[name], :3]
+                        fdir = fdir / (np.linalg.norm(fdir) + 1e-9)
+                        world_dir = base_rot @ fdir
+                        draw_dir = world_dir if force >= 0.0 else -world_dir
+                        if show_viewer_debug["value"]:
+                            add_arrow(start, draw_dir, abs(force), (0.2, 0.6, 1.0, 1.0))
+                            add_bubble_stream(start, -draw_dir, abs(force))
+                        if show_thruster_labels["value"]:
+                            add_label(
+                                f"{name}:{force:+.1f}",
+                                start + np.array([0.0, 0.03, 0.0]),
+                                (0.8, 0.9, 1.0, 1.0),
+                            )
 
                 # Sensor and camera markers
                 if show_sensor_overlay["value"]:
@@ -2062,25 +2454,27 @@ def main() -> None:
                         add_sphere(pos, 0.022, (1.0, 0.5, 0.1, 1.0))
                         add_label("CAM_R", pos + np.array([0.0, 0.03, 0.0]), (1.0, 0.6, 0.2, 1.0))
 
-                # Net thrust (red) and buoyancy (green) at CoB
-                net_force = np.zeros(3)
-                for name in ver_names + yaw_names:
-                    fdir = model.actuator_gear[act[name], :3]
-                    fdir = fdir / (np.linalg.norm(fdir) + 1e-9)
-                    net_force += (base_rot @ fdir) * data.ctrl[act[name]]
-                net_mag = float(np.linalg.norm(net_force))
-                if net_mag > 1e-6:
-                    add_arrow(com, net_force / net_mag, net_mag, (0.95, 0.95, 0.95, 1.0))
-                    add_label("NET", com + np.array([0.0, 0.05, 0.0]), (0.95, 0.95, 0.95, 1.0))
+                if show_viewer_debug["value"]:
+                    net_force = np.zeros(3)
+                    for name in ver_names + yaw_names:
+                        fdir = model.actuator_gear[act[name], :3]
+                        fdir = fdir / (np.linalg.norm(fdir) + 1e-9)
+                        net_force += (base_rot @ fdir) * data.ctrl[act[name]]
+                    net_mag = float(np.linalg.norm(net_force))
+                    if net_mag > 1e-6:
+                        add_arrow(com, net_force / net_mag, net_mag, (0.95, 0.95, 0.95, 1.0))
+                        add_label("NET", com + np.array([0.0, 0.05, 0.0]), (0.95, 0.95, 0.95, 1.0))
 
-                buoy_mag = float(np.linalg.norm(last_buoy_force))
-                if buoy_mag > 1e-6:
-                    add_arrow(last_buoy_point, np.array([0.0, 0.0, 1.0]), buoy_mag * 0.05, (0.2, 1.0, 0.2, 1.0))
-                    add_label("BUOY", last_buoy_point + np.array([0.0, 0.08, 0.0]), (0.6, 1.0, 0.6, 1.0))
+                    buoy_mag = float(np.linalg.norm(last_buoy_force))
+                    if buoy_mag > 1e-6:
+                        add_arrow(last_buoy_point, np.array([0.0, 0.0, 1.0]), buoy_mag * 0.05, (0.2, 1.0, 0.2, 1.0))
+                        add_label("BUOY", last_buoy_point + np.array([0.0, 0.08, 0.0]), (0.6, 1.0, 0.6, 1.0))
 
             # On-screen help (if available)
             if has_set_texts:
-                overlay_line = "Space: pause, M: mode, C: follow, 1/2: stereo cam, 0: free, I: sensors"
+                overlay_line = "C: follow, 1/2: stereo cam, 0: free, I: sensors, L: thruster labels"
+                if args.enable_viewer_pause:
+                    overlay_line = "Space: pause, " + overlay_line
                 if show_sensor_overlay["value"]:
                     imu_g = sensor_value("imu_gyro")
                     imu_a = sensor_value("imu_acc")
@@ -2101,14 +2495,19 @@ def main() -> None:
                     (
                         None,
                         None,
-                        f"Mode: {'viewer' if viewer_control_mode['value'] else 'terminal'} | fwd {forward:+.1f} sway {sway:+.1f} yaw {yaw:+.1f} heave {heave:+.1f} | Cam: {camera_mode['value']}",
+                        f"Cmd fwd {forward:+.1f} sway {sway:+.1f} yaw {yaw:+.1f} heave {heave:+.1f} | Cam: {camera_mode['value']}",
                         overlay_line,
                     )
                 ])
 
             viewer.sync()
-            # Passive viewer sync already handles GUI/event pacing. Additional
-            # fixed sleep here increases control/sensor latency for SITL.
+            next_viewer_wall += viewer_dt
+            now_wall = time.perf_counter()
+            sleep_s = next_viewer_wall - now_wall
+            if sleep_s > 0.0:
+                time.sleep(sleep_s)
+            else:
+                next_viewer_wall = now_wall
 
     if ros_bridge is not None:
         ros_bridge.shutdown()

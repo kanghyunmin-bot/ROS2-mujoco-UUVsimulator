@@ -29,10 +29,26 @@ source_ros_setup_safely() {
   fi
 }
 
-if [[ -n "${ROS_ENV_SETUP:-}" && -f "${ROS_ENV_SETUP}" ]]; then
-  source_ros_setup_safely "${ROS_ENV_SETUP}"
-elif [[ -f "/opt/ros/${ROS_DISTRO:-humble}/setup.bash" ]]; then
-  source_ros_setup_safely "/opt/ros/${ROS_DISTRO:-humble}/setup.bash"
+ROS_BASE_SETUP=""
+for candidate in \
+  "${ROS_ENV_SETUP:-}" \
+  "/opt/ros/${ROS_DISTRO:-humble}/setup.bash" \
+  "${HOME}/miniconda3/envs/ros2_mavros/setup.bash" \
+  "${HOME}/miniconda3/envs/ros2_h311/setup.bash" \
+  "${HOME}/miniconda3/envs/ros2/setup.bash" \
+  "${CONDA_PREFIX:-}/setup.bash"
+do
+  [[ -n "${candidate}" ]] || continue
+  if [[ -f "${candidate}" ]]; then
+    ROS_BASE_SETUP="${candidate}"
+    break
+  fi
+done
+
+if [[ -n "${ROS_BASE_SETUP}" ]]; then
+  source_ros_setup_safely "${ROS_BASE_SETUP}"
+else
+  echo "[gui] warning: ROS setup not found; relying on current shell environment" >&2
 fi
 
 if [[ -n "${ROS_INSTALL_SETUP:-}" && -f "${ROS_INSTALL_SETUP}" ]]; then
@@ -41,5 +57,12 @@ elif [[ -f "${ROS_WORKSPACE_DIR:-${ROOT_DIR}/rospkg}/install/setup.bash" ]]; the
   source_ros_setup_safely "${ROS_WORKSPACE_DIR:-${ROOT_DIR}/rospkg}/install/setup.bash"
 fi
 
-export PYTHONNOUSERSITE=1
-exec python3 "${ROOT_DIR}/uuv_mujoco/v2.2/gui/uuv_control_gui.py" "$@"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+GUI_ENTRY="${UUV_MUJOCO_DIR:-${ROOT_DIR}/uuv_mujoco}/v2.2/gui/uuv_control_gui.py"
+
+if [[ ! -f "${GUI_ENTRY}" ]]; then
+  echo "[gui] GUI entry not found: ${GUI_ENTRY}" >&2
+  exit 1
+fi
+
+exec "${PYTHON_BIN}" "${GUI_ENTRY}" "$@"

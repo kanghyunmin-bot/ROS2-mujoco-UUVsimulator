@@ -17,6 +17,32 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "$SCRIPT_DIR"
 HOST_OS="$(uname -s)"
 ROS_DISTRO="${ROS_DISTRO:-humble}"
+UUV_RUNTIME_PROFILE="${UUV_RUNTIME_PROFILE:-balanced}"
+case "${UUV_RUNTIME_PROFILE}" in
+    low)
+        PROFILE_SENSOR_HZ=30
+        PROFILE_THRUSTER_HZ=60
+        PROFILE_VIEWER_FPS=30
+        ;;
+    balanced|"")
+        UUV_RUNTIME_PROFILE="balanced"
+        PROFILE_SENSOR_HZ=60
+        PROFILE_THRUSTER_HZ=80
+        PROFILE_VIEWER_FPS=60
+        ;;
+    high)
+        PROFILE_SENSOR_HZ=120
+        PROFILE_THRUSTER_HZ=100
+        PROFILE_VIEWER_FPS=60
+        ;;
+    *)
+        echo "[warn] unknown UUV_RUNTIME_PROFILE=${UUV_RUNTIME_PROFILE}; using balanced"
+        UUV_RUNTIME_PROFILE="balanced"
+        PROFILE_SENSOR_HZ=60
+        PROFILE_THRUSTER_HZ=80
+        PROFILE_VIEWER_FPS=60
+        ;;
+esac
 if [[ -n "${MJ311_ROOT:-}" ]]; then
     DEFAULT_MJ311_ROOT="${MJ311_ROOT}"
 elif [[ -x "$HOME/.venvs/uuv_mujoco/bin/python" ]]; then
@@ -90,7 +116,6 @@ resolve_mjpython() {
     return 1
 }
 
-MJ311_MJPYTHON="$(resolve_mjpython)"
 # Parse arguments
 HEADLESS=false
 IMAGES=""
@@ -108,7 +133,7 @@ SCENE_PATH="scenes/tank_current_scene.xml"
 FLUID_MODEL="current"
 SITL_MAVLINK_TARGET_SYSID=1
 SITL_MAVLINK_TARGET_COMPID=1
-SITL_MAVLINK_SOURCE_SYSID=200
+SITL_MAVLINK_SOURCE_SYSID=255
 SITL_MAVLINK_SOURCE_COMPID=190
 
 require_option_value() {
@@ -305,6 +330,12 @@ fi
 SCENE_PATH="$(resolve_scene_path "$SCENE_PATH")"
 SCENE_LABEL="$(basename "$SCENE_PATH")"
 
+if [ "$HEADLESS" = true ]; then
+    PY_LAUNCHER="$(resolve_python)"
+else
+    PY_LAUNCHER="$(resolve_mjpython)"
+fi
+
 extra_arg_present() {
     local needle="$1"
     local token
@@ -473,16 +504,25 @@ if [ "$HEADLESS" = true ]; then
 fi
 
 if [[ -n "$SITL_ARG" ]]; then
-    # In SITL mode, /mavros/rc/override must pass through ArduSub first.  The
-    # standalone MuJoCo fallback is useful without SITL, but it corrupts closed-loop
-    # ALT_HOLD tests by injecting the same RC command directly into the plant.
+    # In SITL mode, /mavros/rc/override must pass through ArduSub first.
+    # Direct MuJoCo fallback is only for explicit smoke/debug runs.
     export ROS2_UUV_MAVROS_RC_OVERRIDE_LOCAL_FALLBACK="${ROS2_UUV_MAVROS_RC_OVERRIDE_LOCAL_FALLBACK:-0}"
+    # Match the real-robot estimator path by default: EKF3 with ExternalNav
+    # for XY/velocity/yaw and Baro for vertical position.
+    export SITL_EKF3_EXTNAV="${SITL_EKF3_EXTNAV:-1}"
+    export SITL_AHRS_EKF_TYPE="${SITL_AHRS_EKF_TYPE:-3}"
+    export ROS2_UUV_SITL_EXTNAV_ENABLE="${ROS2_UUV_SITL_EXTNAV_ENABLE:-${SITL_EKF3_EXTNAV}}"
+    # The bridge owns the vertical feedback contract: JSON position.z,
+    # JSON velocity.z, and ExternalNav VELZ all use the Bar30-derived
+    # NED down-positive state. Do not expose runtime z-flip/source switches
+    # on the default closed-loop path.
+    export ROS2_UUV_ARM_MODE_BOOT_GUARD_S="${ROS2_UUV_ARM_MODE_BOOT_GUARD_S:-4}"
 fi
 
 echo "[launch] Starting MuJoCo UUV Simulation"
 echo "[launch] Scene: ${SCENE_LABEL}"
 echo "[launch] Fluid model: ${FLUID_MODEL}"
-echo "[launch] Python launcher: ${MJ311_MJPYTHON}"
+echo "[launch] Python launcher: ${PY_LAUNCHER}"
 if [ "$ROS2_REQUESTED" = true ]; then
     echo "[launch] Source ROS2 environment for --ros2 topics."
     ROS_SETUP_FILE=""
@@ -502,7 +542,10 @@ if [ "$ROS2_REQUESTED" = true ]; then
     echo "  ROS2 Transport: enabled"
     if [[ -n "$SITL_ARG" ]]; then
         echo "    Input:  /mavros/rc/override -> ArduSub closed-loop"
-        echo "            /cmd_vel remains available for standalone bridge tests"
+        echo "            set ROS2_UUV_MAVROS_RC_OVERRIDE_LOCAL_FALLBACK=1 only for direct MuJoCo smoke/debug"
+        echo "            /cmd_vel is ignored in SITL by default; set ROS2_UUV_SITL_CMD_VEL_SETPOINT_ENABLE=1 only for guided-setpoint smoke tests"
+        echo "    SITL vertical feedback: Bar30 depth + NED down-positive velocity"
+        echo "    SITL EKF3 ExternalNav: ${ROS2_UUV_SITL_EXTNAV_ENABLE}"
     else
         echo "    Input:  /cmd_vel (TwistStamped), /mavros/rc/override direct fallback"
     fi
@@ -536,7 +579,7 @@ fi
 echo ""
 
 if [[ -n "$SITL_ARG" ]]; then
-    SITL_SERVO_SOURCE="mavlink"
+    SITL_SERVO_SOURCE="json"
     SITL_MAVLINK_ENDPOINT_VALUE=""
     if [[ "$SITL_PORT" == "$SITL_SEND_PORT" ]]; then
         echo "[warn] --sitl-port and --sitl-send-port are identical (${SITL_PORT}); SITL usually requires distinct direction-specific UDP ports."
@@ -551,39 +594,43 @@ if [[ -n "$SITL_ARG" ]]; then
         fi
         replace_extra_arg_value --profile "$PROFILE"
     fi
-    # Raise SITL sensor feed rate by default to reduce EKF lag in stabilize mode.
+    SITL_SENSOR_HZ_DEFAULT="${SITL_SENSOR_HZ_DEFAULT:-${PROFILE_SENSOR_HZ}}"
+    SITL_THRUSTER_LOOP_HZ_DEFAULT="${SITL_THRUSTER_LOOP_HZ_DEFAULT:-${PROFILE_THRUSTER_HZ}}"
+    SITL_MAVLINK_SERVO_HZ_DEFAULT="${SITL_MAVLINK_SERVO_HZ_DEFAULT:-25}"
+    MUJOCO_VIEWER_FPS_DEFAULT="${UUV_MUJOCO_VIEWER_FPS:-${PROFILE_VIEWER_FPS}}"
+    echo "[launch] runtime profile: ${UUV_RUNTIME_PROFILE} (sensor=${SITL_SENSOR_HZ_DEFAULT}Hz, thruster=${SITL_THRUSTER_LOOP_HZ_DEFAULT}Hz, viewer=${MUJOCO_VIEWER_FPS_DEFAULT}Hz)"
+    # Keep the default profile responsive without saturating CPU/ROS on native desktops.
     if [[ "$HOST_OS" == "Darwin" ]]; then
-        if append_extra_arg_if_missing "--ros2-sensor-hz" --ros2-sensor-hz 120; then
-            echo "[launch] SITL mode: using macOS-friendly sensor publish rate 120 Hz (override with --ros2-sensor-hz)."
+        if append_extra_arg_if_missing "--ros2-sensor-hz" --ros2-sensor-hz "${SITL_SENSOR_HZ_DEFAULT}"; then
+            echo "[launch] SITL mode: using sensor publish rate ${SITL_SENSOR_HZ_DEFAULT} Hz (override with --ros2-sensor-hz)."
         fi
-    elif append_extra_arg_if_missing "--ros2-sensor-hz" --ros2-sensor-hz 300; then
-        echo "[launch] SITL mode: overriding sensor publish rate to 300 Hz (use --ros2-sensor-hz to set manually)."
+    elif append_extra_arg_if_missing "--ros2-sensor-hz" --ros2-sensor-hz "${SITL_SENSOR_HZ_DEFAULT}"; then
+        echo "[launch] SITL mode: using sensor publish rate ${SITL_SENSOR_HZ_DEFAULT} Hz (override with --ros2-sensor-hz)."
     fi
-    if append_extra_arg_if_missing "--thruster-loop-hz" --thruster-loop-hz 150; then
-        echo "[launch] SITL mode: overriding thruster loop rate to 150 Hz (use --thruster-loop-hz to set manually)."
+    if append_extra_arg_if_missing "--thruster-loop-hz" --thruster-loop-hz "${SITL_THRUSTER_LOOP_HZ_DEFAULT}"; then
+        echo "[launch] SITL mode: using thruster loop rate ${SITL_THRUSTER_LOOP_HZ_DEFAULT} Hz (override with --thruster-loop-hz)."
+    fi
+    if [[ "$HEADLESS" != true ]]; then
+        append_extra_arg_if_missing "--viewer-fps" --viewer-fps "${MUJOCO_VIEWER_FPS_DEFAULT}" >/dev/null || true
     fi
     if extra_arg_present "--sitl-mavlink-endpoint"; then
         SITL_MAVLINK_ENDPOINT_VALUE="$(extra_arg_value "--sitl-mavlink-endpoint" || true)"
     else
         SITL_MAVLINK_ENDPOINT_VALUE="udpin:0.0.0.0:14660"
     fi
-    case "$(printf '%s' "$SITL_MAVLINK_ENDPOINT_VALUE" | tr '[:upper:]' '[:lower:]')" in
-        none|off|disabled|disable)
-            SITL_SERVO_SOURCE="json"
-            ;;
-    esac
-    if [[ "$SITL_SERVO_SOURCE" == "mavlink" ]]; then
-        echo "[launch] SITL mode: using servo source mavlink (SERVO_OUTPUT_RAW)."
-    else
-        echo "[launch] SITL mode: using servo source json (standard ArduPilot SITL UDP servo packets)."
-    fi
+    export ROS2_UUV_SITL_JSON_SERVO_FALLBACK="${ROS2_UUV_SITL_JSON_SERVO_FALLBACK:-1}"
+    echo "[launch] SITL mode: using servo source json (standard ArduPilot SITL UDP servo packets)."
+    echo "[launch] SITL mode: MAVLink SERVO_OUTPUT_RAW kept for heartbeat/telemetry only."
     append_extra_arg_if_missing "--sitl-mavlink-target-sysid" --sitl-mavlink-target-sysid "${SITL_MAVLINK_TARGET_SYSID}" >/dev/null || true
     append_extra_arg_if_missing "--sitl-mavlink-target-compid" --sitl-mavlink-target-compid "${SITL_MAVLINK_TARGET_COMPID}" >/dev/null || true
     append_extra_arg_if_missing "--sitl-mavlink-source-sysid" --sitl-mavlink-source-sysid "${SITL_MAVLINK_SOURCE_SYSID}" >/dev/null || true
     append_extra_arg_if_missing "--sitl-mavlink-source-compid" --sitl-mavlink-source-compid "${SITL_MAVLINK_SOURCE_COMPID}" >/dev/null || true
     append_extra_arg_if_missing "--sitl-mavlink-endpoint" --sitl-mavlink-endpoint "udpin:0.0.0.0:14660" >/dev/null || true
-    append_extra_arg_if_missing "--sitl-mavlink-servo-hz" --sitl-mavlink-servo-hz 50 >/dev/null || true
-    append_extra_arg_if_missing "--sitl-servo-scale" --sitl-servo-scale "0.58" >/dev/null || true
+    append_extra_arg_if_missing "--sitl-mavlink-servo-hz" --sitl-mavlink-servo-hz "${SITL_MAVLINK_SERVO_HZ_DEFAULT}" >/dev/null || true
+    # Legacy polynomial/gain tuned mode used:
+    # append_extra_arg_if_missing "--sitl-servo-scale" --sitl-servo-scale "0.58" >/dev/null || true
+    append_extra_arg_if_missing "--sitl-servo-scale" --sitl-servo-scale "${SITL_SERVO_SCALE_DEFAULT:-1.0}" >/dev/null || true
+    append_extra_arg_if_missing "--thruster-perf-direct" --thruster-perf-direct >/dev/null || true
     # Lower input latency defaults for SITL command loops.
     : "${ROS2_UUV_CMD_DEADBAND:=0.0}"
     : "${ROS2_UUV_CMD_SLEW_RATE:=200.0}"
@@ -593,9 +640,11 @@ if [[ -n "$SITL_ARG" ]]; then
     : "${ROS2_UUV_SITL_MAVLINK_TIMEOUT_S:=1.5}"
     export ROS2_UUV_CMD_DEADBAND ROS2_UUV_CMD_SLEW_RATE ROS2_UUV_DVL_LPF_ALPHA ROS2_UUV_BAR30_NOISE_PA_STD ROS2_UUV_CMD_TIMEOUT_S ROS2_UUV_SITL_MAVLINK_TIMEOUT_S
     echo "[launch] SITL mode: simple sensor path deadband=${ROS2_UUV_CMD_DEADBAND}, slew=${ROS2_UUV_CMD_SLEW_RATE}/s, dvl_alpha=${ROS2_UUV_DVL_LPF_ALPHA}, bar30_noise=${ROS2_UUV_BAR30_NOISE_PA_STD}Pa, timeout=${ROS2_UUV_CMD_TIMEOUT_S}s, mavlink_timeout=${ROS2_UUV_SITL_MAVLINK_TIMEOUT_S}s"
-    if append_extra_arg_if_missing "--disable-thruster-perf" --disable-thruster-perf; then
-        echo "[launch] SITL mode: disabling thruster performance curve for simple model."
-    fi
+    # Legacy polynomial/gain tuned mode disabled the T200 performance curve:
+    # if append_extra_arg_if_missing "--disable-thruster-perf" --disable-thruster-perf; then
+    #     echo "[launch] SITL mode: disabling thruster performance curve for simple model."
+    # fi
+    echo "[launch] SITL mode: using T200 thruster performance direct mode."
     if [[ "$QGC_VIDEO_AUTO" != "off" ]] && ! extra_arg_present "--qgc-video"; then
         EXTRA_ARGS+=("--qgc-video")
         echo "[launch] SITL mode: enabling direct QGC video stream."
@@ -649,4 +698,4 @@ if ((${#EXTRA_ARGS[@]})); then
     RUN_ARGS+=("${EXTRA_ARGS[@]}")
 fi
 
-"$MJ311_MJPYTHON" run_urdf_full.py "${RUN_ARGS[@]}"
+"$PY_LAUNCHER" run_urdf_full.py "${RUN_ARGS[@]}"

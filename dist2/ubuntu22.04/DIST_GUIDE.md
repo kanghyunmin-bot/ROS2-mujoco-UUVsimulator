@@ -21,9 +21,9 @@ Before creating or uploading a dist2 package, all of these rules must hold:
 3. `package_dist2.sh` must create the artifact from a clean release workflow or
    from an explicitly allowed dirty worktree test.
 4. `verify_package.sh` must pass against the exact zip that will be shared.
-5. Installer changes must be tested in Ubuntu 22.04 again, preferably with the
-   Docker procedure in this file and, for GUI/QGroundControl, on real x86_64
-   Ubuntu hardware.
+5. Installer changes must be tested on native Ubuntu 22.04 again. Containers
+   are allowed only as a quick precheck; they are not authoritative evidence for
+   GUI, QGroundControl, SITL timing, RC override, or graphics behavior.
 6. Runtime scripts must not contain developer-machine absolute paths.
 7. The package must not contain backup files, caches, logs, generated build
    outputs, `.git` directories, or macOS metadata.
@@ -60,6 +60,9 @@ Use this as the release gate. A single failed item blocks the package.
 | R14 | Ubuntu install | Run the documented Ubuntu 22.04 install sequence. | Installer exits `0`, imports pass, colcon package builds. |
 | R15 | Headless smoke | Run `timeout 90s ./launch_uuv_sim.sh --headless --no-ros2`. | Exit `0` or `124`; logs show the simulator reached runtime. |
 | R16 | GUI/QGC caveat | Validate on real x86_64 Ubuntu when GUI/QGC is part of the release claim. | GUI starts with sourced env; QGroundControl is not judged from ARM64 Docker alone. |
+| R17 | RC override | With GUI-launched SITL/ROS2 bridge, inspect `/mavros/rc/override`, ArduSub forwarding logs, and `SERVO_OUTPUT_RAW` motion. | GUI publishes `OverrideRCIn`; bridge subscribes; RC override is forwarded to ArduSub; MuJoCo moves from ArduSub servo output, not direct fallback. |
+| R18 | Performance defaults | Run the standard GUI/SITL path without extra debug flags. | QGC video is off unless requested, viewer debug overlays are off unless requested, Ping360 status does not force raycasts, and default SITL rates are usable on native Ubuntu. |
+| R19 | Ping360 image quality | Inspect `/ping360/scan_image` in the GUI after the sim is running. | The center blind zone stays blank, water visual geoms are not raycast as obstacles, and the image does not show a bright center dot or fake circular ring near the sonar. |
 
 Do not ship a package with "known small violations" of this checklist. If a
 rule is obsolete, first change the code, validate the new behavior on Ubuntu
@@ -78,10 +81,16 @@ Before packaging, audit these files and directories directly.
 | `dist2/ubuntu22.04/verify_package.sh` | Check required top-level files, nested required runtime files, syntax, forbidden paths, backup/cache files, and user-site blocking env. | A bad package passes local packaging because only top-level files were checked. |
 | `run_control_gui.sh` | Source the generated env when present, use native user site packages, do not set `PYTHONNOUSERSITE=1`, resolve paths from the script location. | GUI starts on the developer machine but cannot import installed Python packages on Ubuntu. |
 | `uuv_control_gui.py` | Locate bundled runtime paths relative to the extracted package or explicit environment variables. | GUI points to an old local checkout instead of the packaged runtime. |
-| `uuv_mujoco/v2.2/launch_uuv_sim.sh` | Build command arrays explicitly, support `--headless --no-ros2`, no blank optional args. | Python exits with `run_urdf_full.py: error: unrecognized arguments:`. |
+| `uuv_mujoco/v2.2/launch_uuv_sim.sh` | Build command arrays explicitly, support `--headless --no-ros2`, no blank optional args, keep RC override local fallback disabled by default for SITL unless explicitly overridden for smoke/debug. | Python exits with `run_urdf_full.py: error: unrecognized arguments:` or GUI RC override bypasses ArduSub and drives MuJoCo directly. |
 | `uuv_mujoco/v2.2/start_sitl_mujoco_mj311.sh` | Source ROS/env safely, wait for runtime readiness, pass optional args without blank strings. | SITL launch fails before simulator readiness. |
 | `uuv_mujoco/v2.2/start_ardusub_sitl_mj311.sh` | Resolve `ARDUPILOT_DIR`, construct SITL command with array-length checks, do not assume local ArduPilot checkout. | SITL command uses missing local paths or receives malformed arguments. |
 | `uuv_mujoco/v2.2/reset_uuv_sim.sh` | Use runtime-relative paths and safe shell syntax. | Reset works only from one current working directory. |
+| `uuv_mujoco/v2.2/gui/ros_process_mixin.py` | When the GUI starts the sim stack, preserve an explicit user override but default `ROS2_UUV_MAVROS_RC_OVERRIDE_LOCAL_FALLBACK=0`. | GUI/SITL appears to work by direct MuJoCo injection while ArduSub control is actually bypassed. |
+| `uuv_mujoco/v2.2/gui/node.py` | Publish RC override messages when the toggle is active; subscriber count is diagnostic, not a publish gate. | Topic-graph timing makes the GUI suppress valid RC commands. |
+| `uuv_mujoco/v2.2/run_urdf_full.py` | Keep heavy viewer debug geometry opt-in through `--viewer-debug`; keep viewer pause opt-in through `--enable-viewer-pause`; avoid forcing Ping360 raycasts for status-only subscribers. | Viewer rendering, accidental spacebar pause, or GUI Ping360 status subscription makes the simulator feel unusably slow. |
+| `uuv_mujoco/v2.2/bridge/ping360_sim.py` | Keep the Ping360 blind zone blank and ramp background noise in after `settings.blind_bins`; do not start `noise_floor` abruptly at the first visible bin. | `/ping360/scan_image` shows a fake bright circular ring centered on the sonar. |
+| `uuv_mujoco/v2.2/bridge/ros2_bridge.py` | Keep polar image rendering blank inside `settings.blind_bins` and fade the first visible pixels after the blind radius. | The GUI makes the Ping360 minimum-range edge look like a real circular obstacle. |
+| `uuv_mujoco/v2.2/scenes/*.xml` | Keep visual-only water geoms such as `water_vis` and `water_surface` in MuJoCo geom group `5`, which the Ping360 raycast mask excludes. | The vertical Ping360 beam hits the transparent water volume/surface and creates a false circular ring around the sonar. |
 | `uuv_mujoco/v2.2/assets/**` | Mesh and JSON/XML references must be relative to bundled assets. | MuJoCo fails to load assets on another computer. |
 | `rospkg/kmu26_auv/urdf/**` | URDF mesh paths must be package-relative or relative; no `file:///Users/...`. | RViz/ROS cannot load robot description outside the developer Mac. |
 | `rospkg/kmu26_auv/rviz/**` | RViz config must use topics or empty/default description fields, not absolute local URDF files. | RViz opens with a broken robot model path. |
@@ -174,6 +183,147 @@ rg -n '/Users/|/home/kanghyunmin|file:///Users|PYTHONNOUSERSITE=1' /tmp/uuvdist2
 Expected result: hits only in release guide/audit documentation, not runtime
 payload.
 
+## RC Override Runtime Contract
+
+RC override is a release-blocking GUI behavior. Installation can be successful
+while RC override is still broken, so do not treat installer success as proof
+that the simulator is usable from the GUI.
+
+The required runtime path is:
+
+```text
+GUI stick/toggle
+-> /mavros/rc/override (mavros_msgs/msg/OverrideRCIn)
+-> uuv_mujoco/v2.2/bridge/ros2_bridge.py
+-> ArduSub SITL RC override forwarding
+-> ArduSub SERVO_OUTPUT_RAW
+-> MuJoCo thruster input
+```
+
+Required RC channel contract:
+
+```text
+ch3 = heave
+ch4 = yaw
+ch5 = forward
+ch6 = lateral/sway
+neutral = 1500 us
+default span = +/-300 us
+```
+
+The GUI and bridge must keep the same mapping. The GUI layout is in
+`uuv_mujoco/v2.2/gui/config.py`; the bridge mapping defaults are in
+`uuv_mujoco/v2.2/bridge/ros2_bridge.py` through these environment variables:
+
+```text
+ROS2_UUV_MAVROS_RC_CH_HEAVE=3
+ROS2_UUV_MAVROS_RC_CH_YAW=4
+ROS2_UUV_MAVROS_RC_CH_FORWARD=5
+ROS2_UUV_MAVROS_RC_CH_SWAY=6
+ROS2_UUV_MAVROS_RC_INV_HEAVE=1
+```
+
+For the dist package, SITL mode must default to:
+
+```bash
+ROS2_UUV_MAVROS_RC_OVERRIDE_LOCAL_FALLBACK=0
+```
+
+This is intentional. The GUI must exercise the same closed-loop path that the
+real ArduSub controller uses. If this default is `1`, RC override also writes a
+normalized command directly into MuJoCo and the simulator can appear responsive
+while ArduSub control is not actually working.
+
+Direct MuJoCo fallback may still be enabled, but only as an explicit smoke or
+debug setup:
+
+```bash
+export ROS2_UUV_MAVROS_RC_OVERRIDE_LOCAL_FALLBACK=1
+./uuv_mujoco/v2.2/start_sitl_mujoco_mj311.sh --ros2
+```
+
+Do not ship a release where GUI-started SITL forces this value to `1`.
+
+When RC override appears broken on Ubuntu, run these checks after sourcing the
+generated env file:
+
+```bash
+source ./.uuv_mujoco_env.sh
+ros2 topic info /mavros/rc/override -v
+ros2 topic echo /mavros/rc/override
+ros2 topic echo /mavros/rc/in --once
+ros2 topic list | grep -E 'mavros|sim|imu|dvl|depth|ping360'
+tail -n 120 uuv_mujoco/v2.2/logs/gui_start_stack_*.log
+tail -n 120 uuv_mujoco/v2.2/logs/mujoco_*.log
+```
+
+Interpretation:
+
+- No `/mavros/rc/override` publisher means the GUI is not running in the sourced
+  Python/ROS environment or `mavros_msgs` is unavailable.
+- No `/mavros/rc/override` subscriber means the MuJoCo ROS2 bridge is not
+  running with the MAVROS compatibility surface enabled.
+- Override messages appear but the vehicle does not move means the bridge is
+  receiving GUI RC but ArduSub is not producing non-neutral servo output. Check
+  the MuJoCo log for `RC override not forwarded to ArduSub`, `Waiting for SITL
+  MAVLink SERVO_OUTPUT_RAW`, or neutral-servo warnings.
+- `/mavros/rc/in` mirrors the override but the vehicle still does not move
+  means the bridge received the message; inspect ArduSub mode, arm state,
+  `MAV_GCS_SYSID`, `MAV_GCS_SYSID_HI`, target heartbeat, and servo output before
+  blaming the installer.
+- Direct fallback is not proof of ArduSub control. If
+  `ROS2_UUV_MAVROS_RC_OVERRIDE_LOCAL_FALLBACK=1` is set, MuJoCo can move without
+  ArduSub producing the corresponding `SERVO_OUTPUT_RAW`.
+
+## Runtime Performance Contract
+
+The default runtime must be usable on native Ubuntu without asking users to
+guess which debug features are expensive.
+
+Default SITL rates:
+
+```text
+ROS2 sensor publish: 120 Hz
+thruster force loop: 80 Hz
+SITL MAVLink servo stream request: 25 Hz
+QGC direct video: off
+viewer debug geometry: off
+viewer spacebar pause: off
+Ping360 status publish: 2 Hz
+```
+
+Higher-rate experiments are allowed, but they must be explicit:
+
+```bash
+SITL_SENSOR_HZ_DEFAULT=300 \
+SITL_THRUSTER_LOOP_HZ_DEFAULT=150 \
+SITL_MAVLINK_SERVO_HZ_DEFAULT=50 \
+./uuv_mujoco/v2.2/start_sitl_mujoco_mj311.sh --ros2
+
+./uuv_mujoco/v2.2/start_sitl_mujoco_mj311.sh --ros2 -- --viewer-debug --qgc-video
+```
+
+Rules:
+
+- Do not make QGC H264 video automatic. Users must request it with
+  `--qgc-video`.
+- Do not draw thruster arrows, bubbles, labels, net force, buoyancy arrows, or
+  sensor markers every viewer frame unless `--viewer-debug` is set.
+- Do not let the MuJoCo viewer spacebar pause the runtime unless
+  `--enable-viewer-pause` is set.
+- Do not make `/ping360/status` subscribers trigger Ping360 raycasts. Raycasts
+  should happen only when image/scan/echo data is actually demanded or when a
+  specific Ping360 data topic is being viewed. Status-only updates should stay
+  low-rate and are tunable with `ROS2_UUV_PING360_STATUS_HZ`.
+- Do not let Ping360 background noise begin as a hard step immediately after
+  `settings.blind_bins`. Fade it in over a short range band, and keep the polar
+  renderer blank inside the blind radius so the GUI does not show a fake
+  center dot or circular minimum-range ring.
+- Do not leave transparent water visualization geoms in a sonar-raycasted group.
+  `water_vis` and `water_surface` must be group `5`; Ping360 sets
+  `geomgroup[5] = 0` so these visual-only geoms do not become fake acoustic
+  targets.
+
 ## Known-Good Reference
 
 The working reference package tested on Ubuntu was:
@@ -200,9 +350,42 @@ runtime installation itself progressed correctly. When installation starts
 failing again, compare the current dist2 installer against the behavior in this
 guide before debugging unrelated runtime code.
 
-## Current Validated Candidate
+### Known-Good Install Zip Is Not A GUI-Complete Reference
 
-The repaired local candidate built after the 2026-05-08 Docker validation is:
+The zip with SHA256
+`6f1b9a329e44a6c8d2c9e8c50c6df702d5eabf3d86a4fe3857202125f47fb783` is useful
+only as an installer-behavior reference. It must not be treated as the final
+GUI behavior reference.
+
+Concrete differences found when comparing that zip against the repaired dist2
+candidate:
+
+- It contains only `rospkg/kmu26_auv.zip`; it does not contain
+  `rospkg/dvl_msgs.zip` or `rospkg/ping360_sonar_msgs.zip`.
+- Its GUI implementation is a single top-level `uuv_control_gui.py`. It does
+  not contain the modular runtime GUI directory `uuv_mujoco/v2.2/gui/`.
+- Its top-level `run_control_gui.sh` starts the top-level monolithic GUI
+  directly. The repaired dist keeps the compatibility wrapper at the top level
+  and runs the implementation from `uuv_mujoco/v2.2/gui/uuv_control_gui.py`.
+- Its `launch_uuv_sim.sh` does not source the local
+  `rospkg/install/setup.bash` workspace when `--ros2` is requested. This can
+  make locally built message packages invisible to bridge/runtime child
+  processes unless the user had already sourced the workspace manually.
+- Its Ping360 path predates the `ping360_sonar_msgs` bundle and the
+  `/ping360/scan_image`, `/ping360/scan_echo`, and `/ping360/echo` topics.
+  GUI Ping360 view fallback targeted `/ping360/image`, while the current GUI
+  creates a generated RViz config and falls back to `/ping360/scan_image`.
+- Its GUI-started simulator stack does not append `--ros2-real-pkg-compat`
+  when the real ROS package is already running. The repaired GUI does this so
+  GUI-launched MuJoCo/SITL and the real package topic surface line up.
+
+Rule: use this zip to recover the native Ubuntu install flow only. Do not copy
+its GUI packaging layout, ROS workspace sourcing behavior, or Ping360 topic
+surface into a new release.
+
+## Current Local Candidate
+
+The current local candidate is:
 
 ```text
 dist2/ubuntu22.04/out/uuv_sim_ubuntu22.04_dist2.zip
@@ -213,25 +396,17 @@ Use `SHA256SUMS` next to the generated zip for the current artifact hash. Do
 not hard-code the current zip hash inside this guide because this guide is part
 of the package payload; editing the embedded hash changes the zip hash again.
 
-Validation performed:
+Local validation performed before handing off the artifact:
 
 - `package_dist2.sh` completed.
 - `verify_package.sh` passed.
-- Ubuntu 22.04 Docker install completed as a non-root user.
-- Native Python runtime imports passed after sourcing `.uuv_mujoco_env.sh`.
-- Direct headless MuJoCo smoke test reached the running simulation state and
-  exited through `timeout` status `124`, which is acceptable for a long-running
-  simulator.
+- The packaged nested runtime was unpacked and inspected for the RC override
+  fallback fix.
+- Shell and Python syntax checks passed for the touched runtime files.
 
-Docker validation logs from this repair pass were written to:
-
-```text
-/tmp/uuv_docker_ubuntu2204_test_user/full_test.log
-/tmp/uuv_docker_ubuntu2204_test_user/launch_headless.log
-/tmp/uuv_docker_ubuntu2204_test_user_patched/launch_headless_patched.log
-```
-
-Those `/tmp` logs are local evidence, not release payload. Do not package them.
+Native Ubuntu 22.04 validation is still the authority for a release claim.
+Do not describe a candidate as GUI/QGC/RC validated until it has been run on
+real Ubuntu hardware or an equivalent native Ubuntu installation.
 
 ## Non-Negotiable Installer Rules
 
@@ -1716,6 +1891,7 @@ Use the first real error in the log, not the final cascade.
 | Runtime tries to open `/Users/kanghyunmin/...` | Host-specific path leaked into package. | Rewrite to relative path, package URL, script-derived root, or explicit env/CLI path. |
 | RViz opens without robot model | RViz config points to an absolute local URDF or wrong description source. | Use topic/default description settings or package-relative paths. |
 | MuJoCo asset load fails for Ping360 STL | JSON/XML mesh path points outside bundled assets. | Use bundled relative path such as `PING360_SONAR_BR-100399/PING360-ASM.STL`. |
+| Ping360 GUI shows a bright center dot or circular ring around the center | The polar renderer draws the sonar origin, raw noise starts abruptly at the blind-zone boundary, or the vertical beam hits `water_vis`/`water_surface` visual geoms. | Keep the blind radius black, ramp `noise_floor`/speckle in after `settings.blind_bins`, and keep water visual geoms in raycast-excluded group `5`. |
 | Replay script cannot find a real bag file | Real rosbag data is intentionally not bundled. | Require `--bag /path/to/file` and document data acquisition separately. |
 | QGroundControl AppImage does not run in ARM64 Docker | The downloaded AppImage is x86_64. | Validate QGC on x86_64 Ubuntu or an explicit amd64 environment. |
 | `verify_package.sh` passes but Ubuntu install fails | Verifier only checked structure/syntax. | Run the Docker or real Ubuntu install test and add a new rule for the missed failure. |
@@ -1773,6 +1949,9 @@ Check these first if Ubuntu installation fails:
     relative `--out-dir` was interpreted from a changed working directory.
 19. `dvl_msgs` is treated as an apt-only dependency even though Humble apt did
     not provide `ros-humble-dvl-msgs` during validation.
+20. Ping360 blind-zone noise starts as a hard step, or transparent water visual
+    geoms remain in raycast group `0`, so the GUI displays a fake circular ring
+    near the sonar center.
 
 When debugging, capture the exact failing command and the 30-50 log lines above
 the first error. Later cascading errors are usually less useful.

@@ -1,0 +1,230 @@
+{
+  "bag_dir": "/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/measurements/mavros_step_test_current_shadowfix_20260406_033840/bag",
+  "phase_spans": [
+    {
+      "name": "preflight_neutral",
+      "start": 0.0035050600000000004,
+      "end": 2.0049372770000002
+    },
+    {
+      "name": "preflight_neutral_end",
+      "start": 2.0049372770000002,
+      "end": 2.009088632
+    },
+    {
+      "name": "manual_mode_settle",
+      "start": 2.009088632,
+      "end": 3.5091800710000003
+    },
+    {
+      "name": "manual_mode_settle_end",
+      "start": 3.5091800710000003,
+      "end": 3.516784277
+    },
+    {
+      "name": "post_arm_settle",
+      "start": 3.516784277,
+      "end": 8.518513998000001
+    },
+    {
+      "name": "post_arm_settle_end",
+      "start": 8.518513998000001,
+      "end": 8.518576457
+    },
+    {
+      "name": "manual_neutral",
+      "start": 8.518576457,
+      "end": 10.521742600000001
+    },
+    {
+      "name": "manual_neutral_end",
+      "start": 10.521742600000001,
+      "end": 10.5217481
+    },
+    {
+      "name": "manual_forward_step",
+      "start": 10.5217481,
+      "end": 14.522646357000001
+    },
+    {
+      "name": "manual_forward_step_end",
+      "start": 14.522646357000001,
+      "end": 14.522709566000001
+    },
+    {
+      "name": "manual_neutral_2",
+      "start": 14.522709566000001,
+      "end": 17.024369931000003
+    },
+    {
+      "name": "manual_neutral_2_end",
+      "start": 17.024369931000003,
+      "end": 17.02460314
+    },
+    {
+      "name": "manual_yaw_step",
+      "start": 17.02460314,
+      "end": 21.026693404000003
+    },
+    {
+      "name": "manual_yaw_step_end",
+      "start": 21.026693404000003,
+      "end": 21.026810488000002
+    },
+    {
+      "name": "manual_neutral_3",
+      "start": 21.026810488000002,
+      "end": 23.527942683000003
+    },
+    {
+      "name": "manual_neutral_3_end",
+      "start": 23.527942683000003,
+      "end": 23.560034142000003
+    },
+    {
+      "name": "stabilize_mode_settle",
+      "start": 23.560034142000003,
+      "end": 26.060454583000002
+    },
+    {
+      "name": "stabilize_mode_settle_end",
+      "start": 26.060454583000002,
+      "end": 26.060581334000002
+    },
+    {
+      "name": "stabilize_forward_step",
+      "start": 26.060581334000002,
+      "end": 30.065690238000002
+    },
+    {
+      "name": "stabilize_forward_step_end",
+      "start": 30.065690238000002,
+      "end": 30.065836614000002
+    },
+    {
+      "name": "stabilize_neutral",
+      "start": 30.065836614000002,
+      "end": 32.565905637
+    },
+    {
+      "name": "stabilize_neutral_end",
+      "start": 32.565905637,
+      "end": 32.56966949
+    },
+    {
+      "name": "alt_hold_mode_settle",
+      "start": 32.56966949,
+      "end": 35.072253317000005
+    },
+    {
+      "name": "alt_hold_mode_settle_end",
+      "start": 35.072253317000005,
+      "end": 35.072290651
+    },
+    {
+      "name": "alt_hold_forward_step",
+      "start": 35.072290651,
+      "end": 39.076019257000006
+    },
+    {
+      "name": "alt_hold_forward_step_end",
+      "start": 39.076019257000006,
+      "end": 39.076060715000004
+    },
+    {
+      "name": "alt_hold_neutral",
+      "start": 39.076060715000004,
+      "end": 41.577329578000004
+    },
+    {
+      "name": "alt_hold_neutral_end",
+      "start": 41.577329578000004,
+      "end": 41.577371453000005
+    },
+    {
+      "name": "alt_hold_heave_step",
+      "start": 41.577371453000005,
+      "end": 45.581692270000005
+    },
+    {
+      "name": "alt_hold_heave_step_end",
+      "start": 45.581692270000005,
+      "end": 45.58175002
+    },
+    {
+      "name": "post_test_neutral",
+      "start": 45.58175002,
+      "end": 48.084789392000005
+    },
+    {
+      "name": "post_test_neutral_end",
+      "start": 48.084789392000005,
+      "end": 48.087726407000005
+    },
+    {
+      "name": "post_disarm",
+      "start": 48.087726407000005,
+      "end": 49.087746866
+    },
+    {
+      "name": "post_disarm_end",
+      "start": 49.087746866,
+      "end": 49.087746866
+    }
+  ],
+  "summary": {
+    "manual_forward_step": {
+      "surge_mps": {
+        "mean": 0.47972662504072544,
+        "max": 0.5553095323718691,
+        "min": -0.0005066286833375641,
+        "final": 0.5553095323718691
+      }
+    },
+    "stabilize_forward_step": {
+      "surge_mps": {
+        "mean": 0.4585692909324312,
+        "max": 0.5572112525109323,
+        "min": -0.0013387583541422095,
+        "final": 0.12472698382296356
+      },
+      "roll_rad": {
+        "mean": 0.0011423454506644278,
+        "max": 0.0076536312111716975,
+        "min": -0.00026965312940756633,
+        "final": 0.0076536312111716975
+      },
+      "pitch_rad": {
+        "mean": 0.1172708594048297,
+        "max": 0.22561320555695225,
+        "min": -0.00011193682900373657,
+        "final": 0.1657983836622905
+      }
+    },
+    "alt_hold_forward_step": {
+      "surge_mps": {
+        "mean": 0.03768723075532172,
+        "max": 0.1695732346369848,
+        "min": -0.050558855342891174,
+        "final": 0.0021766153941971443
+      }
+    },
+    "manual_yaw_step": {
+      "yaw_rate_rad_s": {
+        "mean": -0.7500203632943132,
+        "max": 0.0013988956000268009,
+        "min": -0.7897216603137439,
+        "final": -0.7853056796970619
+      }
+    },
+    "alt_hold_heave_step": {
+      "depth_m": {
+        "mean": 0.04810174355326697,
+        "max": 0.06856268644332886,
+        "min": 0.03259176015853882,
+        "final": 0.04604281485080719,
+        "delta": -0.018750295042991638
+      }
+    }
+  }
+}

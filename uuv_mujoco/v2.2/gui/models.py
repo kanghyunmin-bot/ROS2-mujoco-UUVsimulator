@@ -40,10 +40,15 @@ class TelemetrySnapshot:
     depth_source: str = "unavailable"
     pressure_pa: float = math.nan
 
+    rc_in: list[int] = field(default_factory=lambda: [0] * RC_FEEDBACK_CHANNEL_COUNT)
     rc_out: list[int] = field(default_factory=lambda: [0] * RC_FEEDBACK_CHANNEL_COUNT)
+    rc_in_source: str = "unavailable"
+    rc_out_source: str = "unavailable"
     rc_feedback_source: str = "unavailable"
     events: Deque[str] = field(default_factory=lambda: deque(maxlen=TELEMETRY_EVENT_LIMIT))
     ping360_summary: str = "ping360: no status"
+    ping360_enabled: bool | None = None
+    ping360_active: bool | None = None
     ping360_age_s: float = math.inf
 
     state_age_s: float = math.inf
@@ -51,6 +56,8 @@ class TelemetrySnapshot:
     pose_age_s: float = math.inf
     depth_age_s: float = math.inf
     rc_age_s: float = math.inf
+    rc_in_age_s: float = math.inf
+    rc_out_age_s: float = math.inf
 
 
 @dataclass(frozen=True)

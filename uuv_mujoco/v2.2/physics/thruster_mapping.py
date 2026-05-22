@@ -8,16 +8,43 @@ import sys
 PHYSICAL_VERTICAL_THRUSTERS = ("ver_lf", "ver_lr", "ver_rf", "ver_rr")
 PHYSICAL_YAW_THRUSTERS = ("yaw_lf", "yaw_lr", "yaw_rf", "yaw_rr")
 
+# ArduSub AP_Motors6DOF.cpp, SUB_FRAME_VECTORED_6DOF.
+# Columns are roll, pitch, yaw, throttle, forward, lateral in ArduPilot's FRD
+# body frame. Keep this next to the servo map so version drift is visible.
+ARDUSUB_VECTORED_6DOF_MOTOR_FACTORS_FRD = (
+    (0.0, 0.0, 1.0, 0.0, -1.0, 1.0),
+    (0.0, 0.0, -1.0, 0.0, -1.0, -1.0),
+    (0.0, 0.0, -1.0, 0.0, 1.0, 1.0),
+    (0.0, 0.0, 1.0, 0.0, 1.0, -1.0),
+    (1.0, -1.0, 0.0, -1.0, 0.0, 0.0),
+    (-1.0, -1.0, 0.0, -1.0, 0.0, 0.0),
+    (1.0, 1.0, 0.0, -1.0, 0.0, 0.0),
+    (-1.0, 1.0, 0.0, -1.0, 0.0, 0.0),
+)
+
+# real_robot.param MOT_1_DIRECTION .. MOT_8_DIRECTION. ArduSub applies these
+# before generating SERVO_OUTPUT_RAW, so the simulator must account for them
+# when converting final PWM delta into MuJoCo actuator-positive force.
+REAL_ROBOT_MOT_DIRECTIONS = (1, 1, -1, -1, -1, 1, 1, -1)
+
+# ArduSub VECTORED_6DOF motor order is defined in AP_Motors6DOF.cpp:
+#   1..4: horizontal yaw/forward/lateral motors
+#   5..8: vertical roll/pitch/throttle motors
+# The signs below convert the final SERVO_OUTPUT_RAW PWM delta, after the real
+# MOT_x_DIRECTION parameters have already been applied inside ArduSub, into this
+# MuJoCo model's actuator-positive force direction. ArduSub's body convention is
+# FRD, while the MuJoCo body is FLU, so yaw/pitch/lateral signs must be compared
+# after converting the model wrench into FRD axes.
 ARDUSUB_VECTORED_6DOF_YAW_CHANNEL_ORDER = ("yaw_rf", "yaw_lf", "yaw_rr", "yaw_lr")
+# BlueROV/ArduSub VECTORED_6DOF SERVO5..8 physical vertical motor order.
 ARDUSUB_VECTORED_6DOF_VERTICAL_CHANNEL_ORDER = ("ver_rf", "ver_lf", "ver_rr", "ver_lr")
 ARDUSUB_VECTORED_6DOF_SERVO_MAP = (
     ARDUSUB_VECTORED_6DOF_YAW_CHANNEL_ORDER
     + ARDUSUB_VECTORED_6DOF_VERTICAL_CHANNEL_ORDER
 )
-# Physical ESC/prop convention that converts ArduSub SERVO_OUTPUT_RAW to MuJoCo
-# thruster force. The real vehicle's QGC Motor Config reverse flags for motors
-# 3/4/5/8 are already injected into ArduSub SITL as MOT_*_DIRECTION parameters
-# by start_ardusub_sitl_mj311.sh, so they must not be applied a second time here.
+# These signs make a positive ArduSub roll, pitch, throttle, forward, lateral,
+# and yaw command produce the same primary FRD wrench direction in MuJoCo after
+# ArduSub's real MOT_x_DIRECTION parameters have already shaped SERVO_OUTPUT_RAW.
 ARDUSUB_VECTORED_6DOF_SERVO_SIGNS = (-1, -1, 1, 1, -1, 1, 1, -1)
 
 SENSOR_SITES_FLU = {

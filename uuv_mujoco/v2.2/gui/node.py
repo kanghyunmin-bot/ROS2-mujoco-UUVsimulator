@@ -6,6 +6,7 @@ from dataclasses import replace
 
 from .config import *
 from .helpers import (
+    clamp_axis,
     make_rc_override_message,
     make_rc_release_message,
     normalize_backend_name,
@@ -37,18 +38,47 @@ class UuvGuiNode(Node):
         self._last_graph_probe_wall = -1.0
         self._last_mode_seen = ""
         self._last_armed_seen: Optional[bool] = None
+        self._arm_request_in_flight = False
         self._rc_override_subscribers = 0
+        self._manual_control_subscribers = 0
+        self._one_shot_timers = []
+        self._vehicle_connected_since_wall = -1.0
+        self._alt_hold_release_delay_s = float(os.environ.get("UUV_GUI_ALT_HOLD_RELEASE_DELAY_S", "0.0"))
+        self._control_request_timeout_s = float(os.environ.get("UUV_GUI_CONTROL_REQUEST_TIMEOUT_S", "20.0"))
+        self._control_request_retry_s = float(os.environ.get("UUV_GUI_CONTROL_REQUEST_RETRY_S", "0.5"))
+        self._require_arm_mode_settle = os.environ.get(
+            "UUV_GUI_REQUIRE_ARM_MODE_EKF_SETTLE",
+            "1",
+        ).strip().lower() not in {"0", "false", "no", "off"}
+        self._arm_mode_settle_s = float(os.environ.get("UUV_GUI_ARM_MODE_EKF_SETTLE_S", "3.0"))
+        self._initial_depth_hold_opt_in = os.environ.get(
+            "UUV_GUI_HOLD_INITIAL_DEPTH_UNTIL_RELEASE",
+            "0",
+        ).strip().lower() not in {"0", "false", "no", "off"}
+        self._initial_depth_release_pending = False
+        self._initial_depth_release_in_flight = False
+        self._initial_depth_release_reason = ""
 
         if HAVE_MAVROS_MSGS:
             self._rc_override_pub = self.create_publisher(OverrideRCIn, self._topic("rc/override"), 10)
+            self._manual_control_pub = self.create_publisher(ManualControl, self._topic("manual_control/send"), 10)
             self._arm_client = self.create_client(CommandBool, self._topic("cmd/arming"))
             self._mode_client = self.create_client(SetMode, self._topic("set_mode"))
             self._vehicle_info_client = self.create_client(VehicleInfoGet, self._topic("vehicle_info_get"))
         else:
             self._rc_override_pub = None
+            self._manual_control_pub = None
             self._arm_client = None
             self._mode_client = None
             self._vehicle_info_client = None
+
+        if HAVE_STD_SRVS and self._initial_depth_hold_opt_in:
+            self._initial_depth_release_client = self.create_client(
+                Trigger,
+                "/mujoco/release_initial_depth_hold",
+            )
+        else:
+            self._initial_depth_release_client = None
 
         state_qos = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
@@ -96,7 +126,7 @@ class UuvGuiNode(Node):
         self.create_subscription(PoseStamped, "/mujoco/ground_truth/pose", self._on_ground_truth_pose, qos_profile_sensor_data)
         if HAVE_MAVROS_MSGS:
             self.create_subscription(RCOut, self._topic("rc/out"), self._on_rc_out, 20)
-            self.create_subscription(OverrideRCIn, self._topic("rc/in"), self._on_rc_in, 20)
+            self.create_subscription(RCIn, self._topic("rc/in"), self._on_rc_in, 20)
             self.create_subscription(StatusText, self._topic("statustext/recv"), self._on_status_text, best_effort_qos)
 
         self.create_subscription(Float32, "/depth", self._on_depth, best_effort_qos)
@@ -117,7 +147,8 @@ class UuvGuiNode(Node):
 
         self._push_event(
             f"GUI attached to {self._base_ns or '/mavros'} "
-            f"(RC override via {self._topic('rc/override')}; SITL stack uses ArduSub closed-loop)"
+            f"(pilot joystick via {self._topic('manual_control/send')}; "
+            f"rosbag replay via {self._topic('rc/override')})"
         )
         if not HAVE_MAVROS_MSGS:
             self._push_event("mavros_msgs not available in this Python env: MAVROS arm/mode/RC features disabled")
@@ -168,6 +199,26 @@ class UuvGuiNode(Node):
     def rc_mapping_summary(self) -> str:
         return self._active_layout().summary
 
+    def control_readiness(self, snap: TelemetrySnapshot) -> tuple[str, str]:
+        state_fresh = bool(snap.connected) and math.isfinite(snap.state_age_s) and snap.state_age_s < 3.0
+        arm_ready = self._service_ready(self._arm_client) > 0
+        mode_ready = self._service_ready(self._mode_client) > 0
+        rc_ready = self._manual_control_subscribers > 0 or self._rc_override_subscribers > 0
+        depth_ready = math.isfinite(snap.depth_m) and math.isfinite(snap.depth_age_s) and snap.depth_age_s < 3.0
+        settle_left_s = self._arm_mode_settle_left_s()
+
+        if not state_fresh:
+            return "WAIT: vehicle", "NotReady.TLabel"
+        if settle_left_s > 0.0:
+            return f"WAIT: EKF settle {settle_left_s:.0f}s", "NotReady.TLabel"
+        if not arm_ready or not mode_ready:
+            return "WAIT: arm/mode", "NotReady.TLabel"
+        if not rc_ready:
+            return "CMD READY / RC WAIT", "Limited.TLabel"
+        if not depth_ready:
+            return "CMD READY / DEPTH WAIT", "Limited.TLabel"
+        return "READY", "Ready.TLabel"
+
     def vehicle_info_supported(self) -> bool:
         return bool(self._vehicle_info_supported)
 
@@ -176,7 +227,7 @@ class UuvGuiNode(Node):
 
     def _probe_backend(self, force: bool = False) -> None:
         now = time.monotonic()
-        if not force and self._last_graph_probe_wall >= 0.0 and (now - self._last_graph_probe_wall) < 1.0:
+        if not force and self._last_graph_probe_wall >= 0.0 and (now - self._last_graph_probe_wall) < 3.0:
             return
         self._last_graph_probe_wall = now
 
@@ -201,7 +252,9 @@ class UuvGuiNode(Node):
         bridge_dvl_velocity_publishers = self._safe_count_publishers("/dvl/velocity")
         bridge_depth_publishers = self._safe_count_publishers("/depth")
         rc_override_subscribers = self._safe_count_subscribers(self._topic("rc/override"))
+        manual_control_subscribers = self._safe_count_subscribers(self._topic("manual_control/send"))
         self._rc_override_subscribers = rc_override_subscribers
+        self._manual_control_subscribers = manual_control_subscribers
 
         if vehicle_info_services > 0:
             mavros_score += 3
@@ -234,6 +287,8 @@ class UuvGuiNode(Node):
         if bridge_battery_publishers > 0:
             sim_score += 1
         if rc_override_subscribers > 0:
+            sim_score += 2
+        if manual_control_subscribers > 0:
             sim_score += 2
 
         self._vehicle_info_supported = vehicle_info_services > 0
@@ -276,6 +331,7 @@ class UuvGuiNode(Node):
         with self._lock:
             snap = replace(
                 self._snapshot,
+                rc_in=list(self._snapshot.rc_in),
                 rc_out=list(self._snapshot.rc_out),
                 events=deque(self._snapshot.events, maxlen=TELEMETRY_EVENT_LIMIT),
             )
@@ -284,7 +340,9 @@ class UuvGuiNode(Node):
         snap.imu_age_s = now - self._last_wall.get("imu", math.inf)
         snap.pose_age_s = now - self._last_wall.get("pose", math.inf)
         snap.depth_age_s = now - self._last_wall.get("depth", math.inf)
-        snap.rc_age_s = now - self._last_wall.get("rc_out", math.inf)
+        snap.rc_in_age_s = now - self._last_wall.get("rc_in", math.inf)
+        snap.rc_out_age_s = now - self._last_wall.get("rc_out", math.inf)
+        snap.rc_age_s = min(snap.rc_in_age_s, snap.rc_out_age_s)
         snap.ping360_age_s = now - self._last_wall.get("ping360", math.inf)
         return snap
 
@@ -323,60 +381,314 @@ class UuvGuiNode(Node):
             self._snapshot.mode_id = int(info.mode_id)
             self._snapshot.autopilot_name = f"autopilot={info.autopilot}, type={info.type}"
 
-    def arm(self, value: bool) -> None:
+    def _call_trigger_service(self, client, label: str, on_success=None, on_done=None) -> bool:
+        try:
+            ready = client is not None and client.service_is_ready()
+        except Exception:
+            ready = False
+        if not ready:
+            self._push_event(f"{label}: service unavailable")
+            return False
+        future = client.call_async(Trigger.Request())
+
+        def _done(fut) -> None:
+            try:
+                resp = fut.result()
+            except Exception as exc:
+                self._push_event(f"{label} failed: {exc}")
+                if on_done is not None:
+                    on_done(False)
+                return
+            ok = bool(getattr(resp, "success", False))
+            message = str(getattr(resp, "message", ""))
+            self._push_event(f"{label}: success={ok} {message}".strip())
+            if on_done is not None:
+                on_done(ok)
+                return
+            if ok and on_success is not None:
+                on_success()
+
+        future.add_done_callback(_done)
+        return True
+
+    def _vehicle_ready_for_initial_depth_release(self) -> bool:
+        with self._lock:
+            armed = bool(self._snapshot.armed)
+            mode = str(self._snapshot.mode).upper()
+        if not armed:
+            return False
+        if self._initial_depth_release_reason == "ALT_HOLD":
+            return mode == "ALT_HOLD"
+        return True
+
+    def _try_release_initial_depth_hold(self) -> None:
+        if not self._initial_depth_hold_opt_in:
+            return
+        if not self._initial_depth_release_pending:
+            return
+        if self._initial_depth_release_in_flight:
+            return
+        if not self._vehicle_ready_for_initial_depth_release():
+            return
+        self._initial_depth_release_in_flight = True
+
+        def _on_release_done(ok: bool) -> None:
+            self._initial_depth_release_in_flight = False
+            self._initial_depth_release_pending = not bool(ok)
+            if ok:
+                self._initial_depth_release_reason = ""
+
+        started = self._call_trigger_service(
+            self._initial_depth_release_client,
+            "initial depth release",
+            on_done=_on_release_done,
+        )
+        if not started:
+            self._initial_depth_release_in_flight = False
+            self._initial_depth_release_pending = True
+
+    def _request_initial_depth_release_when_armed(self, reason: str) -> None:
+        if not self._initial_depth_hold_opt_in:
+            return
+        self._initial_depth_release_pending = True
+        self._initial_depth_release_reason = str(reason).strip() or "unknown"
+        self._push_event(f"initial depth hold release waiting for armed state ({reason})")
+        self._try_release_initial_depth_hold()
+
+    def request_initial_depth_release_when_armed(self, reason: str) -> None:
+        self._request_initial_depth_release_when_armed(reason)
+
+    def _schedule_initial_depth_release_after_althold(self) -> None:
+        if not self._initial_depth_hold_opt_in:
+            return
+        self._request_initial_depth_release_when_armed("ALT_HOLD")
+
+    def _schedule_once(self, delay_s: float, callback) -> None:
+        holder = {}
+
+        def _timer_cb() -> None:
+            timer = holder.get("timer")
+            if timer is not None:
+                try:
+                    timer.cancel()
+                except Exception:
+                    pass
+            try:
+                callback()
+            finally:
+                if timer in self._one_shot_timers:
+                    self._one_shot_timers.remove(timer)
+
+        timer = self.create_timer(max(0.0, float(delay_s)), _timer_cb)
+        holder["timer"] = timer
+        self._one_shot_timers.append(timer)
+
+    def _state_age_s(self) -> float:
+        return time.monotonic() - self._last_wall.get("state", math.inf)
+
+    def _fresh_vehicle_state(self) -> tuple[bool, bool, str]:
+        with self._lock:
+            return bool(self._snapshot.connected), bool(self._snapshot.armed), str(self._snapshot.mode)
+
+    def _arm_mode_settle_left_s(self) -> float:
+        if not self._require_arm_mode_settle:
+            return 0.0
+        with self._lock:
+            connected_since = float(self._vehicle_connected_since_wall)
+        if connected_since <= 0.0:
+            return float(max(0.0, self._arm_mode_settle_s))
+        age_s = time.monotonic() - connected_since
+        return float(max(0.0, self._arm_mode_settle_s - age_s))
+
+    def _arm_mode_gate_reason(self, *, arm_value: Optional[bool] = None, mode: str = "") -> str:
+        if arm_value is False:
+            return ""
+        requested_mode = str(mode or "").upper()
+        if requested_mode in {"", "MANUAL"} and arm_value is None:
+            return ""
+
+        snap = self.snapshot()
+        if not bool(snap.connected) or not math.isfinite(snap.state_age_s) or snap.state_age_s >= 3.0:
+            return "waiting for fresh vehicle state"
+        if math.isfinite(snap.depth_age_s) and snap.depth_age_s >= 3.0:
+            return "waiting for fresh Bar30/depth feedback"
+        if not math.isfinite(snap.depth_age_s):
+            return "waiting for Bar30/depth feedback"
+        if math.isfinite(snap.imu_age_s) and snap.imu_age_s >= 3.0:
+            return "waiting for fresh IMU feedback"
+        if not math.isfinite(snap.imu_age_s):
+            return "waiting for IMU feedback"
+
+        settle_left_s = self._arm_mode_settle_left_s()
+        if settle_left_s > 0.0:
+            return f"waiting EKF/ExternalNav settle ({settle_left_s:.1f}s left)"
+        return ""
+
+    def _arm_target_reached(self, value: bool) -> bool:
+        connected, armed, _mode = self._fresh_vehicle_state()
+        return connected and self._state_age_s() < 3.0 and armed == bool(value)
+
+    def _mode_target_reached(self, mode: str) -> bool:
+        connected, _armed, current_mode = self._fresh_vehicle_state()
+        return connected and self._state_age_s() < 3.0 and current_mode.upper() == str(mode).upper()
+
+    def _retry_arm_request(self, value: bool, deadline: float, attempt: int) -> None:
+        if time.monotonic() >= deadline:
+            self._push_event(f"arm target timeout: armed={value}")
+            return
+        self._schedule_once(
+            self._control_request_retry_s,
+            lambda: self._send_arm_request(value, deadline, attempt + 1),
+        )
+
+    def _retry_mode_request(self, mode: str, deadline: float, attempt: int) -> None:
+        if time.monotonic() >= deadline:
+            self._push_event(f"set_mode target timeout: {mode}")
+            return
+        self._schedule_once(
+            self._control_request_retry_s,
+            lambda: self._send_mode_request(mode, deadline, attempt + 1),
+        )
+
+    def _send_arm_request(self, value: bool, deadline: Optional[float] = None, attempt: int = 1) -> None:
+        if deadline is None:
+            deadline = time.monotonic() + self._control_request_timeout_s
+        if self._arm_target_reached(value):
+            self._push_event(f"arm target reached: armed={value}")
+            if value:
+                self._try_release_initial_depth_hold()
+            return
+        gate_reason = self._arm_mode_gate_reason(arm_value=bool(value))
+        if gate_reason:
+            if time.monotonic() >= deadline:
+                self._push_event(f"arm blocked: {gate_reason}")
+                return
+            if attempt == 1 or attempt % 4 == 0:
+                self._push_event(f"arm delayed: {gate_reason}")
+            self._retry_arm_request(value, deadline, attempt)
+            return
+        if self._arm_request_in_flight:
+            self._retry_arm_request(value, deadline, attempt)
+            return
         if self._arm_client is None:
             self._push_event("arm service unavailable in current Python env")
+            self._retry_arm_request(value, deadline, attempt)
             return
         try:
             ready = self._arm_client.service_is_ready()
         except Exception:
             ready = False
         if not ready:
-            self._push_event("arm service unavailable")
+            if attempt == 1 or attempt % 4 == 0:
+                self._push_event("arm service unavailable; waiting")
+            self._retry_arm_request(value, deadline, attempt)
             return
         req = CommandBool.Request()
         req.value = bool(value)
         future = self._arm_client.call_async(req)
+        self._arm_request_in_flight = True
         future.add_done_callback(
-            lambda fut: self._on_arm_response(fut, "arm" if value else "disarm")
+            lambda fut: self._on_arm_response(
+                fut,
+                "arm" if value else "disarm",
+                bool(value),
+                deadline,
+                attempt,
+            )
         )
 
-    def _on_arm_response(self, future, action: str) -> None:
+    def arm(self, value: bool) -> None:
+        deadline = time.monotonic() + self._control_request_timeout_s
+        self._send_arm_request(value, deadline, 1)
+
+    def _on_arm_response(
+        self,
+        future,
+        action: str,
+        target_value: bool,
+        deadline: float,
+        attempt: int,
+    ) -> None:
+        self._arm_request_in_flight = False
         try:
             resp = future.result()
         except Exception as exc:
             self._push_event(f"{action} failed: {exc}")
+            self._retry_arm_request(target_value, deadline, attempt)
             return
-        self._push_event(f"{action}: success={resp.success}, result={resp.result}")
+        self._push_event(f"{action}: success={resp.success}, result={resp.result}, attempt={attempt}")
+        if self._arm_target_reached(target_value):
+            self._push_event(f"arm target reached: armed={target_value}")
+            if target_value:
+                self._try_release_initial_depth_hold()
+            return
+        self._retry_arm_request(target_value, deadline, attempt)
 
     def set_mode(self, mode: str) -> None:
+        deadline = time.monotonic() + self._control_request_timeout_s
+        self._send_mode_request(mode, deadline, 1)
+
+    def _send_mode_request(self, mode: str, deadline: float, attempt: int) -> None:
+        if self._mode_target_reached(mode):
+            self._push_event(f"mode target reached: {mode}")
+            if str(mode).upper() == "ALT_HOLD":
+                self._schedule_initial_depth_release_after_althold()
+            return
+        gate_reason = self._arm_mode_gate_reason(mode=mode)
+        if gate_reason:
+            if time.monotonic() >= deadline:
+                self._push_event(f"set_mode {mode} blocked: {gate_reason}")
+                return
+            if attempt == 1 or attempt % 4 == 0:
+                self._push_event(f"set_mode {mode} delayed: {gate_reason}")
+            self._retry_mode_request(mode, deadline, attempt)
+            return
         if self._mode_request_in_flight:
+            self._retry_mode_request(mode, deadline, attempt)
             return
         if self._mode_client is None:
             self._push_event("set_mode service unavailable in current Python env")
+            self._retry_mode_request(mode, deadline, attempt)
             return
         try:
             ready = self._mode_client.service_is_ready()
         except Exception:
             ready = False
         if not ready:
-            self._push_event("set_mode service unavailable")
+            if attempt == 1 or attempt % 4 == 0:
+                self._push_event("set_mode service unavailable; waiting")
+            self._retry_mode_request(mode, deadline, attempt)
             return
         req = SetMode.Request()
         req.base_mode = 0
         req.custom_mode = mode
         future = self._mode_client.call_async(req)
         self._mode_request_in_flight = True
-        future.add_done_callback(lambda fut: self._on_mode_response(fut, mode))
+        future.add_done_callback(lambda fut: self._on_mode_response(fut, mode, deadline, attempt))
 
-    def _on_mode_response(self, future, mode: str) -> None:
+    def _on_mode_response(self, future, mode: str, deadline: float, attempt: int) -> None:
         self._mode_request_in_flight = False
         try:
             resp = future.result()
         except Exception as exc:
             self._push_event(f"set_mode {mode} failed: {exc}")
+            self._retry_mode_request(mode, deadline, attempt)
             return
-        self._push_event(f"set_mode {mode}: mode_sent={resp.mode_sent}")
+        self._push_event(f"set_mode {mode}: mode_sent={resp.mode_sent}, attempt={attempt}")
+        if self._mode_target_reached(mode):
+            self._push_event(f"mode target reached: {mode}")
+            if str(mode).upper() == "ALT_HOLD":
+                self._schedule_initial_depth_release_after_althold()
+            return
+        if str(mode).upper() == "ALT_HOLD" and bool(getattr(resp, "mode_sent", False)):
+            self._push_event(
+                f"initial depth hold release check scheduled: {self._alt_hold_release_delay_s:.1f}s"
+            )
+            self._schedule_once(
+                self._alt_hold_release_delay_s,
+                self._schedule_initial_depth_release_after_althold,
+            )
+        self._retry_mode_request(mode, deadline, attempt)
 
     def publish_rc_override(
         self,
@@ -400,8 +712,27 @@ class UuvGuiNode(Node):
             forward=forward,
             lateral=lateral,
         )
-        if self._rc_override_subscribers > 0:
-            self._rc_override_pub.publish(msg)
+        self._rc_override_pub.publish(msg)
+
+    def publish_manual_control(
+        self,
+        *,
+        yaw: float,
+        heave: float,
+        forward: float,
+        lateral: float,
+    ) -> None:
+        if self._manual_control_pub is None:
+            return
+        msg = ManualControl()
+        msg.x = clamp_axis(forward)
+        msg.y = clamp_axis(lateral)
+        # The local bridge accepts normalized heave [-1, +1] and converts it to
+        # MAVLink MANUAL_CONTROL z [0, 1000] with 500 as neutral.
+        msg.z = clamp_axis(heave)
+        msg.r = clamp_axis(yaw)
+        msg.buttons = 0
+        self._manual_control_pub.publish(msg)
 
     def publish_rc_release(self) -> None:
         if self._rc_override_pub is None:
@@ -448,15 +779,27 @@ class UuvGuiNode(Node):
             f"{interface_mode} {frequency_khz}kHz sector={start_angle_grad}..{stop_angle_grad}grad"
         )
 
+    def publish_ping360_enabled(self, enabled: bool) -> None:
+        msg = String()
+        msg.data = json.dumps({"enabled": bool(enabled)}, sort_keys=True)
+        self._ping360_config_pub.publish(msg)
+        self._push_event(f"ping360 sonar -> {'on' if enabled else 'off'}")
+
     def _on_state(self, msg: State) -> None:
         self._touch("state")
+        now = time.monotonic()
         with self._lock:
+            was_connected = bool(self._snapshot.connected)
             self._snapshot.connected = bool(msg.connected)
             self._snapshot.armed = bool(msg.armed)
             self._snapshot.guided = bool(msg.guided)
             self._snapshot.manual_input = bool(msg.manual_input)
             self._snapshot.mode = msg.mode
             self._snapshot.system_status = int(msg.system_status)
+            if bool(msg.connected) and not was_connected:
+                self._vehicle_connected_since_wall = now
+            elif not bool(msg.connected):
+                self._vehicle_connected_since_wall = -1.0
 
         if msg.mode != self._last_mode_seen:
             self._push_event(f"mode -> {msg.mode}")
@@ -464,6 +807,7 @@ class UuvGuiNode(Node):
         if self._last_armed_seen is None or bool(msg.armed) != self._last_armed_seen:
             self._push_event(f"armed -> {msg.armed}")
             self._last_armed_seen = bool(msg.armed)
+        self._try_release_initial_depth_hold()
 
     def _on_imu(self, msg: Imu) -> None:
         self._touch("imu")
@@ -566,15 +910,17 @@ class UuvGuiNode(Node):
         self._touch("rc_out")
         with self._lock:
             self._snapshot.rc_out = padded_rc_channels(msg.channels)
+            self._snapshot.rc_out_source = self._topic("rc/out")
             self._snapshot.rc_feedback_source = self._topic("rc/out")
 
-    def _on_rc_in(self, msg: OverrideRCIn) -> None:
-        self._touch("rc_out")
+    def _on_rc_in(self, msg: RCIn) -> None:
+        self._touch("rc_in")
         with self._lock:
-            self._snapshot.rc_out = padded_rc_channels(
+            self._snapshot.rc_in = padded_rc_channels(
                 getattr(msg, "channels", []),
                 sanitize_override_markers=True,
             )
+            self._snapshot.rc_in_source = self._topic("rc/in")
             self._snapshot.rc_feedback_source = self._topic("rc/in")
 
     def _on_status_text(self, msg: StatusText) -> None:
@@ -598,6 +944,11 @@ class UuvGuiNode(Node):
             settings = {}
             payload = {}
 
+        active = payload.get("active") if isinstance(payload, dict) else None
+        enabled = payload.get("enabled") if isinstance(payload, dict) else None
+        active_bool = bool(active) if isinstance(active, bool) else None
+        enabled_bool = bool(enabled) if isinstance(enabled, bool) else None
+
         try:
             effective_range = float(settings.get("effective_range_m", math.nan))
             requested_range = float(settings.get("requested_range_m", math.nan))
@@ -616,7 +967,9 @@ class UuvGuiNode(Node):
             stop_grad = 399
             flags = []
 
-        if math.isfinite(effective_range):
+        if active_bool is False:
+            summary = "ping360: off" if enabled_bool is False else "ping360: inactive"
+        elif math.isfinite(effective_range):
             summary = (
                 f"ping360: req={requested_range:.2f}m eff={effective_range:.2f}m "
                 f"res={resolution_cm:.2f}cm step={num_steps}/{angular_resolution:.1f}deg "
@@ -629,6 +982,8 @@ class UuvGuiNode(Node):
             summary += " flags=" + ",".join(str(flag) for flag in flags[:4])
         with self._lock:
             self._snapshot.ping360_summary = summary
+            self._snapshot.ping360_enabled = enabled_bool
+            self._snapshot.ping360_active = active_bool
 
     def _on_atm_pressure(self, msg: FluidPressure) -> None:
         self._on_pressure_value(float(msg.fluid_pressure), self._topic("imu/atm_pressure"))

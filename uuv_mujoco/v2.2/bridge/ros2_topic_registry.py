@@ -57,7 +57,7 @@ PUBLISHER_SPECS: tuple[PublisherSpec, ...] = (
     PublisherSpec("mavros_vfr_hud", "VfrHud", "/mavros/vfr_hud", 1),
     PublisherSpec("mavros_imu_atm_pressure", "FluidPressure", "/mavros/imu/atm_pressure", 1),
     PublisherSpec("mavros_battery", "BatteryState", "/mavros/battery", 1),
-    PublisherSpec("mavros_rc_in", "OverrideRCIn", "/mavros/rc/in", 1),
+    PublisherSpec("mavros_rc_in", "RCIn", "/mavros/rc/in", 1),
     PublisherSpec("dvl_data", "DVLMsg", "/dvl/data", 1),
     PublisherSpec("dvl_position", "DVLDRMsg", "/dvl/position", 1),
 )
@@ -78,6 +78,13 @@ SUBSCRIBER_SPECS: tuple[SubscriberSpec, ...] = (
         "OverrideRCIn",
         "/mavros/rc/override",
         "_on_mavros_rc_override",
+        10,
+    ),
+    SubscriberSpec(
+        "mavros_manual_control",
+        "ManualControl",
+        "/mavros/manual_control/send",
+        "_on_mavros_manual_control",
         10,
     ),
 )

@@ -1,0 +1,80 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{fontspec}
+\usepackage[margin=18mm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\defaultfontfeatures{Ligatures=TeX,Scale=MatchLowercase}
+\IfFontExistsTF{Noto Sans CJK KR}{\setmainfont{Noto Sans CJK KR}\setsansfont{Noto Sans CJK KR}}{\setmainfont{Apple SD Gothic Neo}\setsansfont{Apple SD Gothic Neo}}
+\IfFontExistsTF{DejaVu Sans Mono}{\setmonofont{DejaVu Sans Mono}}{\setmonofont{Menlo}}
+\XeTeXlinebreaklocale "ko"
+\XeTeXlinebreakskip = 0pt plus 1pt
+\hypersetup{colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black}
+\setlength{\parskip}{0.45em}
+\setlength{\parindent}{0pt}
+\renewcommand{\arraystretch}{1.16}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\code}[1]{\texttt{#1}}
+\captionsetup{font=small,labelfont=bf,justification=raggedright,singlelinecheck=false}
+
+\title{2026-04-01 UUV MuJoCo Inertia A/B 분석\\\large A/B-1: body inertia only}
+\author{}
+\date{2026-04-28}
+
+\begin{document}
+\maketitle
+
+\section{실험 조건}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.98\linewidth]{real_bag_2026_04_01_replay_ab_inertia/latex_figures/inertia_ab_pipeline.png}
+  \caption{A/B-1 구성. baseline은 current profile의 \code{body\_inertia\_scale\_xyz=[1e-6,1e-6,1e-6]}, inertia-only는 같은 profile에서 관성 scale만 \code{[1,1,1]}로 바꾼다. 다른 물리/추력/센서/명령 replay 조건은 그대로 둔다.}
+\end{figure}
+
+\section{정량 비교}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.98\linewidth]{real_bag_2026_04_01_replay_ab_inertia/latex_figures/inertia_ab_rmse.png}
+  \caption{baseline과 inertia-only의 RMSE 비교. 20:20 depth RMSE는 줄지만, DVL/gyro의 상관과 real/sim gain 개선은 제한적이다.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.98\linewidth]{real_bag_2026_04_01_replay_ab_inertia/latex_figures/inertia_ab_corr_gain.png}
+  \caption{상관계수와 real/sim gain. 관성 정상화만으로 yaw rate gain이 1에 가까워지지 않는다. 즉 yaw 과응답의 1차 원인은 관성만이 아니라 thruster force/yaw torque scale 쪽일 가능성이 크다.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.98\linewidth]{real_bag_2026_04_01_replay_ab_inertia/latex_figures/inertia_ab_overlay.png}
+  \caption{sim sensor time-series overlay. inertia-only는 일부 peak를 완화하지만 명령-응답 형태 자체를 일관되게 개선하지 않는다.}
+\end{figure}
+
+\section{판단}
+
+\begin{table}[H]
+  \centering
+  \caption{핵심 수치}
+  \begin{tabularx}{\linewidth}{lYYYY}
+    \toprule
+    Bag & Case & DVL x gain & DVL y gain & gyro z gain \\
+    \midrule
+    20:08 & baseline & 0.254 & 0.150 & 0.351 \\
+    20:08 & inertia-only & 0.245 & 0.144 & 0.358 \\
+    20:20 & baseline & 0.082 & 0.103 & 0.157 \\
+    20:20 & inertia-only & 0.027 & 0.097 & 0.134 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+결론: \code{body\_inertia\_scale\_xyz=[1,1,1]}는 물리적으로 더 타당하지만, 이 변경 하나만으로 실제와 simulation amplitude gap을 해결하지 못한다. 다음 A/B는 \code{gain\_scale\_all} 또는 yaw torque/thruster gain만 낮추는 실험이어야 한다. 특히 yaw z gain이 0.35 또는 0.16 수준에 머무르므로 sim yaw response가 여전히 실제보다 크다.
+
+\end{document}

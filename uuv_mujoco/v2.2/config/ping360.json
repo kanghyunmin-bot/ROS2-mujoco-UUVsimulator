@@ -1,5 +1,5 @@
 {
-  "enabled": true,
+  "enabled": false,
   "site_name": "ping360_site",
   "frame_id": "ping360_link",
   "interface_mode": "ethernet",

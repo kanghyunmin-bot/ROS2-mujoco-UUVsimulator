@@ -89,6 +89,17 @@ from sensor_msgs.msg import BatteryState, FluidPressure, Imu
 from std_msgs.msg import Float32, String
 
 try:
+    from std_srvs.srv import Trigger
+
+    HAVE_STD_SRVS = True
+except ModuleNotFoundError:
+    HAVE_STD_SRVS = False
+
+    class Trigger:
+        class Request:
+            pass
+
+try:
     import rosbag2_py
     from rclpy.serialization import deserialize_message
 
@@ -99,7 +110,7 @@ except ModuleNotFoundError:
     deserialize_message = None
 
 try:
-    from mavros_msgs.msg import OverrideRCIn, RCOut, State, StatusText
+    from mavros_msgs.msg import ManualControl, OverrideRCIn, RCIn, RCOut, State, StatusText
     from mavros_msgs.srv import CommandBool, SetMode, VehicleInfoGet
 
     HAVE_MAVROS_MSGS = True
@@ -113,7 +124,19 @@ except ModuleNotFoundError:
         def __init__(self) -> None:
             self.channels = []
 
+    class ManualControl:
+        def __init__(self) -> None:
+            self.x = 0.0
+            self.y = 0.0
+            self.z = 0.0
+            self.r = 0.0
+            self.buttons = 0
+
     class RCOut:
+        def __init__(self) -> None:
+            self.channels = []
+
+    class RCIn:
         def __init__(self) -> None:
             self.channels = []
 

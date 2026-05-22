@@ -39,6 +39,8 @@ READY_WAIT_SECS=60 SITL_WAIT_SECS=360 ./start_sitl_mujoco_mj311.sh -- --headless
 ```
 
 Notes:
+- The default runtime profile is optimized for normal native Ubuntu use. Heavy
+  viewer debug overlays, viewer pause, and QGroundControl video are opt-in.
 - No sample rosbag is bundled. Replay/autotune tools work after you choose a
   local rosbag path in the GUI or pass `--bag` explicitly.
 - `dvl_msgs` is bundled as a source package because `ros-humble-dvl-msgs` is

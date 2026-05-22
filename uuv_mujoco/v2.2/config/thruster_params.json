@@ -1,11 +1,12 @@
 {
   "global": {
     "deadzone": 0.002,
-    "tau_up": 0.04,
-    "tau_down": 0.06,
+    "tau_up": 0.060,
+    "tau_down": 0.090,
     "reverse_asymmetry": 0.70,
     "reaction_torque_gain": 0.0,
     "gain_scale_all": 1.0,
+    "direct_gain_scale_all": 1.0,
     "forward_poly": [
       0.0,
       1.9,
@@ -26,34 +27,62 @@
   "per_thruster": {
     "ver_lf": {
       "gain_scale": 2.425,
+            "direct_gain_scale": 0.15,
+      "tau_up": 0.065,
+      "tau_down": 0.095,
       "speed_sample": 0.3
     },
     "ver_lr": {
       "gain_scale": 2.425,
+            "direct_gain_scale": 0.15,
+      "tau_up": 0.065,
+      "tau_down": 0.095,
       "speed_sample": 0.3029
     },
     "ver_rf": {
       "gain_scale": 2.425,
+            "direct_gain_scale": 0.15,
+      "tau_up": 0.065,
+      "tau_down": 0.095,
       "speed_sample": 0.2976
     },
     "ver_rr": {
       "gain_scale": 2.425,
+            "direct_gain_scale": 0.15,
+      "tau_up": 0.065,
+      "tau_down": 0.095,
       "speed_sample": 0.3001
     },
     "yaw_lf": {
       "gain_scale": 3.3,
+      "direct_gain_scale": 1.0,
+      "reverse_asymmetry": 0.80,
+      "tau_up": 0.028,
+      "tau_down": 0.040,
       "speed_sample": 0.3204
     },
     "yaw_lr": {
       "gain_scale": 3.3,
+      "direct_gain_scale": 1.0,
+      "reverse_asymmetry": 0.80,
+      "tau_up": 0.028,
+      "tau_down": 0.040,
       "speed_sample": 0.3199
     },
     "yaw_rf": {
       "gain_scale": 3.3,
+      "direct_gain_scale": 1.0,
+      "reverse_asymmetry": 0.80,
+      "tau_up": 0.028,
+      "tau_down": 0.040,
       "speed_sample": 0.3265
     },
     "yaw_rr": {
       "gain_scale": 3.3,
+      "direct_gain_scale": 1.0,
+      "reverse_asymmetry": 0.80,
+      "tau_up": 0.028,
+      "tau_down": 0.040,
       "speed_sample": 0.3243
     }
   }

@@ -193,6 +193,26 @@ class Ping360Simulator:
         self.settings = self._build_effective_settings()
         self._resize_buffers(self.settings.number_of_samples)
 
+    def status_dict(self, sim_t: float | None = None) -> dict[str, Any]:
+        self.settings = self._build_effective_settings()
+        self._resize_buffers(self.settings.number_of_samples)
+        if self._latest is not None:
+            payload = self._latest.status_dict()
+            payload["updated"] = False
+            payload["sim_time_s"] = float(sim_t) if sim_t is not None else payload["sim_time_s"]
+        else:
+            angle_grad = self._current_angle_grad()
+            payload = {
+                "sim_time_s": float(sim_t) if sim_t is not None else 0.0,
+                "angle_grad": angle_grad,
+                "angle_deg": angle_grad * PING360_DEG_PER_GRAD,
+                "ping_number": self._ping_number,
+                "settings": self.settings.as_dict(),
+                "updated": False,
+            }
+        payload["active"] = bool(self.active)
+        return payload
+
     def update(self, data: mujoco.MjData, sim_t: float) -> Ping360Sample | None:
         if not self.active:
             return None
@@ -417,10 +437,20 @@ class Ping360Simulator:
         blind_bins = min(settings.blind_bins, n)
         if blind_bins > 0:
             profile[:blind_bins] = 0.0
-        if self.config.noise_floor > 0.0:
-            profile[blind_bins:] += float(self.config.noise_floor)
-        if self.config.speckle_std > 0.0:
-            profile[blind_bins:] += self._rng.normal(0.0, float(self.config.speckle_std), max(0, n - blind_bins))
+        visible_bins = max(0, n - blind_bins)
+        if visible_bins > 0:
+            noise = np.zeros(visible_bins, dtype=np.float64)
+            if self.config.noise_floor > 0.0:
+                noise += float(self.config.noise_floor)
+            if self.config.speckle_std > 0.0:
+                noise += self._rng.normal(0.0, float(self.config.speckle_std), visible_bins)
+            fade_bins = min(
+                visible_bins,
+                max(1, int(math.ceil(0.20 / max(settings.range_resolution_m, 1.0e-9)))),
+            )
+            if fade_bins > 1:
+                noise[:fade_bins] *= np.linspace(0.0, 1.0, fade_bins, dtype=np.float64)
+            profile[blind_bins:] += noise
         profile = np.clip(profile, 0.0, 255.0)
         return profile.astype(np.uint8), (nearest if math.isfinite(nearest) else None), float(min(255.0, peak))
 
