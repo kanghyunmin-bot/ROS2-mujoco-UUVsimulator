@@ -126,7 +126,7 @@ FORCE_NO_DISPLAY="${SITL_FORCE_NO_DISPLAY:-1}"
 USER_ARGS=()
 USER_SET_MAVPROXY_ARGS=0
 SITL_EKF3_EXTNAV_ENABLE=0
-case "${SITL_EKF3_EXTNAV:-0}" in
+case "${SITL_EKF3_EXTNAV:-1}" in
   0|false|FALSE|no|NO|off|OFF|disable|disabled)
     SITL_EKF3_EXTNAV_ENABLE=0
     ;;
@@ -139,10 +139,9 @@ if [[ "$SITL_EKF3_EXTNAV_ENABLE" -eq 1 ]]; then
   SITL_DEFAULT_SURFACE_DEPTH=-10.0
   SITL_DEFAULT_AHRS_GPS_USE=1
 else
-  # Deterministic JSON SITL depth-hold contract: SIM AHRS and Bar30 vertical
-  # position only. Keep the DVL/rangefinder path out of the default ALT_HOLD
-  # loop because the real depth hold source is Bar30, and bottom range clamps
-  # can mask the RC3 -> depth-target contract during neutral/heave tests.
+  # Deterministic JSON SITL debug contract: SIM AHRS and Bar30 vertical
+  # position only. Use SITL_EKF3_EXTNAV=0 only when deliberately isolating
+  # ExternalNav/DVL from the ALT_HOLD loop.
   SITL_DEFAULT_RNGFND1_TYPE=0
   SITL_DEFAULT_SURFACE_DEPTH=-10.0
   SITL_DEFAULT_AHRS_GPS_USE=0
@@ -343,10 +342,18 @@ case "${SITL_USE_REAL_PARAM_FILE:-1}" in
     USE_REAL_PARAM_FILE=1
     ;;
 esac
-REAL_PARAM_FILE="${SITL_REAL_PARAM_FILE:-${WORKSPACE_DIR}/real_robot.param}"
+DEFAULT_REAL_PARAM_FILE="${SCRIPT_DIR}/config/ardusub_realrobot_contract.param"
+if [[ ! -f "$DEFAULT_REAL_PARAM_FILE" ]]; then
+  DEFAULT_REAL_PARAM_FILE="${WORKSPACE_DIR}/real_robot.param"
+fi
+REAL_PARAM_FILE="${SITL_REAL_PARAM_FILE:-$DEFAULT_REAL_PARAM_FILE}"
 if [[ "$USE_REAL_PARAM_FILE" -eq 1 && -f "$REAL_PARAM_FILE" ]]; then
   SIM_ARGS+=(--add-param-file "$REAL_PARAM_FILE")
   echo "[start-sitl] loading real vehicle params: ${REAL_PARAM_FILE}"
+elif [[ "$USE_REAL_PARAM_FILE" -eq 1 ]]; then
+  echo "[error] missing real vehicle contract param file: ${REAL_PARAM_FILE}" >&2
+  echo "        Set SITL_USE_REAL_PARAM_FILE=0 only for isolated SITL debug." >&2
+  exit 1
 fi
 
 has_param_override() {
@@ -424,9 +431,9 @@ fi
 # a brief Docker/Mac scheduling stall during JSON startup causes watchdog_rst,
 # then ArduSub refuses to arm. Keep this disabled in simulation.
 append_param_if_not_overridden "BRD_OPTIONS" "${SITL_BRD_OPTIONS:-0}"
-# Keep two estimator contracts explicit. The default deterministic SITL path
-# uses Bar30 only for vertical hold. EKF3 ExternalNav can still be enabled
-# explicitly with SITL_EKF3_EXTNAV=1 for estimator-contract validation.
+# Keep two estimator contracts explicit. The default path matches the real
+# robot vertical EKF contract: POSZ from Baro/Bar30 and VELZ from ExternalNav.
+# Set SITL_EKF3_EXTNAV=0 only for deterministic Bar30-only debugging.
 append_param_if_not_overridden "RNGFND1_TYPE" "${SITL_RNGFND1_TYPE:-$SITL_DEFAULT_RNGFND1_TYPE}"
 append_param_if_not_overridden "RNGFND1_MIN_CM" "5"
 append_param_if_not_overridden "RNGFND1_MAX_CM" "3000"
@@ -438,10 +445,13 @@ append_param_if_not_overridden "SURFACE_MAX_THR" "${SITL_SURFACE_MAX_THR:-0.1}"
 # ArduSub 4.1.x accepts RC override/manual control only from SYSID_MYGCS.
 # Match the real vehicle dump and QGC joystick path.
 append_param_if_not_overridden "SYSID_MYGCS" "255"
-# Keep RC deadzones explicit for closed-loop replay and match the real
-# transmitter/QGC parameter dump by default. QGC MANUAL_CONTROL is first scaled
-# by JS_GAIN_DEFAULT inside ArduSub, so joystick authority should be adjusted
-# with JS gain, not by shrinking the real RC deadzones.
+# Closed-loop pilot-input contract:
+# - GUI and rosbag replay use /mavros/rc/override by default.
+# - RC3 neutral is 1500 because RC override maps heave directly to 1100..1900.
+# - RC3_TRIM may remain the real vehicle value; do not reinterpret it as stick
+#   neutral for the RC override path.
+# - MANUAL_CONTROL remains available for QGC-like joystick behavior and is
+#   scaled by JS_GAIN/JS_THR_GAIN inside ArduSub.
 append_param_if_not_overridden "RC_OPTIONS" "${SITL_RC_OPTIONS:-32}"
 append_param_if_not_overridden "RC_OVERRIDE_TIME" "${SITL_RC_OVERRIDE_TIME:-3.0}"
 append_param_if_not_overridden "RC1_DZ" "${SITL_RC1_DZ:-30}"
@@ -452,7 +462,10 @@ append_param_if_not_overridden "RC3_MAX" "1900"
 append_param_if_not_overridden "RC3_DZ" "${SITL_RC3_DZ:-30}"
 append_param_if_not_overridden "RC3_TRIM" "${SITL_RC3_TRIM:-1100}"
 append_param_if_not_overridden "JS_GAIN_DEFAULT" "${SITL_JS_GAIN_DEFAULT:-0.1}"
+append_param_if_not_overridden "JS_GAIN_MIN" "${SITL_JS_GAIN_MIN:-0.25}"
 append_param_if_not_overridden "JS_GAIN_MAX" "${SITL_JS_GAIN_MAX:-2.0}"
+append_param_if_not_overridden "JS_GAIN_STEPS" "${SITL_JS_GAIN_STEPS:-4}"
+append_param_if_not_overridden "JS_THR_GAIN" "${SITL_JS_THR_GAIN:-1.0}"
 append_param_if_not_overridden "PILOT_SPEED_UP" "${SITL_PILOT_SPEED_UP:-100}"
 append_param_if_not_overridden "PILOT_SPEED_DN" "${SITL_PILOT_SPEED_DN:-0}"
 append_param_if_not_overridden "PILOT_ACCEL_Z" "${SITL_PILOT_ACCEL_Z:-100}"

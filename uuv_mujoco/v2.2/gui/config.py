@@ -35,10 +35,14 @@ PILOT_CONTROL_RC_OVERRIDE = "rc_override"
 
 
 def _pilot_control_mode() -> str:
-    mode = os.environ.get("UUV_GUI_PILOT_CONTROL_MODE", PILOT_CONTROL_MANUAL).strip().lower()
+    default_mode = os.environ.get(
+        "UUV_GUI_DEFAULT_PILOT_CONTROL_MODE",
+        PILOT_CONTROL_RC_OVERRIDE,
+    ).strip().lower()
+    mode = os.environ.get("UUV_GUI_PILOT_CONTROL_MODE", default_mode).strip().lower()
     if mode in {PILOT_CONTROL_MANUAL, PILOT_CONTROL_RC_OVERRIDE}:
         return mode
-    return PILOT_CONTROL_MANUAL
+    return PILOT_CONTROL_RC_OVERRIDE
 
 
 def _env_float_default(name: str, default: float) -> float:

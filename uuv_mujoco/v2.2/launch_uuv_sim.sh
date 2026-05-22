@@ -504,14 +504,26 @@ if [ "$HEADLESS" = true ]; then
 fi
 
 if [[ -n "$SITL_ARG" ]]; then
-    # In SITL mode, /mavros/rc/override must pass through ArduSub first.
-    # Direct MuJoCo fallback is only for explicit smoke/debug runs.
+    # ArduSub closed-loop contract. GUI and rosbag replay use the same RC3 PWM
+    # authority by default; direct/local plant command paths are opt-in only.
+    export UUV_GUI_PILOT_CONTROL_MODE="${UUV_GUI_PILOT_CONTROL_MODE:-rc_override}"
+    export ROS2_UUV_SITL_ALLOW_DIRECT_CMD="${ROS2_UUV_SITL_ALLOW_DIRECT_CMD:-0}"
+    export ROS2_UUV_SITL_CMD_VEL_SETPOINT_ENABLE="${ROS2_UUV_SITL_CMD_VEL_SETPOINT_ENABLE:-0}"
+    export ROS2_UUV_MAVROS_SETPOINT_ENABLE="${ROS2_UUV_MAVROS_SETPOINT_ENABLE:-0}"
     export ROS2_UUV_MAVROS_RC_OVERRIDE_LOCAL_FALLBACK="${ROS2_UUV_MAVROS_RC_OVERRIDE_LOCAL_FALLBACK:-0}"
+    export ROS2_UUV_SITL_JSON_SERVO_FALLBACK="${ROS2_UUV_SITL_JSON_SERVO_FALLBACK:-1}"
+    export ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE="${ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE:-0}"
     # Match the real-robot estimator path by default: EKF3 with ExternalNav
     # for XY/velocity/yaw and Baro for vertical position.
     export SITL_EKF3_EXTNAV="${SITL_EKF3_EXTNAV:-1}"
+    export SITL_EKF3_EXTNAV_POSZ="${SITL_EKF3_EXTNAV_POSZ:-1}"
+    export SITL_EKF3_EXTNAV_VELZ="${SITL_EKF3_EXTNAV_VELZ:-6}"
     export SITL_AHRS_EKF_TYPE="${SITL_AHRS_EKF_TYPE:-3}"
     export ROS2_UUV_SITL_EXTNAV_ENABLE="${ROS2_UUV_SITL_EXTNAV_ENABLE:-${SITL_EKF3_EXTNAV}}"
+    export ROS2_UUV_REQUIRE_EXTNAV_TX="${ROS2_UUV_REQUIRE_EXTNAV_TX:-1}"
+    export ROS2_UUV_EXTNAV_MIN_TX_HZ="${ROS2_UUV_EXTNAV_MIN_TX_HZ:-10}"
+    export ROS2_UUV_EXTNAV_TX_GRACE_S="${ROS2_UUV_EXTNAV_TX_GRACE_S:-6}"
+    export ROS2_UUV_EXTNAV_MAX_STALE_S="${ROS2_UUV_EXTNAV_MAX_STALE_S:-0.5}"
     # The bridge owns the vertical feedback contract: JSON position.z,
     # JSON velocity.z, and ExternalNav VELZ all use the Bar30-derived
     # NED down-positive state. Do not expose runtime z-flip/source switches
@@ -542,8 +554,11 @@ if [ "$ROS2_REQUESTED" = true ]; then
     echo "  ROS2 Transport: enabled"
     if [[ -n "$SITL_ARG" ]]; then
         echo "    Input:  /mavros/rc/override -> ArduSub closed-loop"
+        echo "            GUI pilot input mode: ${UUV_GUI_PILOT_CONTROL_MODE}"
         echo "            set ROS2_UUV_MAVROS_RC_OVERRIDE_LOCAL_FALLBACK=1 only for direct MuJoCo smoke/debug"
         echo "            /cmd_vel is ignored in SITL by default; set ROS2_UUV_SITL_CMD_VEL_SETPOINT_ENABLE=1 only for guided-setpoint smoke tests"
+        echo "            /mavros/setpoint_raw/local enabled only with ROS2_UUV_MAVROS_SETPOINT_ENABLE=1"
+        echo "            /uuv_mujoco/rc/out_override enabled only with ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE=1"
         echo "    SITL vertical feedback: Bar30 depth + NED down-positive velocity"
         echo "    SITL EKF3 ExternalNav: ${ROS2_UUV_SITL_EXTNAV_ENABLE}"
     else

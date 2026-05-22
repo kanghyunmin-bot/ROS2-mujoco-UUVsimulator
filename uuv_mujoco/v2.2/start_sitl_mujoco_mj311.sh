@@ -227,8 +227,8 @@ else
 fi
 if [[ "$ROS2_MODE" != "off" ]]; then
   if [[ -z "${SITL_EKF3_EXTNAV+x}" ]]; then
-    export SITL_EKF3_EXTNAV=0
-    echo "[start] SITL estimator path: deterministic SIM AHRS/Baro (set SITL_EKF3_EXTNAV=1 for EKF3 ExternalNav)"
+    export SITL_EKF3_EXTNAV=1
+    echo "[start] SITL estimator path: real-robot-like EKF3 ExternalNav (set SITL_EKF3_EXTNAV=0 for deterministic Bar30-only debug)"
   else
     echo "[start] SITL estimator path: SITL_EKF3_EXTNAV=${SITL_EKF3_EXTNAV}"
   fi

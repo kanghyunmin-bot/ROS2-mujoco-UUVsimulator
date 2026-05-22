@@ -43,7 +43,6 @@ class UuvGuiNode(Node):
         self._manual_control_subscribers = 0
         self._one_shot_timers = []
         self._vehicle_connected_since_wall = -1.0
-        self._alt_hold_release_delay_s = float(os.environ.get("UUV_GUI_ALT_HOLD_RELEASE_DELAY_S", "0.0"))
         self._control_request_timeout_s = float(os.environ.get("UUV_GUI_CONTROL_REQUEST_TIMEOUT_S", "20.0"))
         self._control_request_retry_s = float(os.environ.get("UUV_GUI_CONTROL_REQUEST_RETRY_S", "0.5"))
         self._require_arm_mode_settle = os.environ.get(
@@ -458,11 +457,6 @@ class UuvGuiNode(Node):
     def request_initial_depth_release_when_armed(self, reason: str) -> None:
         self._request_initial_depth_release_when_armed(reason)
 
-    def _schedule_initial_depth_release_after_althold(self) -> None:
-        if not self._initial_depth_hold_opt_in:
-            return
-        self._request_initial_depth_release_when_armed("ALT_HOLD")
-
     def _schedule_once(self, delay_s: float, callback) -> None:
         holder = {}
 
@@ -625,15 +619,25 @@ class UuvGuiNode(Node):
         self._retry_arm_request(target_value, deadline, attempt)
 
     def set_mode(self, mode: str) -> None:
+        if str(mode).upper() == "ALT_HOLD":
+            self._request_initial_depth_release_when_armed("before_ALT_HOLD")
         deadline = time.monotonic() + self._control_request_timeout_s
         self._send_mode_request(mode, deadline, 1)
 
     def _send_mode_request(self, mode: str, deadline: float, attempt: int) -> None:
         if self._mode_target_reached(mode):
             self._push_event(f"mode target reached: {mode}")
-            if str(mode).upper() == "ALT_HOLD":
-                self._schedule_initial_depth_release_after_althold()
             return
+        if str(mode).upper() == "ALT_HOLD" and self._initial_depth_hold_opt_in:
+            self._try_release_initial_depth_hold()
+            if self._initial_depth_release_pending or self._initial_depth_release_in_flight:
+                if time.monotonic() >= deadline:
+                    self._push_event("set_mode ALT_HOLD blocked: initial depth hold release not complete")
+                    return
+                if attempt == 1 or attempt % 4 == 0:
+                    self._push_event("set_mode ALT_HOLD delayed: releasing initial depth hold first")
+                self._retry_mode_request(mode, deadline, attempt)
+                return
         gate_reason = self._arm_mode_gate_reason(mode=mode)
         if gate_reason:
             if time.monotonic() >= deadline:
@@ -677,17 +681,7 @@ class UuvGuiNode(Node):
         self._push_event(f"set_mode {mode}: mode_sent={resp.mode_sent}, attempt={attempt}")
         if self._mode_target_reached(mode):
             self._push_event(f"mode target reached: {mode}")
-            if str(mode).upper() == "ALT_HOLD":
-                self._schedule_initial_depth_release_after_althold()
             return
-        if str(mode).upper() == "ALT_HOLD" and bool(getattr(resp, "mode_sent", False)):
-            self._push_event(
-                f"initial depth hold release check scheduled: {self._alt_hold_release_delay_s:.1f}s"
-            )
-            self._schedule_once(
-                self._alt_hold_release_delay_s,
-                self._schedule_initial_depth_release_after_althold,
-            )
         self._retry_mode_request(mode, deadline, attempt)
 
     def publish_rc_override(

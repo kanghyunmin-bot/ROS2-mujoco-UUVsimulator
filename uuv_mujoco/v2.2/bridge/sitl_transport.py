@@ -115,6 +115,7 @@ class SitlTransport:
         self._sitl_manual_control_primed = False
         self._sitl_json_servo_fallback = self._env_flag("ROS2_UUV_SITL_JSON_SERVO_FALLBACK", True)
         self._sitl_json_servo_ignored_warn_wall = -1.0
+        self._allow_rcout_plant_override = self._env_flag("ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE", False)
 
         self._sitl_mavlink_endpoint = str(sitl_mavlink_endpoint or "").strip()
         requested_servo_hz = float(sitl_mavlink_servo_hz)
@@ -228,6 +229,21 @@ class SitlTransport:
         self._sitl_extnav_bootstrap_count = 0
         self._sitl_extnav_last_log_wall = -1.0
         self._sitl_extnav_send_failed_wall = -1.0
+        self._sitl_extnav_required = self._env_flag("ROS2_UUV_REQUIRE_EXTNAV_TX", self._sitl_extnav_enabled)
+        self._sitl_extnav_min_tx_hz = float(
+            np.clip(self._env_to_float("ROS2_UUV_EXTNAV_MIN_TX_HZ", 10.0), 1.0, 50.0)
+        )
+        self._sitl_extnav_grace_s = float(
+            np.clip(self._env_to_float("ROS2_UUV_EXTNAV_TX_GRACE_S", 6.0), 0.5, 30.0)
+        )
+        self._sitl_extnav_max_stale_s = float(
+            np.clip(self._env_to_float("ROS2_UUV_EXTNAV_MAX_STALE_S", 0.5), 0.1, 5.0)
+        )
+        self._sitl_extnav_start_wall = time.monotonic()
+        self._sitl_extnav_last_send_wall = -1.0
+        self._sitl_extnav_tx_window_start_wall = self._sitl_extnav_start_wall
+        self._sitl_extnav_tx_window_count = 0
+        self._sitl_extnav_fault = ""
 
         self._connect_sitl()
         self._connect_sitl_mavlink()
@@ -384,6 +400,15 @@ class SitlTransport:
         fresh recorded RCOUT sample is being held.
         """
         now_wall = time.monotonic()
+        if not self._allow_rcout_plant_override:
+            if now_wall - self._sitl_last_rc_override_warn_wall > 3.0:
+                print(
+                    "[sitl_transport] RCOUT plant override rejected by "
+                    "ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE=0",
+                    flush=True,
+                )
+                self._sitl_last_rc_override_warn_wall = now_wall
+            return
         hold_s = float(np.clip(float(hold_s), 0.05, 5.0))
         self._sitl_external_servo_override_until_wall = now_wall + hold_s
         if now_wall - self._sitl_external_servo_override_log_wall > 3.0:
@@ -1564,6 +1589,22 @@ class SitlTransport:
                 float(vel_tx[2]),
             )
             self._sitl_extnav_last_send_sim_t = float(sim_t)
+            self._sitl_extnav_last_send_wall = now_wall
+            self._sitl_extnav_tx_window_count += 1
+            window_s = now_wall - self._sitl_extnav_tx_window_start_wall
+            if window_s >= 2.0:
+                rate_hz = self._sitl_extnav_tx_window_count / max(window_s, 1.0e-6)
+                if (
+                    self._sitl_extnav_required
+                    and now_wall - self._sitl_extnav_start_wall > self._sitl_extnav_grace_s
+                    and rate_hz < self._sitl_extnav_min_tx_hz
+                ):
+                    self._sitl_extnav_fault = (
+                        "ExternalNav TX rate below contract: "
+                        f"{rate_hz:.2f}Hz < {self._sitl_extnav_min_tx_hz:.2f}Hz"
+                    )
+                self._sitl_extnav_tx_window_start_wall = now_wall
+                self._sitl_extnav_tx_window_count = 0
             if self._sitl_cmd_debug and now_wall - self._sitl_extnav_last_log_wall >= 2.0:
                 print(
                     "[sitl_transport] ExternalNav tx sample "
@@ -1577,6 +1618,27 @@ class SitlTransport:
             if now_wall - self._sitl_extnav_send_failed_wall > 2.0:
                 print(f"[sitl_transport] ExternalNav send failed: {exc}", flush=True)
                 self._sitl_extnav_send_failed_wall = now_wall
+
+    def _enforce_extnav_contract(self) -> None:
+        if not self._sitl_extnav_required:
+            return
+        now_wall = time.monotonic()
+        if not self._sitl_extnav_enabled:
+            raise RuntimeError("ExternalNav contract required but ExternalNav output is disabled")
+        if self._sitl_extnav_fault:
+            raise RuntimeError(self._sitl_extnav_fault)
+        if now_wall - self._sitl_extnav_start_wall < self._sitl_extnav_grace_s:
+            return
+        if self._sitl_extnav_last_send_wall <= 0.0:
+            raise RuntimeError(
+                "ExternalNav contract required but no VISION_POSITION_ESTIMATE/"
+                "VISION_SPEED_ESTIMATE has been sent"
+            )
+        stale_s = now_wall - self._sitl_extnav_last_send_wall
+        if stale_s > self._sitl_extnav_max_stale_s:
+            raise RuntimeError(
+                f"ExternalNav TX stale: {stale_s:.3f}s > {self._sitl_extnav_max_stale_s:.3f}s"
+            )
 
     def _poll_servo_endpoint(self) -> None:
         if not self.sitl_sock:
@@ -1707,6 +1769,7 @@ class SitlTransport:
 
         roll, pitch, yaw = self.quat_to_rpy(quat)
         self._send_external_nav(sitl_t, vertical_est, quat, roll, pitch, yaw)
+        self._enforce_extnav_contract()
         json_position = np.asarray(vertical_est.pos_ned, dtype=np.float64).copy()
         json_velocity = np.asarray(vertical_est.vel_ned, dtype=np.float64).copy()
         # ArduSub's JSON backend stores position.z as NED down. AP_Baro_SITL

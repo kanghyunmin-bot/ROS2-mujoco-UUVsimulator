@@ -23,8 +23,9 @@ ARDUSUB_VECTORED_6DOF_MOTOR_FACTORS_FRD = (
 )
 
 # real_robot.param MOT_1_DIRECTION .. MOT_8_DIRECTION. ArduSub applies these
-# before generating SERVO_OUTPUT_RAW, so the simulator must account for them
-# when converting final PWM delta into MuJoCo actuator-positive force.
+# before generating final JSON/SERVO PWM, so the simulator must not multiply
+# them again when converting final PWM delta into MuJoCo actuator-positive force.
+# Keep this tuple for contract verification and documentation only.
 REAL_ROBOT_MOT_DIRECTIONS = (1, 1, -1, -1, -1, 1, 1, -1)
 
 # ArduSub VECTORED_6DOF motor order is defined in AP_Motors6DOF.cpp:

@@ -168,13 +168,16 @@ class Ros2Bridge:
         self._mavros_rc_override_local_fallback = bool(
             self._env_to_int("ROS2_UUV_MAVROS_RC_OVERRIDE_LOCAL_FALLBACK", 0)
         )
+        self._sitl_allow_direct_cmd = bool(self._env_to_int("ROS2_UUV_SITL_ALLOW_DIRECT_CMD", 0))
         self._sitl_cmd_vel_setpoint_enabled = bool(
             self._env_to_int("ROS2_UUV_SITL_CMD_VEL_SETPOINT_ENABLE", 0)
         )
         self._sitl_cmd_vel_blocked_warned = False
+        self._sitl_direct_cmd_blocked_warned = False
+        self._allow_rcout_plant_override = bool(self._env_to_int("ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE", 0))
 
         # Setpoint emulation.
-        self._mavros_setpoint_enabled = bool(self._env_to_int("ROS2_UUV_MAVROS_SETPOINT_ENABLE", 1))
+        self._mavros_setpoint_enabled = bool(self._env_to_int("ROS2_UUV_MAVROS_SETPOINT_ENABLE", 0))
         self._mavros_setpoint_pos_kp = float(self._env_to_float("ROS2_UUV_MAVROS_SETPOINT_POS_KP", 0.55))
         self._mavros_setpoint_heave_kp = float(self._env_to_float("ROS2_UUV_MAVROS_SETPOINT_HEAVE_KP", 0.55))
         self._mavros_setpoint_yaw_kp = float(self._env_to_float("ROS2_UUV_MAVROS_SETPOINT_YAW_KP", 1.2))
@@ -542,7 +545,7 @@ class Ros2Bridge:
                     self._on_replay_rcout_override,
                     q10,
                 )
-                if self.RCOut
+                if self.RCOut and self._allow_rcout_plant_override
                 else None
             )
             self.sub_mavros_manual_control = self.node.create_subscription(
@@ -551,7 +554,16 @@ class Ros2Bridge:
                 self._on_mavros_manual_control,
                 q10,
             )
-            self.sub_mavros_setpoint = self.node.create_subscription(self.PositionTarget, "/mavros/setpoint_raw/local", self._on_mavros_setpoint, q10)
+            self.sub_mavros_setpoint = (
+                self.node.create_subscription(
+                    self.PositionTarget,
+                    "/mavros/setpoint_raw/local",
+                    self._on_mavros_setpoint,
+                    q10,
+                )
+                if self._mavros_setpoint_enabled
+                else None
+            )
         else:
             self.sub_mavros_rc_override = None
             self.sub_replay_rcout_override = None
@@ -680,6 +692,14 @@ class Ros2Bridge:
         return float(np.clip(value, -1.0, 1.0))
 
     def _handle_normalized_cmd(self, fwd_norm: float, sway_norm: float, yaw_norm: float, heave_norm: float) -> None:
+        if self._sitl_transport is not None and not self._sitl_allow_direct_cmd:
+            if not self._sitl_direct_cmd_blocked_warned and self.node is not None:
+                self._sitl_direct_cmd_blocked_warned = True
+                self.node.get_logger().warn(
+                    "direct MuJoCo command callback ignored in SITL closed-loop mode; "
+                    "ArduSub JSON servo is the only plant input."
+                )
+            return
         now = time.monotonic()
         raw = np.array(
             [
@@ -710,6 +730,9 @@ class Ros2Bridge:
     def _clear_cmd(self) -> None:
         self._cmd_filter_t = time.monotonic()
         self._cmd_filter_norm = np.zeros(4, dtype=np.float64)
+        if self._sitl_transport is not None and not self._sitl_allow_direct_cmd:
+            self.cmd_active = False
+            return
         self.command_callback(0.0, 0.0, 0.0, 0.0)
         self.cmd_active = False
 

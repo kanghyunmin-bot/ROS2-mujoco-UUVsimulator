@@ -804,7 +804,14 @@ def main() -> None:
             2.0,
         )
     )
-    sitl_allow_direct_cmd = bool(int(os.getenv("ROS2_UUV_SITL_ALLOW_DIRECT_CMD", "0")))
+
+    def env_flag(name: str, default: bool = False) -> bool:
+        value = os.environ.get(name)
+        if value is None or value == "":
+            return bool(default)
+        return value.strip().lower() in {"1", "true", "yes", "on", "enable", "enabled"}
+
+    sitl_allow_direct_cmd = env_flag("ROS2_UUV_SITL_ALLOW_DIRECT_CMD", False)
     if args.sitl and not sitl_allow_direct_cmd:
         print(
             "[control] SITL closed-loop authority: direct MuJoCo command fallback is disabled. "
@@ -844,6 +851,8 @@ def main() -> None:
             show_viewer_debug["value"] = True
 
     def apply_ros_cmd(forward: float, sway: float, yaw: float, heave: float) -> None:
+        if args.sitl and not sitl_allow_direct_cmd:
+            return
         with cmd_lock:
             max_val = state["max"]
             cmd["forward"] = clamp(forward, max_val)
@@ -1688,6 +1697,15 @@ def main() -> None:
     thruster_reaction_torque_world = np.zeros(3, dtype=np.float64)
     last_thruster_force_body = np.zeros(3, dtype=np.float64)
     last_thruster_torque_body = np.zeros(3, dtype=np.float64)
+    descent_guard_enabled = bool(args.sitl and env_flag("UUV_MJ_DESCENT_CONTRACT_GUARD", True))
+    descent_guard_fail_fast = env_flag("UUV_MJ_DESCENT_CONTRACT_FAIL_FAST", False)
+    descent_guard_vz_down_mps = float(
+        np.clip(float(os.getenv("UUV_MJ_DESCENT_CONTRACT_VZ_DOWN_MPS", "0.05")), 0.005, 1.0)
+    )
+    descent_guard_start_s = float(
+        np.clip(float(os.getenv("UUV_MJ_DESCENT_CONTRACT_START_S", "2.0")), 0.0, 60.0)
+    )
+    descent_guard_last_warn_wall = {"value": -1.0}
     thruster_debug_path = os.environ.get("UUV_MJ_THRUSTER_DEBUG_CSV", "").strip()
     thruster_debug_file = None
     thruster_debug_next_t = {"value": 0.0}
@@ -1705,6 +1723,12 @@ def main() -> None:
                 "ang_vel_body_x",
                 "ang_vel_body_y",
                 "ang_vel_body_z",
+                "base_depth_m",
+                "base_vz_down_mps",
+                "buoy_force_world_z",
+                "weight_force_world_z",
+                "net_static_force_world_z",
+                "initial_depth_hold_active",
                 "thr_force_body_x",
                 "thr_force_body_y",
                 "thr_force_body_z",
@@ -1751,11 +1775,21 @@ def main() -> None:
         while sim_t + 1e-9 >= thruster_debug_next_t["value"]:
             thruster_debug_next_t["value"] += 0.05
         lin_vel_body, ang_vel_body = body_velocity_local()
+        base_depth_m = water_surface_z - float(base_origin_world()[2])
+        base_vz_down_mps = -float(data.qvel[world_qvel_adr + 2])
+        weight_force_world_z = -float(vehicle_mass * g)
+        net_static_force_world_z = float(last_buoy_force[2] + weight_force_world_z)
         values: list[float] = [
             time.monotonic(),
             sim_t,
             *lin_vel_body.tolist(),
             *ang_vel_body.tolist(),
+            base_depth_m,
+            base_vz_down_mps,
+            float(last_buoy_force[2]),
+            weight_force_world_z,
+            net_static_force_world_z,
+            1.0 if initial_depth_hold["active"] else 0.0,
             *last_thruster_force_body.tolist(),
             *last_thruster_torque_body.tolist(),
         ]
@@ -1770,6 +1804,51 @@ def main() -> None:
                 ]
             )
         thruster_debug_file.write(",".join(f"{value:.9g}" for value in values) + "\n")
+
+    def enforce_descent_contract() -> None:
+        if not descent_guard_enabled:
+            return
+        if initial_depth_hold["active"] or float(data.time) < descent_guard_start_s:
+            return
+        base_vz_down_mps = -float(data.qvel[world_qvel_adr + 2])
+        if base_vz_down_mps < descent_guard_vz_down_mps:
+            return
+
+        vertical_pwm = [int(v) for v in sitl_servo_pwm_values[4:8]]
+        vertical_pwm_delta = max((abs(v - 1500) for v in vertical_pwm), default=0)
+        base_rot = data.xmat[base_id].reshape(3, 3)
+        thruster_force_world_z = float((base_rot @ last_thruster_force_body)[2])
+        weight_force_world_z = -float(vehicle_mass * g)
+        net_static_force_world_z = float(last_buoy_force[2] + weight_force_world_z)
+
+        if vertical_pwm_delta <= 12 and abs(thruster_force_world_z) <= 1.0:
+            if net_static_force_world_z < -1.0:
+                cause = "physics_negative_buoyancy_or_partial_submergence"
+            else:
+                cause = "neutral_pwm_with_existing_down_velocity"
+        elif thruster_force_world_z < -1.0:
+            cause = "controller_or_mapping_is_commanding_down_force"
+        else:
+            cause = "controller_is_braking_or_force_sign_needs_review"
+
+        now_wall = time.monotonic()
+        if now_wall - descent_guard_last_warn_wall["value"] < 1.0:
+            return
+        descent_guard_last_warn_wall["value"] = now_wall
+        message = (
+            "[descent-contract] "
+            f"cause={cause} "
+            f"depth={water_surface_z - float(base_origin_world()[2]):.3f}m "
+            f"vz_down={base_vz_down_mps:+.3f}m/s "
+            f"json_pwm5_8={tuple(vertical_pwm)} "
+            f"thruster_force_z={thruster_force_world_z:+.3f}N "
+            f"buoy_z={float(last_buoy_force[2]):+.3f}N "
+            f"weight_z={weight_force_world_z:+.3f}N "
+            f"net_static_z={net_static_force_world_z:+.3f}N"
+        )
+        if descent_guard_fail_fast:
+            raise RuntimeError(message)
+        print(message, flush=True)
 
     def force_from_shaped_command(name: str, command_shaped: float, gain: float) -> float:
         if abs(command_shaped) <= 1e-9:
