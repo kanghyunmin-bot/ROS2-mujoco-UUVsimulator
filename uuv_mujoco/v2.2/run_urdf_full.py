@@ -1314,12 +1314,19 @@ def main() -> None:
         old_mass = float(model.body_mass[base_id])
         old_com = model.body_ipos[base_id].copy()
         old_inertia = model.body_inertia[base_id].copy()
+        # mj_setConst can restore free-joint qpos/qvel from the XML defaults.
+        # Preserve the already-applied launch pose, otherwise --initial-depth-m
+        # and drop-start contracts silently revert to base_link's MJCF pose.
+        saved_qpos = data.qpos[world_qpos_adr : world_qpos_adr + 7].copy()
+        saved_qvel = data.qvel[world_qvel_adr : world_qvel_adr + 6].copy()
 
         model.body_mass[base_id] = total_mass
         model.body_ipos[base_id, :] = composite_com
         model.body_inertia[base_id, :] = np.maximum(composite_inertia, 1e-6)
         if hasattr(mujoco, "mj_setConst"):
             mujoco.mj_setConst(model, data)
+        data.qpos[world_qpos_adr : world_qpos_adr + 7] = saved_qpos
+        data.qvel[world_qvel_adr : world_qvel_adr + 6] = saved_qvel
         mujoco.mj_forward(model, data)
 
         print(
