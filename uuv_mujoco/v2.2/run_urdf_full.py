@@ -1022,14 +1022,6 @@ def main() -> None:
             print(f"[ros2] initial depth hold service unavailable: {exc}", flush=True)
 
     fluid_model = str(args.fluid_model)
-    if args.sitl:
-        if fluid_model != "legacy":
-            print(
-                "[physics] SITL free-surface contract: forcing fluid_model=legacy "
-                "and disabling MuJoCo built-in global fluid",
-                flush=True,
-            )
-        fluid_model = "legacy"
     use_custom_hydrodynamics = fluid_model == "legacy"
     if use_custom_hydrodynamics:
         model.opt.density = 0.0
