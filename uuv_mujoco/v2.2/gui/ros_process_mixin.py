@@ -199,7 +199,12 @@ class RosProcessMixin:
         # vehicle by default: the artificial hold/release path hides startup
         # physics and can inject an AltHold transient that the real vehicle
         # does not have.
-        gui_initial_depth_m = os.environ.get("UUV_GUI_INITIAL_DEPTH_M", "0.2501").strip()
+        default_drop_height_m = os.environ.get("UUV_SITL_DROP_HEIGHT_M", "0.35").strip() or "0.35"
+        try:
+            default_initial_depth_m = f"{-max(float(default_drop_height_m), 0.0):.4f}"
+        except ValueError:
+            default_initial_depth_m = "-0.3500"
+        gui_initial_depth_m = os.environ.get("UUV_GUI_INITIAL_DEPTH_M", default_initial_depth_m).strip()
         if not gui_initial_depth_m:
             return
 
@@ -216,7 +221,14 @@ class RosProcessMixin:
             cmd.extend(["--initial-depth-hold-target-m", hold_target_m])
         if hold_until_release and not has_hold_flag:
             cmd.append("--hold-initial-depth-until-release")
-        self.node.push_event(f"sim initial depth: base_link={gui_initial_depth_m} m")
+        try:
+            depth_value = float(gui_initial_depth_m)
+        except ValueError:
+            depth_value = 0.0
+        if depth_value < 0.0:
+            self.node.push_event(f"sim drop start: base_link={-depth_value:.3f} m above water")
+        else:
+            self.node.push_event(f"sim initial depth: base_link={gui_initial_depth_m} m")
 
     def _set_ros_pkg_status(self, text: str) -> None:
         if threading.current_thread() is threading.main_thread():

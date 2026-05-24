@@ -328,7 +328,10 @@ def main() -> None:
         "--initial-depth-m",
         type=float,
         default=None,
-        help="Set the initial base_link depth below the water surface before runtime starts.",
+        help=(
+            "Set initial base_link depth relative to the water surface before runtime starts. "
+            "Positive is underwater; negative starts above the water and lets gravity drop the vehicle."
+        ),
     )
     parser.add_argument(
         "--initial-rpy-rad",
@@ -387,6 +390,16 @@ def main() -> None:
         "--enable-viewer-pause",
         action="store_true",
         help="Allow the MuJoCo viewer spacebar/pause state to stop the simulation loop",
+    )
+    parser.add_argument(
+        "--viewer-camera-mode",
+        type=str,
+        default=os.environ.get("UUV_MUJOCO_VIEWER_CAMERA_MODE", ""),
+        choices=("", "free", "follow", "stereo_left", "stereo_right"),
+        help=(
+            "Initial MuJoCo viewer camera. Empty defaults to follow in SITL and free otherwise. "
+            "Use stereo_left/stereo_right for fixed onboard robot cameras."
+        ),
     )
     args = parser.parse_args()
 
@@ -685,6 +698,12 @@ def main() -> None:
             data.qacc[world_qvel_adr : world_qvel_adr + 6] = 0.0
         mujoco.mj_forward(model, data)
 
+    drop_start_enabled_raw = os.environ.get("UUV_SITL_DROP_START_ABOVE_WATER", "1").strip().lower()
+    drop_start_enabled = drop_start_enabled_raw in {"1", "true", "yes", "on", "enable", "enabled"}
+    if args.sitl and args.initial_depth_m is None and drop_start_enabled:
+        drop_height_m = float(max(_env_float("UUV_SITL_DROP_HEIGHT_M", 0.35), 0.0))
+        args.initial_depth_m = -drop_height_m
+
     initial_depth_hold = {
         "active": bool(args.hold_initial_depth_until_release),
         "depth_m": float(args.initial_depth_m) if args.initial_depth_m is not None else None,
@@ -704,9 +723,14 @@ def main() -> None:
 
     if args.initial_depth_m is not None:
         set_base_depth(float(args.initial_depth_m))
+        initial_depth_value = float(args.initial_depth_m)
+        if initial_depth_value < 0.0:
+            start_msg = f"drop start: base_link={-initial_depth_value:.3f} m above water"
+        else:
+            start_msg = f"initial depth set: {initial_depth_value:.3f} m"
         print(
-            "[runtime] initial depth set: "
-            f"{float(args.initial_depth_m):.3f} m"
+            "[runtime] "
+            + start_msg
             + (
                 " with hold enabled"
                 if initial_depth_hold["active"]
@@ -823,10 +847,18 @@ def main() -> None:
     paused_flag = {"value": False}
     show_viewer_debug = {"value": bool(args.viewer_debug)}
     show_thruster_labels = {"value": bool(args.viewer_debug)}
-    follow_camera = {"value": False}
+    initial_viewer_camera_mode = str(args.viewer_camera_mode or "").strip().lower()
+    if not initial_viewer_camera_mode:
+        initial_viewer_camera_mode = "follow" if args.sitl else "free"
+    if initial_viewer_camera_mode not in {"free", "follow", "stereo_left", "stereo_right"}:
+        initial_viewer_camera_mode = "follow" if args.sitl else "free"
+    follow_camera = {"value": initial_viewer_camera_mode == "follow"}
     follow_camera_init = {"value": False}
     show_sensor_overlay = {"value": bool(args.viewer_debug)}
-    camera_mode = {"value": "free"}  # free | follow | stereo_left | stereo_right
+    camera_mode = {"value": initial_viewer_camera_mode}  # free | follow | stereo_left | stereo_right
+    follow_camera_distance = float(np.clip(_env_float("UUV_VIEWER_FOLLOW_DISTANCE", 2.2), 0.2, 20.0))
+    follow_camera_elevation = float(np.clip(_env_float("UUV_VIEWER_FOLLOW_ELEVATION_DEG", -20.0), -89.0, 89.0))
+    follow_camera_azimuth = float(_env_float("UUV_VIEWER_FOLLOW_AZIMUTH_DEG", 135.0))
 
     def clamp(value: float, max_val: float) -> float:
         return max(-max_val, min(max_val, value))
@@ -2423,9 +2455,9 @@ def main() -> None:
                     cam.type = int(mujoco.mjtCamera.mjCAMERA_TRACKING)
                     cam.trackbodyid = int(base_id)
                     if not follow_camera_init["value"]:
-                        cam.distance = 2.2
-                        cam.elevation = -20.0
-                        cam.azimuth = 135.0
+                        cam.distance = follow_camera_distance
+                        cam.elevation = follow_camera_elevation
+                        cam.azimuth = follow_camera_azimuth
                         follow_camera_init["value"] = True
                 else:
                     if int(viewer.cam.type) in (
