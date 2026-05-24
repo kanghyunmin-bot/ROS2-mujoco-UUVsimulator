@@ -67,6 +67,7 @@ class SitlTransport:
         self._bar30_water_density = float(water_density)
         self._bar30_gravity = float(gravity)
         self._sitl_home_alt_m = float(home_alt_m)
+        self._water_surface_z = self._env_to_float("UUV_WATER_SURFACE_Z", 0.0)
         self._sitl_rangefinder_max_m = float(rangefinder_max_m)
         self._sitl_cmd_debug = bool(command_debug)
 
@@ -360,13 +361,18 @@ class SitlTransport:
         base_pos_enu: np.ndarray,
         base_vel_enu: np.ndarray,
     ) -> VerticalEstimate | None:
-        """Simple vertical truth model for SITL standard path."""
+        """Legacy base-link vertical fallback.
+
+        The active ArduSub SITL path should provide a Bar30-site
+        VerticalEstimate from Ros2Bridge. This fallback is kept only for
+        older call paths and uses the same waterline depth convention.
+        """
         if base_pos_enu is None or base_vel_enu is None:
             return None
         if not np.all(np.isfinite(base_pos_enu)) or not np.all(np.isfinite(base_vel_enu)):
             return None
 
-        base_depth_m = float(max(0.0, -float(base_pos_enu[2])))
+        base_depth_m = float(max(0.0, self._water_surface_z - float(base_pos_enu[2])))
         pos_ned = self._enu_to_ned @ np.asarray(base_pos_enu, dtype=np.float64)
         vel_ned = self._enu_to_ned @ np.asarray(base_vel_enu, dtype=np.float64)
         pos_ned[2] = base_depth_m

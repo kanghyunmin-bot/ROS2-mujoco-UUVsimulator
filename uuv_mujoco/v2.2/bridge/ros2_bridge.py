@@ -202,6 +202,8 @@ class Ros2Bridge:
         self._bar30_surface_pressure_pa = self._env_to_clamped_float("ROS2_UUV_BAR30_SURFACE_PRESSURE_PA", 101900.0, 80000.0, 120000.0)
         self._bar30_water_density = self._env_to_clamped_float("ROS2_UUV_BAR30_WATER_DENSITY", float(self.model.opt.density), 900.0, 1200.0)
         self._bar30_gravity = self._env_to_clamped_float("ROS2_UUV_BAR30_GRAVITY", 9.80665, 9.5, 10.0)
+        self._water_surface_z = float(self._env_to_float("UUV_WATER_SURFACE_Z", 0.0))
+        self._sitl_home_alt_m = float(self._env_to_float("ROS2_UUV_HOME_ALT_M", 0.0))
         self._gravity_enu = np.array([0.0, 0.0, -self._bar30_gravity], dtype=np.float64)
         self._imu_acc_clip_mps2 = 16.0 * self._bar30_gravity
         self._static_pressure_source = str(os.environ.get("ROS2_UUV_STATIC_PRESSURE_SOURCE", "external")).strip().lower()
@@ -317,7 +319,7 @@ class Ros2Bridge:
                 surface_pressure_pa=self._bar30_surface_pressure_pa,
                 water_density=self._bar30_water_density,
                 gravity=self._bar30_gravity,
-                home_alt_m=float(self._env_to_float("ROS2_UUV_HOME_ALT_M", 0.0)),
+                home_alt_m=self._sitl_home_alt_m,
                 rangefinder_max_m=float(self._env_to_float("ROS2_UUV_SITL_RANGEFINDER_MAX_M", 30.0)),
                 command_debug=bool(self._env_to_int("ROS2_UUV_SITL_CMD_DEBUG", 0)),
             )
@@ -1759,9 +1761,11 @@ class Ros2Bridge:
         local NED, where positive Z is down. POSZ is Baro on the real robot,
         and the JSON backend derives its simulated water barometer from
         position.z, so the Bar30 site depth is the only vertical position
-        source here.
+        source here. Above the waterline the Bar30 reports surface pressure
+        and zero positive-down depth.
         """
-        bar30_abs_depth_m = float(max(0.0, -float(bar30_pos_enu[2])))
+        raw_bar30_depth_m = self._water_surface_z - float(bar30_pos_enu[2])
+        bar30_abs_depth_m = float(max(0.0, raw_bar30_depth_m))
         depth_m = float(max(0.0, bar30_abs_depth_m + self._sitl_depth_sensor_bias_m))
 
         vel_d = float("nan")
@@ -1792,7 +1796,8 @@ class Ros2Bridge:
             self._bar30_water_density,
             self._bar30_gravity,
         )
-        return VerticalEstimate(depth_m=depth_m, pressure_pa=pressure_pa, pos_ned=pos_ned, vel_ned=vel_ned, alt_m=-depth_m)
+        alt_m = float(self._sitl_home_alt_m - depth_m)
+        return VerticalEstimate(depth_m=depth_m, pressure_pa=pressure_pa, pos_ned=pos_ned, vel_ned=vel_ned, alt_m=alt_m)
 
     def _imu_vectors_in_body(self, data: mujoco.MjData, gyro: np.ndarray | None) -> np.ndarray | None:
         gyro_bmj = np.array(gyro, dtype=np.float64) if gyro is not None else None
@@ -2007,7 +2012,7 @@ class Ros2Bridge:
                 bar30_vel_enu[:] = 0.0
             else:
                 bar30_vel_enu[2] = 0.0
-            self._sitl_bar30_prev_depth_m = float(max(0.0, -bar30_pos_enu[2]))
+            self._sitl_bar30_prev_depth_m = float(max(0.0, self._water_surface_z - float(bar30_pos_enu[2])))
             self._sitl_bar30_prev_t = sim_t
         sitl_vertical_est = self._estimate_sitl_vertical(base_pos_enu, base_vel_enu, bar30_pos_enu, bar30_vel_enu, sim_t)
         if zero_vertical_reason:

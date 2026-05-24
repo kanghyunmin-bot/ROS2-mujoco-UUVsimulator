@@ -642,7 +642,7 @@ def main() -> None:
         raise SystemExit("[runtime] world_joint free joint not found in model")
     world_qpos_adr = int(model.jnt_qposadr[world_joint_id])
     world_qvel_adr = int(model.jnt_dofadr[world_joint_id])
-    water_surface_z = 0.0
+    water_surface_z = float(_env_float("UUV_WATER_SURFACE_Z", 0.0))
 
     def quat_wxyz_from_rpy_rad(roll: float, pitch: float, yaw: float) -> np.ndarray:
         cr = math.cos(0.5 * float(roll))
@@ -990,12 +990,20 @@ def main() -> None:
             print(f"[ros2] initial depth hold service unavailable: {exc}", flush=True)
 
     fluid_model = str(args.fluid_model)
+    if args.sitl:
+        if fluid_model != "legacy":
+            print(
+                "[physics] SITL free-surface contract: forcing fluid_model=legacy "
+                "and disabling MuJoCo built-in global fluid",
+                flush=True,
+            )
+        fluid_model = "legacy"
     use_custom_hydrodynamics = fluid_model == "legacy"
     if use_custom_hydrodynamics:
         model.opt.density = 0.0
         model.opt.viscosity = 0.0
         print(
-            "[physics] fluid model: legacy 6-DOF "
+            "[physics] fluid model: legacy/custom free-surface "
             f"(MuJoCo built-in fluid disabled, scene rho={scene_fluid_density:.1f}, "
             f"viscosity={scene_fluid_viscosity:.6f})",
             flush=True,
@@ -1282,7 +1290,7 @@ def main() -> None:
     build_horizontal_allocator()
 
     # Water/fluid basics
-    water_surface_z = 0.0
+    # Keep the same waterline used by initial pose/depth and Bar30 contracts.
     rho = scene_fluid_density
     g = abs(float(model.opt.gravity[2]))
     total_mass_all = float(np.sum(model.body_mass[1:]))
@@ -1586,6 +1594,10 @@ def main() -> None:
     water_current_world = hydro_cfg.water_current_world.astype(np.float64, copy=True)
     body_components = hydro_cfg.body_components
     buoyancy_points = hydro_cfg.buoyancy_points
+    thruster_air_force_scale = float(np.clip(_env_float("UUV_THRUSTER_AIR_FORCE_SCALE", 0.0), 0.0, 1.0))
+    thruster_immersion_half_height_m = float(
+        max(_env_float("UUV_THRUSTER_IMMERSION_HALF_HEIGHT_M", 0.045), 1.0e-4)
+    )
     if hydro_cfg.displaced_volume is not None and hydro_cfg.displaced_volume > 0.0:
         neutral_volume = float(hydro_cfg.displaced_volume)
     thruster_loop_hz = float(np.clip(args.thruster_loop_hz, 1.0, 500.0))
@@ -1615,7 +1627,14 @@ def main() -> None:
         f"slope_scale={buoyancy_slope_scale:.2f}, "
         f"surface_heave_damping={surface_heave_damping:.2f}, "
         f"heave_damping_scale={heave_damping_scale:.2f}, "
-        f"full_heave_damping={full_heave_damping:.2f}",
+        f"full_heave_damping={full_heave_damping:.2f}, "
+        f"water_surface_z={water_surface_z:.3f}",
+        flush=True,
+    )
+    print(
+        "[physics] thruster immersion force scale: "
+        f"air_scale={thruster_air_force_scale:.3f}, "
+        f"half_height={thruster_immersion_half_height_m:.3f}m",
         flush=True,
     )
     if abs(yaw_torque_scale - yaw_torque_scale_config) > 1e-9:
@@ -1881,6 +1900,22 @@ def main() -> None:
         )
         return float(-force_mag * gain)
 
+    def thruster_force_immersion_scale(thr_name: str) -> float:
+        """Scale plant force by the actual thruster site water immersion."""
+        sid = thruster_site_ids.get(thr_name, -1)
+        if sid < 0:
+            return 1.0
+
+        site_z = float(data.site_xpos[sid, 2])
+        site_depth_m = float(water_surface_z - site_z)
+        water_fraction = submerged_fraction(
+            site_depth_m,
+            thruster_immersion_half_height_m,
+            buoyancy_model,
+        )
+        water_fraction = float(np.clip(water_fraction, 0.0, 1.0))
+        return float(thruster_air_force_scale + (1.0 - thruster_air_force_scale) * water_fraction)
+
     def update_thruster_forces(_dt: float) -> None:
         nonlocal thruster_reaction_torque_world, last_thruster_force_body, last_thruster_torque_body
 
@@ -1908,6 +1943,7 @@ def main() -> None:
             else:
                 shaped_cmd = shape_thruster_command(thr_state[name], deadzone, command_limit)
             force = force_from_shaped_command(name, shaped_cmd, gain)
+            force *= thruster_force_immersion_scale(name)
             force = float(np.clip(force, lo, hi))
             data.ctrl[aid] = force
             thruster_force_cmd[name] = force
@@ -2120,9 +2156,7 @@ def main() -> None:
             prev_rel_nu_body = nu_rel_body.copy()
 
             immersed_added_mass = added_mass_diag * submerged
-            immersed_linear_damping = air_linear_damping_diag + submerged * (
-                linear_damping_diag - air_linear_damping_diag
-            )
+            immersed_linear_damping = linear_damping_diag * submerged
             immersed_quadratic_damping = quadratic_damping_diag * submerged
             immersed_linear_damping[2] *= heave_damping_scale
             immersed_quadratic_damping[2] *= heave_damping_scale

@@ -632,7 +632,7 @@ class UuvGuiNode(Node):
             self._try_release_initial_depth_hold()
             if self._initial_depth_release_pending or self._initial_depth_release_in_flight:
                 if time.monotonic() >= deadline:
-                    self._push_event("set_mode ALT_HOLD blocked: initial depth hold release not complete")
+                    self._push_event("set_mode ALT_HOLD not sent: initial depth hold release incomplete")
                     return
                 if attempt == 1 or attempt % 4 == 0:
                     self._push_event("set_mode ALT_HOLD delayed: releasing initial depth hold first")
