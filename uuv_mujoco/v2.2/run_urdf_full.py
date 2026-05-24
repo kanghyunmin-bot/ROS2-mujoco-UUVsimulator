@@ -55,6 +55,13 @@ def _env_float(name: str, default: float) -> float:
         return float(default)
 
 
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None or value == "":
+        return bool(default)
+    return value.strip().lower() in {"1", "true", "yes", "on", "enable", "enabled"}
+
+
 def main() -> None:
     """Parse CLI options, initialize runtime state, and execute selected mode."""
     parser = argparse.ArgumentParser(description="UUV MuJoCo runner")
@@ -587,6 +594,9 @@ def main() -> None:
         name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, int(geom_id))
         return name or f"geom_{geom_id}"
 
+    fluid_geom_names = {int(geom_id): _fluid_geom_name(int(geom_id)) for geom_id in fluid_geom_ids}
+    fluidcoef_static_geom_scales: dict[str, np.ndarray] = {}
+
     if fluidcoef_scale is not None:
         if fluidcoef_scale.size != 5:
             print(
@@ -608,7 +618,6 @@ def main() -> None:
 
     fluidcoef_geom_scales = sim_profile.get("mujoco_fluidcoef_geom_scales")
     if isinstance(fluidcoef_geom_scales, dict) and fluid_geom_ids.size:
-        fluid_geom_names = {int(geom_id): _fluid_geom_name(int(geom_id)) for geom_id in fluid_geom_ids}
         for pattern, raw_scale in fluidcoef_geom_scales.items():
             geom_scale = _to_float_array(raw_scale)
             if geom_scale is None or geom_scale.size != 5:
@@ -620,6 +629,7 @@ def main() -> None:
                 )
                 continue
             geom_scale = np.clip(geom_scale.astype(np.float64, copy=False), 0.0, 10.0)
+            fluidcoef_static_geom_scales[str(pattern)] = geom_scale.copy()
             matching_geom_ids = [
                 geom_id
                 for geom_id, geom_name in fluid_geom_names.items()
@@ -639,6 +649,102 @@ def main() -> None:
                 f"geoms={', '.join(fluid_geom_names[geom_id] for geom_id in matching_geom_ids)}, "
                 "coeff=(blunt, slender, angular, Kutta, Magnus)="
                 f"{np.array2string(geom_scale, precision=3)}",
+                flush=True,
+            )
+
+    fluidcoef_dynamic_cfg = sim_profile.get("dynamic_fluidcoef")
+    if not isinstance(fluidcoef_dynamic_cfg, dict):
+        fluidcoef_dynamic_cfg = {}
+    fluidcoef_dynamic_enabled = bool(
+        _env_flag("UUV_DYNAMIC_FLUIDCOEF_ENABLE", bool(fluidcoef_dynamic_cfg.get("active", False)))
+        and str(args.fluid_model) == "current"
+        and fluid_geom_ids.size
+    )
+    fluidcoef_dynamic_base = model.geom_fluid[:, 1:6].copy()
+    fluidcoef_dynamic_current = fluidcoef_dynamic_base.copy()
+    fluidcoef_dynamic_reference = fluidcoef_dynamic_base.copy()
+    fluidcoef_dynamic_weights = np.zeros_like(fluidcoef_dynamic_base)
+    fluidcoef_dynamic_active_geom_ids: set[int] = set()
+
+    if fluidcoef_dynamic_enabled:
+        reference_geom_scales = fluidcoef_dynamic_cfg.get("reference_geom_scales")
+        coefficient_load_weights = fluidcoef_dynamic_cfg.get("coefficient_load_weights")
+        if not isinstance(reference_geom_scales, dict):
+            reference_geom_scales = {}
+        if not isinstance(coefficient_load_weights, dict):
+            coefficient_load_weights = {}
+
+        min_multiplier = float(np.clip(float(fluidcoef_dynamic_cfg.get("min_multiplier", 0.25)), 0.01, 100.0))
+        max_multiplier = float(np.clip(float(fluidcoef_dynamic_cfg.get("max_multiplier", 25.0)), 0.01, 100.0))
+        default_weights = _to_float_array(fluidcoef_dynamic_cfg.get("default_load_weights", [1, 1, 1, 1, 1]))
+        if default_weights is None or default_weights.size != 5:
+            default_weights = np.ones(5, dtype=np.float64)
+        default_weights = np.clip(default_weights.astype(np.float64, copy=False), 0.0, 5.0)
+
+        for pattern, raw_reference_scale in reference_geom_scales.items():
+            reference_scale = _to_float_array(raw_reference_scale)
+            if reference_scale is None or reference_scale.size != 5:
+                print(
+                    "[physics] ignoring dynamic_fluidcoef reference "
+                    f"for {pattern!r}: expected 5 values "
+                    "(blunt, slender, angular, Kutta, Magnus)",
+                    flush=True,
+                )
+                continue
+            reference_scale = np.clip(reference_scale.astype(np.float64, copy=False), 0.0, 100.0)
+            current_scale = fluidcoef_static_geom_scales.get(str(pattern))
+            if current_scale is None:
+                current_scale = np.ones(5, dtype=np.float64)
+            ratio = np.divide(
+                reference_scale,
+                np.maximum(current_scale.astype(np.float64, copy=False), 1.0e-12),
+            )
+            ratio = np.clip(ratio, min_multiplier, max_multiplier)
+            matching_geom_ids = [
+                int(geom_id)
+                for geom_id, geom_name in fluid_geom_names.items()
+                if fnmatch.fnmatchcase(geom_name, str(pattern))
+            ]
+            if not matching_geom_ids:
+                print(
+                    "[physics] warning: dynamic_fluidcoef pattern "
+                    f"{pattern!r} matched no fluid geoms",
+                    flush=True,
+                )
+                continue
+
+            raw_weights = coefficient_load_weights.get(str(pattern), default_weights)
+            weights = _to_float_array(raw_weights)
+            if weights is None or weights.size != 5:
+                weights = default_weights
+            weights = np.clip(weights.astype(np.float64, copy=False), 0.0, 5.0)
+
+            idx = np.array(matching_geom_ids, dtype=np.int32)
+            fluidcoef_dynamic_reference[idx, :] = fluidcoef_dynamic_base[idx, :] * ratio.reshape(1, 5)
+            fluidcoef_dynamic_weights[idx, :] = weights.reshape(1, 5)
+            fluidcoef_dynamic_active_geom_ids.update(matching_geom_ids)
+            print(
+                "[physics] dynamic MuJoCo fluidcoef target loaded: "
+                f"pattern={pattern!r}, count={len(matching_geom_ids)}, "
+                f"geoms={', '.join(fluid_geom_names[geom_id] for geom_id in matching_geom_ids)}, "
+                "target/reference static scale ratio="
+                f"{np.array2string(ratio, precision=3)}, "
+                "load_weights="
+                f"{np.array2string(weights, precision=3)}",
+                flush=True,
+            )
+
+        if not fluidcoef_dynamic_active_geom_ids:
+            fluidcoef_dynamic_enabled = False
+            print(
+                "[physics] dynamic MuJoCo fluidcoef disabled: no active reference geoms",
+                flush=True,
+            )
+        else:
+            print(
+                "[physics] dynamic MuJoCo fluidcoef enabled: "
+                f"source={fluidcoef_dynamic_cfg.get('source', 'sim_profile')!r}, "
+                "coeff=(blunt, slender, angular, Kutta, Magnus)",
                 flush=True,
             )
 
@@ -1638,6 +1744,143 @@ def main() -> None:
             next_thruster_sim_time["value"] += thruster_loop_dt
         return True
 
+    fluidcoef_dynamic_active_idx = np.array(
+        sorted(fluidcoef_dynamic_active_geom_ids),
+        dtype=np.int32,
+    )
+    fluidcoef_dynamic_update_hz = float(
+        np.clip(
+            _env_float(
+                "UUV_DYNAMIC_FLUIDCOEF_HZ",
+                float(fluidcoef_dynamic_cfg.get("update_hz", 20.0)),
+            ),
+            0.5,
+            500.0,
+        )
+    )
+    fluidcoef_dynamic_update_dt = 1.0 / max(fluidcoef_dynamic_update_hz, 1.0e-6)
+    fluidcoef_dynamic_alpha = float(
+        np.clip(
+            _env_float(
+                "UUV_DYNAMIC_FLUIDCOEF_ALPHA",
+                float(fluidcoef_dynamic_cfg.get("smoothing_alpha", 0.25)),
+            ),
+            0.01,
+            1.0,
+        )
+    )
+    fluidcoef_dynamic_ref_speed = float(
+        max(
+            _env_float(
+                "UUV_DYNAMIC_FLUIDCOEF_REFERENCE_SPEED_MPS",
+                float(fluidcoef_dynamic_cfg.get("reference_speed_mps", 0.3)),
+            ),
+            1.0e-3,
+        )
+    )
+    fluidcoef_dynamic_ref_angular = float(
+        max(
+            _env_float(
+                "UUV_DYNAMIC_FLUIDCOEF_REFERENCE_ANGULAR_RPS",
+                float(fluidcoef_dynamic_cfg.get("reference_angular_rps", 0.6)),
+            ),
+            1.0e-3,
+        )
+    )
+    fluidcoef_dynamic_next_sim_t = {"value": -1.0}
+    fluidcoef_dynamic_last_log_sim_t = {"value": -10.0}
+    fluidcoef_dynamic_debug = _env_flag(
+        "UUV_DYNAMIC_FLUIDCOEF_DEBUG",
+        bool(fluidcoef_dynamic_cfg.get("debug", False)),
+    )
+
+    def _fluidcoef_loads_from_local_velocity(rel: np.ndarray, omega: np.ndarray) -> np.ndarray:
+        rel = np.asarray(rel, dtype=np.float64)
+        omega = np.asarray(omega, dtype=np.float64)
+        surge = abs(float(rel[0]))
+        broadside = float(np.linalg.norm(rel[1:3]))
+        speed = float(np.linalg.norm(rel))
+        angular = float(np.linalg.norm(omega))
+        surge_load = float(np.clip(surge / fluidcoef_dynamic_ref_speed, 0.0, 1.0))
+        broadside_load = float(np.clip(broadside / fluidcoef_dynamic_ref_speed, 0.0, 1.0))
+        trans_load = float(np.clip(speed / fluidcoef_dynamic_ref_speed, 0.0, 1.0))
+        angular_load = float(np.clip(angular / fluidcoef_dynamic_ref_angular, 0.0, 1.0))
+        aoa_load = float(np.clip(broadside / max(speed, 1.0e-6), 0.0, 1.0)) if speed > 1.0e-5 else 0.0
+        coupling_load = float(np.sqrt(max(trans_load * angular_load, 0.0)))
+
+        # MuJoCo fluidcoef order: blunt, slender, angular, Kutta, Magnus.
+        # CFD/HAN prior: x flow mostly informs slender, y/z crossflow informs
+        # blunt and Kutta, and angular/Magnus are activated by body rates.
+        return np.array(
+            [
+                broadside_load,
+                surge_load,
+                angular_load,
+                max(broadside_load, aoa_load),
+                coupling_load,
+            ],
+            dtype=np.float64,
+        )
+
+    def update_dynamic_fluidcoef(_rel_lin_vel_body: np.ndarray, _ang_vel_body: np.ndarray) -> None:
+        """Update each MuJoCo ellipsoid fluidcoef from that geom's flow state."""
+        if not fluidcoef_dynamic_enabled or fluidcoef_dynamic_active_idx.size == 0:
+            return
+
+        sim_t = float(data.time)
+        if fluidcoef_dynamic_next_sim_t["value"] < 0.0:
+            fluidcoef_dynamic_next_sim_t["value"] = sim_t
+        if sim_t + 1.0e-9 < fluidcoef_dynamic_next_sim_t["value"]:
+            return
+        while sim_t + 1.0e-9 >= fluidcoef_dynamic_next_sim_t["value"]:
+            fluidcoef_dynamic_next_sim_t["value"] += fluidcoef_dynamic_update_dt
+
+        idx = fluidcoef_dynamic_active_idx
+        blend = np.zeros((idx.size, 5), dtype=np.float64)
+        first_loads = np.zeros(5, dtype=np.float64)
+        for row, geom_id in enumerate(idx):
+            vel6 = np.zeros(6, dtype=np.float64)
+            mujoco.mj_objectVelocity(
+                model,
+                data,
+                mujoco.mjtObj.mjOBJ_GEOM,
+                int(geom_id),
+                vel6,
+                1,
+            )
+            geom_rot = data.geom_xmat[int(geom_id)].reshape(3, 3)
+            current_local = geom_rot.T @ water_current_world
+            coeff_loads = _fluidcoef_loads_from_local_velocity(
+                vel6[3:] - current_local,
+                vel6[:3],
+            )
+            if row == 0:
+                first_loads = coeff_loads
+            blend[row, :] = np.clip(fluidcoef_dynamic_weights[int(geom_id), :] * coeff_loads, 0.0, 1.0)
+
+        target = fluidcoef_dynamic_base[idx, :] + blend * (
+            fluidcoef_dynamic_reference[idx, :] - fluidcoef_dynamic_base[idx, :]
+        )
+        fluidcoef_dynamic_current[idx, :] += fluidcoef_dynamic_alpha * (
+            target - fluidcoef_dynamic_current[idx, :]
+        )
+        model.geom_fluid[idx, 1:6] = fluidcoef_dynamic_current[idx, :]
+
+        if fluidcoef_dynamic_debug and sim_t - fluidcoef_dynamic_last_log_sim_t["value"] >= 2.0:
+            fluidcoef_dynamic_last_log_sim_t["value"] = sim_t
+            first_id = int(idx[0])
+            ratio = np.divide(
+                fluidcoef_dynamic_current[first_id, :],
+                np.maximum(fluidcoef_dynamic_base[first_id, :], 1.0e-12),
+            )
+            print(
+                "[physics] dynamic fluidcoef update: "
+                f"geom={fluid_geom_names.get(first_id, first_id)!r}, "
+                f"loads={np.array2string(first_loads, precision=3)}, "
+                f"ratio={np.array2string(ratio, precision=3)}",
+                flush=True,
+            )
+
     print(
         f"[runtime] thruster loop rate: {thruster_loop_hz:.1f} Hz "
         f"(physics dt={float(model.opt.timestep):.4f}s)",
@@ -2041,6 +2284,7 @@ def main() -> None:
         current_body = base_rot.T @ water_current_world
         rel_lin_vel_body = lin_vel_body - current_body
         rel_lin_vel_world = base_rot @ rel_lin_vel_body
+        update_dynamic_fluidcoef(rel_lin_vel_body, ang_vel_body)
         cob = data.site_xpos[cob_site_id].copy() if cob_site_id >= 0 else com
         depth = water_surface_z - float(base_origin[2])
         submerged = submerged_fraction(depth, half_height, buoyancy_model)

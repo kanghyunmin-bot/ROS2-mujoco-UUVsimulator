@@ -375,6 +375,69 @@
         0.12374876201844129
       ]
     },
+    "dynamic_fluidcoef": {
+      "active": true,
+      "source": "UUV-HAN/outputs/proposed_profile_dynamic_fit.json current.mujoco_fluidcoef_geom_scales; CFD x/y prior from UUV-HAN/docs/cfd_xy_ratio_cycle_20260517.md",
+      "update_hz": 20.0,
+      "smoothing_alpha": 0.25,
+      "reference_speed_mps": 0.3,
+      "reference_angular_rps": 0.6,
+      "min_multiplier": 0.25,
+      "max_multiplier": 25.0,
+      "default_load_weights": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "coefficient_load_weights": {
+        "fluid_center_enclosure": [
+          0.7,
+          0.8,
+          1.0,
+          0.6,
+          0.6
+        ],
+        "fluid_*_lower_body": [
+          0.9,
+          0.8,
+          1.0,
+          0.7,
+          0.7
+        ],
+        "fluid_*_plate": [
+          1.0,
+          0.9,
+          1.0,
+          0.9,
+          0.6
+        ]
+      },
+      "reference_geom_scales": {
+        "fluid_center_enclosure": [
+          5.4,
+          8.8,
+          3.4,
+          0.25,
+          0.08
+        ],
+        "fluid_*_lower_body": [
+          9.287340459718855,
+          7.785550884634931,
+          1.4874999999999998,
+          0.75,
+          0.2
+        ],
+        "fluid_*_plate": [
+          7.690714099236311,
+          5.524248870162175,
+          5.375,
+          4.125,
+          0.10349999999999998
+        ]
+      }
+    },
     "linear_damping_linear": [
       1.1,
       1.32,
