@@ -1691,7 +1691,7 @@ def main() -> None:
             "[physics] current mode uses MuJoCo built-in fluidcoef; "
             "profile 6DOF added_mass/linear_damping/quadratic_damping are inactive. "
             "Active profile knobs here are hydrostatic buoyancy, CoB torque, "
-            "full_heave_damping, thruster tuning, mujoco_fluidcoef_scale, "
+            "thruster tuning, mujoco_fluidcoef_scale, "
             "and mujoco_fluidcoef_geom_scales.",
             flush=True,
         )
@@ -2154,22 +2154,15 @@ def main() -> None:
         data.xfrc_applied[base_id, 0:3] += buoy_force_world
         data.xfrc_applied[base_id, 3:6] += buoy_tau_world
 
-        surface_weight = max(0.0, 4.0 * submerged * (1.0 - submerged))
-        if surface_heave_damping > 1e-9 and surface_weight > 1e-9:
-            surface_force_world = np.array(
-                [0.0, 0.0, -surface_heave_damping * surface_weight * float(rel_lin_vel_world[2])],
-                dtype=np.float64,
-            )
-            data.xfrc_applied[base_id, 0:3] += surface_force_world
-
-        if (not use_custom_hydrodynamics) and full_heave_damping > 1e-9 and submerged > 1e-9:
-            full_heave_force_world = np.array(
-                [0.0, 0.0, -full_heave_damping * submerged * float(rel_lin_vel_world[2])],
-                dtype=np.float64,
-            )
-            data.xfrc_applied[base_id, 0:3] += full_heave_force_world
-
         if use_custom_hydrodynamics:
+            surface_weight = max(0.0, 4.0 * submerged * (1.0 - submerged))
+            if surface_heave_damping > 1e-9 and surface_weight > 1e-9:
+                surface_force_world = np.array(
+                    [0.0, 0.0, -surface_heave_damping * surface_weight * float(rel_lin_vel_world[2])],
+                    dtype=np.float64,
+                )
+                data.xfrc_applied[base_id, 0:3] += surface_force_world
+
             rel_flow_world = water_current_world - (base_rot @ lin_vel_body)
             nu_rel_body = np.concatenate((rel_lin_vel_body, ang_vel_body))
 
