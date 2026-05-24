@@ -804,7 +804,7 @@ def main() -> None:
             data.qacc[world_qvel_adr : world_qvel_adr + 6] = 0.0
         mujoco.mj_forward(model, data)
 
-    drop_start_enabled_raw = os.environ.get("UUV_SITL_DROP_START_ABOVE_WATER", "1").strip().lower()
+    drop_start_enabled_raw = os.environ.get("UUV_SITL_DROP_START_ABOVE_WATER", "0").strip().lower()
     drop_start_enabled = drop_start_enabled_raw in {"1", "true", "yes", "on", "enable", "enabled"}
     if args.sitl and args.initial_depth_m is None and drop_start_enabled:
         drop_height_m = float(max(_env_float("UUV_SITL_DROP_HEIGHT_M", 0.35), 0.0))
@@ -844,6 +844,19 @@ def main() -> None:
             ),
             flush=True,
         )
+        bar30_site_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "bar30_site")
+        if bar30_site_id >= 0:
+            bar30_depth_m = max(0.0, water_surface_z - float(data.site_xpos[bar30_site_id, 2]))
+            surface_depth_m = abs(_env_float("SITL_SURFACE_DEPTH", -10.0)) / 100.0
+            surface_clear_m = surface_depth_m + 0.05
+            if args.sitl and bar30_depth_m < surface_clear_m:
+                print(
+                    "[runtime] warning: initial Bar30 depth "
+                    f"{bar30_depth_m:.3f}m is inside ArduSub SURFACE_DEPTH hysteresis "
+                    f"(<{surface_clear_m:.3f}m). ALT_HOLD may clamp upward heave and "
+                    "command a dive until it clears the surfaced state.",
+                    flush=True,
+                )
     if args.initial_rpy_rad is not None:
         initial_rpy = np.asarray(args.initial_rpy_rad, dtype=np.float64)
         if initial_rpy.shape == (3,) and np.all(np.isfinite(initial_rpy)):

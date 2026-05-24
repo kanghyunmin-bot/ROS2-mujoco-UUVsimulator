@@ -199,11 +199,11 @@ class RosProcessMixin:
         # vehicle by default: the artificial hold/release path hides startup
         # physics and can inject an AltHold transient that the real vehicle
         # does not have.
-        default_drop_height_m = os.environ.get("UUV_SITL_DROP_HEIGHT_M", "0.35").strip() or "0.35"
-        try:
-            default_initial_depth_m = f"{-max(float(default_drop_height_m), 0.0):.4f}"
-        except ValueError:
-            default_initial_depth_m = "-0.3500"
+        # ArduSub ALT_HOLD blocks upward climb while the pressure sensor is
+        # inside the SURFACE_DEPTH hysteresis band.  The GUI closed-loop default
+        # therefore starts below that band; explicit UUV_GUI_INITIAL_DEPTH_M can
+        # still request a free-surface drop test.
+        default_initial_depth_m = os.environ.get("UUV_GUI_DEFAULT_INITIAL_DEPTH_M", "0.2500").strip() or "0.2500"
         gui_initial_depth_m = os.environ.get("UUV_GUI_INITIAL_DEPTH_M", default_initial_depth_m).strip()
         if not gui_initial_depth_m:
             return
