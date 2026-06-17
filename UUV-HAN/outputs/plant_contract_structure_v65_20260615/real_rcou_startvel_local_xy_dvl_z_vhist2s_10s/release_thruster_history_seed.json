@@ -1,0 +1,40 @@
+{
+  "final_target": {
+    "ver_lf": -0.105,
+    "ver_lr": 0.2625,
+    "ver_rf": -0.165,
+    "ver_rr": 0.1975,
+    "yaw_lf": 0.4725,
+    "yaw_lr": -0.3625,
+    "yaw_rf": 0.425,
+    "yaw_rr": -0.535
+  },
+  "full_state": {
+    "ver_lf": -0.10489659651081273,
+    "ver_lr": 0.26224149127703184,
+    "ver_rf": -0.16483750880270573,
+    "ver_rr": 0.19730550296081442,
+    "yaw_lf": 0.15864005924662047,
+    "yaw_lr": -0.12170798196169294,
+    "yaw_rf": 0.1426921167826745,
+    "yaw_rr": -0.17962419406760205
+  },
+  "history_event_count": 10,
+  "history_s": 2.0,
+  "input_csv": "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/debug/controller_parity_412/real_90s_feedback_source_servo_20260601/real_controller_feedback_20hz.csv",
+  "input_time_column": "t_s",
+  "mode": "first_order_pwm_history",
+  "pwm_prefix": "rc_out",
+  "scale": 1.0,
+  "scope": "vertical",
+  "source_event_count_before_source": 10,
+  "source_t_s": 0.8,
+  "state": {
+    "ver_lf": -0.10489659651081273,
+    "ver_lr": 0.26224149127703184,
+    "ver_rf": -0.16483750880270573,
+    "ver_rr": 0.19730550296081442
+  },
+  "thruster_params": "/Users/kanghyunmin/Desktop/uuv_sim/UUV-HAN/outputs/plant_physical_direction_yaw_inertia_heave_profiles_v35_20260615/v35_inertia_z090_yh48.thruster_params.json",
+  "window_start_s": -1.2
+}

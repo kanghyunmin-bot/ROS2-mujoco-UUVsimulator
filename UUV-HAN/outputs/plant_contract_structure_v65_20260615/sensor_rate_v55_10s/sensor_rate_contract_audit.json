@@ -1,0 +1,556 @@
+{
+  "rate_contract_verdicts": [
+    {
+      "contract": "rc_out",
+      "expected_hz": 2.0,
+      "expected_key": "mavros_rc_out",
+      "ratio": 1.0460387047680368,
+      "real_hz": 1.9999737876193215,
+      "real_topic": "/mavros/rc/out",
+      "sim_group": "rcout_input",
+      "sim_hz": 2.09204999037134,
+      "verdict": "pass"
+    },
+    {
+      "contract": "static_pressure",
+      "expected_hz": 2.0,
+      "expected_key": "mavros_static_pressure",
+      "ratio": 1.0000006952765268,
+      "real_hz": 1.9999986094479132,
+      "real_topic": "/mavros/imu/static_pressure",
+      "sim_group": "static_pressure",
+      "sim_hz": 2.0,
+      "verdict": "pass"
+    },
+    {
+      "contract": "atm_pressure",
+      "expected_hz": 10.0,
+      "expected_key": "mavros_atm_pressure",
+      "ratio": 0.9999396989289857,
+      "real_hz": 10.000603047074527,
+      "real_topic": "/mavros/imu/atm_pressure",
+      "sim_group": "atm_pressure",
+      "sim_hz": 10.0,
+      "verdict": "pass"
+    },
+    {
+      "contract": "depth_pose",
+      "expected_hz": 2.0,
+      "expected_key": "depth",
+      "ratio": 0.9999990223506309,
+      "real_hz": 2.00000195530065,
+      "real_topic": "/depth/pose",
+      "sim_group": "depth_pose",
+      "sim_hz": 2.0,
+      "verdict": "pass"
+    },
+    {
+      "contract": "local_pose",
+      "expected_hz": 3.0,
+      "expected_key": "mavros_local_position",
+      "ratio": 0.9989775893413444,
+      "real_hz": 3.003070371156163,
+      "real_topic": "/mavros/local_position/pose",
+      "sim_group": "local_pose",
+      "sim_hz": 3.0,
+      "verdict": "pass"
+    },
+    {
+      "contract": "local_vel",
+      "expected_hz": 3.0,
+      "expected_key": "mavros_local_position",
+      "ratio": 0.9989771612514794,
+      "real_hz": 3.0030716580564443,
+      "real_topic": "/mavros/local_position/velocity_local",
+      "sim_group": "local_vel",
+      "sim_hz": 3.0,
+      "verdict": "pass"
+    },
+    {
+      "contract": "local_vel_body",
+      "expected_hz": 3.0,
+      "expected_key": "mavros_local_position",
+      "ratio": 0.9989773473775077,
+      "real_hz": 3.003071098534447,
+      "real_topic": "/mavros/local_position/velocity_body",
+      "sim_group": "local_vel_body",
+      "sim_hz": 3.0,
+      "verdict": "pass"
+    },
+    {
+      "contract": "dvl_twist",
+      "expected_hz": 10.0,
+      "expected_key": "dvl_twist",
+      "ratio": 1.0304831556223948,
+      "real_hz": 9.704185794245385,
+      "real_topic": "/dvl/twist",
+      "sim_group": "dvl_twist",
+      "sim_hz": 10.0,
+      "verdict": "pass"
+    },
+    {
+      "contract": "dvl_position",
+      "expected_hz": 4.45,
+      "expected_key": "dvl_position",
+      "ratio": 1.010824134349823,
+      "real_hz": 4.451812978223424,
+      "real_topic": "/dvl/position",
+      "sim_group": "dvl_position",
+      "sim_hz": 4.5,
+      "verdict": "pass"
+    },
+    {
+      "contract": "imu",
+      "expected_hz": 20.0,
+      "expected_key": "mavros_imu_data",
+      "ratio": 0.9999615381398818,
+      "real_hz": 20.000769266789796,
+      "real_topic": "/mavros/imu/data",
+      "sim_group": "imu",
+      "sim_hz": 20.0,
+      "verdict": "pass"
+    },
+    {
+      "contract": "imu_raw",
+      "expected_hz": 2.0,
+      "expected_key": "mavros_imu_raw",
+      "ratio": 0.9999996696770524,
+      "real_hz": 2.0000006606461134,
+      "real_topic": "/mavros/imu/data_raw",
+      "sim_group": "imu_raw",
+      "sim_hz": 2.0,
+      "verdict": "pass"
+    }
+  ],
+  "real_bag_db3": "/Users/kanghyunmin/Desktop/uuv_sim/90s/rosbag/mp4_start_0s_90s_all_topics_0.db3",
+  "real_csv": "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/debug/controller_parity_412/real_90s_feedback_source_servo_20260601/real_controller_feedback_20hz.csv",
+  "real_csv_rates": {
+    "atm_pressure": {
+      "event_dt_median_s": NaN,
+      "event_dt_p95_s": NaN,
+      "event_hz": 0.0,
+      "events": 1,
+      "sample_dt_median_s": 0.04999999999999982,
+      "sample_hz": 20.0,
+      "samples": 201,
+      "unchanged_ratio": 0.9950248756218906
+    },
+    "depth_pose": {
+      "event_dt_median_s": 0.5,
+      "event_dt_p95_s": 1.0,
+      "event_hz": 1.8,
+      "events": 19,
+      "sample_dt_median_s": 0.04999999999999982,
+      "sample_hz": 20.0,
+      "samples": 201,
+      "unchanged_ratio": 0.9054726368159204
+    },
+    "dvl_position": {
+      "event_dt_median_s": 0.25,
+      "event_dt_p95_s": 0.25,
+      "event_hz": 4.221105527638191,
+      "events": 43,
+      "sample_dt_median_s": 0.04999999999999982,
+      "sample_hz": 20.0,
+      "samples": 201,
+      "unchanged_ratio": 0.7860696517412935
+    },
+    "dvl_twist": {
+      "event_dt_median_s": 0.09999999999999964,
+      "event_dt_p95_s": 0.10000000000000053,
+      "event_hz": 12.261306532663315,
+      "events": 123,
+      "sample_dt_median_s": 0.04999999999999982,
+      "sample_hz": 20.0,
+      "samples": 201,
+      "unchanged_ratio": 0.3880597014925373
+    },
+    "imu": {
+      "event_dt_median_s": 0.04999999999999982,
+      "event_dt_p95_s": 0.05000000000000071,
+      "event_hz": 20.0,
+      "events": 201,
+      "sample_dt_median_s": 0.04999999999999982,
+      "sample_hz": 20.0,
+      "samples": 201,
+      "unchanged_ratio": 0.0
+    },
+    "imu_raw": {
+      "event_hz": 0.0,
+      "events": 0,
+      "sample_hz": 0.0,
+      "samples": 0
+    },
+    "local_pose": {
+      "event_dt_median_s": 0.34999999999999964,
+      "event_dt_p95_s": 0.35000000000000053,
+      "event_hz": 3.0303030303030303,
+      "events": 31,
+      "sample_dt_median_s": 0.04999999999999982,
+      "sample_hz": 20.0,
+      "samples": 201,
+      "unchanged_ratio": 0.845771144278607
+    },
+    "local_vel": {
+      "event_dt_median_s": 0.34999999999999964,
+      "event_dt_p95_s": 0.35000000000000053,
+      "event_hz": 3.0303030303030303,
+      "events": 31,
+      "sample_dt_median_s": 0.04999999999999982,
+      "sample_hz": 20.0,
+      "samples": 201,
+      "unchanged_ratio": 0.845771144278607
+    },
+    "local_vel_body": {
+      "event_hz": 0.0,
+      "events": 0,
+      "sample_hz": 0.0,
+      "samples": 0
+    },
+    "rc_out": {
+      "event_dt_median_s": 0.5,
+      "event_dt_p95_s": 0.5,
+      "event_hz": 2.0,
+      "events": 21,
+      "sample_dt_median_s": 0.04999999999999982,
+      "sample_hz": 20.0,
+      "samples": 201,
+      "unchanged_ratio": 0.8955223880597015
+    },
+    "static_pressure": {
+      "event_dt_median_s": 0.5,
+      "event_dt_p95_s": 1.0,
+      "event_hz": 1.8,
+      "events": 19,
+      "sample_dt_median_s": 0.04999999999999982,
+      "sample_hz": 20.0,
+      "samples": 201,
+      "unchanged_ratio": 0.9054726368159204
+    },
+    "vision_delta": {
+      "event_dt_median_s": 0.09999999999999964,
+      "event_dt_p95_s": 0.10000000000000138,
+      "event_hz": 12.261306532663315,
+      "events": 123,
+      "sample_dt_median_s": 0.04999999999999982,
+      "sample_hz": 20.0,
+      "samples": 201,
+      "unchanged_ratio": 0.3880597014925373
+    }
+  },
+  "rosbag_topic_rates": {
+    "/depth/pose": {
+      "count": 180,
+      "dt_max_s": 0.5152590274810791,
+      "dt_median_s": 0.4999856948852539,
+      "dt_min_s": 0.48644065856933594,
+      "dt_p95_s": 0.5057541608810425,
+      "duration_s": 89.49991250038147,
+      "mean_hz": 2.00000195530065,
+      "present": 1
+    },
+    "/dvl/position": {
+      "count": 401,
+      "dt_max_s": 0.3209412097930908,
+      "dt_median_s": 0.2220391035079956,
+      "dt_min_s": 0.18483185768127441,
+      "dt_p95_s": 0.2600667595863342,
+      "duration_s": 89.85103416442871,
+      "mean_hz": 4.451812978223424,
+      "present": 1
+    },
+    "/dvl/twist": {
+      "count": 873,
+      "dt_max_s": 0.24460411071777344,
+      "dt_median_s": 0.10141348838806152,
+      "dt_min_s": 0.05470395088195801,
+      "dt_p95_s": 0.12825720310211178,
+      "duration_s": 89.85813117027283,
+      "mean_hz": 9.704185794245385,
+      "present": 1
+    },
+    "/mavros/imu/atm_pressure": {
+      "count": 900,
+      "dt_max_s": 0.12331724166870117,
+      "dt_median_s": 0.10003137588500977,
+      "dt_min_s": 0.0763092041015625,
+      "dt_p95_s": 0.10322580337524415,
+      "duration_s": 89.89457893371582,
+      "mean_hz": 10.000603047074527,
+      "present": 1
+    },
+    "/mavros/imu/data": {
+      "count": 1800,
+      "dt_max_s": 0.06992793083190918,
+      "dt_median_s": 0.05001544952392578,
+      "dt_min_s": 0.029758453369140625,
+      "dt_p95_s": 0.05183320045471191,
+      "duration_s": 89.94654035568237,
+      "mean_hz": 20.000769266789796,
+      "present": 1
+    },
+    "/mavros/imu/data_raw": {
+      "count": 180,
+      "dt_max_s": 0.5094723701477051,
+      "dt_median_s": 0.49985313415527344,
+      "dt_min_s": 0.4880483150482178,
+      "dt_p95_s": 0.5054919481277466,
+      "duration_s": 89.49997043609619,
+      "mean_hz": 2.0000006606461134,
+      "present": 1
+    },
+    "/mavros/imu/static_pressure": {
+      "count": 180,
+      "dt_max_s": 0.5149838924407959,
+      "dt_median_s": 0.49995946884155273,
+      "dt_min_s": 0.486497163772583,
+      "dt_p95_s": 0.5054080963134766,
+      "duration_s": 89.50006222724915,
+      "mean_hz": 1.9999986094479132,
+      "present": 1
+    },
+    "/mavros/local_position/pose": {
+      "count": 270,
+      "dt_max_s": 0.3545215129852295,
+      "dt_median_s": 0.33277010917663574,
+      "dt_min_s": 0.3092944622039795,
+      "dt_p95_s": 0.33678426742553713,
+      "duration_s": 89.57499051094055,
+      "mean_hz": 3.003070371156163,
+      "present": 1
+    },
+    "/mavros/local_position/velocity_body": {
+      "count": 270,
+      "dt_max_s": 0.3546578884124756,
+      "dt_median_s": 0.3327598571777344,
+      "dt_min_s": 0.3091611862182617,
+      "dt_p95_s": 0.3367783069610596,
+      "duration_s": 89.57496881484985,
+      "mean_hz": 3.003071098534447,
+      "present": 1
+    },
+    "/mavros/local_position/velocity_local": {
+      "count": 270,
+      "dt_max_s": 0.35465478897094727,
+      "dt_median_s": 0.33275413513183594,
+      "dt_min_s": 0.3091731071472168,
+      "dt_p95_s": 0.33677353858947756,
+      "duration_s": 89.57495212554932,
+      "mean_hz": 3.0030716580564443,
+      "present": 1
+    },
+    "/mavros/rc/out": {
+      "count": 180,
+      "dt_max_s": 0.5087690353393555,
+      "dt_median_s": 0.49988269805908203,
+      "dt_min_s": 0.48811841011047363,
+      "dt_p95_s": 0.5047505617141723,
+      "duration_s": 89.50117301940918,
+      "mean_hz": 1.9999737876193215,
+      "present": 1
+    },
+    "/mavros/rc/override": {
+      "count": 10515,
+      "dt_max_s": 0.03725481033325195,
+      "dt_median_s": 0.009127140045166016,
+      "dt_min_s": 5.340576171875e-05,
+      "dt_p95_s": 0.022226095199584964,
+      "duration_s": 89.9941759109497,
+      "mean_hz": 116.8297825228571,
+      "present": 1
+    },
+    "/uas1/mavlink_sink": {
+      "count": 12477,
+      "dt_max_s": 0.04924774169921875,
+      "dt_median_s": 0.004593253135681152,
+      "dt_min_s": 6.198883056640625e-05,
+      "dt_p95_s": 0.019995510578155518,
+      "duration_s": 89.99413633346558,
+      "mean_hz": 138.63125430496103,
+      "present": 1
+    },
+    "/uas1/mavlink_source": {
+      "count": 11348,
+      "dt_max_s": 0.06827306747436523,
+      "dt_median_s": 0.00025391578674316406,
+      "dt_min_s": 5.1021575927734375e-05,
+      "dt_p95_s": 0.04913372993469238,
+      "duration_s": 89.9612648487091,
+      "mean_hz": 126.13206382861149,
+      "present": 1
+    }
+  },
+  "sim_csv": "/Users/kanghyunmin/Desktop/uuv_sim/UUV-HAN/outputs/plant_structural_forward_seed_yawpair_v55_20260615/forward_seed_1p0_yawpair2p4_10s/sim_sensor_replay.csv",
+  "sim_csv_rates": {
+    "atm_pressure": {
+      "event_dt_median_s": 0.1,
+      "event_dt_p95_s": 0.1,
+      "event_hz": 10.0,
+      "events": 101,
+      "observed_change_rows": 101,
+      "sample_dt_median_s": 0.020000000000000462,
+      "sample_hz": 50.0,
+      "samples": 501,
+      "seq_based_rate": 1,
+      "seq_delta": 100.0,
+      "unchanged_ratio": 0.7984031936127745
+    },
+    "bar30_pressure": {
+      "event_dt_median_s": 0.47619047619047616,
+      "event_dt_p95_s": 0.47619047619047616,
+      "event_hz": 2.1,
+      "events": 22,
+      "observed_change_rows": 22,
+      "sample_dt_median_s": 0.020000000000000462,
+      "sample_hz": 50.0,
+      "samples": 501,
+      "seq_based_rate": 1,
+      "seq_delta": 21.0,
+      "unchanged_ratio": 0.9560878243512974
+    },
+    "depth": {
+      "event_dt_median_s": 0.47619047619047616,
+      "event_dt_p95_s": 0.47619047619047616,
+      "event_hz": 2.1,
+      "events": 22,
+      "observed_change_rows": 22,
+      "sample_dt_median_s": 0.020000000000000462,
+      "sample_hz": 50.0,
+      "samples": 501,
+      "seq_based_rate": 1,
+      "seq_delta": 21.0,
+      "unchanged_ratio": 0.9560878243512974
+    },
+    "depth_pose": {
+      "event_dt_median_s": 0.5,
+      "event_dt_p95_s": 0.5,
+      "event_hz": 2.0,
+      "events": 21,
+      "observed_change_rows": 21,
+      "sample_dt_median_s": 0.020000000000000462,
+      "sample_hz": 50.0,
+      "samples": 501,
+      "seq_based_rate": 1,
+      "seq_delta": 20.0,
+      "unchanged_ratio": 0.9580838323353293
+    },
+    "dvl_position": {
+      "event_dt_median_s": 0.2222222222222222,
+      "event_dt_p95_s": 0.2222222222222222,
+      "event_hz": 4.5,
+      "events": 46,
+      "observed_change_rows": 46,
+      "sample_dt_median_s": 0.020000000000000462,
+      "sample_hz": 50.0,
+      "samples": 501,
+      "seq_based_rate": 1,
+      "seq_delta": 45.0,
+      "unchanged_ratio": 0.908183632734531
+    },
+    "dvl_twist": {
+      "event_dt_median_s": 0.1,
+      "event_dt_p95_s": 0.1,
+      "event_hz": 10.0,
+      "events": 101,
+      "observed_change_rows": 101,
+      "sample_dt_median_s": 0.020000000000000462,
+      "sample_hz": 50.0,
+      "samples": 501,
+      "seq_based_rate": 1,
+      "seq_delta": 100.0,
+      "unchanged_ratio": 0.7984031936127745
+    },
+    "imu": {
+      "event_dt_median_s": 0.05,
+      "event_dt_p95_s": 0.05,
+      "event_hz": 20.0,
+      "events": 201,
+      "observed_change_rows": 201,
+      "sample_dt_median_s": 0.020000000000000462,
+      "sample_hz": 50.0,
+      "samples": 501,
+      "seq_based_rate": 1,
+      "seq_delta": 200.0,
+      "unchanged_ratio": 0.5988023952095809
+    },
+    "imu_raw": {
+      "event_dt_median_s": 0.5,
+      "event_dt_p95_s": 0.5,
+      "event_hz": 2.0,
+      "events": 21,
+      "observed_change_rows": 21,
+      "sample_dt_median_s": 0.020000000000000462,
+      "sample_hz": 50.0,
+      "samples": 501,
+      "seq_based_rate": 1,
+      "seq_delta": 20.0,
+      "unchanged_ratio": 0.9580838323353293
+    },
+    "local_pose": {
+      "event_dt_median_s": 0.3333333333333333,
+      "event_dt_p95_s": 0.3333333333333333,
+      "event_hz": 3.0,
+      "events": 31,
+      "observed_change_rows": 31,
+      "sample_dt_median_s": 0.020000000000000462,
+      "sample_hz": 50.0,
+      "samples": 501,
+      "seq_based_rate": 1,
+      "seq_delta": 30.0,
+      "unchanged_ratio": 0.93812375249501
+    },
+    "local_vel": {
+      "event_dt_median_s": 0.3333333333333333,
+      "event_dt_p95_s": 0.3333333333333333,
+      "event_hz": 3.0,
+      "events": 31,
+      "observed_change_rows": 31,
+      "sample_dt_median_s": 0.020000000000000462,
+      "sample_hz": 50.0,
+      "samples": 501,
+      "seq_based_rate": 1,
+      "seq_delta": 30.0,
+      "unchanged_ratio": 0.93812375249501
+    },
+    "local_vel_body": {
+      "event_dt_median_s": 0.3333333333333333,
+      "event_dt_p95_s": 0.3333333333333333,
+      "event_hz": 3.0,
+      "events": 31,
+      "observed_change_rows": 31,
+      "sample_dt_median_s": 0.020000000000000462,
+      "sample_hz": 50.0,
+      "samples": 501,
+      "seq_based_rate": 1,
+      "seq_delta": 30.0,
+      "unchanged_ratio": 0.93812375249501
+    },
+    "rcout_input": {
+      "event_dt_median_s": 0.5,
+      "event_dt_p95_s": 0.5000000000000001,
+      "event_hz": 2.09204999037134,
+      "events": 21,
+      "sample_dt_median_s": 0.020000000000000462,
+      "sample_hz": 50.0,
+      "samples": 501,
+      "unchanged_ratio": 0.9580838323353293
+    },
+    "static_pressure": {
+      "event_dt_median_s": 0.5,
+      "event_dt_p95_s": 0.5,
+      "event_hz": 2.0,
+      "events": 21,
+      "observed_change_rows": 21,
+      "sample_dt_median_s": 0.020000000000000462,
+      "sample_hz": 50.0,
+      "samples": 501,
+      "seq_based_rate": 1,
+      "seq_delta": 20.0,
+      "unchanged_ratio": 0.9580838323353293
+    }
+  },
+  "window": {
+    "end_s": 10.35,
+    "start_s": 0.35
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "cases": [
+    {
+      "contract": {
+        "body_vel_z_column": "local_vel_body_z",
+        "depth_column": "depth_m",
+        "dvl_z_column": "dvl_twist_z",
+        "early": {
+          "depth_end_delta": -0.005768984999999949,
+          "depth_end_diff_vs_real": -0.00882863199999995,
+          "depth_slope": -0.0029813608188153005,
+          "depth_slope_sign_matches_real": false,
+          "dvl_z_mean": -0.013637522874039019,
+          "dvl_z_mean_diff_vs_real": 0.01936991849181463,
+          "dvl_z_slope": 0.0020852700315010467,
+          "dvl_z_slope_sign_matches_real": false
+        },
+        "local_vel_z_column": "local_vel_z",
+        "sign_frame": {
+          "body_vel_z_mean": 0.01146888203482588,
+          "corr_body_vel_z_dvl_z": -0.8436781299132282,
+          "corr_body_vel_z_neg_dvl_z": 0.8436781299132282,
+          "corr_local_vel_z_dvl_z": -0.7950326800792367,
+          "corr_local_vel_z_neg_dvl_z": 0.7950326800792367,
+          "dvl_z_mean": -0.01116050259879032,
+          "local_vel_z_mean": 0.00013972800497512528
+        },
+        "time_column": "t_real_s"
+      },
+      "name": "v55_10s",
+      "sim_csv": "/Users/kanghyunmin/Desktop/uuv_sim/UUV-HAN/outputs/plant_structural_forward_seed_yawpair_v55_20260615/forward_seed_1p0_yawpair2p4_10s/sim_sensor_replay.csv"
+    },
+    {
+      "contract": {
+        "body_vel_z_column": "local_vel_body_z",
+        "depth_column": "depth_m",
+        "dvl_z_column": "dvl_twist_z",
+        "early": {
+          "depth_end_delta": -0.0036068559999999916,
+          "depth_end_diff_vs_real": -0.006666502999999992,
+          "depth_slope": -0.001758238832752594,
+          "depth_slope_sign_matches_real": false,
+          "dvl_z_mean": -0.012115308966215653,
+          "dvl_z_mean_diff_vs_real": 0.020892132399637997,
+          "dvl_z_slope": -0.0019374872668814383,
+          "dvl_z_slope_sign_matches_real": true
+        },
+        "local_vel_z_column": "local_vel_z",
+        "sign_frame": {
+          "body_vel_z_mean": 0.010039053412935334,
+          "corr_body_vel_z_dvl_z": -0.542774417844658,
+          "corr_body_vel_z_neg_dvl_z": 0.542774417844658,
+          "corr_local_vel_z_dvl_z": -0.5172028072526866,
+          "corr_local_vel_z_neg_dvl_z": 0.5172028072526866,
+          "dvl_z_mean": -0.010849683119861035,
+          "local_vel_z_mean": -0.0012830948855721397
+        },
+        "time_column": "t_real_s"
+      },
+      "name": "startvel_local_xy_dvl_z",
+      "sim_csv": "/Users/kanghyunmin/Desktop/uuv_sim/UUV-HAN/outputs/plant_contract_structure_v65_20260615/real_rcou_startvel_local_xy_dvl_z_10s/sim_sensor_replay.csv"
+    },
+    {
+      "contract": {
+        "body_vel_z_column": "local_vel_body_z",
+        "depth_column": "depth_m",
+        "dvl_z_column": "dvl_twist_z",
+        "early": {
+          "depth_end_delta": 0.012827188000000045,
+          "depth_end_diff_vs_real": 0.009767541000000044,
+          "depth_slope": 0.0057218617944250925,
+          "depth_slope_sign_matches_real": true,
+          "dvl_z_mean": -0.0041721633069297616,
+          "dvl_z_mean_diff_vs_real": 0.02883527805892389,
+          "dvl_z_slope": 0.00017743357026691895,
+          "dvl_z_slope_sign_matches_real": false
+        },
+        "local_vel_z_column": "local_vel_z",
+        "sign_frame": {
+          "body_vel_z_mean": 0.001569367457711443,
+          "corr_body_vel_z_dvl_z": -0.6230680841466842,
+          "corr_body_vel_z_neg_dvl_z": 0.6230680841466842,
+          "corr_local_vel_z_dvl_z": -0.5957234720946214,
+          "corr_local_vel_z_neg_dvl_z": 0.5957234720946214,
+          "dvl_z_mean": -0.002130099452978591,
+          "local_vel_z_mean": -0.009790191388059703
+        },
+        "time_column": "t_real_s"
+      },
+      "name": "startvel_local_xy_dvl_z_buoy100",
+      "sim_csv": "/Users/kanghyunmin/Desktop/uuv_sim/UUV-HAN/outputs/plant_contract_structure_v65_20260615/real_rcou_startvel_local_xy_dvl_z_buoy100_10s/sim_sensor_replay.csv"
+    }
+  ],
+  "decision": "structural_vertical_time_response_mismatch",
+  "interpretation": "DVL_z sign/frame is not a simple sign inversion: real and sim both show DVL_z opposing local/body z. The failure is the early vertical time response, so fitting hydrodynamic coefficients against the current low-rate actuator telemetry is underconstrained.",
+  "real": {
+    "depth_column": "static_pressure_delta_depth_m",
+    "dvl_z_column": "dvl_twist_z",
+    "early": {
+      "depth_end_delta": 0.003059647,
+      "depth_slope": 0.00033745454703832756,
+      "dvl_z_mean": -0.03300744136585365,
+      "dvl_z_slope": -0.006066213195121946
+    },
+    "local_vel_z_column": "local_vel_z",
+    "pose_depth_column": "depth_pose_depth_m",
+    "sign_frame": {
+      "corr_local_vel_z_dvl_z": -0.5803244209182933,
+      "corr_local_vel_z_neg_dvl_z": 0.5803244209182933,
+      "dvl_z_mean": -0.03144814234328356,
+      "local_vel_z_mean": 0.009771612407960182
+    }
+  },
+  "real_csv": "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/debug/controller_parity_412/real_90s_feedback_source_servo_20260601/real_controller_feedback_20hz.csv",
+  "schema": "vertical_sensor_contract_v1",
+  "window": {
+    "dt_s": 0.05,
+    "early_window_s": 2.0,
+    "end_s": 10.35,
+    "start_s": 0.35
+  }
+}

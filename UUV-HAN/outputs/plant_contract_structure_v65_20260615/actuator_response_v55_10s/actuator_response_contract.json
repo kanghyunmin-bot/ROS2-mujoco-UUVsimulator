@@ -1,0 +1,316 @@
+{
+  "active_samples": 181,
+  "input_observability_contract": {
+    "channels": [
+      {
+        "changes": 20,
+        "channel": 1,
+        "column": "rc_out_ch1",
+        "first_values": [
+          1330,
+          1333,
+          1332,
+          1351,
+          1380,
+          1413,
+          1477,
+          1239
+        ],
+        "max_hold_s": 0.5000000000000001,
+        "median_hold_s": 0.5,
+        "min_hold_s": 0.49999999999999956
+      },
+      {
+        "changes": 20,
+        "channel": 2,
+        "column": "rc_out_ch2",
+        "first_values": [
+          1311,
+          1314,
+          1316,
+          1302,
+          1271,
+          1241,
+          1172,
+          1406
+        ],
+        "max_hold_s": 0.5000000000000001,
+        "median_hold_s": 0.5,
+        "min_hold_s": 0.49999999999999956
+      },
+      {
+        "changes": 20,
+        "channel": 3,
+        "column": "rc_out_ch3",
+        "first_values": [
+          1286,
+          1288,
+          1286,
+          1304,
+          1335,
+          1364,
+          1429,
+          1185
+        ],
+        "max_hold_s": 0.5000000000000001,
+        "median_hold_s": 0.5,
+        "min_hold_s": 0.49999999999999956
+      },
+      {
+        "changes": 19,
+        "channel": 4,
+        "column": "rc_out_ch4",
+        "first_values": [
+          1355,
+          1359,
+          1361,
+          1347,
+          1316,
+          1287,
+          1221,
+          1457
+        ],
+        "max_hold_s": 1.0,
+        "median_hold_s": 0.5,
+        "min_hold_s": 0.49999999999999956
+      },
+      {
+        "changes": 20,
+        "channel": 5,
+        "column": "rc_out_ch5",
+        "first_values": [
+          1566,
+          1567,
+          1569,
+          1565,
+          1564,
+          1559,
+          1527,
+          1520
+        ],
+        "max_hold_s": 0.5000000000000001,
+        "median_hold_s": 0.5,
+        "min_hold_s": 0.49999999999999956
+      },
+      {
+        "changes": 20,
+        "channel": 6,
+        "column": "rc_out_ch6",
+        "first_values": [
+          1458,
+          1461,
+          1457,
+          1453,
+          1455,
+          1445,
+          1451,
+          1489
+        ],
+        "max_hold_s": 0.5000000000000001,
+        "median_hold_s": 0.5,
+        "min_hold_s": 0.49999999999999956
+      },
+      {
+        "changes": 19,
+        "channel": 7,
+        "column": "rc_out_ch7",
+        "first_values": [
+          1579,
+          1573,
+          1572,
+          1577,
+          1580,
+          1586,
+          1587,
+          1546
+        ],
+        "max_hold_s": 1.0,
+        "median_hold_s": 0.5,
+        "min_hold_s": 0.49999999999999956
+      },
+      {
+        "changes": 19,
+        "channel": 8,
+        "column": "rc_out_ch8",
+        "first_values": [
+          1395,
+          1396,
+          1400,
+          1403,
+          1399,
+          1408,
+          1434,
+          1444
+        ],
+        "max_hold_s": 1.0,
+        "median_hold_s": 0.5,
+        "min_hold_s": 0.49999999999999956
+      }
+    ],
+    "end_s": 10.35,
+    "inferred_update_hz": 2.0,
+    "interpretation": "Plant replay identification requires actuator history at the motor-update layer. High-rate json_servo* input can support contract diagnostics; low-rate SERVO_OUTPUT_RAW telemetry cannot.",
+    "median_hold_s_all_channels": 0.5,
+    "ok_for_high_rate_plant_identification": false,
+    "pwm_prefix": "rc_out",
+    "source": "real_mavros_rcout_servo_output_raw_telemetry",
+    "start_s": 0.35,
+    "time_column": "t_s"
+  },
+  "interpretation": "High wrench-vs-sim-derivative correlation means the simulated plant is internally responding to the applied actuator wrench. Low wrench-vs-real-derivative correlation or low sim/real derivative RMS ratio points to actuator effectiveness/timing/history contract mismatch before hydrodynamic coefficient fitting.",
+  "metrics": [
+    {
+      "axis": "roll",
+      "corr_wrench_vs_real_derivative": -0.0197978717858692,
+      "corr_wrench_vs_sim_derivative": 0.09946242348552471,
+      "kind": "angular_x",
+      "lag_wrench_to_real_derivative_s": -0.4,
+      "lag_wrench_to_sim_derivative_s": -0.75,
+      "real_derivative_rms": 0.09829550090668274,
+      "samples": 181,
+      "sim_derivative_rms": 0.019334295441085617,
+      "sim_over_real_derivative_rms_ratio_signed": 0.19669562963457213,
+      "wrench_mean": 0.8292271991325966,
+      "wrench_rms": 0.8758849211951275
+    },
+    {
+      "axis": "pitch",
+      "corr_wrench_vs_real_derivative": 0.03165749452868108,
+      "corr_wrench_vs_sim_derivative": 0.02878656573174317,
+      "kind": "angular_y",
+      "lag_wrench_to_real_derivative_s": -0.55,
+      "lag_wrench_to_sim_derivative_s": 0.75,
+      "real_derivative_rms": 0.11464514155471173,
+      "samples": 181,
+      "sim_derivative_rms": 0.14402007751994247,
+      "sim_over_real_derivative_rms_ratio_signed": -1.2562248654140502,
+      "wrench_mean": 3.3186483382320446,
+      "wrench_rms": 3.326914205663455
+    },
+    {
+      "axis": "yaw",
+      "corr_wrench_vs_real_derivative": -0.2272494946598397,
+      "corr_wrench_vs_sim_derivative": 0.10802688166598802,
+      "kind": "angular_z",
+      "lag_wrench_to_real_derivative_s": -1.0,
+      "lag_wrench_to_sim_derivative_s": -1.0,
+      "real_derivative_rms": 0.9052868390483992,
+      "samples": 181,
+      "sim_derivative_rms": 0.5217638424717613,
+      "sim_over_real_derivative_rms_ratio_signed": 0.5763519582591284,
+      "wrench_mean": -2.109226933137569,
+      "wrench_rms": 3.2718944835919483
+    },
+    {
+      "axis": "forward",
+      "corr_wrench_vs_real_derivative": -0.06047702346830347,
+      "corr_wrench_vs_sim_derivative": 0.22001171758667804,
+      "kind": "linear_x",
+      "lag_wrench_to_real_derivative_s": 0.75,
+      "lag_wrench_to_sim_derivative_s": -1.0,
+      "real_derivative_rms": 0.14498203306197616,
+      "samples": 181,
+      "sim_derivative_rms": 0.0232465223579986,
+      "sim_over_real_derivative_rms_ratio_signed": 0.16034071165260388,
+      "wrench_mean": 44.699096743093925,
+      "wrench_rms": 44.8079921582634
+    },
+    {
+      "axis": "lateral",
+      "corr_wrench_vs_real_derivative": -0.02613494077469357,
+      "corr_wrench_vs_sim_derivative": 0.47650771603684133,
+      "kind": "linear_y",
+      "lag_wrench_to_real_derivative_s": -1.0,
+      "lag_wrench_to_sim_derivative_s": -1.0,
+      "real_derivative_rms": 0.10463768670206158,
+      "samples": 181,
+      "sim_derivative_rms": 0.012947764553932503,
+      "sim_over_real_derivative_rms_ratio_signed": 0.12373901757594384,
+      "wrench_mean": -11.163810933425413,
+      "wrench_rms": 11.761053593247253
+    },
+    {
+      "axis": "heave",
+      "corr_wrench_vs_real_derivative": -0.26627851590580837,
+      "corr_wrench_vs_sim_derivative": -0.03664856398411649,
+      "kind": "linear_z",
+      "lag_wrench_to_real_derivative_s": -1.0,
+      "lag_wrench_to_sim_derivative_s": -1.0,
+      "real_derivative_rms": 0.04410425270052963,
+      "samples": 181,
+      "sim_derivative_rms": 0.0038600114821136784,
+      "sim_over_real_derivative_rms_ratio_signed": 0.08752016519412253,
+      "wrench_mean": -0.1505080960248619,
+      "wrench_rms": 0.15542920096030036
+    }
+  ],
+  "plant_input_csv": "uuv_mujoco/v2.2/debug/controller_parity_412/real_90s_feedback_source_servo_20260601/real_controller_feedback_20hz.csv",
+  "real_csv": "uuv_mujoco/v2.2/debug/controller_parity_412/real_90s_feedback_source_servo_20260601/real_controller_feedback_20hz.csv",
+  "sim_csv": "UUV-HAN/outputs/plant_structural_forward_seed_yawpair_v55_20260615/forward_seed_1p0_yawpair2p4_10s/sim_sensor_replay.csv",
+  "sim_dynamics_qacc_self_check": [
+    {
+      "best_qacc_corr": 0.9987304982011759,
+      "best_qacc_index": 0,
+      "expected_qacc_corr": 0.9987304982011759,
+      "expected_qacc_index": 0,
+      "samples": 181,
+      "target": "lin_x",
+      "velocity_col": "qvel_0"
+    },
+    {
+      "best_qacc_corr": 0.9970999408430224,
+      "best_qacc_index": 1,
+      "expected_qacc_corr": 0.9970999408430224,
+      "expected_qacc_index": 1,
+      "samples": 181,
+      "target": "lin_y",
+      "velocity_col": "qvel_1"
+    },
+    {
+      "best_qacc_corr": 0.9847360164997411,
+      "best_qacc_index": 2,
+      "expected_qacc_corr": 0.9847360164997411,
+      "expected_qacc_index": 2,
+      "samples": 181,
+      "target": "lin_z",
+      "velocity_col": "qvel_2"
+    },
+    {
+      "best_qacc_corr": 0.9270710789584986,
+      "best_qacc_index": 3,
+      "expected_qacc_corr": 0.9270710789584986,
+      "expected_qacc_index": 3,
+      "samples": 181,
+      "target": "ang_x",
+      "velocity_col": "qvel_3"
+    },
+    {
+      "best_qacc_corr": 0.9959228563669777,
+      "best_qacc_index": 4,
+      "expected_qacc_corr": 0.9959228563669777,
+      "expected_qacc_index": 4,
+      "samples": 181,
+      "target": "ang_y",
+      "velocity_col": "qvel_4"
+    },
+    {
+      "best_qacc_corr": 0.9750610099945062,
+      "best_qacc_index": 5,
+      "expected_qacc_corr": 0.9750610099945062,
+      "expected_qacc_index": 5,
+      "samples": 181,
+      "target": "ang_z",
+      "velocity_col": "qvel_5"
+    }
+  ],
+  "thruster_debug_csv": "UUV-HAN/outputs/plant_structural_forward_seed_yawpair_v55_20260615/forward_seed_1p0_yawpair2p4_10s/thruster_debug.csv",
+  "window": {
+    "analysis_end_margin_s": 0.5,
+    "analysis_start_offset_s": 0.5,
+    "debug_time_offset_s": 32.141998343,
+    "dt": 0.05,
+    "duration_s": 10.0,
+    "real_end": 10.35,
+    "real_start": 0.35
+  }
+}

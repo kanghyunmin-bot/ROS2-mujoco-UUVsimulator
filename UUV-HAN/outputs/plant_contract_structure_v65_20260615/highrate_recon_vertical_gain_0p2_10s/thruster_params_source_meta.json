@@ -1,0 +1,5 @@
+{
+  "restored_after_run": true,
+  "thruster_params_config_path": "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/config/thruster_params.json",
+  "thruster_params_source": "/Users/kanghyunmin/Desktop/uuv_sim/UUV-HAN/outputs/plant_physical_direction_yaw_inertia_heave_profiles_v35_20260615/v35_inertia_z090_yh48.thruster_params.json"
+}

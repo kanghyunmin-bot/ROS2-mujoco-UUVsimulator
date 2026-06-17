@@ -1,0 +1,115 @@
+{
+  "bag_db3": "90s/rosbag/mp4_start_0s_90s_all_topics_0.db3",
+  "candidate_topics": [
+    {
+      "count": 12477,
+      "duration_s": 89.99413639000001,
+      "mean_hz": 138.6312542178727,
+      "median_dt_s": 0.004593238500001817,
+      "plant_role": "MAVLink input transport",
+      "topic": "/uas1/mavlink_sink",
+      "topic_id": 112,
+      "type": "mavros_msgs/msg/Mavlink"
+    },
+    {
+      "count": 11348,
+      "duration_s": 89.961265037,
+      "mean_hz": 126.13206356461431,
+      "median_dt_s": 0.00025382800000173233,
+      "plant_role": "MAVLink transport; decode required",
+      "topic": "/uas1/mavlink_source",
+      "topic_id": 64,
+      "type": "mavros_msgs/msg/Mavlink"
+    },
+    {
+      "count": 10515,
+      "duration_s": 89.994175885,
+      "mean_hz": 116.82978255654481,
+      "median_dt_s": 0.00912717499999971,
+      "plant_role": "pilot/controller input, not actuator output",
+      "topic": "/mavros/rc/override",
+      "topic_id": 28,
+      "type": "mavros_msgs/msg/OverrideRCIn"
+    },
+    {
+      "count": 180,
+      "duration_s": 89.501172972,
+      "mean_hz": 1.9999737886787166,
+      "median_dt_s": 0.4998824079999977,
+      "plant_role": "controller parity telemetry",
+      "topic": "/mavros/rc/out",
+      "topic_id": 86,
+      "type": "mavros_msgs/msg/RCOut"
+    },
+    {
+      "count": 180,
+      "duration_s": 89.501262315,
+      "mean_hz": 1.9999717922414197,
+      "median_dt_s": 0.49986137500000005,
+      "plant_role": "",
+      "topic": "/mavros/rc/in",
+      "topic_id": 105,
+      "type": "mavros_msgs/msg/RCIn"
+    }
+  ],
+  "conclusion": "No plant-grade high-rate actuator-output history was found in this bag. The available high-rate signals are RC override / MAVLink transport inputs; /mavros/rc/out and decoded SERVO_OUTPUT_RAW remain low-rate telemetry. Controller parity can use SERVO_OUTPUT_RAW, but MuJoCo plant replay cannot identify high-rate actuator dynamics from this bag alone.",
+  "controller_parity_source_available": true,
+  "mavlink_output_summary": {
+    "available": true,
+    "duration_proxy_s": 90.0,
+    "messages": [
+      {
+        "count": 179,
+        "estimated_hz": 1.988888888888889,
+        "message": "SERVO_OUTPUT_RAW",
+        "plant_grade": false
+      },
+      {
+        "count": 0,
+        "estimated_hz": null,
+        "message": "ACTUATOR_OUTPUT_STATUS",
+        "plant_grade": false
+      },
+      {
+        "count": 0,
+        "estimated_hz": null,
+        "message": "ESC_TELEMETRY_1_TO_4",
+        "plant_grade": false
+      },
+      {
+        "count": 0,
+        "estimated_hz": null,
+        "message": "ESC_TELEMETRY_5_TO_8",
+        "plant_grade": false
+      },
+      {
+        "count": 0,
+        "estimated_hz": null,
+        "message": "ESC_TELEMETRY_9_TO_12",
+        "plant_grade": false
+      },
+      {
+        "count": 0,
+        "estimated_hz": null,
+        "message": "ESC_TELEMETRY_13_TO_16",
+        "plant_grade": false
+      },
+      {
+        "count": 0,
+        "estimated_hz": null,
+        "message": "ESC_STATUS",
+        "plant_grade": false
+      }
+    ],
+    "notes": [
+      "A high-rate /uas1/mavlink_source topic only proves transport rate.",
+      "Plant replay needs the actuator-output MAVLink message itself to be high-rate."
+    ],
+    "path": "uuv_mujoco/v2.2/debug/controller_parity_412/real_90s_mavlink_source_audit_20260601/real_mavlink_source_telemetry_summary.json",
+    "plant_grade_messages": [],
+    "source_topic": "/uas1/mavlink_source"
+  },
+  "min_plant_hz": 20.0,
+  "plant_grade_actuator_history_available": false,
+  "plant_grade_topic_candidates": []
+}
