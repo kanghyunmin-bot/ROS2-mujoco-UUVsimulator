@@ -1,404 +1,302 @@
 {
-  "legacy": {
-    "half_height": 0.147,
-    "buoyancy_model": "ellipsoid",
-    "buoyancy_scale": 1.02,
-    "buoyancy_slope_scale": 1.2,
-    "surface_heave_damping": 18.0,
-    "heave_damping_scale": 1.2,
-    "cob_torque_scale": 0.2,
-    "buoyancy_point_blend": 1.0,
-    "cob_x_offset": -0.003,
-    "cob_z_offset": 0.01,
-    "thruster_voltage": 20.0,
-    "thruster_force_max": 45.0,
-    "linear_drag": 1.1,
-    "angular_drag": 0.32,
-    "linear_damping_linear": [
-      1.1,
-      1.32,
-      1.54
-    ],
-    "linear_damping_angular": [
-      0.32,
-      0.36,
-      0.28
-    ],
-    "quadratic_damping_linear": [
-      1.4,
-      2.0,
-      2.4
-    ],
-    "quadratic_damping_angular": [
-      0.1,
-      0.12,
-      0.08
-    ],
-    "added_mass_linear": [
-      1.8,
-      2.3,
-      3.0
-    ],
-    "added_mass_angular": [
-      0.1,
-      0.12,
-      0.08
-    ],
-    "current_world": [
-      0.0,
-      0.0,
-      0.0
-    ],
-    "body_inertia_scale_xyz": [
-      1.0,
-      1.0,
-      1.0
-    ],
+  "current": {
     "body_components": [
       {
-        "name": "center_enclosure",
-        "shape": "ellipsoid",
-        "size": [
-          0.22,
-          0.12,
-          0.11
-        ],
-        "mass": 6.0,
-        "mass_pos": [
-          -0.005,
-          0.0,
-          0.075
-        ],
         "buoyancy_pos": [
           -0.005,
           0.0,
           0.06
         ],
-        "buoyancy_share": 0.2
-      },
-      {
-        "name": "port_lower_body",
-        "shape": "ellipsoid",
-        "size": [
-          0.38,
-          0.09,
-          0.09
-        ],
-        "mass": 4.5,
-        "mass_pos": [
-          0.0,
-          0.208,
-          -0.005
-        ],
-        "buoyancy_pos": [
-          0.0,
-          0.208,
-          0.04
-        ],
-        "buoyancy_share": 0.4
-      },
-      {
-        "name": "starboard_lower_body",
-        "shape": "ellipsoid",
-        "size": [
-          0.38,
-          0.09,
-          0.09
-        ],
-        "mass": 4.5,
-        "mass_pos": [
-          0.0,
-          -0.208,
-          -0.005
-        ],
-        "buoyancy_pos": [
-          0.0,
-          -0.208,
-          0.04
-        ],
-        "buoyancy_share": 0.4
-      }
-    ],
-    "buoyancy_points": [
-      {
-        "name": "buoy_ver_lf",
-        "pos": [
-          0.149,
-          0.2346,
-          0.04
-        ],
-        "share": 0.25,
-        "half_height": 0.09
-      },
-      {
-        "name": "buoy_ver_lr",
-        "pos": [
-          -0.171,
-          0.2346,
-          0.04
-        ],
-        "share": 0.25,
-        "half_height": 0.09
-      },
-      {
-        "name": "buoy_ver_rf",
-        "pos": [
-          0.149,
-          -0.2344,
-          0.04
-        ],
-        "share": 0.25,
-        "half_height": 0.09
-      },
-      {
-        "name": "buoy_ver_rr",
-        "pos": [
-          -0.171,
-          -0.2344,
-          0.04
-        ],
-        "share": 0.25,
-        "half_height": 0.09
-      }
-    ],
-    "spin_gain": 22.0,
-    "yaw_torque_scale": 1.0,
-    "validation_timestep": 0.004,
-    "validation_iterations": 20,
-    "validation_ls_iterations": 8,
-    "validation_step_start": 0.5,
-    "validation_step_end": 1.4,
-    "validation_total_time": 3.2,
-    "validation_step_amp_ratio": 0.35
-  },
-  "current": {
-    "buoyancy_model": "ellipsoid",
-    "buoyancy_scale": 1.0,
-    "buoyancy_slope_scale": 1.2,
-    "surface_heave_damping": 14.0,
-    "heave_damping_scale": 1.0,
-    "cob_torque_scale": 0.85,
-    "buoyancy_point_blend": 1.0,
-    "cob_x_offset": 0.05,
-    "cob_z_offset": 0.5,
-    "thruster_voltage": 22.2,
-    "thruster_voltage_note": "Thruster performance direct mode uses the synthesized 22.2V T200 curve extrapolated from the public 10-20V data.",
-    "thruster_force_max": 21.0,
-    "linear_drag": 0.93,
-    "angular_drag": 0.72,
-    "current_world": [
-      0.0,
-      0.0,
-      0.0
-    ],
-    "body_inertia_scale_xyz": [
-      0.65,
-      1.35,
-      0.4
-    ],
-    "body_components": [
-      {
-        "name": "center_enclosure",
-        "shape": "ellipsoid",
-        "size": [
-          0.208,
-          0.113,
-          0.108
-        ],
+        "buoyancy_share": 0.2,
         "mass": 6.0,
         "mass_pos": [
           -0.005,
           0.0,
           0.01
         ],
-        "buoyancy_pos": [
-          -0.005,
-          0.0,
-          0.01
-        ],
-        "buoyancy_share": 0.2
+        "name": "center_enclosure",
+        "shape": "cylinder",
+        "size": [
+          0.208,
+          0.113,
+          0.108
+        ]
       },
       {
+        "buoyancy_pos": [
+          -0.004,
+          0.248,
+          0.04
+        ],
+        "buoyancy_share": 0.4,
+        "mass": 4.5,
+        "mass_pos": [
+          -0.004,
+          0.248,
+          -0.082
+        ],
         "name": "port_lower_body",
-        "shape": "ellipsoid",
+        "shape": "capsule",
         "size": [
           0.355,
           0.048,
           0.061
-        ],
-        "mass": 4.5,
-        "mass_pos": [
-          -0.004,
-          0.248,
-          -0.082
-        ],
-        "buoyancy_pos": [
-          -0.004,
-          0.248,
-          -0.082
-        ],
-        "buoyancy_share": 0.4
+        ]
       },
       {
-        "name": "starboard_lower_body",
-        "shape": "ellipsoid",
-        "size": [
-          0.355,
-          0.048,
-          0.061
+        "buoyancy_pos": [
+          -0.004,
+          -0.248,
+          0.04
         ],
+        "buoyancy_share": 0.4,
         "mass": 4.5,
         "mass_pos": [
           -0.004,
           -0.248,
           -0.082
         ],
-        "buoyancy_pos": [
-          -0.004,
-          -0.248,
-          -0.082
-        ],
-        "buoyancy_share": 0.4
+        "name": "starboard_lower_body",
+        "shape": "capsule",
+        "size": [
+          0.355,
+          0.048,
+          0.061
+        ]
       }
     ],
+    "body_inertia_scale_xyz": [
+      0.65,
+      2.5,
+      0.9
+    ],
+    "buoyancy_model": "ellipsoid",
+    "buoyancy_point_blend": 1.0,
     "buoyancy_points": [
       {
+        "half_height": 0.061,
         "name": "buoy_ver_lf",
         "pos": [
           0.214,
           0.248,
           -0.024
         ],
-        "share": 0.25,
-        "half_height": 0.061
+        "share": 0.25
       },
       {
+        "half_height": 0.061,
         "name": "buoy_ver_lr",
         "pos": [
           -0.294,
           0.248,
           -0.024
         ],
-        "share": 0.25,
-        "half_height": 0.061
+        "share": 0.25
       },
       {
+        "half_height": 0.061,
         "name": "buoy_ver_rf",
         "pos": [
           0.214,
           -0.248,
           -0.024
         ],
-        "share": 0.25,
-        "half_height": 0.061
+        "share": 0.25
       },
       {
+        "half_height": 0.061,
         "name": "buoy_ver_rr",
         "pos": [
           -0.294,
           -0.248,
           -0.024
         ],
-        "share": 0.25,
-        "half_height": 0.061
+        "share": 0.25
       }
     ],
-    "ellipsoid_model": {
-      "active": true,
-      "semi_axes": [
-        0.16,
-        0.106,
-        0.147
-      ],
-      "use_shape_volume": false,
-      "effective_cd_linear": [
-        0.03847806043308015,
-        0.06406995942506478,
-        0.14007534871484592
-      ],
-      "effective_cd_angular": [
-        1.0058349062460843,
-        0.5404360508358603,
-        0.001
-      ],
-      "added_mass_scale_linear": [
-        0.5041924218019987,
-        0.4647212945762935,
-        0.8824298857300565
-      ],
-      "added_mass_scale_angular": [
-        0.8066184260450019,
-        0.9862867985516093,
-        0.8917560164425672
-      ],
-      "linear_damping_ratio_linear": 2.0,
-      "linear_damping_ratio_angular": 4.2,
-      "reference_speed_linear": 0.3,
-      "reference_speed_angular": 0.6
+    "buoyancy_points_note": "Legacy fallback only. The current plant contract uses body_components for hydrostatic volume distribution.",
+    "buoyancy_scale": 1.0,
+    "buoyancy_scale_note": "GUI/QGC live-control baseline: keep the vehicle neutrally buoyant so it does not drift into the surface clamp before heave commands. Replay/HAN calibration can still sweep positive buoyancy in a separate profile.",
+    "buoyancy_slope_scale": 1.2,
+    "cfd_dynamic_wrench": {
+      "active": false,
+      "axes": {
+        "x": {
+          "extrapolate": "quadratic",
+          "negative_velocity_force_n": [
+            0.32836,
+            1.4386
+          ],
+          "positive_velocity_force_n": [
+            0.3168,
+            1.5317
+          ],
+          "speeds_mps": [
+            0.1,
+            0.2
+          ]
+        },
+        "y": {
+          "extrapolate": "quadratic",
+          "negative_velocity_force_n": [
+            0.9567,
+            3.5395
+          ],
+          "positive_velocity_force_n": [
+            1.0558,
+            3.9086
+          ],
+          "speeds_mps": [
+            0.1,
+            0.2
+          ]
+        },
+        "z": {
+          "extrapolate": "linear",
+          "negative_velocity_force_n": [
+            12.0969,
+            24.5738
+          ],
+          "positive_velocity_force_n": [
+            7.2677,
+            14.5361
+          ],
+          "speeds_mps": [
+            0.1,
+            0.2
+          ]
+        }
+      },
+      "force_table_csv": "UUV-HAN/CFD/results/cfd_actual_center_lower_stl_openfoam_force_table.csv",
+      "force_table_report": "UUV-HAN/CFD/results/cfd_actual_center_lower_stl_openfoam_form_report.md",
+      "scale": 1.0,
+      "source": "actual STL OpenFOAM center/lower force table, 2026-06-03; applies body-frame force lookup for x/y/z including z heave"
     },
-    "spin_gain": 22.0,
-    "yaw_torque_scale": 1.0,
-    "validation_timestep": 0.005,
-    "validation_iterations": 20,
-    "validation_ls_iterations": 8,
-    "validation_step_start": 0.5,
-    "validation_step_end": 1.4,
-    "validation_total_time": 3.2,
-    "validation_step_amp_ratio": 0.3,
-    "mujoco_fluidcoef_scale": [
-      1.0,
-      1.0,
-      1.0,
-      1.0,
-      1.0
+    "cob_torque_scale": 1.05,
+    "cob_x_offset": 0.0,
+    "cob_x_offset_note": "Static plant contract baseline from 2026-06-13 A/B neutral checks. With body-component buoyancy, -0.009m leaves about +0.75deg natural MANUAL pitch trim; 0.0m reduces the same neutral check to about -0.02deg without changing RCOU/controller mapping.",
+    "cob_z_offset": 0.075,
+    "cob_z_offset_note": "Measured plant-replay hydrostatic correction. The vertical CoB offset is raised to 0.075 m for stronger static righting from the ellipsoid/body-component buoyancy model without adding pitch-rate damping or hiding RCOU parity. Replace with measured CoB/GM when available.",
+    "current_world": [
+      0.0,
+      0.0,
+      0.0
     ],
-    "mujoco_fluidcoef_geom_scales": {
-      "fluid_center_enclosure": [
-        5.363593541670069,
-        8.65345933988948,
-        0.17,
-        0.25,
-        0.08
-      ],
-      "fluid_*_lower_body": [
-        9.760744077720753,
-        7.267607092205486,
-        0.0671353395775691,
-        0.75,
-        0.2
-      ],
-      "fluid_*_plate": [
-        7.516616330766711,
-        5.550407100549676,
-        8.550506800576823,
-        5.021288758789951,
-        0.12374876201844129
-      ]
-    },
     "dynamic_fluidcoef": {
-      "active": true,
-      "source": "UUV-HAN/outputs/proposed_profile_dynamic_fit.json current.mujoco_fluidcoef_geom_scales; CFD x/y prior from UUV-HAN/docs/cfd_xy_ratio_cycle_20260517.md",
-      "update_hz": 20.0,
-      "smoothing_alpha": 0.25,
-      "reference_speed_mps": 0.3,
-      "reference_angular_rps": 0.6,
-      "min_multiplier": 0.25,
-      "max_multiplier": 25.0,
-      "default_load_weights": [
-        1.0,
-        1.0,
-        1.0,
-        1.0,
-        1.0
-      ],
-      "coefficient_load_weights": {
-        "fluid_center_enclosure": [
-          0.7,
-          0.8,
-          1.0,
-          0.6,
-          0.6
+      "active": false,
+      "coefficient_angular_axis_weights": {
+        "fluid_*_lower_body": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            1.0,
+            0.45,
+            0.55
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.25,
+            0.15,
+            0.2
+          ]
         ],
+        "fluid_center_enclosure": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.9,
+            0.9,
+            0.55
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.35,
+            0.35,
+            0.25
+          ]
+        ]
+      },
+      "coefficient_axis_weights": {
+        "fluid_*_lower_body": [
+          [
+            0.1,
+            1.0,
+            0.65
+          ],
+          [
+            1.0,
+            0.1,
+            0.1
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.02,
+            0.35,
+            0.2
+          ],
+          [
+            0.2,
+            0.25,
+            0.15
+          ]
+        ],
+        "fluid_center_enclosure": [
+          [
+            0.35,
+            0.85,
+            0.85
+          ],
+          [
+            1.0,
+            0.25,
+            0.25
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.05,
+            0.35,
+            0.35
+          ],
+          [
+            0.25,
+            0.25,
+            0.25
+          ]
+        ]
+      },
+      "coefficient_load_weights": {
         "fluid_*_lower_body": [
           0.9,
           0.8,
@@ -406,22 +304,33 @@
           0.7,
           0.7
         ],
-        "fluid_*_plate": [
+        "fluid_center_enclosure": [
+          0.7,
+          0.8,
           1.0,
-          0.9,
-          1.0,
-          0.9,
+          0.6,
           0.6
         ]
       },
+      "default_load_weights": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "lift_smoothing_alpha": 0.08,
+      "log_decay_coefficients": [
+        true,
+        true,
+        true,
+        false,
+        false
+      ],
+      "max_multiplier": 25.0,
+      "min_multiplier": 0.25,
+      "reference_angular_rps": 0.6,
       "reference_geom_scales": {
-        "fluid_center_enclosure": [
-          5.4,
-          8.8,
-          3.4,
-          0.25,
-          0.08
-        ],
         "fluid_*_lower_body": [
           9.287340459718855,
           7.785550884634931,
@@ -429,36 +338,186 @@
           0.75,
           0.2
         ],
-        "fluid_*_plate": [
-          7.690714099236311,
-          5.524248870162175,
-          5.375,
-          4.125,
-          0.10349999999999998
+        "fluid_center_enclosure": [
+          5.4,
+          8.8,
+          3.4,
+          0.25,
+          0.08
         ]
+      },
+      "reference_speed_mps": 0.3,
+      "smoothing_alpha": 0.25,
+      "source": "disabled for clean plant contract baseline; fixed current.mujoco_fluidcoef_geom_scales remain as the accepted static five-coefficient ellipsoid profile",
+      "transient_attack_alpha": 1.0,
+      "transient_decay_s": 2.5,
+      "transient_floor": 0.0,
+      "transient_mode": "log_decay",
+      "transient_rearm_load": 0.02,
+      "transient_reset_load": 0.06,
+      "transient_retrigger_delta": 0.15,
+      "update_hz": 20.0
+    },
+    "ellipsoid_model": {
+      "active": true,
+      "semi_axes": [
+        0.16,
+        0.106,
+        0.147
+      ],
+      "use_shape_volume": false
+    },
+    "forward_speed_z_r": 0.0,
+    "fossen_residual_hydro": {
+      "active": true,
+      "added_mass": {
+        "active": true,
+        "k_p": 0.0,
+        "m_q": 0.0,
+        "n_r": 0.6,
+        "x_u": 2.0,
+        "y_r_n_v": 0.0,
+        "y_v": 2.5,
+        "z_q_m_w": 0.0,
+        "z_w": 0.0
+      },
+      "forward_speed_linear": {
+        "m_q": 0.0,
+        "m_w": 0.0,
+        "n_r": 4.5,
+        "n_v": -7.0,
+        "y_r": 0.0,
+        "y_v": 0.0,
+        "z_q": 0.0,
+        "z_r": 0.0,
+        "z_w": 0.0
+      },
+      "linear": {
+        "m_q": 0.0,
+        "m_w": 0.0,
+        "n_r": 0.0,
+        "n_v": 0.0,
+        "y_r": 0.0,
+        "y_v": 20.0,
+        "z_q": 0.0,
+        "z_w": 18.0
+      },
+      "note": "Fossen-style residual damping layered on top of MuJoCo ellipsoid fluid for current-mode plant replay. All coefficients default to zero; HAN/CFD may identify forward-speed and nonlinear terms, but no term is accepted without full90 real-RCOU validation.",
+      "quadratic": {
+        "m_abs_q_q": 0.0,
+        "m_abs_w_w": 0.0,
+        "n_abs_r_r": 2.4,
+        "n_abs_v_v": -16.0,
+        "y_abs_r_r": 0.0,
+        "y_abs_v_v": 80.0,
+        "z_abs_q_q": 0.0,
+        "z_abs_w_w": 60.0
       }
     },
-    "linear_damping_linear": [
-      1.1,
-      1.32,
-      1.54
+    "heave_extra_damping_n_per_mps": 0.0,
+    "heave_extra_damping_note": "Disabled in the QGC/manual-control default contract because it makes small RC heave commands feel stuck. Replay/HAN calibration runs can still enable this explicitly with UUV_HEAVE_EXTRA_DAMPING_N_PER_MPS or a separate validation profile.",
+    "horizontal_thruster_z_offset_m": 0.0,
+    "horizontal_thruster_z_offset_note": "Disabled for plant-contract replay. Thruster force must act at the XML/CAD site unless a measured mount offset is supplied.",
+    "hydro_pitch_moment_coeff": 0.0,
+    "hydro_residual_wrench": {
+      "active": true,
+      "linear": {
+        "m_q": 0.0,
+        "m_w": 0.0,
+        "n_r": 0.0,
+        "n_v": 0.0,
+        "y_r": 0.0,
+        "y_v": 0.0,
+        "z_q": 0.0,
+        "z_w": 0.0
+      },
+      "note": "Current-mode residual body-frame hydrodynamic coupling layered on top of MuJoCo ellipsoid fluid. Defaults are zero, so the accepted static ellipsoid contract is unchanged until HAN/CFD identifies measured coefficients. This is plant physics only, not an RCOU/controller shim."
+    },
+    "hydro_vertical_lift_coeff": 0.0,
+    "hydro_vertical_lift_deadband_mps": 0.2,
+    "hydro_vertical_lift_power": 4.0,
+    "hydro_yawrate_heave_neg_coeff": 0.0,
+    "hydro_yawrate_heave_pos_coeff": 0.0,
+    "hydro_yawrate_heave_speed_deadband_mps": 0.24,
+    "hydro_yawrate_heave_yaw_deadband_radps": 0.1,
+    "hydrostatic_restoring": {
+      "active": true,
+      "pitch_stiffness_nm_per_rad": 220.0,
+      "roll_stiffness_nm_per_rad": 83.0,
+      "source": "Explicit static righting-moment contract. Pitch stiffness is raised for stronger static recovery while roll keeps the 83 Nm/rad plant baseline; Fossen pitch-rate damping remains disabled so pitch speed is not artificially killed. Replace with measured CoB/GM when available."
+    },
+    "hydrostatic_volume_source": "body_components",
+    "linear_z_w": 18.0,
+    "mujoco_fluid_geom_size_scales": {
+      "fluid_*_lower_body": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "fluid_center_enclosure": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    "mujoco_fluidcoef_geom_scales": {
+      "fluid_*_lower_body": [
+        9.3,
+        7.56,
+        1.625,
+        0.35,
+        0.07
+      ],
+      "fluid_center_enclosure": [
+        5.852799999999999,
+        8.024,
+        3.9000000000000004,
+        0.16,
+        0.04
+      ]
+    },
+    "mujoco_fluidcoef_scale": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
     ],
-    "linear_damping_angular": [
-      0.32,
-      0.36,
-      0.28
-    ],
-    "quadratic_damping_linear": [
-      1.4,
-      2.0,
-      2.4
-    ],
-    "quadratic_damping_angular": [
-      0.1,
-      0.12,
-      0.08
-    ],
-    "air_linear_drag": 0.03,
-    "air_angular_drag": 0.03
+    "profile_note": "physical_direction_vertical_0p02_buoyancy_1p045_hdrag_yaw_torque_3.8: stronger yaw-only moment sweep combined with yaw thruster actuator tau candidates after 2.0 plus slower tau improved both yaw NRMSE and gyro_z RMSE but still under-ranged cumulative yaw. v26_yaw_smooth_extend: fixed v23 nonlinear Bar30 lift; torque=3.8, tau=1.1/2.5, n_r=4.5, qnr=2.4, izz=1.3.\nv26-1 dynamics; reduce positive-yaw pair pure yaw moment scale 3.8->3.2 without changing direct force.\nv51 candidate: current v35 profile with inner yaw pair yaw_lr/yaw_rf reduced 3.2->2.8 to test v29 yaw-drift direction without copying older depth/DVL structure.",
+    "quadratic_z_abs_w_w": 60.0,
+    "spin_gain": 22.0,
+    "thruster_direct_gain_scales": {
+      "ver_lf": 1.0,
+      "ver_lr": 1.0,
+      "ver_rf": 1.0,
+      "ver_rr": 1.0,
+      "yaw_lf": 1.0,
+      "yaw_lr": 1.0,
+      "yaw_rf": 1.0,
+      "yaw_rr": 1.0
+    },
+    "thruster_direct_gain_scales_note": "Raw T200-direct contract baseline. Plant replay and GUI closed-loop runs must not hide controller/actuator mismatch with per-thruster force multipliers; mounted actuator effectiveness belongs in measured geometry, hydrodynamics, or a separately gated calibration profile.",
+    "thruster_force_max": 21.0,
+    "thruster_voltage": 20.0,
+    "thruster_voltage_note": "Use the measured public 20V T200 curve for parity runs. The 2026-04-01 bag has no usable 6S thruster bus voltage topic; the 22.2V curve is synthetic extrapolation and is not used as the default plant contract.",
+    "v30_lift_tail_balance_note": "mild tail lift reduction plus small hydrostatic recovery; keeps v29 per-thruster yaw-only moment and raw direct force unchanged.",
+    "v31_positive_yawrate_heave_note": "Asymmetric body/lower-hull flow interaction: adds downward body-z force only during positive yaw-rate with sufficient forward speed; does not change sensor output, raw T200 force, or v29 yaw-only moment scales.",
+    "v35_yaw_inertia_heave_note": "lower inertia plus stronger yaw-heave",
+    "validation_iterations": 20,
+    "validation_ls_iterations": 8,
+    "validation_step_amp_ratio": 0.3,
+    "validation_step_end": 1.4,
+    "validation_step_start": 0.5,
+    "validation_timestep": 0.005,
+    "validation_total_time": 3.2,
+    "yaw_torque_scale": 1.0,
+    "yaw_torque_scale_note": "QGC/manual-control default uses the direct plant yaw moment without hidden amplification. Plant-replay yaw A/B tests can still set UUV_YAW_TORQUE_SCALE explicitly.",
+    "yaw_torque_thruster_scales": {
+      "yaw_lf": 1.0,
+      "yaw_lr": 1.0,
+      "yaw_rf": 1.0,
+      "yaw_rr": 1.0
+    },
+    "yaw_torque_thruster_scales_note": "v55 candidate: v54 forward release seed plus lower inner pair yaw moment scale 2.4."
   }
 }

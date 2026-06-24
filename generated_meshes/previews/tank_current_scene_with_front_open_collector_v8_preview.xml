@@ -1,17 +1,12 @@
 <mujoco model="tank_ellipsoid">
-  
-  <compiler angle="radian" meshdir="../assets/urdf_full/meshes_split/" />
-
+  <compiler angle="radian" meshdir="/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/assets/urdf_full/meshes_split" />
   <option density="1000" viscosity="0.001" integrator="implicitfast" />
-
   <visual>
     <headlight diffuse="0.9 0.9 0.9" ambient="0.3 0.3 0.3" specular="0.1 0.1 0.1" />
   </visual>
-
   <default>
     <site size="0.03" rgba="0 0 0 0" />
   </default>
-
   <asset>
     <mesh name="base_link_part0" content_type="model/stl" file="base_link_part0.stl" />
     <mesh name="base_link_part1" content_type="model/stl" file="base_link_part1.stl" />
@@ -32,13 +27,10 @@
     <material name="enclosure_white" rgba="0.95 0.95 0.95 1" />
     <material name="pool_tile" rgba="0.3 0.5 0.7 1" />
   </asset>
-
   <worldbody>
     <light name="sun" pos="0 0 10" dir="0 0 -1" diffuse="0.9 0.9 0.9" specular="0.3 0.3 0.3" />
     <camera name="course_overview" pos="0 0 32" xyaxes="1 0 0 0 1 0" fovy="58" />
     <camera name="course_side" pos="0 -14.0 -5.2" xyaxes="1 0 0 0 0 1" fovy="50" />
-
-    <!-- Tank dimensions: 35.0m length (x) x 30.0m width (y) x 11.0m max depth, water surface at z=0, wall top at z=0.6m. -->
     <geom name="pool_floor" type="box" pos="0 0 -11.05" size="17.5 15.0 0.05" material="pool_tile" />
     <geom name="pool_wall_px" type="box" pos="17.55 0 -5.2" size="0.05 15.05 5.8" rgba="0.7 0.7 0.7 1" />
     <geom name="pool_wall_nx" type="box" pos="-17.55 0 -5.2" size="0.05 15.05 5.8" rgba="0.7 0.7 0.7 1" />
@@ -46,76 +38,69 @@
     <geom name="pool_wall_ny" type="box" pos="0 -15.05 -5.2" size="17.6 0.05 5.8" rgba="0.7 0.7 0.7 1" />
     <geom name="water_vis" type="box" pos="0 0 -5.5" size="17.5 15.0 5.5" rgba="0.05 0.45 0.95 0.16" contype="0" conaffinity="0" group="0" />
     <geom name="water_surface" type="box" pos="0 0 0.004" size="17.5 15.0 0.004" rgba="0.45 0.85 1.00 0.22" contype="0" conaffinity="0" group="0" />
-    <!-- 수면 기준선: 수조 벽과 물 사이 z=0 경계를 viewer에서 바로 읽을 수 있게 표시. -->
-    <geom name="waterline_x_min" type="capsule" fromto="-17.45 -15.00 0.012 -17.45 15.00 0.012" size="0.025" rgba="1.00 1.00 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="waterline_x_max" type="capsule" fromto="17.45 -15.00 0.012 17.45 15.00 0.012" size="0.025" rgba="1.00 1.00 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="waterline_y_min" type="capsule" fromto="-17.50 -14.95 0.012 17.50 -14.95 0.012" size="0.025" rgba="1.00 1.00 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="waterline_y_max" type="capsule" fromto="-17.50 14.95 0.012 17.50 14.95 0.012" size="0.025" rgba="1.00 1.00 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="waterline_wall_x_min" type="box" pos="-17.48 0 0.006" size="0.018 15.00 0.018" rgba="0.00 0.95 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="waterline_wall_x_max" type="box" pos="17.48 0 0.006" size="0.018 15.00 0.018" rgba="0.00 0.95 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="waterline_wall_y_min" type="box" pos="0 -14.98 0.006" size="17.50 0.018 0.018" rgba="0.00 0.95 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="waterline_wall_y_max" type="box" pos="0 14.98 0.006" size="17.50 0.018 0.018" rgba="0.00 0.95 1.00 1" contype="0" conaffinity="0" group="0" />
-
-    <!-- 2026 경기 필드 프록시. 공식 수량: 각 코스 빨간 5, 노란 5, 주황 2. Pinger는 hydrophone 없이 중앙 흰색 부표로만 둔다. -->
+    <geom name="waterline_x_min" type="capsule" fromto="-17.45 -15.00 0.055 -17.45 15.00 0.055" size="0.085" rgba="1.00 1.00 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="waterline_x_max" type="capsule" fromto="17.45 -15.00 0.055 17.45 15.00 0.055" size="0.085" rgba="1.00 1.00 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="waterline_y_min" type="capsule" fromto="-17.50 -14.95 0.055 17.50 -14.95 0.055" size="0.085" rgba="1.00 1.00 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="waterline_y_max" type="capsule" fromto="-17.50 14.95 0.055 17.50 14.95 0.055" size="0.085" rgba="1.00 1.00 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="waterline_wall_x_min" type="box" pos="-17.48 0 0.010" size="0.045 15.00 0.045" rgba="0.00 0.95 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="waterline_wall_x_max" type="box" pos="17.48 0 0.010" size="0.045 15.00 0.045" rgba="0.00 0.95 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="waterline_wall_y_min" type="box" pos="0 -14.98 0.010" size="17.50 0.045 0.045" rgba="0.00 0.95 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="waterline_wall_y_max" type="box" pos="0 14.98 0.010" size="17.50 0.045 0.045" rgba="0.00 0.95 1.00 1" contype="0" conaffinity="0" group="0" />
     <geom name="course_center_split" type="box" pos="0 0 0.015" size="0.025 14.75 0.010" rgba="0.20 0.75 1.00 0.35" contype="0" conaffinity="0" group="0" />
-    <!-- 가점존: 수면 고정 1.5m 지름 파란 훌라후프 프록시. -->
-    <geom name="course_a_score_hoop_01" type="capsule" fromto="-6.050 0.000 0.035 -6.270 0.530 0.035" size="0.080" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="course_a_score_hoop_02" type="capsule" fromto="-6.270 0.530 0.035 -6.800 0.750 0.035" size="0.080" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="course_a_score_hoop_03" type="capsule" fromto="-6.800 0.750 0.035 -7.330 0.530 0.035" size="0.080" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="course_a_score_hoop_04" type="capsule" fromto="-7.330 0.530 0.035 -7.550 0.000 0.035" size="0.080" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="course_a_score_hoop_05" type="capsule" fromto="-7.550 0.000 0.035 -7.330 -0.530 0.035" size="0.080" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="course_a_score_hoop_06" type="capsule" fromto="-7.330 -0.530 0.035 -6.800 -0.750 0.035" size="0.080" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="course_a_score_hoop_07" type="capsule" fromto="-6.800 -0.750 0.035 -6.270 -0.530 0.035" size="0.080" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="course_a_score_hoop_08" type="capsule" fromto="-6.270 -0.530 0.035 -6.050 0.000 0.035" size="0.080" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="course_b_score_hoop_01" type="capsule" fromto="7.550 0.000 0.035 7.330 0.530 0.035" size="0.080" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="course_b_score_hoop_02" type="capsule" fromto="7.330 0.530 0.035 6.800 0.750 0.035" size="0.080" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="course_b_score_hoop_03" type="capsule" fromto="6.800 0.750 0.035 6.270 0.530 0.035" size="0.080" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="course_b_score_hoop_04" type="capsule" fromto="6.270 0.530 0.035 6.050 0.000 0.035" size="0.080" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="course_b_score_hoop_05" type="capsule" fromto="6.050 0.000 0.035 6.270 -0.530 0.035" size="0.080" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="course_b_score_hoop_06" type="capsule" fromto="6.270 -0.530 0.035 6.800 -0.750 0.035" size="0.080" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="course_b_score_hoop_07" type="capsule" fromto="6.800 -0.750 0.035 7.330 -0.530 0.035" size="0.080" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
-    <geom name="course_b_score_hoop_08" type="capsule" fromto="7.330 -0.530 0.035 7.550 0.000 0.035" size="0.080" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="course_a_score_hoop_01" type="capsule" fromto="-6.050 0.000 0.035 -6.270 0.530 0.035" size="0.120" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="course_a_score_hoop_02" type="capsule" fromto="-6.270 0.530 0.035 -6.800 0.750 0.035" size="0.120" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="course_a_score_hoop_03" type="capsule" fromto="-6.800 0.750 0.035 -7.330 0.530 0.035" size="0.120" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="course_a_score_hoop_04" type="capsule" fromto="-7.330 0.530 0.035 -7.550 0.000 0.035" size="0.120" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="course_a_score_hoop_05" type="capsule" fromto="-7.550 0.000 0.035 -7.330 -0.530 0.035" size="0.120" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="course_a_score_hoop_06" type="capsule" fromto="-7.330 -0.530 0.035 -6.800 -0.750 0.035" size="0.120" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="course_a_score_hoop_07" type="capsule" fromto="-6.800 -0.750 0.035 -6.270 -0.530 0.035" size="0.120" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="course_a_score_hoop_08" type="capsule" fromto="-6.270 -0.530 0.035 -6.050 0.000 0.035" size="0.120" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="course_b_score_hoop_01" type="capsule" fromto="7.550 0.000 0.035 7.330 0.530 0.035" size="0.120" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="course_b_score_hoop_02" type="capsule" fromto="7.330 0.530 0.035 6.800 0.750 0.035" size="0.120" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="course_b_score_hoop_03" type="capsule" fromto="6.800 0.750 0.035 6.270 0.530 0.035" size="0.120" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="course_b_score_hoop_04" type="capsule" fromto="6.270 0.530 0.035 6.050 0.000 0.035" size="0.120" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="course_b_score_hoop_05" type="capsule" fromto="6.050 0.000 0.035 6.270 -0.530 0.035" size="0.120" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="course_b_score_hoop_06" type="capsule" fromto="6.270 -0.530 0.035 6.800 -0.750 0.035" size="0.120" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="course_b_score_hoop_07" type="capsule" fromto="6.800 -0.750 0.035 7.330 -0.530 0.035" size="0.120" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
+    <geom name="course_b_score_hoop_08" type="capsule" fromto="7.330 -0.530 0.035 7.550 0.000 0.035" size="0.120" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
     <geom name="course_a_entry_gate" type="box" pos="-15.7 -13.4 0.030" size="0.65 0.20 0.020" rgba="0.05 0.85 0.52 0.55" contype="0" conaffinity="0" group="0" />
     <geom name="course_b_entry_gate" type="box" pos="15.7 -13.4 0.030" size="0.65 0.20 0.020" rgba="0.05 0.85 0.52 0.55" contype="0" conaffinity="0" group="0" />
-
-    <!-- Viewer-only 수면 투영 표식: 실제 고정 부표는 2.5m 아래에 두고, overview에서는 위치를 크게 보여준다. -->
-    <geom name="course_buoy_a_yellow_1_surface_projection" type="cylinder" pos="-14.4 9.0 0.070" size="0.820 0.012" rgba="1.00 0.95 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_a_yellow_1_surface_projection_outline" type="cylinder" pos="-14.4 9.0 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_a_yellow_2_surface_projection" type="cylinder" pos="-12.8 -1.3 0.070" size="0.820 0.012" rgba="1.00 0.95 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_a_yellow_2_surface_projection_outline" type="cylinder" pos="-12.8 -1.3 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_a_yellow_3_surface_projection" type="cylinder" pos="-8.6 4.6 0.070" size="0.820 0.012" rgba="1.00 0.95 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_a_yellow_3_surface_projection_outline" type="cylinder" pos="-8.6 4.6 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_a_orange_1_surface_projection" type="cylinder" pos="-4.0 4.9 0.070" size="0.820 0.012" rgba="1.00 0.58 0.00 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_a_orange_1_surface_projection_outline" type="cylinder" pos="-4.0 4.9 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_a_orange_2_surface_projection" type="cylinder" pos="-1.8 -6.5 0.070" size="0.820 0.012" rgba="1.00 0.58 0.00 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_a_orange_2_surface_projection_outline" type="cylinder" pos="-1.8 -6.5 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_b_orange_1_surface_projection" type="cylinder" pos="3.7 5.0 0.070" size="0.820 0.012" rgba="1.00 0.58 0.00 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_b_orange_1_surface_projection_outline" type="cylinder" pos="3.7 5.0 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_b_orange_2_surface_projection" type="cylinder" pos="6.0 -5.9 0.070" size="0.820 0.012" rgba="1.00 0.58 0.00 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_b_orange_2_surface_projection_outline" type="cylinder" pos="6.0 -5.9 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_b_yellow_1_surface_projection" type="cylinder" pos="7.6 6.5 0.070" size="0.820 0.012" rgba="1.00 0.95 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_b_yellow_1_surface_projection_outline" type="cylinder" pos="7.6 6.5 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_b_yellow_2_surface_projection" type="cylinder" pos="10.4 -1.3 0.070" size="0.820 0.012" rgba="1.00 0.95 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_b_yellow_2_surface_projection_outline" type="cylinder" pos="10.4 -1.3 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_b_yellow_3_surface_projection" type="cylinder" pos="13.3 -7.2 0.070" size="0.820 0.012" rgba="1.00 0.95 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_b_yellow_3_surface_projection_outline" type="cylinder" pos="13.3 -7.2 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_a_yellow_4_surface_projection" type="cylinder" pos="-10.2 -9.1 0.070" size="0.820 0.012" rgba="1.00 0.95 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_a_yellow_4_surface_projection_outline" type="cylinder" pos="-10.2 -9.1 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_a_yellow_5_surface_projection" type="cylinder" pos="-5.1 1.0 0.070" size="0.820 0.012" rgba="1.00 0.95 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_a_yellow_5_surface_projection_outline" type="cylinder" pos="-5.1 1.0 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_b_yellow_4_surface_projection" type="cylinder" pos="4.8 9.2 0.070" size="0.820 0.012" rgba="1.00 0.95 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_b_yellow_4_surface_projection_outline" type="cylinder" pos="4.8 9.2 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_b_yellow_5_surface_projection" type="cylinder" pos="15.0 2.1 0.070" size="0.820 0.012" rgba="1.00 0.95 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_b_yellow_5_surface_projection_outline" type="cylinder" pos="15.0 2.1 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_pinger_white_1_surface_projection" type="cylinder" pos="0.0 -1.8 0.070" size="0.820 0.012" rgba="0.96 0.96 0.92 0.00" density="0" contype="0" conaffinity="0" group="5" />
-    <geom name="course_buoy_pinger_white_1_surface_projection_outline" type="cylinder" pos="0.0 -1.8 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
-
-    <!-- 빨간 부표: 자석/라인 없이 free joint로 떠다닌다. 런타임 부력은 부표 몸통에 0.98N을 적용한다. -->
-    <body name="course_buoy_a_red_1_float" gravcomp="0" pos="-14.2 6.9 0.070">
-      <joint name="course_buoy_a_red_1_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+    <geom name="course_buoy_a_yellow_1_surface_projection" type="cylinder" pos="-14.4 9.0 0.070" size="0.820 0.012" rgba="1.00 0.95 0.02 0.88" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_a_yellow_1_surface_projection_outline" type="cylinder" pos="-14.4 9.0 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.45" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_a_yellow_2_surface_projection" type="cylinder" pos="-12.8 -1.3 0.070" size="0.820 0.012" rgba="1.00 0.95 0.02 0.88" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_a_yellow_2_surface_projection_outline" type="cylinder" pos="-12.8 -1.3 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.45" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_a_yellow_3_surface_projection" type="cylinder" pos="-8.6 4.6 0.070" size="0.820 0.012" rgba="1.00 0.95 0.02 0.88" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_a_yellow_3_surface_projection_outline" type="cylinder" pos="-8.6 4.6 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.45" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_a_orange_1_surface_projection" type="cylinder" pos="-4.0 4.9 0.070" size="0.820 0.012" rgba="1.00 0.58 0.00 0.88" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_a_orange_1_surface_projection_outline" type="cylinder" pos="-4.0 4.9 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.45" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_a_orange_2_surface_projection" type="cylinder" pos="-1.8 -6.5 0.070" size="0.820 0.012" rgba="1.00 0.58 0.00 0.88" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_a_orange_2_surface_projection_outline" type="cylinder" pos="-1.8 -6.5 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.45" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_b_orange_1_surface_projection" type="cylinder" pos="3.7 5.0 0.070" size="0.820 0.012" rgba="1.00 0.58 0.00 0.88" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_b_orange_1_surface_projection_outline" type="cylinder" pos="3.7 5.0 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.45" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_b_orange_2_surface_projection" type="cylinder" pos="6.0 -5.9 0.070" size="0.820 0.012" rgba="1.00 0.58 0.00 0.88" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_b_orange_2_surface_projection_outline" type="cylinder" pos="6.0 -5.9 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.45" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_b_yellow_1_surface_projection" type="cylinder" pos="7.6 6.5 0.070" size="0.820 0.012" rgba="1.00 0.95 0.02 0.88" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_b_yellow_1_surface_projection_outline" type="cylinder" pos="7.6 6.5 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.45" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_b_yellow_2_surface_projection" type="cylinder" pos="10.4 -1.3 0.070" size="0.820 0.012" rgba="1.00 0.95 0.02 0.88" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_b_yellow_2_surface_projection_outline" type="cylinder" pos="10.4 -1.3 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.45" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_b_yellow_3_surface_projection" type="cylinder" pos="13.3 -7.2 0.070" size="0.820 0.012" rgba="1.00 0.95 0.02 0.88" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_b_yellow_3_surface_projection_outline" type="cylinder" pos="13.3 -7.2 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.45" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_a_yellow_4_surface_projection" type="cylinder" pos="-10.2 -9.1 0.070" size="0.820 0.012" rgba="1.00 0.95 0.02 0.88" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_a_yellow_4_surface_projection_outline" type="cylinder" pos="-10.2 -9.1 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.45" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_a_yellow_5_surface_projection" type="cylinder" pos="-5.1 1.0 0.070" size="0.820 0.012" rgba="1.00 0.95 0.02 0.88" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_a_yellow_5_surface_projection_outline" type="cylinder" pos="-5.1 1.0 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.45" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_b_yellow_4_surface_projection" type="cylinder" pos="4.8 9.2 0.070" size="0.820 0.012" rgba="1.00 0.95 0.02 0.88" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_b_yellow_4_surface_projection_outline" type="cylinder" pos="4.8 9.2 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.45" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_b_yellow_5_surface_projection" type="cylinder" pos="15.0 2.1 0.070" size="0.820 0.012" rgba="1.00 0.95 0.02 0.88" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_b_yellow_5_surface_projection_outline" type="cylinder" pos="15.0 2.1 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.45" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_pinger_white_1_surface_projection" type="cylinder" pos="0.0 -1.8 0.070" size="0.820 0.012" rgba="0.96 0.96 0.92 0.92" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="course_buoy_pinger_white_1_surface_projection_outline" type="cylinder" pos="0.0 -1.8 0.083" size="0.900 0.005" rgba="0.02 0.02 0.02 0.45" density="0" contype="0" conaffinity="0" group="5" />
+    <body name="course_buoy_a_red_1_float" gravcomp="0.9993" pos="-14.2 6.9 -0.035">
+      <joint name="course_buoy_a_red_1_slide_x" type="slide" axis="1 0 0" damping="0.25" />
+      <joint name="course_buoy_a_red_1_slide_y" type="slide" axis="0 1 0" damping="0.25" />
+      <inertial pos="0 0 0" mass="0.100" diaginertia="0.00016 0.00016 0.00010" />
       <geom name="course_buoy_a_red_1_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.04 0.02 1" density="0" />
-      <geom name="course_buoy_a_red_1_viewer_surface_disc" type="cylinder" pos="0 0 0.070" size="0.780 0.012" rgba="1.00 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
+      <geom name="course_buoy_a_red_1_viewer_surface_disc" type="cylinder" pos="0 0 0.070" size="0.780 0.012" rgba="1.00 0.02 0.02 0.82" density="0" contype="0" conaffinity="0" group="5" />
       <geom name="course_buoy_a_red_1_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_red_1_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_red_1_equator_band_03" type="capsule" fromto="0.000 0.056 0.000 -0.040 0.040 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -133,11 +118,12 @@
       <geom name="course_buoy_a_red_1_lower_bolt" type="cylinder" pos="0 0 -0.252" size="0.008 0.010" rgba="0.04 0.04 0.04 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_red_1_lower_jig" type="cylinder" pos="0 0 -0.278" size="0.028 0.010" rgba="0.95 0.95 0.92 1" density="0" contype="0" conaffinity="0" group="0" />
     </body>
-    <body name="course_buoy_a_red_2_float" gravcomp="0" pos="-12.1 -5.7 0.070">
-      <joint name="course_buoy_a_red_2_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+    <body name="course_buoy_a_red_2_float" gravcomp="0.9993" pos="-12.1 -5.7 -0.035">
+      <joint name="course_buoy_a_red_2_slide_x" type="slide" axis="1 0 0" damping="0.25" />
+      <joint name="course_buoy_a_red_2_slide_y" type="slide" axis="0 1 0" damping="0.25" />
+      <inertial pos="0 0 0" mass="0.100" diaginertia="0.00016 0.00016 0.00010" />
       <geom name="course_buoy_a_red_2_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.04 0.02 1" density="0" />
-      <geom name="course_buoy_a_red_2_viewer_surface_disc" type="cylinder" pos="0 0 0.070" size="0.780 0.012" rgba="1.00 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
+      <geom name="course_buoy_a_red_2_viewer_surface_disc" type="cylinder" pos="0 0 0.070" size="0.780 0.012" rgba="1.00 0.02 0.02 0.82" density="0" contype="0" conaffinity="0" group="5" />
       <geom name="course_buoy_a_red_2_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_red_2_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_red_2_equator_band_03" type="capsule" fromto="0.000 0.056 0.000 -0.040 0.040 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -155,11 +141,12 @@
       <geom name="course_buoy_a_red_2_lower_bolt" type="cylinder" pos="0 0 -0.252" size="0.008 0.010" rgba="0.04 0.04 0.04 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_red_2_lower_jig" type="cylinder" pos="0 0 -0.278" size="0.028 0.010" rgba="0.95 0.95 0.92 1" density="0" contype="0" conaffinity="0" group="0" />
     </body>
-    <body name="course_buoy_a_red_3_float" gravcomp="0" pos="-5.6 -7.3 0.070">
-      <joint name="course_buoy_a_red_3_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+    <body name="course_buoy_a_red_3_float" gravcomp="0.9993" pos="-5.6 -7.3 -0.035">
+      <joint name="course_buoy_a_red_3_slide_x" type="slide" axis="1 0 0" damping="0.25" />
+      <joint name="course_buoy_a_red_3_slide_y" type="slide" axis="0 1 0" damping="0.25" />
+      <inertial pos="0 0 0" mass="0.100" diaginertia="0.00016 0.00016 0.00010" />
       <geom name="course_buoy_a_red_3_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.04 0.02 1" density="0" />
-      <geom name="course_buoy_a_red_3_viewer_surface_disc" type="cylinder" pos="0 0 0.070" size="0.780 0.012" rgba="1.00 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
+      <geom name="course_buoy_a_red_3_viewer_surface_disc" type="cylinder" pos="0 0 0.070" size="0.780 0.012" rgba="1.00 0.02 0.02 0.82" density="0" contype="0" conaffinity="0" group="5" />
       <geom name="course_buoy_a_red_3_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_red_3_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_red_3_equator_band_03" type="capsule" fromto="0.000 0.056 0.000 -0.040 0.040 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -177,11 +164,12 @@
       <geom name="course_buoy_a_red_3_lower_bolt" type="cylinder" pos="0 0 -0.252" size="0.008 0.010" rgba="0.04 0.04 0.04 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_red_3_lower_jig" type="cylinder" pos="0 0 -0.278" size="0.028 0.010" rgba="0.95 0.95 0.92 1" density="0" contype="0" conaffinity="0" group="0" />
     </body>
-    <body name="course_buoy_b_red_1_float" gravcomp="0" pos="8.2 3.2 0.070">
-      <joint name="course_buoy_b_red_1_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+    <body name="course_buoy_b_red_1_float" gravcomp="0.9993" pos="8.2 3.2 -0.035">
+      <joint name="course_buoy_b_red_1_slide_x" type="slide" axis="1 0 0" damping="0.25" />
+      <joint name="course_buoy_b_red_1_slide_y" type="slide" axis="0 1 0" damping="0.25" />
+      <inertial pos="0 0 0" mass="0.100" diaginertia="0.00016 0.00016 0.00010" />
       <geom name="course_buoy_b_red_1_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.04 0.02 1" density="0" />
-      <geom name="course_buoy_b_red_1_viewer_surface_disc" type="cylinder" pos="0 0 0.070" size="0.780 0.012" rgba="1.00 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
+      <geom name="course_buoy_b_red_1_viewer_surface_disc" type="cylinder" pos="0 0 0.070" size="0.780 0.012" rgba="1.00 0.02 0.02 0.82" density="0" contype="0" conaffinity="0" group="5" />
       <geom name="course_buoy_b_red_1_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_red_1_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_red_1_equator_band_03" type="capsule" fromto="0.000 0.056 0.000 -0.040 0.040 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -199,11 +187,12 @@
       <geom name="course_buoy_b_red_1_lower_bolt" type="cylinder" pos="0 0 -0.252" size="0.008 0.010" rgba="0.04 0.04 0.04 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_red_1_lower_jig" type="cylinder" pos="0 0 -0.278" size="0.028 0.010" rgba="0.95 0.95 0.92 1" density="0" contype="0" conaffinity="0" group="0" />
     </body>
-    <body name="course_buoy_b_red_2_float" gravcomp="0" pos="13.6 -2.0 0.070">
-      <joint name="course_buoy_b_red_2_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+    <body name="course_buoy_b_red_2_float" gravcomp="0.9993" pos="13.6 -2.0 -0.035">
+      <joint name="course_buoy_b_red_2_slide_x" type="slide" axis="1 0 0" damping="0.25" />
+      <joint name="course_buoy_b_red_2_slide_y" type="slide" axis="0 1 0" damping="0.25" />
+      <inertial pos="0 0 0" mass="0.100" diaginertia="0.00016 0.00016 0.00010" />
       <geom name="course_buoy_b_red_2_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.04 0.02 1" density="0" />
-      <geom name="course_buoy_b_red_2_viewer_surface_disc" type="cylinder" pos="0 0 0.070" size="0.780 0.012" rgba="1.00 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
+      <geom name="course_buoy_b_red_2_viewer_surface_disc" type="cylinder" pos="0 0 0.070" size="0.780 0.012" rgba="1.00 0.02 0.02 0.82" density="0" contype="0" conaffinity="0" group="5" />
       <geom name="course_buoy_b_red_2_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_red_2_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_red_2_equator_band_03" type="capsule" fromto="0.000 0.056 0.000 -0.040 0.040 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -221,11 +210,12 @@
       <geom name="course_buoy_b_red_2_lower_bolt" type="cylinder" pos="0 0 -0.252" size="0.008 0.010" rgba="0.04 0.04 0.04 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_red_2_lower_jig" type="cylinder" pos="0 0 -0.278" size="0.028 0.010" rgba="0.95 0.95 0.92 1" density="0" contype="0" conaffinity="0" group="0" />
     </body>
-    <body name="course_buoy_b_red_3_float" gravcomp="0" pos="15.1 6.5 0.070">
-      <joint name="course_buoy_b_red_3_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+    <body name="course_buoy_b_red_3_float" gravcomp="0.9993" pos="15.1 6.5 -0.035">
+      <joint name="course_buoy_b_red_3_slide_x" type="slide" axis="1 0 0" damping="0.25" />
+      <joint name="course_buoy_b_red_3_slide_y" type="slide" axis="0 1 0" damping="0.25" />
+      <inertial pos="0 0 0" mass="0.100" diaginertia="0.00016 0.00016 0.00010" />
       <geom name="course_buoy_b_red_3_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.04 0.02 1" density="0" />
-      <geom name="course_buoy_b_red_3_viewer_surface_disc" type="cylinder" pos="0 0 0.070" size="0.780 0.012" rgba="1.00 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
+      <geom name="course_buoy_b_red_3_viewer_surface_disc" type="cylinder" pos="0 0 0.070" size="0.780 0.012" rgba="1.00 0.02 0.02 0.82" density="0" contype="0" conaffinity="0" group="5" />
       <geom name="course_buoy_b_red_3_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_red_3_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_red_3_equator_band_03" type="capsule" fromto="0.000 0.056 0.000 -0.040 0.040 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -243,11 +233,12 @@
       <geom name="course_buoy_b_red_3_lower_bolt" type="cylinder" pos="0 0 -0.252" size="0.008 0.010" rgba="0.04 0.04 0.04 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_red_3_lower_jig" type="cylinder" pos="0 0 -0.278" size="0.028 0.010" rgba="0.95 0.95 0.92 1" density="0" contype="0" conaffinity="0" group="0" />
     </body>
-    <body name="course_buoy_a_red_4_float" gravcomp="0" pos="-9.4 10.7 0.070">
-      <joint name="course_buoy_a_red_4_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+    <body name="course_buoy_a_red_4_float" gravcomp="0.9993" pos="-9.4 10.7 -0.035">
+      <joint name="course_buoy_a_red_4_slide_x" type="slide" axis="1 0 0" damping="0.25" />
+      <joint name="course_buoy_a_red_4_slide_y" type="slide" axis="0 1 0" damping="0.25" />
+      <inertial pos="0 0 0" mass="0.100" diaginertia="0.00016 0.00016 0.00010" />
       <geom name="course_buoy_a_red_4_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.04 0.02 1" density="0" />
-      <geom name="course_buoy_a_red_4_viewer_surface_disc" type="cylinder" pos="0 0 0.070" size="0.780 0.012" rgba="1.00 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
+      <geom name="course_buoy_a_red_4_viewer_surface_disc" type="cylinder" pos="0 0 0.070" size="0.780 0.012" rgba="1.00 0.02 0.02 0.82" density="0" contype="0" conaffinity="0" group="5" />
       <geom name="course_buoy_a_red_4_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_red_4_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_red_4_equator_band_03" type="capsule" fromto="0.000 0.056 0.000 -0.040 0.040 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -265,11 +256,12 @@
       <geom name="course_buoy_a_red_4_lower_bolt" type="cylinder" pos="0 0 -0.252" size="0.008 0.010" rgba="0.04 0.04 0.04 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_red_4_lower_jig" type="cylinder" pos="0 0 -0.278" size="0.028 0.010" rgba="0.95 0.95 0.92 1" density="0" contype="0" conaffinity="0" group="0" />
     </body>
-    <body name="course_buoy_a_red_5_float" gravcomp="0" pos="-3.4 -2.4 0.070">
-      <joint name="course_buoy_a_red_5_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+    <body name="course_buoy_a_red_5_float" gravcomp="0.9993" pos="-3.4 -2.4 -0.035">
+      <joint name="course_buoy_a_red_5_slide_x" type="slide" axis="1 0 0" damping="0.25" />
+      <joint name="course_buoy_a_red_5_slide_y" type="slide" axis="0 1 0" damping="0.25" />
+      <inertial pos="0 0 0" mass="0.100" diaginertia="0.00016 0.00016 0.00010" />
       <geom name="course_buoy_a_red_5_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.04 0.02 1" density="0" />
-      <geom name="course_buoy_a_red_5_viewer_surface_disc" type="cylinder" pos="0 0 0.070" size="0.780 0.012" rgba="1.00 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
+      <geom name="course_buoy_a_red_5_viewer_surface_disc" type="cylinder" pos="0 0 0.070" size="0.780 0.012" rgba="1.00 0.02 0.02 0.82" density="0" contype="0" conaffinity="0" group="5" />
       <geom name="course_buoy_a_red_5_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_red_5_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_red_5_equator_band_03" type="capsule" fromto="0.000 0.056 0.000 -0.040 0.040 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -287,11 +279,12 @@
       <geom name="course_buoy_a_red_5_lower_bolt" type="cylinder" pos="0 0 -0.252" size="0.008 0.010" rgba="0.04 0.04 0.04 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_red_5_lower_jig" type="cylinder" pos="0 0 -0.278" size="0.028 0.010" rgba="0.95 0.95 0.92 1" density="0" contype="0" conaffinity="0" group="0" />
     </body>
-    <body name="course_buoy_b_red_4_float" gravcomp="0" pos="4.5 -7.8 0.070">
-      <joint name="course_buoy_b_red_4_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+    <body name="course_buoy_b_red_4_float" gravcomp="0.9993" pos="4.5 -7.8 -0.035">
+      <joint name="course_buoy_b_red_4_slide_x" type="slide" axis="1 0 0" damping="0.25" />
+      <joint name="course_buoy_b_red_4_slide_y" type="slide" axis="0 1 0" damping="0.25" />
+      <inertial pos="0 0 0" mass="0.100" diaginertia="0.00016 0.00016 0.00010" />
       <geom name="course_buoy_b_red_4_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.04 0.02 1" density="0" />
-      <geom name="course_buoy_b_red_4_viewer_surface_disc" type="cylinder" pos="0 0 0.070" size="0.780 0.012" rgba="1.00 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
+      <geom name="course_buoy_b_red_4_viewer_surface_disc" type="cylinder" pos="0 0 0.070" size="0.780 0.012" rgba="1.00 0.02 0.02 0.82" density="0" contype="0" conaffinity="0" group="5" />
       <geom name="course_buoy_b_red_4_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_red_4_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_red_4_equator_band_03" type="capsule" fromto="0.000 0.056 0.000 -0.040 0.040 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -309,11 +302,12 @@
       <geom name="course_buoy_b_red_4_lower_bolt" type="cylinder" pos="0 0 -0.252" size="0.008 0.010" rgba="0.04 0.04 0.04 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_red_4_lower_jig" type="cylinder" pos="0 0 -0.278" size="0.028 0.010" rgba="0.95 0.95 0.92 1" density="0" contype="0" conaffinity="0" group="0" />
     </body>
-    <body name="course_buoy_b_red_5_float" gravcomp="0" pos="11.8 8.7 0.070">
-      <joint name="course_buoy_b_red_5_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+    <body name="course_buoy_b_red_5_float" gravcomp="0.9993" pos="11.8 8.7 -0.035">
+      <joint name="course_buoy_b_red_5_slide_x" type="slide" axis="1 0 0" damping="0.25" />
+      <joint name="course_buoy_b_red_5_slide_y" type="slide" axis="0 1 0" damping="0.25" />
+      <inertial pos="0 0 0" mass="0.100" diaginertia="0.00016 0.00016 0.00010" />
       <geom name="course_buoy_b_red_5_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.04 0.02 1" density="0" />
-      <geom name="course_buoy_b_red_5_viewer_surface_disc" type="cylinder" pos="0 0 0.070" size="0.780 0.012" rgba="1.00 0.02 0.02 0.00" density="0" contype="0" conaffinity="0" group="5" />
+      <geom name="course_buoy_b_red_5_viewer_surface_disc" type="cylinder" pos="0 0 0.070" size="0.780 0.012" rgba="1.00 0.02 0.02 0.82" density="0" contype="0" conaffinity="0" group="5" />
       <geom name="course_buoy_b_red_5_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_red_5_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_red_5_equator_band_03" type="capsule" fromto="0.000 0.056 0.000 -0.040 0.040 0.000" size="0.0022" rgba="0.55 0.00 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -331,29 +325,18 @@
       <geom name="course_buoy_b_red_5_lower_bolt" type="cylinder" pos="0 0 -0.252" size="0.008 0.010" rgba="0.04 0.04 0.04 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_red_5_lower_jig" type="cylinder" pos="0 0 -0.278" size="0.028 0.010" rgba="0.95 0.95 0.92 1" density="0" contype="0" conaffinity="0" group="0" />
     </body>
-
-    <!-- 노랑/주황 부표: 11m 바닥 추, 흰 PVC, 긴 나일론 로프, 14.7N급 자석 weld에 붙은 부착형 조립체. -->
     <body name="course_buoy_a_yellow_1_magnet_base" pos="-14.4 9.0 -11.000">
       <geom name="course_buoy_a_yellow_1_diver_weight" type="box" pos="0 0 0.020" size="0.160 0.105 0.020" rgba="0.07 0.08 0.09 1" />
       <geom name="course_buoy_a_yellow_1_weight_eye" type="cylinder" pos="0 0 0.060" size="0.022 0.010" rgba="0.90 0.90 0.86 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_1_bottom_jig" type="cylinder" pos="0 0 0.095" size="0.030 0.014" rgba="0.95 0.95 0.92 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_1_pvc_pipe" type="cylinder" pos="0 0 0.300" size="0.0065 0.185" rgba="1 1 1 1" contype="0" conaffinity="0" group="0" />
-      <!-- visual nylon line: segmented, non-colliding rope proxy; not a rigid constraint -->
-
       <geom name="course_buoy_a_yellow_1_nylon_line_seg_01" type="capsule" fromto="0.0000 0.0018 0.081 0.0021 -0.0015 0.373" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_1_nylon_line_seg_02" type="capsule" fromto="0.0021 -0.0015 0.373 -0.0036 0.0008 0.664" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_1_nylon_line_seg_03" type="capsule" fromto="-0.0036 0.0008 0.664 0.0040 0.0002 0.956" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_1_nylon_line_seg_04" type="capsule" fromto="0.0040 0.0002 0.956 -0.0031 -0.0011 1.248" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_1_nylon_line_seg_05" type="capsule" fromto="-0.0031 -0.0011 1.248 0.0012 0.0017 1.540" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_1_nylon_line_seg_06" type="capsule" fromto="0.0012 0.0017 1.540 0.0010 -0.0017 1.832" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_1_nylon_line_seg_07" type="capsule" fromto="0.0010 -0.0017 1.832 -0.0029 0.0012 2.123" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_1_nylon_line_seg_08" type="capsule" fromto="-0.0029 0.0012 2.123 0.0039 -0.0003 2.415" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_1_magnet_lower_plate" type="cylinder" pos="0 0 2.390" size="0.026 0.006" rgba="0.93 0.93 0.90 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_1_magnet" type="cylinder" pos="0 0 2.415" size="0.016 0.008" rgba="0.04 0.04 0.04 1" contype="0" conaffinity="0" group="0" />
@@ -361,7 +344,7 @@
     </body>
     <body name="course_buoy_a_yellow_1_float" gravcomp="0" pos="-14.4 9.0 -8.500">
       <joint name="course_buoy_a_yellow_1_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+      <inertial pos="0 0 0" mass="0.060" diaginertia="0.00013 0.00013 0.00008" />
       <geom name="course_buoy_a_yellow_1_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.95 0.02 1" density="0" />
       <geom name="course_buoy_a_yellow_1_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.95 0.56 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_1_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.95 0.56 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -378,28 +361,18 @@
       <geom name="course_buoy_a_yellow_1_bottom_socket" type="cylinder" pos="0 0 -0.092" size="0.021 0.006" rgba="0.08 0.08 0.08 1" density="0" contype="0" conaffinity="0" group="0" />
       <site name="course_buoy_a_yellow_1_attach_site" pos="0 0 -0.085" size="0.008" rgba="0 0 0 0" />
     </body>
-
     <body name="course_buoy_a_yellow_2_magnet_base" pos="-12.8 -1.3 -11.000">
       <geom name="course_buoy_a_yellow_2_diver_weight" type="box" pos="0 0 0.020" size="0.160 0.105 0.020" rgba="0.07 0.08 0.09 1" />
       <geom name="course_buoy_a_yellow_2_weight_eye" type="cylinder" pos="0 0 0.060" size="0.022 0.010" rgba="0.90 0.90 0.86 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_2_bottom_jig" type="cylinder" pos="0 0 0.095" size="0.030 0.014" rgba="0.95 0.95 0.92 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_2_pvc_pipe" type="cylinder" pos="0 0 0.300" size="0.0065 0.185" rgba="1 1 1 1" contype="0" conaffinity="0" group="0" />
-      <!-- visual nylon line: segmented, non-colliding rope proxy; not a rigid constraint -->
-
       <geom name="course_buoy_a_yellow_2_nylon_line_seg_01" type="capsule" fromto="0.0000 0.0018 0.081 0.0021 -0.0015 0.373" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_2_nylon_line_seg_02" type="capsule" fromto="0.0021 -0.0015 0.373 -0.0036 0.0008 0.664" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_2_nylon_line_seg_03" type="capsule" fromto="-0.0036 0.0008 0.664 0.0040 0.0002 0.956" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_2_nylon_line_seg_04" type="capsule" fromto="0.0040 0.0002 0.956 -0.0031 -0.0011 1.248" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_2_nylon_line_seg_05" type="capsule" fromto="-0.0031 -0.0011 1.248 0.0012 0.0017 1.540" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_2_nylon_line_seg_06" type="capsule" fromto="0.0012 0.0017 1.540 0.0010 -0.0017 1.832" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_2_nylon_line_seg_07" type="capsule" fromto="0.0010 -0.0017 1.832 -0.0029 0.0012 2.123" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_2_nylon_line_seg_08" type="capsule" fromto="-0.0029 0.0012 2.123 0.0039 -0.0003 2.415" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_2_magnet_lower_plate" type="cylinder" pos="0 0 2.390" size="0.026 0.006" rgba="0.93 0.93 0.90 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_2_magnet" type="cylinder" pos="0 0 2.415" size="0.016 0.008" rgba="0.04 0.04 0.04 1" contype="0" conaffinity="0" group="0" />
@@ -407,7 +380,7 @@
     </body>
     <body name="course_buoy_a_yellow_2_float" gravcomp="0" pos="-12.8 -1.3 -8.500">
       <joint name="course_buoy_a_yellow_2_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+      <inertial pos="0 0 0" mass="0.060" diaginertia="0.00013 0.00013 0.00008" />
       <geom name="course_buoy_a_yellow_2_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.95 0.02 1" density="0" />
       <geom name="course_buoy_a_yellow_2_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.95 0.56 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_2_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.95 0.56 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -424,28 +397,18 @@
       <geom name="course_buoy_a_yellow_2_bottom_socket" type="cylinder" pos="0 0 -0.092" size="0.021 0.006" rgba="0.08 0.08 0.08 1" density="0" contype="0" conaffinity="0" group="0" />
       <site name="course_buoy_a_yellow_2_attach_site" pos="0 0 -0.085" size="0.008" rgba="0 0 0 0" />
     </body>
-
     <body name="course_buoy_a_yellow_3_magnet_base" pos="-8.6 4.6 -11.000">
       <geom name="course_buoy_a_yellow_3_diver_weight" type="box" pos="0 0 0.020" size="0.160 0.105 0.020" rgba="0.07 0.08 0.09 1" />
       <geom name="course_buoy_a_yellow_3_weight_eye" type="cylinder" pos="0 0 0.060" size="0.022 0.010" rgba="0.90 0.90 0.86 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_3_bottom_jig" type="cylinder" pos="0 0 0.095" size="0.030 0.014" rgba="0.95 0.95 0.92 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_3_pvc_pipe" type="cylinder" pos="0 0 0.300" size="0.0065 0.185" rgba="1 1 1 1" contype="0" conaffinity="0" group="0" />
-      <!-- visual nylon line: segmented, non-colliding rope proxy; not a rigid constraint -->
-
       <geom name="course_buoy_a_yellow_3_nylon_line_seg_01" type="capsule" fromto="0.0000 0.0018 0.081 0.0021 -0.0015 0.373" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_3_nylon_line_seg_02" type="capsule" fromto="0.0021 -0.0015 0.373 -0.0036 0.0008 0.664" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_3_nylon_line_seg_03" type="capsule" fromto="-0.0036 0.0008 0.664 0.0040 0.0002 0.956" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_3_nylon_line_seg_04" type="capsule" fromto="0.0040 0.0002 0.956 -0.0031 -0.0011 1.248" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_3_nylon_line_seg_05" type="capsule" fromto="-0.0031 -0.0011 1.248 0.0012 0.0017 1.540" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_3_nylon_line_seg_06" type="capsule" fromto="0.0012 0.0017 1.540 0.0010 -0.0017 1.832" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_3_nylon_line_seg_07" type="capsule" fromto="0.0010 -0.0017 1.832 -0.0029 0.0012 2.123" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_3_nylon_line_seg_08" type="capsule" fromto="-0.0029 0.0012 2.123 0.0039 -0.0003 2.415" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_3_magnet_lower_plate" type="cylinder" pos="0 0 2.390" size="0.026 0.006" rgba="0.93 0.93 0.90 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_3_magnet" type="cylinder" pos="0 0 2.415" size="0.016 0.008" rgba="0.04 0.04 0.04 1" contype="0" conaffinity="0" group="0" />
@@ -453,7 +416,7 @@
     </body>
     <body name="course_buoy_a_yellow_3_float" gravcomp="0" pos="-8.6 4.6 -8.500">
       <joint name="course_buoy_a_yellow_3_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+      <inertial pos="0 0 0" mass="0.060" diaginertia="0.00013 0.00013 0.00008" />
       <geom name="course_buoy_a_yellow_3_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.95 0.02 1" density="0" />
       <geom name="course_buoy_a_yellow_3_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.95 0.56 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_3_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.95 0.56 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -470,28 +433,18 @@
       <geom name="course_buoy_a_yellow_3_bottom_socket" type="cylinder" pos="0 0 -0.092" size="0.021 0.006" rgba="0.08 0.08 0.08 1" density="0" contype="0" conaffinity="0" group="0" />
       <site name="course_buoy_a_yellow_3_attach_site" pos="0 0 -0.085" size="0.008" rgba="0 0 0 0" />
     </body>
-
     <body name="course_buoy_a_yellow_4_magnet_base" pos="-10.2 -9.1 -11.000">
       <geom name="course_buoy_a_yellow_4_diver_weight" type="box" pos="0 0 0.020" size="0.160 0.105 0.020" rgba="0.07 0.08 0.09 1" />
       <geom name="course_buoy_a_yellow_4_weight_eye" type="cylinder" pos="0 0 0.060" size="0.022 0.010" rgba="0.90 0.90 0.86 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_4_bottom_jig" type="cylinder" pos="0 0 0.095" size="0.030 0.014" rgba="0.95 0.95 0.92 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_4_pvc_pipe" type="cylinder" pos="0 0 0.300" size="0.0065 0.185" rgba="1 1 1 1" contype="0" conaffinity="0" group="0" />
-      <!-- visual nylon line: segmented, non-colliding rope proxy; not a rigid constraint -->
-
       <geom name="course_buoy_a_yellow_4_nylon_line_seg_01" type="capsule" fromto="0.0000 0.0018 0.081 0.0021 -0.0015 0.373" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_4_nylon_line_seg_02" type="capsule" fromto="0.0021 -0.0015 0.373 -0.0036 0.0008 0.664" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_4_nylon_line_seg_03" type="capsule" fromto="-0.0036 0.0008 0.664 0.0040 0.0002 0.956" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_4_nylon_line_seg_04" type="capsule" fromto="0.0040 0.0002 0.956 -0.0031 -0.0011 1.248" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_4_nylon_line_seg_05" type="capsule" fromto="-0.0031 -0.0011 1.248 0.0012 0.0017 1.540" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_4_nylon_line_seg_06" type="capsule" fromto="0.0012 0.0017 1.540 0.0010 -0.0017 1.832" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_4_nylon_line_seg_07" type="capsule" fromto="0.0010 -0.0017 1.832 -0.0029 0.0012 2.123" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_4_nylon_line_seg_08" type="capsule" fromto="-0.0029 0.0012 2.123 0.0039 -0.0003 2.415" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_4_magnet_lower_plate" type="cylinder" pos="0 0 2.390" size="0.026 0.006" rgba="0.93 0.93 0.90 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_4_magnet" type="cylinder" pos="0 0 2.415" size="0.016 0.008" rgba="0.04 0.04 0.04 1" contype="0" conaffinity="0" group="0" />
@@ -499,7 +452,7 @@
     </body>
     <body name="course_buoy_a_yellow_4_float" gravcomp="0" pos="-10.2 -9.1 -8.500">
       <joint name="course_buoy_a_yellow_4_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+      <inertial pos="0 0 0" mass="0.060" diaginertia="0.00013 0.00013 0.00008" />
       <geom name="course_buoy_a_yellow_4_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.95 0.02 1" density="0" />
       <geom name="course_buoy_a_yellow_4_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.95 0.56 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_4_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.95 0.56 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -521,22 +474,13 @@
       <geom name="course_buoy_a_yellow_5_weight_eye" type="cylinder" pos="0 0 0.060" size="0.022 0.010" rgba="0.90 0.90 0.86 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_5_bottom_jig" type="cylinder" pos="0 0 0.095" size="0.030 0.014" rgba="0.95 0.95 0.92 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_5_pvc_pipe" type="cylinder" pos="0 0 0.300" size="0.0065 0.185" rgba="1 1 1 1" contype="0" conaffinity="0" group="0" />
-      <!-- visual nylon line: segmented, non-colliding rope proxy; not a rigid constraint -->
-
       <geom name="course_buoy_a_yellow_5_nylon_line_seg_01" type="capsule" fromto="0.0000 0.0018 0.081 0.0021 -0.0015 0.373" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_5_nylon_line_seg_02" type="capsule" fromto="0.0021 -0.0015 0.373 -0.0036 0.0008 0.664" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_5_nylon_line_seg_03" type="capsule" fromto="-0.0036 0.0008 0.664 0.0040 0.0002 0.956" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_5_nylon_line_seg_04" type="capsule" fromto="0.0040 0.0002 0.956 -0.0031 -0.0011 1.248" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_5_nylon_line_seg_05" type="capsule" fromto="-0.0031 -0.0011 1.248 0.0012 0.0017 1.540" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_5_nylon_line_seg_06" type="capsule" fromto="0.0012 0.0017 1.540 0.0010 -0.0017 1.832" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_5_nylon_line_seg_07" type="capsule" fromto="0.0010 -0.0017 1.832 -0.0029 0.0012 2.123" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_yellow_5_nylon_line_seg_08" type="capsule" fromto="-0.0029 0.0012 2.123 0.0039 -0.0003 2.415" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_5_magnet_lower_plate" type="cylinder" pos="0 0 2.390" size="0.026 0.006" rgba="0.93 0.93 0.90 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_5_magnet" type="cylinder" pos="0 0 2.415" size="0.016 0.008" rgba="0.04 0.04 0.04 1" contype="0" conaffinity="0" group="0" />
@@ -544,7 +488,7 @@
     </body>
     <body name="course_buoy_a_yellow_5_float" gravcomp="0" pos="-5.1 1.0 -8.500">
       <joint name="course_buoy_a_yellow_5_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+      <inertial pos="0 0 0" mass="0.060" diaginertia="0.00013 0.00013 0.00008" />
       <geom name="course_buoy_a_yellow_5_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.95 0.02 1" density="0" />
       <geom name="course_buoy_a_yellow_5_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.95 0.56 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_yellow_5_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.95 0.56 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -566,22 +510,13 @@
       <geom name="course_buoy_a_orange_1_weight_eye" type="cylinder" pos="0 0 0.060" size="0.022 0.010" rgba="0.90 0.90 0.86 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_orange_1_bottom_jig" type="cylinder" pos="0 0 0.095" size="0.030 0.014" rgba="0.95 0.95 0.92 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_orange_1_pvc_pipe" type="cylinder" pos="0 0 0.300" size="0.0065 0.185" rgba="1 1 1 1" contype="0" conaffinity="0" group="0" />
-      <!-- visual nylon line: segmented, non-colliding rope proxy; not a rigid constraint -->
-
       <geom name="course_buoy_a_orange_1_nylon_line_seg_01" type="capsule" fromto="0.0000 0.0018 0.081 0.0021 -0.0015 0.373" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_orange_1_nylon_line_seg_02" type="capsule" fromto="0.0021 -0.0015 0.373 -0.0036 0.0008 0.664" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_orange_1_nylon_line_seg_03" type="capsule" fromto="-0.0036 0.0008 0.664 0.0040 0.0002 0.956" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_orange_1_nylon_line_seg_04" type="capsule" fromto="0.0040 0.0002 0.956 -0.0031 -0.0011 1.248" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_orange_1_nylon_line_seg_05" type="capsule" fromto="-0.0031 -0.0011 1.248 0.0012 0.0017 1.540" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_orange_1_nylon_line_seg_06" type="capsule" fromto="0.0012 0.0017 1.540 0.0010 -0.0017 1.832" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_orange_1_nylon_line_seg_07" type="capsule" fromto="0.0010 -0.0017 1.832 -0.0029 0.0012 2.123" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_orange_1_nylon_line_seg_08" type="capsule" fromto="-0.0029 0.0012 2.123 0.0039 -0.0003 2.415" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_orange_1_magnet_lower_plate" type="cylinder" pos="0 0 2.390" size="0.026 0.006" rgba="0.93 0.93 0.90 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_orange_1_magnet" type="cylinder" pos="0 0 2.415" size="0.016 0.008" rgba="0.04 0.04 0.04 1" contype="0" conaffinity="0" group="0" />
@@ -589,7 +524,7 @@
     </body>
     <body name="course_buoy_a_orange_1_float" gravcomp="0" pos="-4.0 4.9 -8.500">
       <joint name="course_buoy_a_orange_1_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+      <inertial pos="0 0 0" mass="0.060" diaginertia="0.00013 0.00013 0.00008" />
       <geom name="course_buoy_a_orange_1_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.62 0.02 1" density="0" />
       <geom name="course_buoy_a_orange_1_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.95 0.35 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_orange_1_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.95 0.35 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -606,28 +541,18 @@
       <geom name="course_buoy_a_orange_1_bottom_socket" type="cylinder" pos="0 0 -0.092" size="0.021 0.006" rgba="0.08 0.08 0.08 1" density="0" contype="0" conaffinity="0" group="0" />
       <site name="course_buoy_a_orange_1_attach_site" pos="0 0 -0.085" size="0.008" rgba="0 0 0 0" />
     </body>
-
     <body name="course_buoy_a_orange_2_magnet_base" pos="-1.8 -6.5 -11.000">
       <geom name="course_buoy_a_orange_2_diver_weight" type="box" pos="0 0 0.020" size="0.160 0.105 0.020" rgba="0.07 0.08 0.09 1" />
       <geom name="course_buoy_a_orange_2_weight_eye" type="cylinder" pos="0 0 0.060" size="0.022 0.010" rgba="0.90 0.90 0.86 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_orange_2_bottom_jig" type="cylinder" pos="0 0 0.095" size="0.030 0.014" rgba="0.95 0.95 0.92 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_orange_2_pvc_pipe" type="cylinder" pos="0 0 0.300" size="0.0065 0.185" rgba="1 1 1 1" contype="0" conaffinity="0" group="0" />
-      <!-- visual nylon line: segmented, non-colliding rope proxy; not a rigid constraint -->
-
       <geom name="course_buoy_a_orange_2_nylon_line_seg_01" type="capsule" fromto="0.0000 0.0018 0.081 0.0021 -0.0015 0.373" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_orange_2_nylon_line_seg_02" type="capsule" fromto="0.0021 -0.0015 0.373 -0.0036 0.0008 0.664" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_orange_2_nylon_line_seg_03" type="capsule" fromto="-0.0036 0.0008 0.664 0.0040 0.0002 0.956" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_orange_2_nylon_line_seg_04" type="capsule" fromto="0.0040 0.0002 0.956 -0.0031 -0.0011 1.248" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_orange_2_nylon_line_seg_05" type="capsule" fromto="-0.0031 -0.0011 1.248 0.0012 0.0017 1.540" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_orange_2_nylon_line_seg_06" type="capsule" fromto="0.0012 0.0017 1.540 0.0010 -0.0017 1.832" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_orange_2_nylon_line_seg_07" type="capsule" fromto="0.0010 -0.0017 1.832 -0.0029 0.0012 2.123" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_a_orange_2_nylon_line_seg_08" type="capsule" fromto="-0.0029 0.0012 2.123 0.0039 -0.0003 2.415" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_orange_2_magnet_lower_plate" type="cylinder" pos="0 0 2.390" size="0.026 0.006" rgba="0.93 0.93 0.90 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_orange_2_magnet" type="cylinder" pos="0 0 2.415" size="0.016 0.008" rgba="0.04 0.04 0.04 1" contype="0" conaffinity="0" group="0" />
@@ -635,7 +560,7 @@
     </body>
     <body name="course_buoy_a_orange_2_float" gravcomp="0" pos="-1.8 -6.5 -8.500">
       <joint name="course_buoy_a_orange_2_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+      <inertial pos="0 0 0" mass="0.060" diaginertia="0.00013 0.00013 0.00008" />
       <geom name="course_buoy_a_orange_2_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.62 0.02 1" density="0" />
       <geom name="course_buoy_a_orange_2_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.95 0.35 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_orange_2_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.95 0.35 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -652,28 +577,18 @@
       <geom name="course_buoy_a_orange_2_bottom_socket" type="cylinder" pos="0 0 -0.092" size="0.021 0.006" rgba="0.08 0.08 0.08 1" density="0" contype="0" conaffinity="0" group="0" />
       <site name="course_buoy_a_orange_2_attach_site" pos="0 0 -0.085" size="0.008" rgba="0 0 0 0" />
     </body>
-
     <body name="course_buoy_b_orange_1_magnet_base" pos="3.7 5.0 -11.000">
       <geom name="course_buoy_b_orange_1_diver_weight" type="box" pos="0 0 0.020" size="0.160 0.105 0.020" rgba="0.07 0.08 0.09 1" />
       <geom name="course_buoy_b_orange_1_weight_eye" type="cylinder" pos="0 0 0.060" size="0.022 0.010" rgba="0.90 0.90 0.86 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_orange_1_bottom_jig" type="cylinder" pos="0 0 0.095" size="0.030 0.014" rgba="0.95 0.95 0.92 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_orange_1_pvc_pipe" type="cylinder" pos="0 0 0.300" size="0.0065 0.185" rgba="1 1 1 1" contype="0" conaffinity="0" group="0" />
-      <!-- visual nylon line: segmented, non-colliding rope proxy; not a rigid constraint -->
-
       <geom name="course_buoy_b_orange_1_nylon_line_seg_01" type="capsule" fromto="0.0000 0.0018 0.081 0.0021 -0.0015 0.373" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_orange_1_nylon_line_seg_02" type="capsule" fromto="0.0021 -0.0015 0.373 -0.0036 0.0008 0.664" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_orange_1_nylon_line_seg_03" type="capsule" fromto="-0.0036 0.0008 0.664 0.0040 0.0002 0.956" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_orange_1_nylon_line_seg_04" type="capsule" fromto="0.0040 0.0002 0.956 -0.0031 -0.0011 1.248" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_orange_1_nylon_line_seg_05" type="capsule" fromto="-0.0031 -0.0011 1.248 0.0012 0.0017 1.540" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_orange_1_nylon_line_seg_06" type="capsule" fromto="0.0012 0.0017 1.540 0.0010 -0.0017 1.832" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_orange_1_nylon_line_seg_07" type="capsule" fromto="0.0010 -0.0017 1.832 -0.0029 0.0012 2.123" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_orange_1_nylon_line_seg_08" type="capsule" fromto="-0.0029 0.0012 2.123 0.0039 -0.0003 2.415" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_orange_1_magnet_lower_plate" type="cylinder" pos="0 0 2.390" size="0.026 0.006" rgba="0.93 0.93 0.90 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_orange_1_magnet" type="cylinder" pos="0 0 2.415" size="0.016 0.008" rgba="0.04 0.04 0.04 1" contype="0" conaffinity="0" group="0" />
@@ -681,7 +596,7 @@
     </body>
     <body name="course_buoy_b_orange_1_float" gravcomp="0" pos="3.7 5.0 -8.500">
       <joint name="course_buoy_b_orange_1_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+      <inertial pos="0 0 0" mass="0.060" diaginertia="0.00013 0.00013 0.00008" />
       <geom name="course_buoy_b_orange_1_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.62 0.02 1" density="0" />
       <geom name="course_buoy_b_orange_1_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.95 0.35 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_orange_1_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.95 0.35 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -698,28 +613,18 @@
       <geom name="course_buoy_b_orange_1_bottom_socket" type="cylinder" pos="0 0 -0.092" size="0.021 0.006" rgba="0.08 0.08 0.08 1" density="0" contype="0" conaffinity="0" group="0" />
       <site name="course_buoy_b_orange_1_attach_site" pos="0 0 -0.085" size="0.008" rgba="0 0 0 0" />
     </body>
-
     <body name="course_buoy_b_orange_2_magnet_base" pos="6.0 -5.9 -11.000">
       <geom name="course_buoy_b_orange_2_diver_weight" type="box" pos="0 0 0.020" size="0.160 0.105 0.020" rgba="0.07 0.08 0.09 1" />
       <geom name="course_buoy_b_orange_2_weight_eye" type="cylinder" pos="0 0 0.060" size="0.022 0.010" rgba="0.90 0.90 0.86 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_orange_2_bottom_jig" type="cylinder" pos="0 0 0.095" size="0.030 0.014" rgba="0.95 0.95 0.92 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_orange_2_pvc_pipe" type="cylinder" pos="0 0 0.300" size="0.0065 0.185" rgba="1 1 1 1" contype="0" conaffinity="0" group="0" />
-      <!-- visual nylon line: segmented, non-colliding rope proxy; not a rigid constraint -->
-
       <geom name="course_buoy_b_orange_2_nylon_line_seg_01" type="capsule" fromto="0.0000 0.0018 0.081 0.0021 -0.0015 0.373" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_orange_2_nylon_line_seg_02" type="capsule" fromto="0.0021 -0.0015 0.373 -0.0036 0.0008 0.664" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_orange_2_nylon_line_seg_03" type="capsule" fromto="-0.0036 0.0008 0.664 0.0040 0.0002 0.956" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_orange_2_nylon_line_seg_04" type="capsule" fromto="0.0040 0.0002 0.956 -0.0031 -0.0011 1.248" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_orange_2_nylon_line_seg_05" type="capsule" fromto="-0.0031 -0.0011 1.248 0.0012 0.0017 1.540" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_orange_2_nylon_line_seg_06" type="capsule" fromto="0.0012 0.0017 1.540 0.0010 -0.0017 1.832" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_orange_2_nylon_line_seg_07" type="capsule" fromto="0.0010 -0.0017 1.832 -0.0029 0.0012 2.123" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_orange_2_nylon_line_seg_08" type="capsule" fromto="-0.0029 0.0012 2.123 0.0039 -0.0003 2.415" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_orange_2_magnet_lower_plate" type="cylinder" pos="0 0 2.390" size="0.026 0.006" rgba="0.93 0.93 0.90 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_orange_2_magnet" type="cylinder" pos="0 0 2.415" size="0.016 0.008" rgba="0.04 0.04 0.04 1" contype="0" conaffinity="0" group="0" />
@@ -727,7 +632,7 @@
     </body>
     <body name="course_buoy_b_orange_2_float" gravcomp="0" pos="6.0 -5.9 -8.500">
       <joint name="course_buoy_b_orange_2_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+      <inertial pos="0 0 0" mass="0.060" diaginertia="0.00013 0.00013 0.00008" />
       <geom name="course_buoy_b_orange_2_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.62 0.02 1" density="0" />
       <geom name="course_buoy_b_orange_2_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.95 0.35 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_orange_2_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.95 0.35 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -744,28 +649,18 @@
       <geom name="course_buoy_b_orange_2_bottom_socket" type="cylinder" pos="0 0 -0.092" size="0.021 0.006" rgba="0.08 0.08 0.08 1" density="0" contype="0" conaffinity="0" group="0" />
       <site name="course_buoy_b_orange_2_attach_site" pos="0 0 -0.085" size="0.008" rgba="0 0 0 0" />
     </body>
-
     <body name="course_buoy_b_yellow_1_magnet_base" pos="7.6 6.5 -11.000">
       <geom name="course_buoy_b_yellow_1_diver_weight" type="box" pos="0 0 0.020" size="0.160 0.105 0.020" rgba="0.07 0.08 0.09 1" />
       <geom name="course_buoy_b_yellow_1_weight_eye" type="cylinder" pos="0 0 0.060" size="0.022 0.010" rgba="0.90 0.90 0.86 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_1_bottom_jig" type="cylinder" pos="0 0 0.095" size="0.030 0.014" rgba="0.95 0.95 0.92 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_1_pvc_pipe" type="cylinder" pos="0 0 0.300" size="0.0065 0.185" rgba="1 1 1 1" contype="0" conaffinity="0" group="0" />
-      <!-- visual nylon line: segmented, non-colliding rope proxy; not a rigid constraint -->
-
       <geom name="course_buoy_b_yellow_1_nylon_line_seg_01" type="capsule" fromto="0.0000 0.0018 0.081 0.0021 -0.0015 0.373" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_1_nylon_line_seg_02" type="capsule" fromto="0.0021 -0.0015 0.373 -0.0036 0.0008 0.664" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_1_nylon_line_seg_03" type="capsule" fromto="-0.0036 0.0008 0.664 0.0040 0.0002 0.956" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_1_nylon_line_seg_04" type="capsule" fromto="0.0040 0.0002 0.956 -0.0031 -0.0011 1.248" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_1_nylon_line_seg_05" type="capsule" fromto="-0.0031 -0.0011 1.248 0.0012 0.0017 1.540" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_1_nylon_line_seg_06" type="capsule" fromto="0.0012 0.0017 1.540 0.0010 -0.0017 1.832" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_1_nylon_line_seg_07" type="capsule" fromto="0.0010 -0.0017 1.832 -0.0029 0.0012 2.123" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_1_nylon_line_seg_08" type="capsule" fromto="-0.0029 0.0012 2.123 0.0039 -0.0003 2.415" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_1_magnet_lower_plate" type="cylinder" pos="0 0 2.390" size="0.026 0.006" rgba="0.93 0.93 0.90 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_1_magnet" type="cylinder" pos="0 0 2.415" size="0.016 0.008" rgba="0.04 0.04 0.04 1" contype="0" conaffinity="0" group="0" />
@@ -773,7 +668,7 @@
     </body>
     <body name="course_buoy_b_yellow_1_float" gravcomp="0" pos="7.6 6.5 -8.500">
       <joint name="course_buoy_b_yellow_1_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+      <inertial pos="0 0 0" mass="0.060" diaginertia="0.00013 0.00013 0.00008" />
       <geom name="course_buoy_b_yellow_1_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.95 0.02 1" density="0" />
       <geom name="course_buoy_b_yellow_1_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.95 0.56 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_1_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.95 0.56 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -790,28 +685,18 @@
       <geom name="course_buoy_b_yellow_1_bottom_socket" type="cylinder" pos="0 0 -0.092" size="0.021 0.006" rgba="0.08 0.08 0.08 1" density="0" contype="0" conaffinity="0" group="0" />
       <site name="course_buoy_b_yellow_1_attach_site" pos="0 0 -0.085" size="0.008" rgba="0 0 0 0" />
     </body>
-
     <body name="course_buoy_b_yellow_2_magnet_base" pos="10.4 -1.3 -11.000">
       <geom name="course_buoy_b_yellow_2_diver_weight" type="box" pos="0 0 0.020" size="0.160 0.105 0.020" rgba="0.07 0.08 0.09 1" />
       <geom name="course_buoy_b_yellow_2_weight_eye" type="cylinder" pos="0 0 0.060" size="0.022 0.010" rgba="0.90 0.90 0.86 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_2_bottom_jig" type="cylinder" pos="0 0 0.095" size="0.030 0.014" rgba="0.95 0.95 0.92 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_2_pvc_pipe" type="cylinder" pos="0 0 0.300" size="0.0065 0.185" rgba="1 1 1 1" contype="0" conaffinity="0" group="0" />
-      <!-- visual nylon line: segmented, non-colliding rope proxy; not a rigid constraint -->
-
       <geom name="course_buoy_b_yellow_2_nylon_line_seg_01" type="capsule" fromto="0.0000 0.0018 0.081 0.0021 -0.0015 0.373" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_2_nylon_line_seg_02" type="capsule" fromto="0.0021 -0.0015 0.373 -0.0036 0.0008 0.664" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_2_nylon_line_seg_03" type="capsule" fromto="-0.0036 0.0008 0.664 0.0040 0.0002 0.956" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_2_nylon_line_seg_04" type="capsule" fromto="0.0040 0.0002 0.956 -0.0031 -0.0011 1.248" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_2_nylon_line_seg_05" type="capsule" fromto="-0.0031 -0.0011 1.248 0.0012 0.0017 1.540" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_2_nylon_line_seg_06" type="capsule" fromto="0.0012 0.0017 1.540 0.0010 -0.0017 1.832" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_2_nylon_line_seg_07" type="capsule" fromto="0.0010 -0.0017 1.832 -0.0029 0.0012 2.123" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_2_nylon_line_seg_08" type="capsule" fromto="-0.0029 0.0012 2.123 0.0039 -0.0003 2.415" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_2_magnet_lower_plate" type="cylinder" pos="0 0 2.390" size="0.026 0.006" rgba="0.93 0.93 0.90 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_2_magnet" type="cylinder" pos="0 0 2.415" size="0.016 0.008" rgba="0.04 0.04 0.04 1" contype="0" conaffinity="0" group="0" />
@@ -819,7 +704,7 @@
     </body>
     <body name="course_buoy_b_yellow_2_float" gravcomp="0" pos="10.4 -1.3 -8.500">
       <joint name="course_buoy_b_yellow_2_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+      <inertial pos="0 0 0" mass="0.060" diaginertia="0.00013 0.00013 0.00008" />
       <geom name="course_buoy_b_yellow_2_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.95 0.02 1" density="0" />
       <geom name="course_buoy_b_yellow_2_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.95 0.56 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_2_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.95 0.56 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -836,28 +721,18 @@
       <geom name="course_buoy_b_yellow_2_bottom_socket" type="cylinder" pos="0 0 -0.092" size="0.021 0.006" rgba="0.08 0.08 0.08 1" density="0" contype="0" conaffinity="0" group="0" />
       <site name="course_buoy_b_yellow_2_attach_site" pos="0 0 -0.085" size="0.008" rgba="0 0 0 0" />
     </body>
-
     <body name="course_buoy_b_yellow_3_magnet_base" pos="13.3 -7.2 -11.000">
       <geom name="course_buoy_b_yellow_3_diver_weight" type="box" pos="0 0 0.020" size="0.160 0.105 0.020" rgba="0.07 0.08 0.09 1" />
       <geom name="course_buoy_b_yellow_3_weight_eye" type="cylinder" pos="0 0 0.060" size="0.022 0.010" rgba="0.90 0.90 0.86 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_3_bottom_jig" type="cylinder" pos="0 0 0.095" size="0.030 0.014" rgba="0.95 0.95 0.92 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_3_pvc_pipe" type="cylinder" pos="0 0 0.300" size="0.0065 0.185" rgba="1 1 1 1" contype="0" conaffinity="0" group="0" />
-      <!-- visual nylon line: segmented, non-colliding rope proxy; not a rigid constraint -->
-
       <geom name="course_buoy_b_yellow_3_nylon_line_seg_01" type="capsule" fromto="0.0000 0.0018 0.081 0.0021 -0.0015 0.373" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_3_nylon_line_seg_02" type="capsule" fromto="0.0021 -0.0015 0.373 -0.0036 0.0008 0.664" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_3_nylon_line_seg_03" type="capsule" fromto="-0.0036 0.0008 0.664 0.0040 0.0002 0.956" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_3_nylon_line_seg_04" type="capsule" fromto="0.0040 0.0002 0.956 -0.0031 -0.0011 1.248" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_3_nylon_line_seg_05" type="capsule" fromto="-0.0031 -0.0011 1.248 0.0012 0.0017 1.540" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_3_nylon_line_seg_06" type="capsule" fromto="0.0012 0.0017 1.540 0.0010 -0.0017 1.832" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_3_nylon_line_seg_07" type="capsule" fromto="0.0010 -0.0017 1.832 -0.0029 0.0012 2.123" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_3_nylon_line_seg_08" type="capsule" fromto="-0.0029 0.0012 2.123 0.0039 -0.0003 2.415" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_3_magnet_lower_plate" type="cylinder" pos="0 0 2.390" size="0.026 0.006" rgba="0.93 0.93 0.90 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_3_magnet" type="cylinder" pos="0 0 2.415" size="0.016 0.008" rgba="0.04 0.04 0.04 1" contype="0" conaffinity="0" group="0" />
@@ -865,7 +740,7 @@
     </body>
     <body name="course_buoy_b_yellow_3_float" gravcomp="0" pos="13.3 -7.2 -8.500">
       <joint name="course_buoy_b_yellow_3_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+      <inertial pos="0 0 0" mass="0.060" diaginertia="0.00013 0.00013 0.00008" />
       <geom name="course_buoy_b_yellow_3_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.95 0.02 1" density="0" />
       <geom name="course_buoy_b_yellow_3_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.95 0.56 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_3_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.95 0.56 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -882,29 +757,18 @@
       <geom name="course_buoy_b_yellow_3_bottom_socket" type="cylinder" pos="0 0 -0.092" size="0.021 0.006" rgba="0.08 0.08 0.08 1" density="0" contype="0" conaffinity="0" group="0" />
       <site name="course_buoy_b_yellow_3_attach_site" pos="0 0 -0.085" size="0.008" rgba="0 0 0 0" />
     </body>
-
-    <!-- 핑거 부착 부표: hydrophone 없이 흰색 부표와 파란 핑거 실린더만 시각화하고 자석 weld로 바닥에 붙인다. -->
     <body name="course_buoy_b_yellow_4_magnet_base" pos="4.8 9.2 -11.000">
       <geom name="course_buoy_b_yellow_4_diver_weight" type="box" pos="0 0 0.020" size="0.160 0.105 0.020" rgba="0.07 0.08 0.09 1" />
       <geom name="course_buoy_b_yellow_4_weight_eye" type="cylinder" pos="0 0 0.060" size="0.022 0.010" rgba="0.90 0.90 0.86 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_4_bottom_jig" type="cylinder" pos="0 0 0.095" size="0.030 0.014" rgba="0.95 0.95 0.92 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_4_pvc_pipe" type="cylinder" pos="0 0 0.300" size="0.0065 0.185" rgba="1 1 1 1" contype="0" conaffinity="0" group="0" />
-      <!-- visual nylon line: segmented, non-colliding rope proxy; not a rigid constraint -->
-
       <geom name="course_buoy_b_yellow_4_nylon_line_seg_01" type="capsule" fromto="0.0000 0.0018 0.081 0.0021 -0.0015 0.373" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_4_nylon_line_seg_02" type="capsule" fromto="0.0021 -0.0015 0.373 -0.0036 0.0008 0.664" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_4_nylon_line_seg_03" type="capsule" fromto="-0.0036 0.0008 0.664 0.0040 0.0002 0.956" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_4_nylon_line_seg_04" type="capsule" fromto="0.0040 0.0002 0.956 -0.0031 -0.0011 1.248" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_4_nylon_line_seg_05" type="capsule" fromto="-0.0031 -0.0011 1.248 0.0012 0.0017 1.540" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_4_nylon_line_seg_06" type="capsule" fromto="0.0012 0.0017 1.540 0.0010 -0.0017 1.832" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_4_nylon_line_seg_07" type="capsule" fromto="0.0010 -0.0017 1.832 -0.0029 0.0012 2.123" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_4_nylon_line_seg_08" type="capsule" fromto="-0.0029 0.0012 2.123 0.0039 -0.0003 2.415" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_4_magnet_lower_plate" type="cylinder" pos="0 0 2.390" size="0.026 0.006" rgba="0.93 0.93 0.90 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_4_magnet" type="cylinder" pos="0 0 2.415" size="0.016 0.008" rgba="0.04 0.04 0.04 1" contype="0" conaffinity="0" group="0" />
@@ -912,7 +776,7 @@
     </body>
     <body name="course_buoy_b_yellow_4_float" gravcomp="0" pos="4.8 9.2 -8.500">
       <joint name="course_buoy_b_yellow_4_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+      <inertial pos="0 0 0" mass="0.060" diaginertia="0.00013 0.00013 0.00008" />
       <geom name="course_buoy_b_yellow_4_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.95 0.02 1" density="0" />
       <geom name="course_buoy_b_yellow_4_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.95 0.56 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_4_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.95 0.56 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -934,22 +798,13 @@
       <geom name="course_buoy_b_yellow_5_weight_eye" type="cylinder" pos="0 0 0.060" size="0.022 0.010" rgba="0.90 0.90 0.86 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_5_bottom_jig" type="cylinder" pos="0 0 0.095" size="0.030 0.014" rgba="0.95 0.95 0.92 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_5_pvc_pipe" type="cylinder" pos="0 0 0.300" size="0.0065 0.185" rgba="1 1 1 1" contype="0" conaffinity="0" group="0" />
-      <!-- visual nylon line: segmented, non-colliding rope proxy; not a rigid constraint -->
-
       <geom name="course_buoy_b_yellow_5_nylon_line_seg_01" type="capsule" fromto="0.0000 0.0018 0.081 0.0021 -0.0015 0.373" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_5_nylon_line_seg_02" type="capsule" fromto="0.0021 -0.0015 0.373 -0.0036 0.0008 0.664" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_5_nylon_line_seg_03" type="capsule" fromto="-0.0036 0.0008 0.664 0.0040 0.0002 0.956" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_5_nylon_line_seg_04" type="capsule" fromto="0.0040 0.0002 0.956 -0.0031 -0.0011 1.248" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_5_nylon_line_seg_05" type="capsule" fromto="-0.0031 -0.0011 1.248 0.0012 0.0017 1.540" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_5_nylon_line_seg_06" type="capsule" fromto="0.0012 0.0017 1.540 0.0010 -0.0017 1.832" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_5_nylon_line_seg_07" type="capsule" fromto="0.0010 -0.0017 1.832 -0.0029 0.0012 2.123" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_b_yellow_5_nylon_line_seg_08" type="capsule" fromto="-0.0029 0.0012 2.123 0.0039 -0.0003 2.415" size="0.0020" rgba="0.82 0.82 0.76 0.72" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_5_magnet_lower_plate" type="cylinder" pos="0 0 2.390" size="0.026 0.006" rgba="0.93 0.93 0.90 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_5_magnet" type="cylinder" pos="0 0 2.415" size="0.016 0.008" rgba="0.04 0.04 0.04 1" contype="0" conaffinity="0" group="0" />
@@ -957,7 +812,7 @@
     </body>
     <body name="course_buoy_b_yellow_5_float" gravcomp="0" pos="15.0 2.1 -8.500">
       <joint name="course_buoy_b_yellow_5_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+      <inertial pos="0 0 0" mass="0.060" diaginertia="0.00013 0.00013 0.00008" />
       <geom name="course_buoy_b_yellow_5_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.95 0.02 1" density="0" />
       <geom name="course_buoy_b_yellow_5_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.95 0.56 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_yellow_5_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.95 0.56 0.00 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -979,22 +834,13 @@
       <geom name="course_buoy_pinger_white_1_weight_eye" type="cylinder" pos="0 0 0.060" size="0.022 0.010" rgba="0.90 0.90 0.86 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_pinger_white_1_bottom_jig" type="cylinder" pos="0 0 0.095" size="0.030 0.014" rgba="0.95 0.95 0.92 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_pinger_white_1_pvc_pipe" type="cylinder" pos="0 0 0.300" size="0.0065 0.185" rgba="1 1 1 1" contype="0" conaffinity="0" group="0" />
-      <!-- visual nylon line: segmented, non-colliding rope proxy; not a rigid constraint -->
-
       <geom name="course_buoy_pinger_white_1_nylon_line_seg_01" type="capsule" fromto="0.0000 0.0018 0.080 0.0021 -0.0015 0.337" size="0.0020" rgba="0.78 0.78 0.73 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_pinger_white_1_nylon_line_seg_02" type="capsule" fromto="0.0021 -0.0015 0.337 -0.0036 0.0008 0.594" size="0.0020" rgba="0.78 0.78 0.73 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_pinger_white_1_nylon_line_seg_03" type="capsule" fromto="-0.0036 0.0008 0.594 0.0040 0.0002 0.850" size="0.0020" rgba="0.78 0.78 0.73 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_pinger_white_1_nylon_line_seg_04" type="capsule" fromto="0.0040 0.0002 0.850 -0.0031 -0.0011 1.107" size="0.0020" rgba="0.78 0.78 0.73 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_pinger_white_1_nylon_line_seg_05" type="capsule" fromto="-0.0031 -0.0011 1.107 0.0012 0.0017 1.364" size="0.0020" rgba="0.78 0.78 0.73 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_pinger_white_1_nylon_line_seg_06" type="capsule" fromto="0.0012 0.0017 1.364 0.0010 -0.0017 1.620" size="0.0020" rgba="0.78 0.78 0.73 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_pinger_white_1_nylon_line_seg_07" type="capsule" fromto="0.0010 -0.0017 1.620 -0.0029 0.0012 1.877" size="0.0020" rgba="0.78 0.78 0.73 0.72" contype="0" conaffinity="0" group="0" />
-
       <geom name="course_buoy_pinger_white_1_nylon_line_seg_08" type="capsule" fromto="-0.0029 0.0012 1.877 0.0039 -0.0003 2.134" size="0.0020" rgba="0.78 0.78 0.73 0.72" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_pinger_white_1_magnet_lower_plate" type="cylinder" pos="0 0 2.110" size="0.026 0.006" rgba="0.93 0.93 0.90 1" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_pinger_white_1_magnet" type="cylinder" pos="0 0 2.135" size="0.016 0.008" rgba="0.04 0.04 0.04 1" contype="0" conaffinity="0" group="0" />
@@ -1002,7 +848,7 @@
     </body>
     <body name="course_buoy_pinger_white_1_float" gravcomp="0" pos="0.0 -1.8 -8.500">
       <joint name="course_buoy_pinger_white_1_free" type="free" />
-      <inertial pos="0 0 0" mass="0.010" diaginertia="0.000015 0.000015 0.00001" />
+      <inertial pos="0 0 0" mass="0.060" diaginertia="0.00013 0.00013 0.00008" />
       <geom name="course_buoy_pinger_white_1_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="0.97 0.97 0.93 1" density="0" />
       <geom name="course_buoy_pinger_white_1_equator_band_01" type="capsule" fromto="0.056 0.000 0.000 0.040 0.040 0.000" size="0.0022" rgba="0.15 0.15 0.15 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_pinger_white_1_equator_band_02" type="capsule" fromto="0.040 0.040 0.000 0.000 0.056 0.000" size="0.0022" rgba="0.15 0.15 0.15 1" density="0" contype="0" conaffinity="0" group="0" />
@@ -1023,89 +869,21 @@
       <geom name="course_buoy_pinger_white_1_pinger_bottom_jig" type="cylinder" pos="0 0 -0.365" size="0.026 0.009" rgba="0.95 0.95 0.92 1" density="0" contype="0" conaffinity="0" group="0" />
       <site name="course_buoy_pinger_white_1_attach_site" pos="0 0 -0.365" size="0.008" rgba="0 0 0 0" />
     </body>
-
-
     <body name="base_link" pos="-2.0 0.9 -0.45" quat="1 0 0 0">
       <inertial pos="-0.0015 0 0.03" quat="1 0 0 0" mass="15" diaginertia="0.001 0.001 0.001" />
       <joint name="world_joint" type="free" />
-
-      <!--
-        Built-in MuJoCo fluid proxy hull.
-        Refit from the STL layout with emphasis on the main body:
-        - center enclosure: based on base_link_part1~4 union
-        - left/right lower bodies: based on base_link_part0 outer bands
-        Battery and plate/flat-surface proxy geoms are intentionally removed:
-        keep geometry minimal and place damping on the wetted proxy bodies.
-      -->
-
-      <geom
-        name="fluid_center_enclosure"
-        type="cylinder"
-        fromto="-0.213000 0.000000 0.010000 0.203000 0.000000 0.010000"
-        size="0.110500"
-        rgba="0.15 0.90 1.00 0.01"
-        contype="0"
-        conaffinity="0"
-        fluidshape="ellipsoid"
-        fluidcoef="0.424 0.120 3.415 0.050 0.025"
-      />
-      <geom
-        name="fluid_port_lower_body"
-        type="capsule"
-        fromto="-0.304500 0.248000 -0.082000 0.296500 0.248000 -0.082000"
-        size="0.054500"
-        rgba="0.10 0.70 1.00 0.01"
-        contype="0"
-        conaffinity="0"
-        fluidshape="ellipsoid"
-        fluidcoef="0.356 0.103 2.683 0.050 0.025"
-      />
-      <geom
-        name="fluid_starboard_lower_body"
-        type="capsule"
-        fromto="-0.304500 -0.248000 -0.082000 0.296500 -0.248000 -0.082000"
-        size="0.054500"
-        rgba="0.10 0.70 1.00 0.01"
-        contype="0"
-        conaffinity="0"
-        fluidshape="ellipsoid"
-        fluidcoef="0.356 0.103 2.683 0.050 0.025"
-      />
+      <geom name="fluid_center_enclosure" type="cylinder" fromto="-0.213000 0.000000 0.010000 0.203000 0.000000 0.010000" size="0.110500" rgba="0.15 0.90 1.00 0.5" contype="0" conaffinity="0" fluidshape="ellipsoid" fluidcoef="0.424 0.120 3.415 0.050 0.025" />
+      <geom name="fluid_port_lower_body" type="capsule" fromto="-0.304500 0.248000 -0.082000 0.296500 0.248000 -0.082000" size="0.054500" rgba="0.10 0.70 1.00 0.5" contype="0" conaffinity="0" fluidshape="ellipsoid" fluidcoef="0.356 0.103 2.683 0.050 0.025" />
+      <geom name="fluid_starboard_lower_body" type="capsule" fromto="-0.304500 -0.248000 -0.082000 0.296500 -0.248000 -0.082000" size="0.054500" rgba="0.10 0.70 1.00 0.5" contype="0" conaffinity="0" fluidshape="ellipsoid" fluidcoef="0.356 0.103 2.683 0.050 0.025" />
       <geom type="mesh" mesh="base_link_part0" material="frame_grey" pos="-0.1807 0.1826 0.15" quat="0.7071068 -0.7071068 0 0" />
       <geom type="mesh" mesh="base_link_part1" material="frame_grey" pos="-0.1807 0.1826 0.15" quat="0.7071068 -0.7071068 0 0" />
       <geom type="mesh" mesh="base_link_part2" material="frame_grey" pos="-0.1807 0.1826 0.15" quat="0.7071068 -0.7071068 0 0" />
       <geom type="mesh" mesh="base_link_part3" material="frame_grey" pos="-0.1807 0.1826 0.15" quat="0.7071068 -0.7071068 0 0" />
       <geom type="mesh" mesh="base_link_part4" material="frame_grey" pos="-0.1807 0.1826 0.15" quat="0.7071068 -0.7071068 0 0" />
-
-      <body name="front_open_buoy_collector" pos="-0.011 0 0.160">
-        <geom name="collector_bottom_rail_left" type="capsule" fromto="-0.170 -0.172 0.000 0.170 -0.172 0.000" size="0.010" rgba="0.92 0.92 0.86 1" density="0" contype="1" conaffinity="1" condim="4" friction="0.8 0.08 0.02" solref="0.01 1" solimp="0.90 0.95 0.001" group="0" />
-        <geom name="collector_bottom_rail_right" type="capsule" fromto="-0.170 0.172 0.000 0.170 0.172 0.000" size="0.010" rgba="0.92 0.92 0.86 1" density="0" contype="1" conaffinity="1" condim="4" friction="0.8 0.08 0.02" solref="0.01 1" solimp="0.90 0.95 0.001" group="0" />
-        <geom name="collector_top_rail_left" type="capsule" fromto="-0.170 -0.172 0.307 0.170 -0.172 0.307" size="0.010" rgba="0.92 0.92 0.86 1" density="0" contype="1" conaffinity="1" condim="4" friction="0.8 0.08 0.02" solref="0.01 1" solimp="0.90 0.95 0.001" group="0" />
-        <geom name="collector_top_rail_right" type="capsule" fromto="-0.170 0.172 0.307 0.170 0.172 0.307" size="0.010" rgba="0.92 0.92 0.86 1" density="0" contype="1" conaffinity="1" condim="4" friction="0.8 0.08 0.02" solref="0.01 1" solimp="0.90 0.95 0.001" group="0" />
-        <geom name="collector_bottom_cross_back" type="capsule" fromto="-0.170 -0.172 0.000 -0.170 0.172 0.000" size="0.010" rgba="0.92 0.92 0.86 1" density="0" contype="1" conaffinity="1" condim="4" friction="0.8 0.08 0.02" solref="0.01 1" solimp="0.90 0.95 0.001" group="0" />
-        <geom name="collector_bottom_cross_front" type="capsule" fromto="0.170 -0.172 0.000 0.170 0.172 0.000" size="0.010" rgba="0.92 0.92 0.86 1" density="0" contype="1" conaffinity="1" condim="4" friction="0.8 0.08 0.02" solref="0.01 1" solimp="0.90 0.95 0.001" group="0" />
-        <geom name="collector_back_top_cross" type="capsule" fromto="-0.170 -0.172 0.307 -0.170 0.172 0.307" size="0.010" rgba="0.92 0.92 0.86 1" density="0" contype="1" conaffinity="1" condim="4" friction="0.8 0.08 0.02" solref="0.01 1" solimp="0.90 0.95 0.001" group="0" />
-        <geom name="collector_post_back_left" type="capsule" fromto="-0.170 -0.172 0.000 -0.170 -0.172 0.307" size="0.010" rgba="0.92 0.92 0.86 1" density="0" contype="1" conaffinity="1" condim="4" friction="0.8 0.08 0.02" solref="0.01 1" solimp="0.90 0.95 0.001" group="0" />
-        <geom name="collector_post_back_right" type="capsule" fromto="-0.170 0.172 0.000 -0.170 0.172 0.307" size="0.010" rgba="0.92 0.92 0.86 1" density="0" contype="1" conaffinity="1" condim="4" friction="0.8 0.08 0.02" solref="0.01 1" solimp="0.90 0.95 0.001" group="0" />
-        <geom name="collector_post_front_left" type="capsule" fromto="0.170 -0.172 0.000 0.170 -0.172 0.307" size="0.010" rgba="0.92 0.92 0.86 1" density="0" contype="1" conaffinity="1" condim="4" friction="0.8 0.08 0.02" solref="0.01 1" solimp="0.90 0.95 0.001" group="0" />
-        <geom name="collector_post_front_right" type="capsule" fromto="0.170 0.172 0.000 0.170 0.172 0.307" size="0.010" rgba="0.92 0.92 0.86 1" density="0" contype="1" conaffinity="1" condim="4" friction="0.8 0.08 0.02" solref="0.01 1" solimp="0.90 0.95 0.001" group="0" />
-        <geom name="collector_bottom_center_rail" type="capsule" fromto="-0.170 0.000 0.000 0.170 0.000 0.000" size="0.0072" rgba="0.92 0.92 0.86 1" density="0" contype="1" conaffinity="1" condim="4" friction="0.8 0.08 0.02" solref="0.01 1" solimp="0.90 0.95 0.001" group="0" />
-        <geom name="collector_back_mid_cross" type="capsule" fromto="-0.170 -0.172 0.153 -0.170 0.172 0.153" size="0.0072" rgba="0.92 0.92 0.86 1" density="0" contype="1" conaffinity="1" condim="4" friction="0.8 0.08 0.02" solref="0.01 1" solimp="0.90 0.95 0.001" group="0" />
-        <geom name="collector_left_net_proxy" type="box" pos="0.000 -0.1632 0.153" size="0.154 0.004 0.141" rgba="0.20 0.30 0.38 0.62" density="0" contype="1" conaffinity="1" condim="4" friction="0.8 0.08 0.02" solref="0.01 1" solimp="0.90 0.95 0.001" group="0" />
-        <geom name="collector_right_net_proxy" type="box" pos="0.000 0.1632 0.153" size="0.154 0.004 0.141" rgba="0.20 0.30 0.38 0.62" density="0" contype="1" conaffinity="1" condim="4" friction="0.8 0.08 0.02" solref="0.01 1" solimp="0.90 0.95 0.001" group="0" />
-        <geom name="collector_back_net_proxy" type="box" pos="-0.1612 0.000 0.153" size="0.004 0.156 0.141" rgba="0.20 0.30 0.38 0.62" density="0" contype="1" conaffinity="1" condim="4" friction="0.8 0.08 0.02" solref="0.01 1" solimp="0.90 0.95 0.001" group="0" />
-        <geom name="collector_bottom_net_proxy" type="box" pos="0.000 0.000 0.0088" size="0.154 0.156 0.006" rgba="0.20 0.30 0.38 0.50" density="0" contype="1" conaffinity="1" condim="4" friction="0.8 0.08 0.02" solref="0.01 1" solimp="0.90 0.95 0.001" group="0" />
-        <geom name="collector_top_net_proxy" type="box" pos="0.000 0.000 0.3130" size="0.154 0.156 0.020" rgba="0.20 0.30 0.38 0.50" density="0" contype="1" conaffinity="1" condim="4" friction="0.8 0.08 0.02" margin="0.012" solref="0.002 1" solimp="0.95 0.99 0.0005" group="0" />
-        <geom name="collector_rear_mount_left" type="box" pos="-0.188 -0.074 0.050" size="0.018 0.026 0.012" rgba="0.86 0.86 0.80 1" density="0" contype="1" conaffinity="1" condim="4" friction="0.8 0.08 0.02" solref="0.01 1" solimp="0.90 0.95 0.001" group="0" />
-        <geom name="collector_rear_mount_right" type="box" pos="-0.188 0.074 0.050" size="0.018 0.026 0.012" rgba="0.86 0.86 0.80 1" density="0" contype="1" conaffinity="1" condim="4" friction="0.8 0.08 0.02" solref="0.01 1" solimp="0.90 0.95 0.001" group="0" />
-        <geom name="collector_open_mouth_marker" type="capsule" fromto="0.170 -0.172 0.320 0.170 0.172 0.320" size="0.005" rgba="0.00 0.90 1.00 0.85" density="0" contype="0" conaffinity="0" group="0" />
-      </body>
-
       <site name="base_link_origin_site" pos="0 0 0" size="0.018" rgba="1 1 1 1" />
       <geom name="base_link_axis_x" type="capsule" fromto="0 0 0 0.100 0 0" size="0.004" rgba="1 0.2 0.2 1" contype="0" conaffinity="0" />
       <geom name="base_link_axis_y" type="capsule" fromto="0 0 0 0 0.100 0" size="0.004" rgba="0.2 1 0.2 1" contype="0" conaffinity="0" />
       <geom name="base_link_axis_z" type="capsule" fromto="0 0 0 0 0 0.100" size="0.004" rgba="0.2 0.6 1 1" contype="0" conaffinity="0" />
-
       <geom pos="0.16 0.2345 -0.078408" quat="0.5 -0.5 -0.5 -0.5" type="mesh" mesh="VER_LF" material="orange" />
       <geom pos="-0.16 0.2345 -0.078408" quat="0.5 -0.5 -0.5 -0.5" type="mesh" mesh="VER_LR" material="orange" />
       <geom pos="0.16 -0.2345 -0.078408" quat="0.4999971 0.5000008 -0.4999992 0.5000029" type="mesh" mesh="VER_RF" material="orange" />
@@ -1114,7 +892,6 @@
       <geom pos="-0.09015 0.183144 0.03" quat="0.9238792 0.0000014 0.0000007 0.3826842" type="mesh" mesh="YAW_LR" material="orange" />
       <geom pos="0.09015 -0.183144 0.03" quat="0.9238792 0.0000014 0.0000007 0.3826842" type="mesh" mesh="YAW_RF" material="orange" />
       <geom pos="-0.09015 -0.183144 0.03" quat="0.9234022 0.0000014 -0.0000007 -0.3838338" type="mesh" mesh="YAW_RR" material="orange" />
-
       <site name="thr_ver_lf" pos="0.149 0.2346 -0.078406" quat="1 0 0 0" />
       <site name="thr_ver_lr" pos="-0.171 0.2346 -0.078406" quat="1 0 0 0" />
       <site name="thr_ver_rf" pos="0.149 -0.2344 -0.07841" quat="1 0 0 0" />
@@ -1131,17 +908,14 @@
       <site name="buoy_ver_rf" pos="0.149 -0.2344 0.040" size="0.010" rgba="0.1 1 0.6 0.85" />
       <site name="buoy_ver_rr" pos="-0.171 -0.2344 0.040" size="0.010" rgba="0.1 1 0.6 0.85" />
       <site name="cob_site" pos="0 0 0.032" size="0.015" rgba="0.1 1 0.1 0.7" quat="1 0 0 0" />
-
       <site name="imu_site" pos="0.1100 -0.0003 0.0920" quat="1 0 0 0" size="0.020" rgba="1 1 0 1" />
       <site name="bar30_site" pos="-0.1736 -0.0303 0.0536" quat="1 0 0 0" size="0.018" rgba="0.2 0.8 1.0 1" />
       <site name="dvl_site" pos="-0.0320 0 -0.0970" quat="0 1 0 0" size="0.020" rgba="0 1 1 1" />
       <site name="ping360_site" pos="0 0 0.205" quat="1 0 0 0" size="0.020" rgba="0.2 0.6 1 1" />
-
       <site name="cam_left_site" pos="0.1493 -0.0225 -0.02" size="0.018" rgba="1 0 1 1" quat="1 0 0 0" />
       <site name="cam_right_site" pos="0.1493 0.0225 -0.02" size="0.018" rgba="1 0.5 0 1" quat="1 0 0 0" />
       <camera name="stereo_left" pos="0.1493 -0.0225 -0.02" xyaxes="0 -1 0 0 0 1" fovy="70" />
       <camera name="stereo_right" pos="0.1493 0.0225 -0.02" xyaxes="0 -1 0 0 0 1" fovy="70" />
-
       <body name="prop_ver_lf" pos="0.16 0.2345 -0.078408" quat="0 -1 0 0">
         <inertial pos="-0.035221 -0.040788 -0.015008" mass="0.001" diaginertia="0.000001 0.000001 0.000001" />
         <joint name="prop_ver_lf_j" type="hinge" axis="0 0 1" damping="1.0" armature="0.01" />
@@ -1162,7 +936,6 @@
         <joint name="prop_ver_rr_j" type="hinge" axis="0 0 1" damping="1.0" armature="0.01" />
         <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="0" />
       </body>
-
       <body name="prop_yaw_lf" pos="0.09015 0.183144 0.03" quat="0.2837635 -0.2837635 0.6476714 -0.6476714">
         <inertial pos="-0.035221 -0.040788 -0.015008" mass="0.001" diaginertia="0.000001 0.000001 0.000001" />
         <joint name="prop_yaw_lf_j" type="hinge" axis="0 0 1" damping="1.0" armature="0.01" />
@@ -1183,11 +956,32 @@
         <joint name="prop_yaw_rr_j" type="hinge" axis="0 0 1" damping="1.0" armature="0.01" />
         <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="0" />
       </body>
+      <body name="front_open_buoy_collector_preview" pos="-0.011000 0.000000 0.160000">
+        <geom name="collector_bottom_rail_y_-0.17" type="capsule" fromto="-0.170000 -0.172000 0.000000 0.170000 -0.172000 0.000000" size="0.010000" rgba="0.920 0.920 0.860 1.000" contype="0" conaffinity="0" density="0" group="0" />
+        <geom name="collector_top_rail_y_-0.17" type="capsule" fromto="-0.170000 -0.172000 0.260000 0.170000 -0.172000 0.260000" size="0.010000" rgba="0.920 0.920 0.860 1.000" contype="0" conaffinity="0" density="0" group="0" />
+        <geom name="collector_bottom_rail_y_+0.17" type="capsule" fromto="-0.170000 0.172000 0.000000 0.170000 0.172000 0.000000" size="0.010000" rgba="0.920 0.920 0.860 1.000" contype="0" conaffinity="0" density="0" group="0" />
+        <geom name="collector_top_rail_y_+0.17" type="capsule" fromto="-0.170000 0.172000 0.260000 0.170000 0.172000 0.260000" size="0.010000" rgba="0.920 0.920 0.860 1.000" contype="0" conaffinity="0" density="0" group="0" />
+        <geom name="collector_bottom_cross_x_-0.17" type="capsule" fromto="-0.170000 -0.172000 0.000000 -0.170000 0.172000 0.000000" size="0.010000" rgba="0.920 0.920 0.860 1.000" contype="0" conaffinity="0" density="0" group="0" />
+        <geom name="collector_bottom_cross_x_+0.17" type="capsule" fromto="0.170000 -0.172000 0.000000 0.170000 0.172000 0.000000" size="0.010000" rgba="0.920 0.920 0.860 1.000" contype="0" conaffinity="0" density="0" group="0" />
+        <geom name="collector_back_top_cross" type="capsule" fromto="-0.170000 -0.172000 0.260000 -0.170000 0.172000 0.260000" size="0.010000" rgba="0.920 0.920 0.860 1.000" contype="0" conaffinity="0" density="0" group="0" />
+        <geom name="collector_post_x-0.17_y-0.17" type="capsule" fromto="-0.170000 -0.172000 0.000000 -0.170000 -0.172000 0.260000" size="0.010000" rgba="0.920 0.920 0.860 1.000" contype="0" conaffinity="0" density="0" group="0" />
+        <geom name="collector_post_x-0.17_y+0.17" type="capsule" fromto="-0.170000 0.172000 0.000000 -0.170000 0.172000 0.260000" size="0.010000" rgba="0.920 0.920 0.860 1.000" contype="0" conaffinity="0" density="0" group="0" />
+        <geom name="collector_post_x+0.17_y-0.17" type="capsule" fromto="0.170000 -0.172000 0.000000 0.170000 -0.172000 0.260000" size="0.010000" rgba="0.920 0.920 0.860 1.000" contype="0" conaffinity="0" density="0" group="0" />
+        <geom name="collector_post_x+0.17_y+0.17" type="capsule" fromto="0.170000 0.172000 0.000000 0.170000 0.172000 0.260000" size="0.010000" rgba="0.920 0.920 0.860 1.000" contype="0" conaffinity="0" density="0" group="0" />
+        <geom name="collector_bottom_center_rail" type="capsule" fromto="-0.170000 0.000000 0.000000 0.170000 0.000000 0.000000" size="0.007200" rgba="0.920 0.920 0.860 1.000" contype="0" conaffinity="0" density="0" group="0" />
+        <geom name="collector_back_mid_cross" type="capsule" fromto="-0.170000 -0.172000 0.130000 -0.170000 0.172000 0.130000" size="0.007200" rgba="0.920 0.920 0.860 1.000" contype="0" conaffinity="0" density="0" group="0" />
+        <geom name="collector_left_net_proxy" type="box" pos="0.000000 -0.163200 0.130000" size="0.154000 0.004000 0.114000" rgba="0.250 0.340 0.420 0.420" contype="0" conaffinity="0" density="0" group="0" />
+        <geom name="collector_right_net_proxy" type="box" pos="0.000000 0.163200 0.130000" size="0.154000 0.004000 0.114000" rgba="0.250 0.340 0.420 0.420" contype="0" conaffinity="0" density="0" group="0" />
+        <geom name="collector_back_net_proxy" type="box" pos="-0.161200 0.000000 0.130000" size="0.004000 0.156000 0.114000" rgba="0.250 0.340 0.420 0.420" contype="0" conaffinity="0" density="0" group="0" />
+        <geom name="collector_bottom_net_proxy" type="box" pos="0.000000 0.000000 0.008800" size="0.154000 0.156000 0.006000" rgba="0.250 0.340 0.420 0.420" contype="0" conaffinity="0" density="0" group="0" />
+        <geom name="collector_top_net_proxy" type="box" pos="0.000000 0.000000 0.251200" size="0.154000 0.156000 0.006000" rgba="0.250 0.340 0.420 0.420" contype="0" conaffinity="0" density="0" group="0" />
+        <geom name="collector_rear_mount_left" type="box" pos="-0.188000 -0.074000 0.050000" size="0.018000 0.026000 0.012000" rgba="0.860 0.860 0.800 1.000" contype="0" conaffinity="0" density="0" group="0" />
+        <geom name="collector_rear_mount_right" type="box" pos="-0.188000 0.074000 0.050000" size="0.018000 0.026000 0.012000" rgba="0.860 0.860 0.800 1.000" contype="0" conaffinity="0" density="0" group="0" />
+        <geom name="collector_open_mouth_marker" type="capsule" fromto="0.170000 -0.172000 0.273000 0.170000 0.172000 0.273000" size="0.005000" rgba="0.000 0.900 1.000 0.850" contype="0" conaffinity="0" density="0" group="0" />
+      </body>
     </body>
   </worldbody>
-
   <equality>
-    <!-- 자석 부착: 10-15N 당김 임계값에서 런타임 release logic이 eq_active를 끄기 전까지 weld로 붙여 둔다. -->
     <weld name="course_buoy_a_orange_1_magnet_weld" site1="course_buoy_a_orange_1_magnet_site" site2="course_buoy_a_orange_1_attach_site" solref="0.004 1" solimp="0.95 0.99 0.001" />
     <weld name="course_buoy_a_orange_2_magnet_weld" site1="course_buoy_a_orange_2_magnet_site" site2="course_buoy_a_orange_2_attach_site" solref="0.004 1" solimp="0.95 0.99 0.001" />
     <weld name="course_buoy_a_yellow_1_magnet_weld" site1="course_buoy_a_yellow_1_magnet_site" site2="course_buoy_a_yellow_1_attach_site" solref="0.004 1" solimp="0.95 0.99 0.001" />
@@ -1204,19 +998,16 @@
     <weld name="course_buoy_b_yellow_5_magnet_weld" site1="course_buoy_b_yellow_5_magnet_site" site2="course_buoy_b_yellow_5_attach_site" solref="0.004 1" solimp="0.95 0.99 0.001" />
     <weld name="course_buoy_pinger_white_1_magnet_weld" site1="course_buoy_pinger_white_1_magnet_site" site2="course_buoy_pinger_white_1_attach_site" solref="0.004 1" solimp="0.95 0.99 0.001" />
   </equality>
-
   <actuator>
     <motor name="ver_lf" site="thr_ver_lf" gear="0 0 -1 0 0 0" ctrlrange="-1200 1200" />
     <motor name="ver_lr" site="thr_ver_lr" gear="0 0 -1 0 0 0" ctrlrange="-1200 1200" />
     <motor name="ver_rf" site="thr_ver_rf" gear="0 0 -1 0 0 0" ctrlrange="-1200 1200" />
     <motor name="ver_rr" site="thr_ver_rr" gear="0 0 -1 0 0 0" ctrlrange="-1200 1200" />
-
     <motor name="yaw_lf" site="thr_yaw_lf" gear="0.7071068 -0.7071068 0 0 0 0" ctrlrange="-1200 1200" />
     <motor name="yaw_lr" site="thr_yaw_lr" gear="-0.7071068 -0.7071068 0 0 0 0" ctrlrange="-1200 1200" />
     <motor name="yaw_rf" site="thr_yaw_rf" gear="0.7071068 0.7071068 0 0 0 0" ctrlrange="-1200 1200" />
     <motor name="yaw_rr" site="thr_yaw_rr" gear="-0.7071068 0.7071068 0 0 0 0" ctrlrange="-1200 1200" />
   </actuator>
-
   <sensor>
     <framequat name="imu_quat" objtype="site" objname="imu_site" />
     <gyro name="imu_gyro" site="imu_site" noise="0" />
