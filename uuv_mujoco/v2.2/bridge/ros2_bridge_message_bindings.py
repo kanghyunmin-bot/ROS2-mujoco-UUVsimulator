@@ -1,0 +1,50 @@
+"""Bind lazily loaded ROS2 message/service imports to the bridge object."""
+
+from __future__ import annotations
+
+
+ROS2_IMPORT_ATTRS = (
+    "rclpy",
+    "SingleThreadedExecutor",
+    "PoseStamped",
+    "PoseWithCovarianceStamped",
+    "TransformStamped",
+    "TwistStamped",
+    "TwistWithCovarianceStamped",
+    "Odometry",
+    "QoSProfile",
+    "DurabilityPolicy",
+    "HistoryPolicy",
+    "ReliabilityPolicy",
+    "BatteryState",
+    "FluidPressure",
+    "Image",
+    "Imu",
+    "LaserScan",
+    "Range",
+    "Float32",
+    "String",
+    "Trigger",
+    "TFMessage",
+    "ManualControl",
+    "OverrideRCIn",
+    "RCIn",
+    "PositionTarget",
+    "RCOut",
+    "VfrHud",
+    "MavrosState",
+    "MavrosCommandBool",
+    "MavrosCommandLong",
+    "MavrosSetMode",
+    "DVLMsg",
+    "DVLDRMsg",
+    "SonarEcho",
+)
+
+
+def bind_ros2_runtime_imports(self, imports: dict[str, object]) -> None:
+    for attr in ROS2_IMPORT_ATTRS:
+        setattr(self, attr, imports[attr])
+
+
+__all__ = ["ROS2_IMPORT_ATTRS", "bind_ros2_runtime_imports"]

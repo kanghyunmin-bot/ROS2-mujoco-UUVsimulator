@@ -8,7 +8,13 @@ This repository contains a local UUV simulation workspace that connects:
 - QGroundControl integration helpers
 - Analysis scripts and generated technical reports
 
-The current primary branch is `uuv_sim`.
+The current primary branch for this simulator workspace is `uuv_sim`.
+Day-to-day launch commands should use the root wrappers under `uuv_mujoco/`.
+Those wrappers resolve `UUV_MUJOCO_RUNTIME_DIR` first and then
+`uuv_mujoco/current`.  The physical `uuv_mujoco/v2.2` directory is only the
+compatibility backing directory for older reports and scripts; it is not the
+freshness boundary.  The active-runtime metadata is recorded in
+`uuv_mujoco/RUNTIME_VERSION.json`.
 
 ## Repository Layout
 
@@ -19,7 +25,9 @@ The current primary branch is `uuv_sim`.
 |-- rospkg/kmu26_auv/          # KMU26 AUV ROS 2 package submodule
 |-- rospkg/dvl_msgs/           # Bundled DVL message package for dist2 builds
 |-- setup/                     # Install and verification scripts
-|-- uuv_mujoco/v2.2/           # MuJoCo runtime, bridge, scenes, configs
+|-- uuv_mujoco/current -> v2.2 # Active MuJoCo runtime alias
+|-- uuv_mujoco/RUNTIME_VERSION.json # Active-runtime provenance metadata
+|-- uuv_mujoco/v2.2/           # Compatibility backing directory
 |   `-- gui/                   # Control and tuning GUI implementation
 |-- document/                  # Reports, analysis scripts, figures
 |-- uuv_control_gui.py         # Compatibility wrapper for the GUI entry point
@@ -139,19 +147,19 @@ export QGC_APP="/Applications/QGroundControl.app"
 Start the MuJoCo simulator with SITL:
 
 ```bash
-./uuv_mujoco/v2.2/launch_uuv_sim.sh --sitl
+./uuv_mujoco/start_sitl_mujoco.sh
 ```
 
 Start with ROS 2 bridge compatibility:
 
 ```bash
-./uuv_mujoco/v2.2/launch_uuv_sim.sh --sitl --ros2 --ros2-real-pkg-compat
+./uuv_mujoco/start_sitl_mujoco.sh --ros2-real-pkg-compat
 ```
 
 Run headless:
 
 ```bash
-./uuv_mujoco/v2.2/launch_uuv_sim.sh --headless --sitl
+./uuv_mujoco/start_sitl_mujoco.sh -- --headless
 ```
 
 Launch the control GUI:
@@ -168,7 +176,7 @@ uses system ROS plus the local rospkg install:
 ```
 
 The canonical GUI implementation is
-`uuv_mujoco/v2.2/gui/uuv_control_gui.py`; the root `uuv_control_gui.py`
+`uuv_mujoco/current/gui/uuv_control_gui.py`; the root `uuv_control_gui.py`
 is kept as a compatibility wrapper.
 
 GUI internals are split by responsibility: `app.py` for the Tk application
@@ -184,13 +192,13 @@ Tk widgets, and `config.py` for paths and constants.
 Reset local simulator processes and ports:
 
 ```bash
-./uuv_mujoco/v2.2/reset_uuv_sim.sh
+./uuv_mujoco/reset_sim.sh
 ```
 
 Reset QGroundControl as well:
 
 ```bash
-./uuv_mujoco/v2.2/reset_uuv_sim.sh --with-qgc-stop
+./uuv_mujoco/reset_sim.sh --with-qgc-stop
 ```
 
 ## Analysis And Tuning
@@ -201,7 +209,7 @@ and parameter sweeps. Current tuning helpers include:
 ```bash
 python3 document/docsource/analyze_april1_real_bags.py --help
 python3 document/docsource/run_uuv_param_autotune.py --help
-python3 uuv_mujoco/v2.2/tools/roll_stability_sweep.py --help
+python3 uuv_mujoco/current/tools/roll_stability_sweep.py --help
 ```
 
 Large generated result folders such as `autotune_*`, `physics_*`,

@@ -790,7 +790,7 @@ if [[ "${ASSUME_RUNNING}" -eq 0 ]]; then
       if [[ -f /tmp/ArduSub.log && -n "${MUJOCO_READY_LOG}" && -f "${MUJOCO_READY_LOG}" ]] \
         && grep -Fq "JSON received:" /tmp/ArduSub.log \
         && grep -Fq "UDP connection 127.0.0.1:14550" /tmp/ArduSub.log \
-        && grep -Fq "UDP connection 127.0.0.1:14660" /tmp/ArduSub.log \
+        && grep -Eq "UDP connection 127\\.0\\.0\\.1:(14660|14661)" /tmp/ArduSub.log \
         && grep -Fq "SITL servo endpoint discovered" "${MUJOCO_READY_LOG}"; then
         AP_READY=1
         break

@@ -22,6 +22,6 @@ docker compose -f docker/ardusub/docker-compose.yml up --build
 GUI에서 Docker 백엔드를 쓰려면:
 
 ```bash
-cd /Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2
+cd /Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/current
 UUV_SITL_BACKEND=docker ./run_control_gui.sh
 ```

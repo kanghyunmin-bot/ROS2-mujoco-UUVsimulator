@@ -11,9 +11,23 @@ fi
 export WORKSPACE_DIR="$(cd "$(dirname "${_UUV_ENV_SOURCE}")" && pwd)"
 export ROS_WORKSPACE_DIR="${ROS_WORKSPACE_DIR:-${WORKSPACE_DIR}/rospkg}"
 export UUV_MUJOCO_DIR="${UUV_MUJOCO_DIR:-${WORKSPACE_DIR}/uuv_mujoco}"
-export ARDUPILOT_DIR="${ARDUPILOT_DIR:-${WORKSPACE_DIR}/ardupilot}"
+export ARDUPILOT_STABLE_DIR="${ARDUPILOT_STABLE_DIR:-${WORKSPACE_DIR}/ardupilot_sub_stable}"
+if [[ -d "${ARDUPILOT_STABLE_DIR}/ArduSub" ]]; then
+  export ARDUPILOT_DIR="${ARDUPILOT_DIR:-${ARDUPILOT_STABLE_DIR}}"
+else
+  export ARDUPILOT_DIR="${ARDUPILOT_DIR:-${WORKSPACE_DIR}/ardupilot}"
+fi
 export KMU26_AUV_DIR="${KMU26_AUV_DIR:-${ROS_WORKSPACE_DIR}/kmu26_auv}"
 export ROS_DISTRO="${ROS_DISTRO:-humble}"
+export UUV_SITL_BACKEND_DEFAULT="${UUV_SITL_BACKEND_DEFAULT:-native}"
+export UUV_SITL_BACKEND="${UUV_SITL_BACKEND:-${UUV_SITL_BACKEND_DEFAULT}}"
+export RMW_IMPLEMENTATION="${RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}"
+export ROS_LOCALHOST_ONLY="${ROS_LOCALHOST_ONLY:-0}"
+export ROS_DISABLE_DAEMON="${ROS_DISABLE_DAEMON:-1}"
+
+if [[ -z "${UUV_MUJOCO_RUNTIME_DIR:-}" ]]; then
+  export UUV_MUJOCO_RUNTIME_DIR="${UUV_MUJOCO_DIR}/current"
+fi
 
 if [[ -z "${ROS_INSTALL_SETUP:-}" ]]; then
   for _candidate in \

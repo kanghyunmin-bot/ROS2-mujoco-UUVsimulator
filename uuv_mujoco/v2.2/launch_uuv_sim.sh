@@ -1,7 +1,7 @@
 #!/bin/bash
 # Launch MuJoCo UUV simulation
 # Usage:
-#   ./launch_uuv_sim.sh [--headless] [--sitl] [--images] [--no-ros2] [--ros2] [--ros2-real-pkg-compat] [--qgc-video] [--force-clean] [--scene <path>] [--tank-549x274x132] [--fluid-model <name>]
+#   ./launch_uuv_sim.sh [--headless] [--sitl] [--images] [--no-ros2] [--ros2] [--ros2-real-pkg-compat] [--qgc-video] [--force-clean] [--scene <path>] [--tank-35x30x11] [--fluid-model <name>]
 #   ./launch_uuv_sim.sh --sitl
 #   ./launch_uuv_sim.sh --sitl --ros2 --ros2-real-pkg-compat
 # Note:
@@ -17,6 +17,42 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "$SCRIPT_DIR"
 HOST_OS="$(uname -s)"
 ROS_DISTRO="${ROS_DISTRO:-humble}"
+CONTROLLER_PARITY_LOCK="${UUV_MUJOCO_CONTROLLER_PARITY_LOCK:-/tmp/uuv_mujoco_controller_parity.lock}"
+
+controller_parity_lock_pid() {
+    python3 - "$1" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+try:
+    data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+    print(int(data.get("pid", 0)))
+except Exception:
+    print("")
+PY
+}
+
+guard_controller_parity_lock() {
+    if [[ "${UUV_RESET_IGNORE_CONTROLLER_PARITY_LOCK:-0}" == "1" ]]; then
+        return 0
+    fi
+    if [[ ! -f "$CONTROLLER_PARITY_LOCK" ]]; then
+        return 0
+    fi
+
+    local lock_owner_pid
+    lock_owner_pid="$(controller_parity_lock_pid "$CONTROLLER_PARITY_LOCK")"
+    if [[ -n "$lock_owner_pid" ]] && kill -0 "$lock_owner_pid" 2>/dev/null; then
+        echo "[launch] refusing to start/reset while controller-parity run owns MuJoCo/SITL lock"
+        echo "[launch] lock: ${CONTROLLER_PARITY_LOCK}"
+        echo "[launch] owner pid: ${lock_owner_pid}"
+        echo "[launch] set UUV_RESET_IGNORE_CONTROLLER_PARITY_LOCK=1 only for intentional manual override"
+        exit 75
+    fi
+}
+
+guard_controller_parity_lock
 UUV_RUNTIME_PROFILE="${UUV_RUNTIME_PROFILE:-balanced}"
 case "${UUV_RUNTIME_PROFILE}" in
     low)
@@ -133,8 +169,8 @@ SCENE_PATH="scenes/tank_current_scene.xml"
 FLUID_MODEL="current"
 SITL_MAVLINK_TARGET_SYSID=1
 SITL_MAVLINK_TARGET_COMPID=1
-SITL_MAVLINK_SOURCE_SYSID=255
-SITL_MAVLINK_SOURCE_COMPID=190
+SITL_MAVLINK_SOURCE_SYSID="${SITL_MAVLINK_SOURCE_SYSID:-254}"
+SITL_MAVLINK_SOURCE_COMPID="${SITL_MAVLINK_SOURCE_COMPID:-240}"
 
 require_option_value() {
     local opt="$1"
@@ -156,21 +192,23 @@ while [[ $# -gt 0 ]]; do
             SCENE_PATH="${1#*=}"
             shift
             ;;
-        --tank-549x274x132)
-            SCENE_PATH="scenes/tank_legacy_scene.xml"
+        --tank-35x30x11|--tank-549x274x132)
+            SCENE_PATH="scenes/tank_current_scene.xml"
             shift
             ;;
         --legacy-scene)
-            SCENE_PATH="scenes/tank_legacy_scene.xml"
-            shift
+            echo "[launch] Unsupported legacy scene option: $1"
+            echo "        Use --current-scene / --ellipsoid-scene so MuJoCo ellipsoid fluidcoef is active."
+            exit 2
             ;;
         --current-scene)
             SCENE_PATH="scenes/tank_current_scene.xml"
             shift
             ;;
         --custom-scene)
-            SCENE_PATH="scenes/tank_legacy_scene.xml"
-            shift
+            echo "[launch] Unsupported custom scene option: $1"
+            echo "        Use --current-scene / --ellipsoid-scene so MuJoCo ellipsoid fluidcoef is active."
+            exit 2
             ;;
         --ellipsoid-scene)
             SCENE_PATH="scenes/tank_current_scene.xml"
@@ -227,7 +265,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --sitl-servo-source|--sitl-servo-source=*|--allow-mavros-rc-in-sitl|--hover-stable)
             echo "[launch] Unsupported legacy option: $1"
-            echo "        v2.2 standard path uses mavlink SITL control and no internal hover helper."
+            echo "        Current standard path uses MAVLink SITL control and no internal hover helper."
             exit 2
             ;;
         --force-clean)
@@ -279,13 +317,15 @@ resolve_scene_path() {
     fi
     case "$requested" in
         tank_legacy_scene.xml)
-            requested="scenes/tank_legacy_scene.xml"
+            echo "[error] legacy scene removed from runtime path; use scenes/tank_current_scene.xml" >&2
+            return 1
             ;;
         tank_current_scene.xml)
             requested="scenes/tank_current_scene.xml"
             ;;
         tank_custom_scene.xml)
-            requested="scenes/tank_legacy_scene.xml"
+            echo "[error] custom scene removed from runtime path; use scenes/tank_current_scene.xml" >&2
+            return 1
             ;;
         tank_ellipsoid_scene.xml)
             requested="scenes/tank_current_scene.xml"
@@ -305,26 +345,21 @@ resolve_scene_path() {
 }
 
 case "$FLUID_MODEL" in
-    legacy|custom|current|ellipsoid|builtin-ellipsoid)
+    ellipsoid|builtin-ellipsoid)
+        FLUID_MODEL="current"
+        ;;
+    current|legacy|custom)
         ;;
     *)
         echo "[error] unknown --fluid-model: ${FLUID_MODEL}" >&2
-        echo "        expected one of: legacy, current" >&2
+        echo "        expected one of: current, ellipsoid, builtin-ellipsoid, legacy, custom" >&2
         exit 2
         ;;
 esac
 
-case "$FLUID_MODEL" in
-    custom)
-        FLUID_MODEL="legacy"
-        ;;
-    ellipsoid|builtin-ellipsoid)
-        FLUID_MODEL="current"
-        ;;
-esac
-
-if [[ "$(basename "$SCENE_PATH")" == "tank_legacy_scene.xml" && "$FLUID_MODEL" == "current" ]]; then
-    SCENE_PATH="scenes/tank_current_scene.xml"
+if [[ "$(basename "$SCENE_PATH")" == "tank_legacy_scene.xml" ]]; then
+    echo "[error] legacy scene removed from runtime path; use scenes/tank_current_scene.xml" >&2
+    exit 2
 fi
 
 SCENE_PATH="$(resolve_scene_path "$SCENE_PATH")"
@@ -335,6 +370,49 @@ if [ "$HEADLESS" = true ]; then
 else
     PY_LAUNCHER="$(resolve_mjpython)"
 fi
+
+run_dev_os_preflight() {
+    local skip_raw skip_lc check_script check_python
+    skip_raw="${UUV_SKIP_DEV_OS_COMPAT_CHECK:-0}"
+    skip_lc="$(printf '%s' "$skip_raw" | tr '[:upper:]' '[:lower:]')"
+    case "$skip_lc" in
+        1|true|yes|on|enable|enabled)
+            echo "[launch] dev OS compatibility preflight skipped by UUV_SKIP_DEV_OS_COMPAT_CHECK=${skip_raw}"
+            return 0
+            ;;
+    esac
+
+    check_script="${SCRIPT_DIR}/tools/check_dev_os_compat.py"
+    if [[ ! -f "$check_script" ]]; then
+        echo "[launch] dev OS compatibility preflight unavailable: ${check_script}"
+        return 0
+    fi
+
+    check_python="$(resolve_python)" || return 1
+    local check_args=("--python" "$check_python")
+    if [ "$HEADLESS" = true ]; then
+        check_args+=("--headless")
+    else
+        check_args+=("--require-viewer" "--mjpython" "$PY_LAUNCHER")
+    fi
+
+    local strict_lc
+    strict_lc="$(printf '%s' "${UUV_DEV_OS_COMPAT_STRICT:-0}" | tr '[:upper:]' '[:lower:]')"
+    case "$strict_lc" in
+        1|true|yes|on|enable|enabled)
+            check_args+=("--strict")
+            ;;
+    esac
+
+    echo "[launch] dev OS compatibility preflight: ${check_script}"
+    if ! "$check_python" "$check_script" "${check_args[@]}"; then
+        echo "[error] dev OS compatibility preflight failed." >&2
+        echo "        Fix the reported Python/MuJoCo/SITL host contract or set UUV_SKIP_DEV_OS_COMPAT_CHECK=1 for intentional debugging." >&2
+        exit 78
+    fi
+}
+
+run_dev_os_preflight
 
 extra_arg_present() {
     local needle="$1"
@@ -396,6 +474,145 @@ replace_extra_arg_value() {
     EXTRA_ARGS+=("$needle" "$value")
 }
 
+env_flag_enabled() {
+    local raw="${1:-0}"
+    raw="$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')"
+    case "$raw" in
+        1|true|yes|on|enable|enabled)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+real_start_state_default_csv() {
+    printf '%s\n' "${SCRIPT_DIR}/debug/controller_parity_412/real_20260401_feedback/real_controller_feedback_20hz.csv"
+}
+
+apply_real_start_state_args() {
+    local enabled_raw="${UUV_REAL_START_STATE:-0}"
+    if ! env_flag_enabled "$enabled_raw"; then
+        return 0
+    fi
+
+    local csv_path="${UUV_REAL_START_STATE_CSV:-$(real_start_state_default_csv)}"
+    local start_s="${UUV_REAL_START_STATE_T_S:-69.35}"
+    local helper="${SCRIPT_DIR}/tools/real_start_state.py"
+    if [[ ! -f "$csv_path" ]]; then
+        echo "[launch] UUV_REAL_START_STATE requested but CSV not found: ${csv_path}" >&2
+        exit 2
+    fi
+    if [[ ! -f "$helper" ]]; then
+        echo "[launch] real-state helper missing: ${helper}" >&2
+        exit 2
+    fi
+
+    local state_shell
+    if ! state_shell="$("$PY_LAUNCHER" "$helper" --csv "$csv_path" --start "$start_s" --format shell)"; then
+        echo "[launch] failed to derive real initial state from ${csv_path}" >&2
+        exit 2
+    fi
+    eval "$state_shell"
+    export UUV_REAL_START_STATE_APPLIED=1
+    export UUV_REAL_START_STATE_CSV="$csv_path"
+    export UUV_REAL_START_STATE_T_S="$start_s"
+    export UUV_REAL_START_STATE_AUTO_RELEASE="${UUV_REAL_START_STATE_AUTO_RELEASE:-1}"
+    export UUV_REAL_START_SOURCE_T_S
+    export UUV_REAL_START_DEPTH_M
+    export UUV_REAL_START_BASE_DEPTH_M
+    export UUV_REAL_START_BASE_X_M
+    export UUV_REAL_START_BASE_Y_M
+    export UUV_REAL_START_ROLL_RAD
+    export UUV_REAL_START_PITCH_RAD
+    export UUV_REAL_START_YAW_RAD
+    export UUV_REAL_START_BODY_VX_MPS
+    export UUV_REAL_START_BODY_VY_MPS
+    export UUV_REAL_START_BODY_VZ_MPS
+    export UUV_REAL_START_BODY_WX_RADPS
+    export UUV_REAL_START_BODY_WY_RADPS
+    export UUV_REAL_START_BODY_WZ_RADPS
+    export UUV_REAL_START_MODE
+    export UUV_REAL_START_ARMED
+    export UUV_REAL_START_DEPTH_SOURCE
+    export UUV_REAL_START_BASE_DEPTH_SOURCE
+    export UUV_REAL_START_BASE_XY_SOURCE
+    export UUV_REAL_START_ATTITUDE_SOURCE
+    export UUV_REAL_START_VELOCITY_SOURCE
+    export UUV_REAL_START_ANGULAR_VELOCITY_SOURCE
+    export UUV_REAL_START_STATIC_PRESSURE_PA
+    export UUV_REAL_START_BAR30_SURFACE_PRESSURE_PA
+    export UUV_REAL_START_BARO_REAL_GND_PRESSURE_PA
+    export UUV_REAL_START_BARO_REAL_GND_SOURCE
+    export UUV_REAL_START_BARO_SITL_GND_PRESSURE_PA
+    export UUV_REAL_START_BARO_JSON_DEPTH_M
+    export UUV_REAL_START_BARO_FRONTEND_DEPTH_M
+
+    if [[ "${UUV_BAR30_SURFACE_PRESSURE_USER_SET:-0}" != "1" && -n "${UUV_REAL_START_BAR30_SURFACE_PRESSURE_PA:-}" ]]; then
+        export ROS2_UUV_BAR30_SURFACE_PRESSURE_PA="$UUV_REAL_START_BAR30_SURFACE_PRESSURE_PA"
+    fi
+    export ROS2_UUV_BARO_REAL_GND_PRESSURE_PA="${ROS2_UUV_BARO_REAL_GND_PRESSURE_PA:-$UUV_REAL_START_BARO_REAL_GND_PRESSURE_PA}"
+    export ROS2_UUV_BARO_SITL_GND_PRESSURE_PA="${ROS2_UUV_BARO_SITL_GND_PRESSURE_PA:-$UUV_REAL_START_BARO_SITL_GND_PRESSURE_PA}"
+    export ROS2_UUV_SITL_BARO_DEPTH_CONTRACT="${ROS2_UUV_SITL_BARO_DEPTH_CONTRACT:-frontend_match}"
+
+    if ! extra_arg_present "--initial-depth-m" && ! extra_arg_present "--initial-bar30-depth-m"; then
+        real_start_geometry_depth_source="${UUV_REAL_START_GEOMETRY_DEPTH_SOURCE:-base}"
+        real_start_geometry_depth_source="$(printf '%s' "$real_start_geometry_depth_source" | tr '[:upper:]' '[:lower:]')"
+        case "$real_start_geometry_depth_source" in
+            base|base_link|local_pose)
+                EXTRA_ARGS+=("--initial-depth-m" "$UUV_REAL_START_BASE_DEPTH_M")
+                ;;
+            bar30|depth|depth_topic|pressure)
+                EXTRA_ARGS+=("--initial-bar30-depth-m" "$UUV_REAL_START_DEPTH_M")
+                ;;
+            *)
+                echo "[launch] invalid UUV_REAL_START_GEOMETRY_DEPTH_SOURCE=${UUV_REAL_START_GEOMETRY_DEPTH_SOURCE}; expected bar30 or base" >&2
+                exit 2
+                ;;
+        esac
+    fi
+    if ! extra_arg_present "--initial-rpy-rad"; then
+        EXTRA_ARGS+=(
+            "--initial-rpy-rad"
+            "$UUV_REAL_START_ROLL_RAD"
+            "$UUV_REAL_START_PITCH_RAD"
+            "$UUV_REAL_START_YAW_RAD"
+        )
+    fi
+    if ! extra_arg_present "--initial-position-xy"; then
+        EXTRA_ARGS+=(
+            "--initial-position-xy"
+            "$UUV_REAL_START_BASE_X_M"
+            "$UUV_REAL_START_BASE_Y_M"
+        )
+    fi
+    if ! extra_arg_present "--release-linear-velocity-body"; then
+        EXTRA_ARGS+=(
+            "--release-linear-velocity-body"
+            "$UUV_REAL_START_BODY_VX_MPS"
+            "$UUV_REAL_START_BODY_VY_MPS"
+            "$UUV_REAL_START_BODY_VZ_MPS"
+        )
+    fi
+    if ! extra_arg_present "--release-angular-velocity-body"; then
+        EXTRA_ARGS+=(
+            "--release-angular-velocity-body"
+            "$UUV_REAL_START_BODY_WX_RADPS"
+            "$UUV_REAL_START_BODY_WY_RADPS"
+            "$UUV_REAL_START_BODY_WZ_RADPS"
+        )
+    fi
+
+    local hold_raw="${UUV_REAL_START_STATE_HOLD_UNTIL_RELEASE:-1}"
+    if env_flag_enabled "$hold_raw" && ! extra_arg_present "--hold-initial-depth-until-release"; then
+        EXTRA_ARGS+=("--hold-initial-depth-until-release")
+    fi
+
+    echo "[launch] real start state: csv=${csv_path}, t=${UUV_REAL_START_SOURCE_T_S}s, base_xy=${UUV_REAL_START_BASE_X_M},${UUV_REAL_START_BASE_Y_M} (${UUV_REAL_START_BASE_XY_SOURCE}), base_depth=${UUV_REAL_START_BASE_DEPTH_M}m (${UUV_REAL_START_BASE_DEPTH_SOURCE}), depth_topic=${UUV_REAL_START_DEPTH_M}m (${UUV_REAL_START_DEPTH_SOURCE}), rpy=${UUV_REAL_START_ROLL_RAD},${UUV_REAL_START_PITCH_RAD},${UUV_REAL_START_YAW_RAD} (${UUV_REAL_START_ATTITUDE_SOURCE}), body_v=${UUV_REAL_START_BODY_VX_MPS},${UUV_REAL_START_BODY_VY_MPS},${UUV_REAL_START_BODY_VZ_MPS} (${UUV_REAL_START_VELOCITY_SOURCE}), body_w=${UUV_REAL_START_BODY_WX_RADPS},${UUV_REAL_START_BODY_WY_RADPS},${UUV_REAL_START_BODY_WZ_RADPS} (${UUV_REAL_START_ANGULAR_VELOCITY_SOURCE})"
+    echo "[launch] real Bar30 contract: static_pressure=${UUV_REAL_START_STATIC_PRESSURE_PA}Pa, initial_surface=${ROS2_UUV_BAR30_SURFACE_PRESSURE_PA}Pa, real_gnd=${ROS2_UUV_BARO_REAL_GND_PRESSURE_PA}Pa (${UUV_REAL_START_BARO_REAL_GND_SOURCE}), sitl_gnd=${ROS2_UUV_BARO_SITL_GND_PRESSURE_PA}Pa, frontend_depth_at_start=${UUV_REAL_START_BARO_FRONTEND_DEPTH_M}m, json_depth_at_start=${UUV_REAL_START_BARO_JSON_DEPTH_M}m"
+}
+
 source_setup_bash_safely() {
     local setup_file="$1"
     local restore_nounset=0
@@ -448,6 +665,7 @@ resolve_ros_setup_for_bash() {
 }
 
 collect_existing_mujoco_pids() {
+    pgrep -f "run_uuv_mujoco.py" || true
     pgrep -f "run_urdf_full.py" || true
 }
 
@@ -478,7 +696,7 @@ if [[ -n "$EXISTING_MJ_PIDS" ]]; then
     else
         echo "[error] existing MuJoCo runtime detected:$EXISTING_MJ_PIDS"
         echo "        Stop old process first or rerun with --force-clean."
-        echo "        Example: pkill -f 'run_urdf_full.py'"
+        echo "        Example: pkill -f 'run_uuv_mujoco.py|run_urdf_full.py'"
         exit 1
     fi
 fi
@@ -504,32 +722,133 @@ if [ "$HEADLESS" = true ]; then
 fi
 
 if [[ -n "$SITL_ARG" ]]; then
-    # ArduSub closed-loop contract. GUI and rosbag replay use the same RC3 PWM
-    # authority by default; direct/local plant command paths are opt-in only.
+    # ArduSub/sim2real run-mode contract. Do not patch ArduSub controller
+    # behavior here: choose only which actuator stream owns the MuJoCo plant.
+    UUV_RUN_MODE="$(printf '%s' "${UUV_RUN_MODE:-closed_loop}" | tr '[:upper:]' '[:lower:]')"
+    case "$UUV_RUN_MODE" in
+        closed_loop|plant_replay)
+            ;;
+        *)
+            echo "[launch] invalid UUV_RUN_MODE=${UUV_RUN_MODE}; expected closed_loop or plant_replay" >&2
+            exit 2
+            ;;
+    esac
+    export UUV_RUN_MODE
+
+    # Keep live GUI/QGC-style pilot input on the dist-style RC override path.
+    # MANUAL_CONTROL remains available as an explicit diagnostic backend.
     export UUV_GUI_PILOT_CONTROL_MODE="${UUV_GUI_PILOT_CONTROL_MODE:-rc_override}"
+    export ROS2_UUV_MAVROS_RC_OVERRIDE_BACKEND="${ROS2_UUV_MAVROS_RC_OVERRIDE_BACKEND:-rc_channels_override}"
+    export UUV_GUI_RC_PWM_SPAN="${UUV_GUI_RC_PWM_SPAN:-300}"
+    export ROS2_UUV_MAVROS_RC_PWM_SPAN="${ROS2_UUV_MAVROS_RC_PWM_SPAN:-300}"
     export ROS2_UUV_SITL_ALLOW_DIRECT_CMD="${ROS2_UUV_SITL_ALLOW_DIRECT_CMD:-0}"
     export ROS2_UUV_SITL_CMD_VEL_SETPOINT_ENABLE="${ROS2_UUV_SITL_CMD_VEL_SETPOINT_ENABLE:-0}"
     export ROS2_UUV_MAVROS_SETPOINT_ENABLE="${ROS2_UUV_MAVROS_SETPOINT_ENABLE:-0}"
     export ROS2_UUV_MAVROS_RC_OVERRIDE_LOCAL_FALLBACK="${ROS2_UUV_MAVROS_RC_OVERRIDE_LOCAL_FALLBACK:-0}"
-    export ROS2_UUV_SITL_JSON_SERVO_FALLBACK="${ROS2_UUV_SITL_JSON_SERVO_FALLBACK:-1}"
-    export ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE="${ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE:-0}"
-    # Match the real-robot estimator path by default: EKF3 with ExternalNav
-    # for XY/velocity/yaw and Baro for vertical position.
-    export SITL_EKF3_EXTNAV="${SITL_EKF3_EXTNAV:-1}"
-    export SITL_EKF3_EXTNAV_POSZ="${SITL_EKF3_EXTNAV_POSZ:-1}"
-    export SITL_EKF3_EXTNAV_VELZ="${SITL_EKF3_EXTNAV_VELZ:-6}"
-    export SITL_AHRS_EKF_TYPE="${SITL_AHRS_EKF_TYPE:-3}"
-    export ROS2_UUV_SITL_EXTNAV_ENABLE="${ROS2_UUV_SITL_EXTNAV_ENABLE:-${SITL_EKF3_EXTNAV}}"
-    export ROS2_UUV_REQUIRE_EXTNAV_TX="${ROS2_UUV_REQUIRE_EXTNAV_TX:-1}"
+    export UUV_SITL_INITIAL_BAR30_DEPTH_M="${UUV_SITL_INITIAL_BAR30_DEPTH_M:-auto}"
+    export SITL_DEDICATED_COMMAND_MAVLINK="${SITL_DEDICATED_COMMAND_MAVLINK:-1}"
+    export SITL_COMMAND_MAV_PORT="${SITL_COMMAND_MAV_PORT:-14661}"
+    export SITL_TCP_MAVLINK_PORT="${SITL_TCP_MAVLINK_PORT:-5760}"
+    if [[ "${SITL_DEDICATED_COMMAND_MAVLINK}" == "1" ]]; then
+        export ROS2_UUV_SITL_COMMAND_MAVLINK_ENDPOINT="${ROS2_UUV_SITL_COMMAND_MAVLINK_ENDPOINT:-udpin:0.0.0.0:${SITL_COMMAND_MAV_PORT}}"
+    else
+        export ROS2_UUV_SITL_COMMAND_MAVLINK_ENDPOINT="${ROS2_UUV_SITL_COMMAND_MAVLINK_ENDPOINT:-}"
+    fi
+    # Real ArduSub-4.1.2 controller/runtime timing contract.
+    # The hardware dump uses SCHED_LOOP_RATE=400, and controller-parity replay
+    # showed that 100Hz SITL changes RCOU shape. Keep sensor feed and plant
+    # force updates on the same default cadence unless explicitly overridden.
+    export SITL_SCHED_LOOP_RATE="${SITL_SCHED_LOOP_RATE:-400}"
+    export SITL_SENSOR_HZ_DEFAULT="${SITL_SENSOR_HZ_DEFAULT:-${SITL_SCHED_LOOP_RATE}}"
+    export SITL_THRUSTER_LOOP_HZ_DEFAULT="${SITL_THRUSTER_LOOP_HZ_DEFAULT:-${SITL_SCHED_LOOP_RATE}}"
+    export UUV_ROS2_SENSOR_HZ="${UUV_ROS2_SENSOR_HZ:-${SITL_SENSOR_HZ_DEFAULT}}"
+    export UUV_THRUSTER_LOOP_HZ="${UUV_THRUSTER_LOOP_HZ:-${SITL_THRUSTER_LOOP_HZ_DEFAULT}}"
+    # BARO_PRIMARY=1 in the real dump selects the second Bar30 ground pressure.
+    # Use that as the default simulated surface pressure so AP_Baro_SITL sees
+    # the same pressure datum as the real-controller replay path.
+    if [[ -n "${ROS2_UUV_BAR30_SURFACE_PRESSURE_PA+x}" ]]; then
+        UUV_BAR30_SURFACE_PRESSURE_USER_SET=1
+    else
+        UUV_BAR30_SURFACE_PRESSURE_USER_SET=0
+    fi
+    export UUV_BAR30_SURFACE_PRESSURE_USER_SET
+    export ROS2_UUV_BAR30_SURFACE_PRESSURE_PA="${ROS2_UUV_BAR30_SURFACE_PRESSURE_PA:-101640.0}"
+    if [[ "$UUV_RUN_MODE" == "plant_replay" ]]; then
+        export ROS2_UUV_SITL_JSON_SERVO_FALLBACK="${ROS2_UUV_SITL_JSON_SERVO_FALLBACK:-0}"
+        export ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE="${ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE:-1}"
+        echo "[mode] plant_replay: recorded actuator PWM/RCOU is authoritative plant input"
+    else
+        export ROS2_UUV_SITL_JSON_SERVO_FALLBACK="${ROS2_UUV_SITL_JSON_SERVO_FALLBACK:-1}"
+        export ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE="${ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE:-0}"
+        echo "[mode] closed_loop: raw ArduSub JSON servo is authoritative plant input"
+    fi
+    # Default GUI/live-control contract is Bar30 POSZ plus JSON IMU only.
+    # The real 4.1.2 ExternalNav/DVL parity contract is still available by
+    # explicitly setting UUV_EKF_CONTRACT=real_param_parity or poshold_extnav.
+    export UUV_EKF_CONTRACT="${UUV_EKF_CONTRACT:-althold_baro}"
+    LIVE_EXTNAV_HZ_DEFAULT=15
+    if [[ -n "${ROS2_UUV_SITL_SENSOR_REPLAY_PREVIEW_CSV:-}" || -n "${ROS2_UUV_SITL_SENSOR_REPLAY_VPD_CSV:-}" ]]; then
+        LIVE_EXTNAV_HZ_DEFAULT=10
+    fi
+    case "$UUV_EKF_CONTRACT" in
+        real_param_parity)
+            export UUV_EKF_CONTRACT="real_param_parity"
+            export SITL_EKF3_EXTNAV=1
+            export SITL_EKF3_EXTNAV_POSZ=1
+            export SITL_EKF3_EXTNAV_VELZ=6
+            export SITL_AHRS_EKF_TYPE="${SITL_AHRS_EKF_TYPE:-3}"
+            export ROS2_UUV_SITL_EXTNAV_ENABLE=1
+            export ROS2_UUV_SITL_EXTNAV_HZ="${ROS2_UUV_SITL_EXTNAV_HZ:-$LIVE_EXTNAV_HZ_DEFAULT}"
+            export ROS2_UUV_REQUIRE_EXTNAV_TX=1
+            export ROS2_UUV_SITL_DVL_RANGEFINDER_ENABLE="${ROS2_UUV_SITL_DVL_RANGEFINDER_ENABLE:-1}"
+            ;;
+        poshold_extnav|poshold_extnav_412|real-ekf|real_ekf|extnav)
+            export SITL_EKF3_EXTNAV=1
+            export SITL_EKF3_EXTNAV_POSZ=1
+            export SITL_EKF3_EXTNAV_VELZ=6
+            export SITL_AHRS_EKF_TYPE="${SITL_AHRS_EKF_TYPE:-3}"
+            export ROS2_UUV_SITL_EXTNAV_ENABLE=1
+            export ROS2_UUV_SITL_EXTNAV_HZ="${ROS2_UUV_SITL_EXTNAV_HZ:-$LIVE_EXTNAV_HZ_DEFAULT}"
+            export ROS2_UUV_REQUIRE_EXTNAV_TX=1
+            export ROS2_UUV_SITL_DVL_RANGEFINDER_ENABLE="${ROS2_UUV_SITL_DVL_RANGEFINDER_ENABLE:-1}"
+            ;;
+        althold_baro|baro|baro-ekf|depthhold_baro)
+            export UUV_EKF_CONTRACT="althold_baro"
+            export SITL_EKF3_EXTNAV=0
+            export SITL_EKF3_EXTNAV_POSZ=1
+            export SITL_EKF3_EXTNAV_VELZ=0
+            export SITL_AHRS_EKF_TYPE="${SITL_AHRS_EKF_TYPE:-3}"
+            export ROS2_UUV_SITL_EXTNAV_ENABLE=0
+            export ROS2_UUV_REQUIRE_EXTNAV_TX=0
+            export ROS2_UUV_SITL_DVL_RANGEFINDER_ENABLE="${ROS2_UUV_SITL_DVL_RANGEFINDER_ENABLE:-0}"
+            ;;
+        *)
+            echo "[launch] unknown UUV_EKF_CONTRACT=$UUV_EKF_CONTRACT" >&2
+            exit 2
+            ;;
+    esac
+    if [[ "${ROS2_UUV_SITL_BRIDGE_EXTNAV_DISABLE:-0}" == "1" ]]; then
+        # Controller-parity direct-MAVLink mode owns the native VPD stream.
+        # Keep ArduSub EKF ExternalNav parameters as requested by
+        # UUV_EKF_CONTRACT, but do not let the MuJoCo bridge synthesize a
+        # second VISION_POSITION_DELTA stream from live plant state.
+        export ROS2_UUV_SITL_EXTNAV_ENABLE=0
+        export ROS2_UUV_REQUIRE_EXTNAV_TX=0
+        echo "[launch] bridge ExternalNav TX disabled by ROS2_UUV_SITL_BRIDGE_EXTNAV_DISABLE=1"
+    fi
     export ROS2_UUV_EXTNAV_MIN_TX_HZ="${ROS2_UUV_EXTNAV_MIN_TX_HZ:-10}"
     export ROS2_UUV_EXTNAV_TX_GRACE_S="${ROS2_UUV_EXTNAV_TX_GRACE_S:-6}"
-    export ROS2_UUV_EXTNAV_MAX_STALE_S="${ROS2_UUV_EXTNAV_MAX_STALE_S:-0.5}"
-    # The bridge owns the vertical feedback contract: JSON position.z,
-    # JSON velocity.z, and ExternalNav VELZ all use the Bar30-derived
-    # NED down-positive state. Do not expose runtime z-flip/source switches
-    # on the default closed-loop path.
+    export ROS2_UUV_EXTNAV_MAX_STALE_S="${ROS2_UUV_EXTNAV_MAX_STALE_S:-2.0}"
+    # Start SITL with the pressure sensor submerged by default. This sets the
+    # launch pose before any sensor packet is published; it is not a runtime
+    # hold, guard, or ALT_HOLD shim.
+    # The bridge owns the ALT_HOLD vertical feedback contract: JSON position.z
+    # is Bar30-derived positive-down depth, IMU comes from base_link, and the
+    # real-param-parity profile sends body-frame VPD instead of VISION_SPEED.
     export ROS2_UUV_ARM_MODE_BOOT_GUARD_S="${ROS2_UUV_ARM_MODE_BOOT_GUARD_S:-4}"
 fi
+
+apply_real_start_state_args
 
 echo "[launch] Starting MuJoCo UUV Simulation"
 echo "[launch] Scene: ${SCENE_LABEL}"
@@ -548,6 +867,14 @@ if [ "$ROS2_REQUESTED" = true ]; then
         echo "[launch] ROS2 workspace setup: ${ROS_WORKSPACE_SETUP}"
         source_setup_bash_safely "$ROS_WORKSPACE_SETUP"
     fi
+    if [[ "$HOST_OS" == "Darwin" && -z "${RMW_IMPLEMENTATION:-}" ]]; then
+        # The MuJoCo runtime executes with a non-conda Python while ROS2
+        # message/service type support is loaded from the conda Humble env.
+        # FastDDS can discover those services but rejects MAVROS request
+        # payloads at runtime; CycloneDDS preserves the MAVROS service facade.
+        export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+        echo "[launch] ROS2 RMW default: ${RMW_IMPLEMENTATION} (macOS deterministic bridge)"
+    fi
 fi
 echo "[launch] Bridge:"
 if [ "$ROS2_REQUESTED" = true ]; then
@@ -559,8 +886,23 @@ if [ "$ROS2_REQUESTED" = true ]; then
         echo "            /cmd_vel is ignored in SITL by default; set ROS2_UUV_SITL_CMD_VEL_SETPOINT_ENABLE=1 only for guided-setpoint smoke tests"
         echo "            /mavros/setpoint_raw/local enabled only with ROS2_UUV_MAVROS_SETPOINT_ENABLE=1"
         echo "            /uuv_mujoco/rc/out_override enabled only with ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE=1"
-        echo "    SITL vertical feedback: Bar30 depth + NED down-positive velocity"
+        echo "    Run mode: ${UUV_RUN_MODE}"
+        echo "    Hydrodynamics: MuJoCo ellipsoid fluidcoef (current profile)"
+        echo "    RCOUT plant override: ${ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE}"
+        echo "    Command MAVLink: ${ROS2_UUV_SITL_COMMAND_MAVLINK_ENDPOINT}"
+        echo "    SITL scheduler: ${SITL_SCHED_LOOP_RATE} Hz"
+        echo "    SITL sensor feed: ${SITL_SENSOR_HZ_DEFAULT} Hz"
+        echo "    SITL thruster loop: ${SITL_THRUSTER_LOOP_HZ_DEFAULT} Hz"
+        echo "    Bar30 surface pressure: ${ROS2_UUV_BAR30_SURFACE_PRESSURE_PA} Pa"
+        if [[ "${UUV_REAL_START_STATE_APPLIED:-0}" == "1" ]]; then
+            echo "    SITL start: real-state CSV ${UUV_REAL_START_STATE_CSV} @ ${UUV_REAL_START_SOURCE_T_S}s"
+            echo "                base xy ${UUV_REAL_START_BASE_X_M}, ${UUV_REAL_START_BASE_Y_M} m; base depth ${UUV_REAL_START_BASE_DEPTH_M} m, depth topic ${UUV_REAL_START_DEPTH_M} m, mode=${UUV_REAL_START_MODE}, armed=${UUV_REAL_START_ARMED}"
+        else
+            echo "    SITL start: Bar30 initial depth default ${UUV_SITL_INITIAL_BAR30_DEPTH_M} m"
+        fi
+        echo "    SITL vertical feedback: Bar30 depth + base_link/Pixhawk IMU"
         echo "    SITL EKF3 ExternalNav: ${ROS2_UUV_SITL_EXTNAV_ENABLE}"
+        echo "    SITL DVL rangefinder payload: ${ROS2_UUV_SITL_DVL_RANGEFINDER_ENABLE}"
     else
         echo "    Input:  /cmd_vel (TwistStamped), /mavros/rc/override direct fallback"
     fi
@@ -601,12 +943,30 @@ if [[ -n "$SITL_ARG" ]]; then
     fi
     # Intentionally do not force extra stabilization/depth-hold for SITL.
     # ArduPilot/QGC depth and attitude modes should own these loops.
+    if ! extra_arg_present "--initial-depth-m" && ! extra_arg_present "--initial-bar30-depth-m"; then
+        initial_bar30_depth_raw="${UUV_SITL_INITIAL_BAR30_DEPTH_M:-}"
+        drop_start_raw="${UUV_SITL_DROP_START_ABOVE_WATER:-0}"
+        drop_start_lc="$(printf '%s' "$drop_start_raw" | tr '[:upper:]' '[:lower:]')"
+        initial_bar30_depth_lc="$(printf '%s' "$initial_bar30_depth_raw" | tr '[:upper:]' '[:lower:]')"
+        case "$drop_start_lc" in
+            1|true|yes|on|enable|enabled)
+                echo "[launch] SITL mode: drop-start requested; not injecting initial Bar30 depth."
+                ;;
+            *)
+                case "$initial_bar30_depth_lc" in
+                    ""|off|none|false)
+                        echo "[launch] SITL mode: initial Bar30 depth disabled by UUV_SITL_INITIAL_BAR30_DEPTH_M=${initial_bar30_depth_raw:-<empty>}."
+                        ;;
+                    *)
+                        EXTRA_ARGS+=("--initial-bar30-depth-m" "$initial_bar30_depth_raw")
+                        echo "[launch] SITL mode: starting with Bar30 depth ${initial_bar30_depth_raw} m."
+                        ;;
+                esac
+                ;;
+        esac
+    fi
     if [[ -z "$PROFILE" ]]; then
-        if [[ "$FLUID_MODEL" == "current" ]]; then
-            PROFILE="current"
-        else
-            PROFILE="legacy"
-        fi
+        PROFILE="current"
         replace_extra_arg_value --profile "$PROFILE"
     fi
     SITL_SENSOR_HZ_DEFAULT="${SITL_SENSOR_HZ_DEFAULT:-${PROFILE_SENSOR_HZ}}"
@@ -633,9 +993,13 @@ if [[ -n "$SITL_ARG" ]]; then
     else
         SITL_MAVLINK_ENDPOINT_VALUE="udpin:0.0.0.0:14660"
     fi
-    export ROS2_UUV_SITL_JSON_SERVO_FALLBACK="${ROS2_UUV_SITL_JSON_SERVO_FALLBACK:-1}"
-    echo "[launch] SITL mode: using servo source json (standard ArduPilot SITL UDP servo packets)."
-    echo "[launch] SITL mode: MAVLink SERVO_OUTPUT_RAW kept for heartbeat/telemetry only."
+    if [[ "$UUV_RUN_MODE" == "plant_replay" ]]; then
+        echo "[launch] SITL mode: plant_replay uses recorded actuator PWM/RCOU as plant input."
+        echo "[launch] SITL mode: JSON/MAVLink live servo streams remain telemetry/estimator context only."
+    else
+        echo "[launch] SITL mode: using servo source json (standard ArduPilot SITL UDP servo packets)."
+        echo "[launch] SITL mode: MAVLink SERVO_OUTPUT_RAW kept for heartbeat/telemetry only."
+    fi
     append_extra_arg_if_missing "--sitl-mavlink-target-sysid" --sitl-mavlink-target-sysid "${SITL_MAVLINK_TARGET_SYSID}" >/dev/null || true
     append_extra_arg_if_missing "--sitl-mavlink-target-compid" --sitl-mavlink-target-compid "${SITL_MAVLINK_TARGET_COMPID}" >/dev/null || true
     append_extra_arg_if_missing "--sitl-mavlink-source-sysid" --sitl-mavlink-source-sysid "${SITL_MAVLINK_SOURCE_SYSID}" >/dev/null || true
@@ -651,10 +1015,11 @@ if [[ -n "$SITL_ARG" ]]; then
     : "${ROS2_UUV_CMD_SLEW_RATE:=200.0}"
     : "${ROS2_UUV_DVL_LPF_ALPHA:=1.0}"
     : "${ROS2_UUV_BAR30_NOISE_PA_STD:=0.0}"
-    : "${ROS2_UUV_CMD_TIMEOUT_S:=0.45}"
+    : "${ROS2_UUV_CMD_TIMEOUT_S:=0.25}"
+    : "${ROS2_UUV_SPIN_TIMEOUT_S:=0.001}"
     : "${ROS2_UUV_SITL_MAVLINK_TIMEOUT_S:=1.5}"
-    export ROS2_UUV_CMD_DEADBAND ROS2_UUV_CMD_SLEW_RATE ROS2_UUV_DVL_LPF_ALPHA ROS2_UUV_BAR30_NOISE_PA_STD ROS2_UUV_CMD_TIMEOUT_S ROS2_UUV_SITL_MAVLINK_TIMEOUT_S
-    echo "[launch] SITL mode: simple sensor path deadband=${ROS2_UUV_CMD_DEADBAND}, slew=${ROS2_UUV_CMD_SLEW_RATE}/s, dvl_alpha=${ROS2_UUV_DVL_LPF_ALPHA}, bar30_noise=${ROS2_UUV_BAR30_NOISE_PA_STD}Pa, timeout=${ROS2_UUV_CMD_TIMEOUT_S}s, mavlink_timeout=${ROS2_UUV_SITL_MAVLINK_TIMEOUT_S}s"
+    export ROS2_UUV_CMD_DEADBAND ROS2_UUV_CMD_SLEW_RATE ROS2_UUV_DVL_LPF_ALPHA ROS2_UUV_BAR30_NOISE_PA_STD ROS2_UUV_CMD_TIMEOUT_S ROS2_UUV_SPIN_TIMEOUT_S ROS2_UUV_SITL_MAVLINK_TIMEOUT_S
+    echo "[launch] SITL mode: simple sensor path deadband=${ROS2_UUV_CMD_DEADBAND}, slew=${ROS2_UUV_CMD_SLEW_RATE}/s, dvl_alpha=${ROS2_UUV_DVL_LPF_ALPHA}, bar30_noise=${ROS2_UUV_BAR30_NOISE_PA_STD}Pa, timeout=${ROS2_UUV_CMD_TIMEOUT_S}s, spin_timeout=${ROS2_UUV_SPIN_TIMEOUT_S}s, mavlink_timeout=${ROS2_UUV_SITL_MAVLINK_TIMEOUT_S}s"
     # Legacy polynomial/gain tuned mode disabled the T200 performance curve:
     # if append_extra_arg_if_missing "--disable-thruster-perf" --disable-thruster-perf; then
     #     echo "[launch] SITL mode: disabling thruster performance curve for simple model."
@@ -695,7 +1060,7 @@ case "$PROFILE" in
         ;;
 esac
 
-if [[ -n "$PROFILE" && "$PROFILE" != "legacy" ]]; then
+if [[ -n "$PROFILE" ]]; then
     echo "[launch] Simulation profile: $PROFILE"
 fi
 
@@ -713,4 +1078,4 @@ if ((${#EXTRA_ARGS[@]})); then
     RUN_ARGS+=("${EXTRA_ARGS[@]}")
 fi
 
-"$PY_LAUNCHER" run_urdf_full.py "${RUN_ARGS[@]}"
+"$PY_LAUNCHER" run_uuv_mujoco.py "${RUN_ARGS[@]}"

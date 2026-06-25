@@ -11,7 +11,7 @@ case "${1:-}" in
 Usage: ./start_docker_ardusub_sitl.sh
 
 Builds and starts only the Ubuntu Docker ArduSub SITL backend, then follows its logs.
-Use start_docker_sitl_mujoco_mj311.sh to start Docker SITL plus Mac MuJoCo together.
+Use start_docker_sitl_mujoco_mj311.sh to start Docker SITL plus host MuJoCo together.
 USAGE
     exit 0
     ;;

@@ -1,1 +1,1 @@
-"""ROS2, SITL, and video bridge helpers for v2.2."""
+"""ROS2, SITL, and video bridge helpers for the active MuJoCo runtime."""

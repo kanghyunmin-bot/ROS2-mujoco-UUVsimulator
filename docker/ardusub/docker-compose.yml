@@ -16,7 +16,7 @@ services:
     environment:
       WORKSPACE_DIR: /workspace
       ARDUPILOT_DIR: /workspace/ardupilot
-      SITL_DIRECT_MAVLINK: "1"
+      SITL_DIRECT_MAVLINK: "0"
       SITL_FORCE_NO_DISPLAY: "1"
       SITL_USE_REAL_PARAM_FILE: "1"
       SITL_REAL_PARAM_FILE: /workspace/real_robot.param
@@ -25,6 +25,7 @@ services:
       SITL_JSON_HOST: host.docker.internal
       SITL_JSON_SENSOR_PORT: "9003"
       SITL_JSON_SERVO_PORT: "9002"
+      SITL_SERIAL0_UDPCLIENT: "0"
       SITL_CONSOLE_HOST: host.docker.internal
       SITL_CONSOLE_PORT: "14552"
       SITL_QGC_HOST: host.docker.internal
@@ -33,11 +34,10 @@ services:
       SITL_MAVROS_PORT: "14551"
       SITL_MUJOCO_MAV_HOST: host.docker.internal
       SITL_MUJOCO_MAV_PORT: "14660"
-      SITL_QGC_OUTPUT_ENABLE: "1"
+      SITL_QGC_OUTPUT_ENABLE: "0"
+      SITL_QGC_DIRECT_SERIAL_ENABLE: "0"
       SITL_MAVROS_OUTPUT_ENABLE: "0"
       SITL_DEDICATED_COMMAND_MAVLINK: "0"
-    ports:
-      - "5760:5760/tcp"
     restart: "no"
 
 volumes:

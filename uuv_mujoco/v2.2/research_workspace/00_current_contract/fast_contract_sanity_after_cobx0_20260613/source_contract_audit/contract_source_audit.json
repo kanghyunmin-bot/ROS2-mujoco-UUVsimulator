@@ -1,0 +1,881 @@
+{
+  "checks": [
+    {
+      "check_id": "active_runtime_alias_current",
+      "conclusion": "Live launch, GUI, Docker, setup, and validation paths must resolve the active runtime through uuv_mujoco/current. The v2.2 directory name is only the compatibility backing directory until a physical rename is done.",
+      "evidence": [
+        {
+          "line": null,
+          "path": "uuv_mujoco/current",
+          "snippet": "uuv_mujoco/current -> v2.2"
+        },
+        {
+          "line": null,
+          "path": "uuv_mujoco/current/run_uuv_mujoco.py",
+          "snippet": "primary runner exists: True"
+        },
+        {
+          "line": null,
+          "path": "uuv_mujoco/run_mujoco.sh",
+          "snippet": "root launcher exists/executable: True"
+        },
+        {
+          "line": null,
+          "path": "uuv_mujoco/start_sitl_mujoco.sh",
+          "snippet": "root launcher exists/executable: True"
+        },
+        {
+          "line": null,
+          "path": "uuv_mujoco/start_docker_sitl_mujoco.sh",
+          "snippet": "root launcher exists/executable: True"
+        },
+        {
+          "line": null,
+          "path": "uuv_mujoco/reset_sim.sh",
+          "snippet": "root launcher exists/executable: True"
+        },
+        {
+          "line": null,
+          "path": "uuv_mujoco/RUNTIME_VERSION.json",
+          "snippet": "runtime version: {\"active_runtime\": \"uuv_mujoco/current\", \"active_runtime_label\": \"current-2026-06-12-uuv_sim\", \"backing_directory\": \"uuv_mujoco/v2.2\", \"compatibility_runner\": \"uuv_mujoco/current/run_urdf_full.py\", \"dirty_state\": {\"active_runtime_dirty_count\": 1182, \"active_runtime_dirty_sample\": [\"uuv_mujoco/v2.2/bridge/__init__.py\", \"uuv_mujoco/v2.2/bridge/ping360_sim.py\", \"uuv_mujoco/v2.2/bridge/qgc_video_stream.py\", \"uuv_mujoco/v2.2/bridge/ros2_bridge.py\", \"uuv_mujoco/v2.2/bridge/ros2_bridge_runtime.py\", \"uuv_mujoco/v2.2/bridge/ros2_topic_registry.py\", \"uuv_mujoco/v2.2/bridge/sitl_transport.py\", \"uuv_mujoco/v2.2/config/ping360.json\", \"uuv_mujoco/v2.2/config/sim_profiles.json\", \"uuv_mujoco/v2.2/config/thruster_params.json\", \"uuv_mujoco/v2.2/gui/app.py\", \"uuv_mujoco/v2.2/gui/autotune_mixin.py\", \"uuv_mujoco/v2.2/gui/config.py\", \"uuv_mujoco/v2.2/gui/control_display_mixin.py\", \"uuv_mujoco/v2.2/gui/helpers.py\", \"uuv_mujoco/v2.2/gui/layout_mixin.py\", \"uuv_mujoco/v2.2/gui/models.py\", \"uuv_mujoco/v2.2/gui/node.py\", \"uuv_mujoco/v2.2/gui/physics_mixin.py\", \"uuv_mujoco/v2.2/gui/replay_mixin.py\"], \"ardupilot_submodule_status\": \"-6271e15bd4a2ef81a0f4ead439cb18188763c271 ardupilot\", \"working_tree_dirty_count\": 1200, \"working_tree_dirty_sample\": [\".uuv_mujoco_env.sh\", \"README.md\", \"ardupilot\", \"cleanup_generated_artifacts.sh\", \"docker/ardusub/README.md\", \"docker/ardusub/entrypoint.sh\", \"run_control_gui.sh\", \"run_control_gui_ubuntu.sh\", \"setup/03_setup_uuv_mujoco.sh\", \"setup/04_verify_uuv_stack.sh\", \"setup/install_uuv_mujoco.sh\", \"uuv_control_gui.py\", \"uuv_mujoco/v2.2/bridge/__init__.py\", \"uuv_mujoco/v2.2/bridge/ping360_sim.py\", \"uuv_mujoco/v2.2/bridge/qgc_video_stream.py\", \"uuv_mujoco/v2.2/bridge/ros2_bridge.py\", \"uuv_mujoco/v2.2/bridge/ros2_bridge_runtime.py\", \"uuv_mujoco/v2.2/bridge/ros2_topic_registry.py\", \"uuv_mujoco/v2.2/bridge/sitl_transport.py\", \"uuv_mujoco/v2.2/config/ping360.json\"]}, \"freshness_policy\": \"origin/uuv_sim is the source branch for this active runtime; origin/main and origin/master are different layout branches and must not be merged blindly into the dirty simulator workspace.\", \"freshness_status\": \"warn\", \"note\": \"v2.2 is a compatibility directory name. New launch, GUI, setup, and validation paths must resolve through uuv_mujoco/current.\", \"origin_uuv_sim_head\": \"e60cd9383c214a7d6e4700cdeb5c2f2a8cf6d328\", \"primary_runner\": \"uuv_mujoco/current/run_uuv_mujoco.py\", \"root_launchers\": {\"docker_sitl_mujoco\": \"uuv_mujoco/start_docker_sitl_mujoco.sh\", \"mujoco\": \"uuv_mujoco/run_mujoco.sh\", \"reset\": \"uuv_mujoco/reset_sim.sh\", \"sitl_mujoco\": \"uuv_mujoco/start_sitl_mujoco.sh\"}, \"schema\": 1, \"source_audit_check\": \"active_runtime_alias_current\", \"source_branch\": \"uuv_sim\", \"source_head\": \"e60cd9383c214a7d6e4700cdeb5c2f2a8cf6d328\", \"source_remote\": \"https://github.com/kanghyunmin-bot/ROS2-mujoco-UUVsimulator.git\", \"status\": \"current-dirty\", \"updated_at\": \"2026-06-12\"}"
+        },
+        {
+          "line": null,
+          "path": "uuv_mujoco/current/tools/check_runtime_freshness.py",
+          "snippet": "freshness checker exists: True"
+        },
+        {
+          "line": null,
+          "path": "uuv_mujoco/*.sh",
+          "snippet": "root launchers call freshness checker: True"
+        },
+        {
+          "line": null,
+          "path": ".",
+          "snippet": "active git branch: uuv_sim"
+        },
+        {
+          "line": null,
+          "path": ".",
+          "snippet": "active git HEAD: e60cd9383c214a7d6e4700cdeb5c2f2a8cf6d328"
+        },
+        {
+          "line": null,
+          "path": ".",
+          "snippet": "origin/uuv_sim HEAD: e60cd9383c214a7d6e4700cdeb5c2f2a8cf6d328"
+        },
+        {
+          "line": null,
+          "path": ".",
+          "snippet": "active runtime dirty paths: M .uuv_mujoco_env.sh\n M README.md\n M docker/ardusub/README.md\n M docker/ardusub/entrypoint.sh\n M setup/03_setup_uuv_mujoco.sh\n M setup/04_verify_uuv_stack.sh\n M setup/install_uuv_mujoco.sh\n M uuv_control_gui.py\n M uuv_mujoco/v2.2/bridge/__init__.py\n M uuv_mujoco/v2.2/bridge/ping360_sim.py\n M uuv_mujoco/v2.2/bridge/qgc_video_stream.py\n M uuv_mujoco/v2.2/bridge/ros2_bridge.py\n M uuv_mujoco/v2.2/bridge/ros2_bridge_runtime.py\n M uuv_mujoco/v2.2/bridge/ros2_topic_registry.py\n M uuv_mujoco/v2.2/bridge/sitl_transport.py\n M uuv_mujoco/v2.2/config/ping360.json\n M uuv_mujoco/v2.2/config/sim_profiles.json\n M uuv_mujoco/v2.2/config/thruster_params.json\n M uuv_mujoco/v2.2/gui/app.py\n D uuv_mujoco/v2.2/gui/autotune_mixin.py\n M uuv_mujoco/v2.2/gui/config.py\n M uuv_mujoco/v2.2/gui/control_display_mixin.py\n M uuv_mujoco/v2.2/gui/helpers.py\n M uuv_mujoco/v2.2/gui/layout_mixin.py\n M uuv_mujoco/v2.2/gui/models.py\n M uuv_mujoco/v2.2/gui/node.py\n M uuv_mujoco/v2.2/gui/physics_mixin.py\n M uuv_mujoco/v2.2/gui/replay_mixin.py\n M uuv_mujoco/v2.2/gui/ros_process_mixin.py\n M uuv_mujoco/v2.2/gui/ros_tools.py\n M uuv_mujoco/v2.2/gui/runtime.py\n M uuv_mujoco/v2.2/gui/uuv_control_gui.py\n M uuv_mujoco/v2.2/gui/widgets.py\n M uuv_mujoco/v2.2/launch_uuv_sim.sh\n M uuv_mujoco/v2.2/physics/__init__.py\n M uuv_mujoco/v2.2/physics/hydrodynamics_helpers.py\n M uuv_mujoco/v2.2/physics/sim_profile_helpers.py\n M uuv_mujoco/v2.2/physics/thruster_mapping.py\n M uuv_mujoco/v2.2/physics/thruster_performance.py\n M uuv_mujoco/v2.2/reset_uuv_sim.sh\n M uuv_mujoco/v2.2/run_control_gui.sh\n M uuv_mujoco/v2.2/run_control_loop_golden_check.sh\n M uuv_mujoco/v2.2/run_urdf_full.py\n M uuv_mujoco/v2.2/scenes/tank_current_scene.xml\n M uuv_mujoco/v2.2/scenes/tank_legacy_scene.xml\n M uuv_mujoco/v2.2/start_ardusub_sitl_mj311.sh\n M uuv_mujoco/v2.2/start_docker_ardusub_sitl.sh\n M uuv_mujoco/v2.2/start_docker_sitl_mujoco_mj311.sh\n M uuv_mujoco/v2.2/start_sitl_mujoco_mj311.sh\n M uuv_mujoco/v2.2/tools/althold_diagnostics_logger.py\n M uuv_mujoco/v2.2/tools/analyze_althold_contract.py\n M uuv_mujoco/v2.2/tools/audit_closed_loop_contract.py\n M uuv_mujoco/v2.2/tools/axis_rc_override_check.py\n M uuv_mujoco/v2.2/tools/control_loop_golden_compare.py\n M uuv_mujoco/v2.2/tools/filter_ping360_stl.py\n M uuv_mujoco/v2.2/tools/preflight_ardupilot_integrity.py\n M uuv_mujoco/v2.2/tools/roll_stability_sweep.py\n M uuv_mujoco/v2.2/tools/verify_ardusub_thruster_contract.py\n?? uuv_mujoco/CURRENT.md\n?? uuv_mujoco/RUNTIME_VERSION.json\n?? uuv_mujoco/current\n?? uuv_mujoco/reset_sim.sh\n?? uuv_mujoco/run_mujoco.sh\n?? uuv_mujoco/start_docker_sitl_mujoco.sh\n?? uuv_mujoco/start_sitl_mujoco.sh\n?? uuv_mujoco/v2.2/bridge/ping360_angle_math.py\n?? uuv_mujoco/v2.2/bridge/ping360_angle_settings.py\n?? uuv_mujoco/v2.2/bridge/ping360_beam_directions.py\n?? uuv_mujoco/v2.2/bridge/ping360_beam_model.py\n?? uuv_mujoco/v2.2/bridge/ping360_config.py\n?? uuv_mujoco/v2.2/bridge/ping360_constants.py\n?? uuv_mujoco/v2.2/bridge/ping360_effective_settings.py\n?? uuv_mujoco/v2.2/bridge/ping360_history.py\n?? uuv_mujoco/v2.2/bridge/ping360_image_layers.py\n?? uuv_mujoco/v2.2/bridge/ping360_image_lookup.py\n?? uuv_mujoco/v2.2/bridge/ping360_image_renderer.py\n?? uuv_mujoco/v2.2/bridge/ping360_interface_timing.py\n?? uuv_mujoco/v2.2/bridge/ping360_model_ids.py\n?? uuv_mujoco/v2.2/bridge/ping360_profile.py\n?? uuv_mujoco/v2.2/bridge/ping360_profile_hits.py\n?? uuv_mujoco/v2.2/bridge/ping360_profile_noise.py\n?? uuv_mujoco/v2.2/bridge/ping360_profile_signal.py\n?? uuv_mujoco/v2.2/bridge/ping360_range_math.py\n?? uuv_mujoco/v2.2/bridge/ping360_range_quality.py\n?? uuv_mujoco/v2.2/bridge/ping360_range_settings.py\n?? uuv_mujoco/v2.2/bridge/ping360_raycast.py\n?? uuv_mujoco/v2.2/bridge/ping360_reflectivity.py\n?? uuv_mujoco/v2.2/bridge/ping360_runtime_state.py\n?? uuv_mujoco/v2.2/bridge/ping360_sample.py\n?? uuv_mujoco/v2.2/bridge/ping360_samples.py\n?? uuv_mujoco/v2.2/bridge/ping360_settings.py\n?? uuv_mujoco/v2.2/bridge/ping360_sim_lifecycle.py\n?? uuv_mujoco/v2.2/bridge/ping360_sim_status.py\n?? uuv_mujoco/v2.2/bridge/ping360_sim_update.py\n?? uuv_mujoco/v2.2/bridge/ping360_sweep.py\n?? uuv_mujoco/v2.2/bridge/ping360_transmit_settings.py\n?? uuv_mujoco/v2.2/bridge/ping360_types.py\n?? uuv_mujoco/v2.2/bridge/ping360_update_cycle.py\n?? uuv_mujoco/v2.2/bridge/qgc_video_ffmpeg.py\n?? uuv_mujoco/v2.2/bridge/qgc_video_ffmpeg_cmd.py\n?? uuv_mujoco/v2.2/bridge/qgc_video_ffmpeg_probe.py\n?? uuv_mujoco/v2.2/bridge/qgc_video_ffmpeg_process.py\n?? uuv_mujoco/v2.2/bridge/qgc_video_stream_config.py\n?? uuv_mujoco/v2.2/bridge/qgc_video_stream_lifecycle.py\n?? uuv_mujoco/v2.2/bridge/qgc_video_stream_write.py\n?? uuv_mujoco/v2.2/bridge/ros2_battery_messages.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_cmd_timeout.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_commands.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_config.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_config_baro.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_config_frames.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_config_imu.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_config_imu_ros_surface.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_config_imu_sitl.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_config_imu_source.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_config_mavros.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_config_mavros_battery.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_config_mavros_rates.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_config_mavros_rcout.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_config_mavros_replay.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_config_mavros_sensor_rates.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_config_mavros_state.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_config_pressure.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_config_static_pressure.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_config_vertical.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_constructor.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_context_runtime.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_import_core.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_import_messages.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_imports.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_init.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_message_bindings.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_method_bindings.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_public_api.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_publish.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_publish_ros.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_publish_stamp.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_publish_timing.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_runtime_methods.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_runtime_setup.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_sensor_setup.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_servo_api.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_shutdown.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_shutdown_guard.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_shutdown_ros.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_shutdown_sitl.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_shutdown_steps.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_shutdown_thread.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_sitl_poll.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_spin_executor.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_spin_once.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_spin_publish.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_startup_log.py\n?? uuv_mujoco/v2.2/bridge/ros2_bridge_static_context.py\n?? uuv_mujoco/v2.2/bridge/ros2_cmd_vel_input.py\n?? uuv_mujoco/v2.2/bridge/ros2_command_bool.py\n?? uuv_mujoco/v2.2/bridge/ros2_command_payload.py\n?? uuv_mujoco/v2.2/bridge/ros2_command_payload_tokens.py\n?? uuv_mujoco/v2.2/bridge/ros2_command_shaping.py\n?? uuv_mujoco/v2.2/bridge/ros2_direct_command_filter.py\n?? uuv_mujoco/v2.2/bridge/ros2_direct_command_guard.py\n?? uuv_mujoco/v2.2/bridge/ros2_direct_command_slew.py\n?? uuv_mujoco/v2.2/bridge/ros2_dvl_header.py\n?? uuv_mujoco/v2.2/bridge/ros2_dvl_messages.py\n?? uuv_mujoco/v2.2/bridge/ros2_dvl_pose_msg.py\n?? uuv_mujoco/v2.2/bridge/ros2_dvl_velocity_msg.py\n?? uuv_mujoco/v2.2/bridge/ros2_endpoint_core_publishers.py\n?? uuv_mujoco/v2.2/bridge/ros2_endpoint_mavros_publishers.py\n?? uuv_mujoco/v2.2/bridge/ros2_endpoint_misc_publishers.py\n?? uuv_mujoco/v2.2/bridge/ros2_endpoint_ping360_publishers.py\n?? uuv_mujoco/v2.2/bridge/ros2_endpoint_publishers.py\n?? uuv_mujoco/v2.2/bridge/ros2_endpoint_services.py\n?? uuv_mujoco/v2.2/bridge/ros2_endpoint_subscriptions.py\n?? uuv_mujoco/v2.2/bridge/ros2_endpoints.py\n?? uuv_mujoco/v2.2/bridge/ros2_imu_messages.py\n?? uuv_mujoco/v2.2/bridge/ros2_manual_control_input.py\n?? uuv_mujoco/v2.2/bridge/ros2_math.py\n?? uuv_mujoco/v2.2/bridge/ros2_math_pressure.py\n?? uuv_mujoco/v2.2/bridge/ros2_math_quat.py\n?? uuv_mujoco/v2.2/bridge/ros2_math_rc.py\n?? uuv_mujoco/v2.2/bridge/ros2_math_rotation.py\n?? uuv_mujoco/v2.2/bridge/ros2_math_scalar.py\n?? uuv_mujoco/v2.2/bridge/ros2_mavros_arm_mode_callbacks.py\n?? uuv_mujoco/v2.2/bridge/ros2_mavros_arm_mode_forwarding.py\n?? uuv_mujoco/v2.2/bridge/ros2_mavros_arm_mode_guard.py\n?? uuv_mujoco/v2.2/bridge/ros2_mavros_arm_mode_services.py\n?? uuv_mujoco/v2.2/bridge/ros2_mavros_arm_mode_transport.py\n?? uuv_mujoco/v2.2/bridge/ros2_mavros_command_services.py\n?? uuv_mujoco/v2.2/bridge/ros2_mavros_condition_yaw.py\n?? uuv_mujoco/v2.2/bridge/ros2_mavros_setpoint_position.py\n?? uuv_mujoco/v2.2/bridge/ros2_mavros_setpoint_services.py\n?? uuv_mujoco/v2.2/bridge/ros2_message_setters.py\n?? uuv_mujoco/v2.2/bridge/ros2_mujoco_model.py\n?? uuv_mujoco/v2.2/bridge/ros2_optional_message.py\n?? uuv_mujoco/v2.2/bridge/ros2_ping360_config.py\n?? uuv_mujoco/v2.2/bridge/ros2_ping360_echo_message.py\n?? uuv_mujoco/v2.2/bridge/ros2_ping360_image_message.py\n?? uuv_mujoco/v2.2/bridge/ros2_ping360_messages.py\n?? uuv_mujoco/v2.2/bridge/ros2_ping360_scan_message.py\n?? uuv_mujoco/v2.2/bridge/ros2_ping360_status_message.py\n?? uuv_mujoco/v2.2/bridge/ros2_pose_messages.py\n?? uuv_mujoco/v2.2/bridge/ros2_pressure_messages.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_builder_core.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_builder_dvl.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_builder_mavros.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_builder_odometry.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_builder_ping360.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_builder_status.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_builders.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_core_cache.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_core_factories.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_dvl_cache.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_dvl_factories.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_mavros_cache.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_mavros_cache_factories.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_mavros_cache_imu.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_mavros_cache_local.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_mavros_cache_status.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_odometry_messages.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_odometry_tf.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_ping360_cache.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_ping360_cache_state.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_ping360_message_cache.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_ping360_sample_cache.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_ping360_status_cache.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_queue.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_runtime.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_schedule.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_schedule_core.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_schedule_dvl.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_schedule_mavros.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_schedule_odometry.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_schedule_ping360.py\n?? uuv_mujoco/v2.2/bridge/ros2_publish_state.py\n?? uuv_mujoco/v2.2/bridge/ros2_publisher_demand.py\n?? uuv_mujoco/v2.2/bridge/ros2_publisher_demand_probe.py\n?? uuv_mujoco/v2.2/bridge/ros2_publisher_demand_state.py\n?? uuv_mujoco/v2.2/bridge/ros2_range_messages.py\n?? uuv_mujoco/v2.2/bridge/ros2_rc_output_commands.py\n?? uuv_mujoco/v2.2/bridge/ros2_rc_override_callback.py\n?? uuv_mujoco/v2.2/bridge/ros2_rc_override_forward_cache.py\n?? uuv_mujoco/v2.2/bridge/ros2_rc_override_forwarding.py\n?? uuv_mujoco/v2.2/bridge/ros2_rc_override_frame.py\n?? uuv_mujoco/v2.2/bridge/ros2_rc_override_input.py\n?? uuv_mujoco/v2.2/bridge/ros2_rc_override_mirror.py\n?? uuv_mujoco/v2.2/bridge/ros2_rc_override_warning.py\n?? uuv_mujoco/v2.2/bridge/ros2_rcout_message.py\n?? uuv_mujoco/v2.2/bridge/ros2_rcout_publish.py\n?? uuv_mujoco/v2.2/bridge/ros2_rcout_stamp.py\n?? uuv_mujoco/v2.2/bridge/ros2_rcout_telemetry.py\n?? uuv_mujoco/v2.2/bridge/ros2_replay_rcout.py\n?? uuv_mujoco/v2.2/bridge/ros2_replay_rcout_channels.py\n?? uuv_mujoco/v2.2/bridge/ros2_replay_rcout_inject.py\n?? uuv_mujoco/v2.2/bridge/ros2_replay_rcout_log.py\n?? uuv_mujoco/v2.2/bridge/ros2_runtime_context_errors.py\n?? uuv_mujoco/v2.2/bridge/ros2_runtime_env.py\n?? uuv_mujoco/v2.2/bridge/ros2_runtime_mavros_state.py\n?? uuv_mujoco/v2.2/bridge/ros2_runtime_mavros_state_header.py\n?? uuv_mujoco/v2.2/bridge/ros2_runtime_mavros_state_values.py\n?? uuv_mujoco/v2.2/bridge/ros2_runtime_safe_publish.py\n?? uuv_mujoco/v2.2/bridge/ros2_runtime_spin.py\n?? uuv_mujoco/v2.2/bridge/ros2_runtime_spin_loop.py\n?? uuv_mujoco/v2.2/bridge/ros2_runtime_spin_state.py\n?? uuv_mujoco/v2.2/bridge/ros2_runtime_spin_thread.py\n?? uuv_mujoco/v2.2/bridge/ros2_runtime_static_context.py\n?? uuv_mujoco/v2.2/bridge/ros2_sensor_messages.py\n?? uuv_mujoco/v2.2/bridge/ros2_sitl_command_override.py\n?? uuv_mujoco/v2.2/bridge/ros2_sitl_command_override_arm_mode.py\n?? uuv_mujoco/v2.2/bridge/ros2_sitl_command_override_replay.py\n?? uuv_mujoco/v2.2/bridge/ros2_sitl_command_override_sensor.py\n?? uuv_mujoco/v2.2/bridge/ros2_sitl_command_override_topic.py\n?? uuv_mujoco/v2.2/bridge/ros2_sitl_sensor_altitude.py\n?? uuv_mujoco/v2.2/bridge/ros2_sitl_sensor_dvl_state.py\n?? uuv_mujoco/v2.2/bridge/ros2_sitl_sensor_feed.py\n?? uuv_mujoco/v2.2/bridge/ros2_sitl_sensor_imu_state.py\n?? uuv_mujoco/v2.2/bridge/ros2_sitl_sensor_kinematics.py\n?? uuv_mujoco/v2.2/bridge/ros2_sitl_sensor_transport.py\n?? uuv_mujoco/v2.2/bridge/ros2_sitl_sensor_types.py\n?? uuv_mujoco/v2.2/bridge/ros2_sitl_sensor_vectors.py\n?? uuv_mujoco/v2.2/bridge/ros2_sitl_sensor_vertical.py\n?? uuv_mujoco/v2.2/bridge/ros2_sitl_sensor_vertical_hold.py\n?? uuv_mujoco/v2.2/bridge/ros2_sitl_transport_setup.py\n?? uuv_mujoco/v2.2/bridge/ros2_standard_messages.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_body_velocity_read.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_dvl_velocity.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_estimation.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_imu_vectors.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_kinematics.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_kinematics_arrays.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_object_velocity_read.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_sensors.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_setpoint.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_setpoint_math.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_site_read.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_sitl_baro.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_sitl_frames.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_sitl_velocity.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_sitl_vertical.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_specific_force.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_vertical.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_vertical_hold.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_vertical_hold_window.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_vertical_truth.py\n?? uuv_mujoco/v2.2/bridge/ros2_state_vertical_zero_reason.py\n?? uuv_mujoco/v2.2/bridge/ros2_static_context_publisher.py\n?? uuv_mujoco/v2.2/bridge/ros2_static_context_robot_description.py\n?? uuv_mujoco/v2.2/bridge/ros2_static_context_tf.py\n?? uuv_mujoco/v2.2/bridge/ros2_static_tf_cameras.py\n?? uuv_mujoco/v2.2/bridge/ros2_static_tf_core.py\n?? uuv_mujoco/v2.2/bridge/ros2_static_tf_sensors.py\n?? uuv_mujoco/v2.2/bridge/ros2_static_tf_specs.py\n?? uuv_mujoco/v2.2/bridge/ros2_static_tf_types.py\n?? uuv_mujoco/v2.2/bridge/ros2_status_messages.py\n?? uuv_mujoco/v2.2/bridge/ros2_tf_geometry.py\n?? uuv_mujoco/v2.2/bridge/ros2_tf_messages.py\n?? uuv_mujoco/v2.2/bridge/ros2_topic_specs.py\n?? uuv_mujoco/v2.2/bridge/ros2_topic_summaries.py\n?? uuv_mujoco/v2.2/bridge/ros2_twist_messages.py\n?? uuv_mujoco/v2.2/bridge/ros2_vfr_hud_messages.py\n?? uuv_mujoco/v2.2/bridge/sitl_arm_mode_arm_send.py\n?? uuv_mujoco/v2.2/bridge/sitl_arm_mode_mode_send.py\n?? uuv_mujoco/v2.2/bridge/sitl_arm_mode_queue.py\n?? uuv_mujoco/v2.2/bridge/sitl_arm_mode_queue_arm.py\n?? uuv_mujoco/v2.2/bridge/sitl_arm_mode_queue_mode.py\n?? uuv_mujoco/v2.2/bridge/sitl_arm_mode_resolve.py\n?? uuv_mujoco/v2.2/bridge/sitl_arm_mode_runtime.py\n?? uuv_mujoco/v2.2/bridge/sitl_arm_mode_send.py\n?? uuv_mujoco/v2.2/bridge/sitl_arm_mode_service.py\n?? uuv_mujoco/v2.2/bridge/sitl_arm_mode_service_arm.py\n?? uuv_mujoco/v2.2/bridge/sitl_arm_mode_service_mode.py\n?? uuv_mujoco/v2.2/bridge/sitl_arm_mode_service_pending.py\n?? uuv_mujoco/v2.2/bridge/sitl_arm_mode_service_send.py\n?? uuv_mujoco/v2.2/bridge/sitl_arm_mode_service_state.py\n?? uuv_mujoco/v2.2/bridge/sitl_auto_ready_actions.py\n?? uuv_mujoco/v2.2/bridge/sitl_auto_ready_extnav.py\n?? uuv_mujoco/v2.2/bridge/sitl_auto_ready_gates.py\n?? uuv_mujoco/v2.2/bridge/sitl_auto_ready_messages.py\n?? uuv_mujoco/v2.2/bridge/sitl_auto_ready_neutral.py\n?? uuv_mujoco/v2.2/bridge/sitl_auto_ready_runtime.py\n?? uuv_mujoco/v2.2/bridge/sitl_auto_ready_sequence.py\n?? uuv_mujoco/v2.2/bridge/sitl_auto_ready_state.py\n?? uuv_mujoco/v2.2/bridge/sitl_body_velocity_setpoint.py\n?? uuv_mujoco/v2.2/bridge/sitl_command_link_activity.py\n?? uuv_mujoco/v2.2/bridge/sitl_command_link_readiness.py\n?? uuv_mujoco/v2.2/bridge/sitl_command_link_select.py\n?? uuv_mujoco/v2.2/bridge/sitl_command_links.py\n?? uuv_mujoco/v2.2/bridge/sitl_command_target_heartbeat.py\n?? uuv_mujoco/v2.2/bridge/sitl_command_target_resolution.py\n?? uuv_mujoco/v2.2/bridge/sitl_command_targets.py\n?? uuv_mujoco/v2.2/bridge/sitl_commanding.py\n?? uuv_mujoco/v2.2/bridge/sitl_contract.py\n?? uuv_mujoco/v2.2/bridge/sitl_env.py\n?? uuv_mujoco/v2.2/bridge/sitl_external_nav_bootstrap.py\n?? uuv_mujoco/v2.2/bridge/sitl_external_nav_cache.py\n?? uuv_mujoco/v2.2/bridge/sitl_external_nav_cache_contract.py\n?? uuv_mujoco/v2.2/bridge/sitl_external_nav_contract.py\n?? uuv_mujoco/v2.2/bridge/sitl_external_nav_contract_errors.py\n?? uuv_mujoco/v2.2/bridge/sitl_external_nav_contract_freshness.py\n?? uuv_mujoco/v2.2/bridge/sitl_external_nav_runtime.py\n?? uuv_mujoco/v2.2/bridge/sitl_external_nav_synthetic_vpd.py\n?? uuv_mujoco/v2.2/bridge/sitl_external_nav_vpd_clock.py\n?? uuv_mujoco/v2.2/bridge/sitl_external_nav_vpd_delta_math.py\n?? uuv_mujoco/v2.2/bridge/sitl_external_nav_vpd_due.py\n?? uuv_mujoco/v2.2/bridge/sitl_external_nav_vpd_emit.py\n?? uuv_mujoco/v2.2/bridge/sitl_external_nav_vpd_history.py\n?? uuv_mujoco/v2.2/bridge/sitl_external_nav_vpd_pose.py\n?? uuv_mujoco/v2.2/bridge/sitl_external_nav_vpd_prepare.py\n?? uuv_mujoco/v2.2/bridge/sitl_external_nav_vpd_rate.py\n?? uuv_mujoco/v2.2/bridge/sitl_external_nav_vpd_send.py\n?? uuv_mujoco/v2.2/bridge/sitl_guided_setpoint_runtime.py\n?? uuv_mujoco/v2.2/bridge/sitl_initialization.py\n?? uuv_mujoco/v2.2/bridge/sitl_initialization_config.py\n?? uuv_mujoco/v2.2/bridge/sitl_initialization_loaders.py\n?? uuv_mujoco/v2.2/bridge/sitl_initialization_logging.py\n?? uuv_mujoco/v2.2/bridge/sitl_initialization_state.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_payload.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_replay_reply.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_replay_reply_gate.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_replay_reply_log.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_replay_reply_payload.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_sender.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_sender_diagnostics.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_sender_io.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_sender_runtime.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_sender_sample_log.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_sender_status_log.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_sender_validation.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_sensor_external_nav.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_sensor_replay_apply.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_sensor_runtime.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_sensor_send.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_servo_endpoint.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_servo_packet_state.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_servo_poll_loop.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_servo_runtime.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_servo_timeout.py\n?? uuv_mujoco/v2.2/bridge/sitl_json_servo_warnings.py\n?? uuv_mujoco/v2.2/bridge/sitl_local_ned_setpoint.py\n?? uuv_mujoco/v2.2/bridge/sitl_manual_control_frame.py\n?? uuv_mujoco/v2.2/bridge/sitl_manual_control_logging.py\n?? uuv_mujoco/v2.2/bridge/sitl_manual_control_runtime.py\n?? uuv_mujoco/v2.2/bridge/sitl_math.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_command_connection.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_command_handlers.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_command_polling.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_command_receive.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_connection.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_endpoint.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_heartbeat.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_imports.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_peer.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_peer_state.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_peer_wait.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_polling.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_request_ap.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_request_command_link.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_request_servo.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_request_servo_link.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_request_targets.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_requests.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_runtime.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_servo_callback.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_servo_connection.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_servo_drain.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_servo_handlers.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_servo_heartbeat.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_servo_heartbeat_target.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_servo_output.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_servo_polling.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_servo_receive.py\n?? uuv_mujoco/v2.2/bridge/sitl_mavlink_telemetry.py\n?? uuv_mujoco/v2.2/bridge/sitl_native_vpd_debug.py\n?? uuv_mujoco/v2.2/bridge/sitl_native_vpd_rate.py\n?? uuv_mujoco/v2.2/bridge/sitl_native_vpd_runtime.py\n?? uuv_mujoco/v2.2/bridge/sitl_native_vpd_send.py\n?? uuv_mujoco/v2.2/bridge/sitl_native_vpd_start.py\n?? uuv_mujoco/v2.2/bridge/sitl_pwm_activity.py\n?? uuv_mujoco/v2.2/bridge/sitl_pwm_frame_handler.py\n?? uuv_mujoco/v2.2/bridge/sitl_pwm_output.py\n?? uuv_mujoco/v2.2/bridge/sitl_pwm_runtime.py\n?? uuv_mujoco/v2.2/bridge/sitl_pwm_safety.py\n?? uuv_mujoco/v2.2/bridge/sitl_pwm_source_policy.py\n?? uuv_mujoco/v2.2/bridge/sitl_rc_manual_runtime.py\n?? uuv_mujoco/v2.2/bridge/sitl_rc_override_core.py\n?? uuv_mujoco/v2.2/bridge/sitl_rc_override_keepalive.py\n?? uuv_mujoco/v2.2/bridge/sitl_rc_override_runtime.py\n?? uuv_mujoco/v2.2/bridge/sitl_rc_override_send.py\n?? uuv_mujoco/v2.2/bridge/sitl_rc_override_warn.py\n?? uuv_mujoco/v2.2/bridge/sitl_replay.py\n?? uuv_mujoco/v2.2/bridge/sitl_replay_common.py\n?? uuv_mujoco/v2.2/bridge/sitl_replay_csv_loader.py\n?? uuv_mujoco/v2.2/bridge/sitl_replay_interp_frame.py\n?? uuv_mujoco/v2.2/bridge/sitl_replay_interp_index.py\n?? uuv_mujoco/v2.2/bridge/sitl_replay_interp_math.py\n?? uuv_mujoco/v2.2/bridge/sitl_replay_interpolation.py\n?? uuv_mujoco/v2.2/bridge/sitl_replay_loaders.py\n?? uuv_mujoco/v2.2/bridge/sitl_replay_row_parsers.py\n?? uuv_mujoco/v2.2/bridge/sitl_replay_row_vectors.py\n?? uuv_mujoco/v2.2/bridge/sitl_replay_sensor_row.py\n?? uuv_mujoco/v2.2/bridge/sitl_replay_types.py\n?? uuv_mujoco/v2.2/bridge/sitl_replay_vpd_row.py\n?? uuv_mujoco/v2.2/bridge/sitl_sensor_replay_clock.py\n?? uuv_mujoco/v2.2/bridge/sitl_sensor_replay_frame_policy.py\n?? uuv_mujoco/v2.2/bridge/sitl_sensor_replay_hold_policy.py\n?? uuv_mujoco/v2.2/bridge/sitl_sensor_replay_payload_time.py\n?? uuv_mujoco/v2.2/bridge/sitl_sensor_replay_runtime.py\n?? uuv_mujoco/v2.2/bridge/sitl_sensor_replay_servo_clock.py\n?? uuv_mujoco/v2.2/bridge/sitl_sensor_replay_start_policy.py\n?? uuv_mujoco/v2.2/bridge/sitl_sensor_replay_state.py\n?? uuv_mujoco/v2.2/bridge/sitl_sensor_replay_status_runtime.py\n?? uuv_mujoco/v2.2/bridge/sitl_status.py\n?? uuv_mujoco/v2.2/bridge/sitl_status_age.py\n?? uuv_mujoco/v2.2/bridge/sitl_status_mavlink.py\n?? uuv_mujoco/v2.2/bridge/sitl_status_mavlink_core.py\n?? uuv_mujoco/v2.2/bridge/sitl_status_mavlink_extnav.py\n?? uuv_mujoco/v2.2/bridge/sitl_status_sensor_replay.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_auto_ready_config.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_bindings.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_command_bindings.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_command_link_config.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_config.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_control_config.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_extnav_base.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_extnav_bindings.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_extnav_config.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_extnav_logging.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_extnav_runtime.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_extnav_scheduler.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_handler_bindings.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_handlers.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_json_bindings.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_json_config.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_lifecycle.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_mavlink_base_config.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_mavlink_bindings.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_mavlink_config.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_mavlink_telemetry_config.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_model_sensors.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_model_state.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_model_vertical.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_polling_config.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_state_bindings.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_status_runtime.py\n?? uuv_mujoco/v2.2/bridge/sitl_transport_vertical_math.py\n?? uuv_mujoco/v2.2/bridge/sitl_types.py\n?? uuv_mujoco/v2.2/bridge/sitl_vehicle_command_ack.py\n?? uuv_mujoco/v2.2/bridge/sitl_vehicle_heartbeat.py\n?? uuv_mujoco/v2.2/bridge/sitl_vehicle_heartbeat_filter.py\n?? uuv_mujoco/v2.2/bridge/sitl_vehicle_heartbeat_target.py\n?? uuv_mujoco/v2.2/bridge/sitl_vehicle_state.py\n?? uuv_mujoco/v2.2/bridge/sitl_vehicle_state_extract.py\n?? uuv_mujoco/v2.2/bridge/sitl_vehicle_state_log.py\n?? uuv_mujoco/v2.2/config/ardusub_realrobot_contract.param\n?? uuv_mujoco/v2.2/debug/\n?? uuv_mujoco/v2.2/docs/\n?? uuv_mujoco/v2.2/experiments/\n?? uuv_mujoco/v2.2/gui/app_lifecycle.py\n?? uuv_mujoco/v2.2/gui/app_shutdown_steps.py\n?? uuv_mujoco/v2.2/gui/app_state.py\n?? uuv_mujoco/v2.2/gui/app_state_core_vars.py\n?? uuv_mujoco/v2.2/gui/app_state_feature_vars.py\n?? uuv_mujoco/v2.2/gui/app_state_tk_vars.py\n?? uuv_mujoco/v2.2/gui/app_state_vars.py\n?? uuv_mujoco/v2.2/gui/backend_helpers.py\n?? uuv_mujoco/v2.2/gui/config_backend.py\n?? uuv_mujoco/v2.2/gui/config_env.py\n?? uuv_mujoco/v2.2/gui/config_paths.py\n?? uuv_mujoco/v2.2/gui/config_physics.py\n?? uuv_mujoco/v2.2/gui/config_rc.py\n?? uuv_mujoco/v2.2/gui/config_ui.py\n?? uuv_mujoco/v2.2/gui/control_attitude_draw.py\n?? uuv_mujoco/v2.2/gui/control_depth_draw.py\n?? uuv_mujoco/v2.2/gui/control_draw_mixin.py\n?? uuv_mujoco/v2.2/gui/control_feedback_mixin.py\n?? uuv_mujoco/v2.2/gui/control_pilot_commands.py\n?? uuv_mujoco/v2.2/gui/control_pilot_mixin.py\n?? uuv_mujoco/v2.2/gui/control_pilot_publish.py\n?? uuv_mujoco/v2.2/gui/control_pilot_release.py\n?? uuv_mujoco/v2.2/gui/control_pilot_toggle.py\n?? uuv_mujoco/v2.2/gui/control_toggle_mixin.py\n?? uuv_mujoco/v2.2/gui/control_toggle_telemetry.py\n?? uuv_mujoco/v2.2/gui/control_update_apply.py\n?? uuv_mujoco/v2.2/gui/control_update_format.py\n?? uuv_mujoco/v2.2/gui/control_update_mixin.py\n?? uuv_mujoco/v2.2/gui/control_update_mode.py\n?? uuv_mujoco/v2.2/gui/control_update_pilot_texts.py\n?? uuv_mujoco/v2.2/gui/control_update_telemetry_status.py\n?? uuv_mujoco/v2.2/gui/control_update_telemetry_texts.py\n?? uuv_mujoco/v2.2/gui/control_update_text_models.py\n?? uuv_mujoco/v2.2/gui/control_update_texts.py\n?? uuv_mujoco/v2.2/gui/control_update_vehicle.py\n?? uuv_mujoco/v2.2/gui/gui_axis_normalization.py\n?? uuv_mujoco/v2.2/gui/gui_math_helpers.py\n?? uuv_mujoco/v2.2/gui/gui_rc_althold.py\n?? uuv_mujoco/v2.2/gui/gui_rc_axes.py\n?? uuv_mujoco/v2.2/gui/gui_rc_helpers.py\n?? uuv_mujoco/v2.2/gui/gui_rc_messages.py\n?? uuv_mujoco/v2.2/gui/gui_rc_padding.py\n?? uuv_mujoco/v2.2/gui/gui_rc_pwm.py\n?? uuv_mujoco/v2.2/gui/joystick_math.py\n?? uuv_mujoco/v2.2/gui/joystick_render.py\n?? uuv_mujoco/v2.2/gui/layout_control_core.py\n?? uuv_mujoco/v2.2/gui/layout_control_modes.py\n?? uuv_mujoco/v2.2/gui/layout_control_pilot.py\n?? uuv_mujoco/v2.2/gui/layout_control_replay.py\n?? uuv_mujoco/v2.2/gui/layout_control_ros2.py\n?? uuv_mujoco/v2.2/gui/layout_control_stack.py\n?? uuv_mujoco/v2.2/gui/layout_control_tuning.py\n?? uuv_mujoco/v2.2/gui/layout_event_log.py\n?? uuv_mujoco/v2.2/gui/layout_shell.py\n?? uuv_mujoco/v2.2/gui/layout_telemetry.py\n?? uuv_mujoco/v2.2/gui/layout_vehicle_summary.py\n?? uuv_mujoco/v2.2/gui/layout_vehicle_visuals.py\n?? uuv_mujoco/v2.2/gui/node_arm_commands.py\n?? uuv_mujoco/v2.2/gui/node_arm_mode_commands.py\n?? uuv_mujoco/v2.2/gui/node_arm_request_deadline.py\n?? uuv_mujoco/v2.2/gui/node_arm_request_gates.py\n?? uuv_mujoco/v2.2/gui/node_arm_request_service.py\n?? uuv_mujoco/v2.2/gui/node_arm_request_steps.py\n?? uuv_mujoco/v2.2/gui/node_arm_request_topic.py\n?? uuv_mujoco/v2.2/gui/node_backend_counts.py\n?? uuv_mujoco/v2.2/gui/node_backend_layout.py\n?? uuv_mujoco/v2.2/gui/node_backend_runtime.py\n?? uuv_mujoco/v2.2/gui/node_backend_score_fields.py\n?? uuv_mujoco/v2.2/gui/node_backend_select_policy.py\n?? uuv_mujoco/v2.2/gui/node_backend_selection.py\n?? uuv_mujoco/v2.2/gui/node_bindings.py\n?? uuv_mujoco/v2.2/gui/node_command_attempts.py\n?? uuv_mujoco/v2.2/gui/node_command_override_pub.py\n?? uuv_mujoco/v2.2/gui/node_command_retries.py\n?? uuv_mujoco/v2.2/gui/node_command_state_gates.py\n?? uuv_mujoco/v2.2/gui/node_command_timing.py\n?? uuv_mujoco/v2.2/gui/node_commanding.py\n?? uuv_mujoco/v2.2/gui/node_commanding_common.py\n?? uuv_mujoco/v2.2/gui/node_init.py\n?? uuv_mujoco/v2.2/gui/node_init_publishers.py\n?? uuv_mujoco/v2.2/gui/node_init_state.py\n?? uuv_mujoco/v2.2/gui/node_init_subscriptions.py\n?? uuv_mujoco/v2.2/gui/node_initial_depth_commands.py\n?? uuv_mujoco/v2.2/gui/node_initial_depth_state.py\n?? uuv_mujoco/v2.2/gui/node_manual_control_publishers.py\n?? uuv_mujoco/v2.2/gui/node_mode_commands.py\n?? uuv_mujoco/v2.2/gui/node_mode_request_gates.py\n?? uuv_mujoco/v2.2/gui/node_mode_request_service.py\n?? uuv_mujoco/v2.2/gui/node_mode_request_steps.py\n?? uuv_mujoco/v2.2/gui/node_mode_request_topic.py\n?? uuv_mujoco/v2.2/gui/node_motion_callbacks.py\n?? uuv_mujoco/v2.2/gui/node_motion_depth_callbacks.py\n?? uuv_mujoco/v2.2/gui/node_motion_imu_callbacks.py\n?? uuv_mujoco/v2.2/gui/node_motion_pose_callbacks.py\n?? uuv_mujoco/v2.2/gui/node_motion_pose_state.py\n?? uuv_mujoco/v2.2/gui/node_motion_velocity_callbacks.py\n?? uuv_mujoco/v2.2/gui/node_ping360_callbacks.py\n?? uuv_mujoco/v2.2/gui/node_ping360_publishers.py\n?? uuv_mujoco/v2.2/gui/node_ping360_status_payload.py\n?? uuv_mujoco/v2.2/gui/node_ping360_status_settings.py\n?? uuv_mujoco/v2.2/gui/node_ping360_status_summary.py\n?? uuv_mujoco/v2.2/gui/node_rc_callbacks.py\n?? uuv_mujoco/v2.2/gui/node_rc_frame.py\n?? uuv_mujoco/v2.2/gui/node_rc_override_publishers.py\n?? uuv_mujoco/v2.2/gui/node_rc_publishers.py\n?? uuv_mujoco/v2.2/gui/node_readiness_freshness.py\n?? uuv_mujoco/v2.2/gui/node_readiness_inputs.py\n?? uuv_mujoco/v2.2/gui/node_readiness_mode.py\n?? uuv_mujoco/v2.2/gui/node_readiness_runtime.py\n?? uuv_mujoco/v2.2/gui/node_readiness_runtime_inputs.py\n?? uuv_mujoco/v2.2/gui/node_sitl_status_callbacks.py\n?? uuv_mujoco/v2.2/gui/node_snapshot_runtime.py\n?? uuv_mujoco/v2.2/gui/node_state_runtime.py\n?? uuv_mujoco/v2.2/gui/node_subscription_core_sensors.py\n?? uuv_mujoco/v2.2/gui/node_subscription_depth.py\n?? uuv_mujoco/v2.2/gui/node_subscription_external_motion.py\n?? uuv_mujoco/v2.2/gui/node_subscription_mavros.py\n?? uuv_mujoco/v2.2/gui/node_subscription_qos.py\n?? uuv_mujoco/v2.2/gui/node_subscription_status.py\n?? uuv_mujoco/v2.2/gui/node_telemetry_callbacks.py\n?? uuv_mujoco/v2.2/gui/node_trigger_service_callbacks.py\n?? uuv_mujoco/v2.2/gui/node_trigger_services.py\n?? uuv_mujoco/v2.2/gui/node_vehicle_callbacks.py\n?? uuv_mujoco/v2.2/gui/node_vehicle_info.py\n?? uuv_mujoco/v2.2/gui/physics_param_apply.py\n?? uuv_mujoco/v2.2/gui/physics_param_error_log.py\n?? uuv_mujoco/v2.2/gui/physics_param_format.py\n?? uuv_mujoco/v2.2/gui/physics_param_io.py\n?? uuv_mujoco/v2.2/gui/physics_param_load.py\n?? uuv_mujoco/v2.2/gui/physics_param_nested.py\n?? uuv_mujoco/v2.2/gui/physics_param_parse.py\n?? uuv_mujoco/v2.2/gui/physics_param_persist.py\n?? uuv_mujoco/v2.2/gui/physics_param_status.py\n?? uuv_mujoco/v2.2/gui/physics_profile_select.py\n?? uuv_mujoco/v2.2/gui/physics_restart.py\n?? uuv_mujoco/v2.2/gui/physics_restart_finish.py\n?? uuv_mujoco/v2.2/gui/physics_restart_process.py\n?? uuv_mujoco/v2.2/gui/physics_restart_reset.py\n?? uuv_mujoco/v2.2/gui/physics_restart_reset_events.py\n?? uuv_mujoco/v2.2/gui/physics_restart_reset_paths.py\n?? uuv_mujoco/v2.2/gui/physics_window.py\n?? uuv_mujoco/v2.2/gui/physics_window_rows.py\n?? uuv_mujoco/v2.2/gui/physics_window_shell.py\n?? uuv_mujoco/v2.2/gui/ping360_config_mixin.py\n?? uuv_mujoco/v2.2/gui/ping360_mixin.py\n?? uuv_mujoco/v2.2/gui/ping360_view_mixin.py\n?? uuv_mujoco/v2.2/gui/ping360_view_process.py\n?? uuv_mujoco/v2.2/gui/ping360_view_status.py\n?? uuv_mujoco/v2.2/gui/ping360_window_lifecycle.py\n?? uuv_mujoco/v2.2/gui/ping360_window_mixin.py\n?? uuv_mujoco/v2.2/gui/ping360_window_panels.py\n?? uuv_mujoco/v2.2/gui/process_common_mixin.py\n?? uuv_mujoco/v2.2/gui/process_env.py\n?? uuv_mujoco/v2.2/gui/process_scan.py\n?? uuv_mujoco/v2.2/gui/process_scan_rows.py\n?? uuv_mujoco/v2.2/gui/process_termination.py\n?? uuv_mujoco/v2.2/gui/process_termination_signal.py\n?? uuv_mujoco/v2.2/gui/rc_replay_decode.py\n?? uuv_mujoco/v2.2/gui/rc_replay_loader.py\n?? uuv_mujoco/v2.2/gui/rc_replay_path.py\n?? uuv_mujoco/v2.2/gui/rc_replay_rosbag.py\n?? uuv_mujoco/v2.2/gui/readiness_arm_mode_gate.py\n?? uuv_mujoco/v2.2/gui/readiness_command_link.py\n?? uuv_mujoco/v2.2/gui/readiness_contract.py\n?? uuv_mujoco/v2.2/gui/readiness_extnav.py\n?? uuv_mujoco/v2.2/gui/readiness_feedback_gate.py\n?? uuv_mujoco/v2.2/gui/replay_browse.py\n?? uuv_mujoco/v2.2/gui/replay_controls.py\n?? uuv_mujoco/v2.2/gui/replay_format.py\n?? uuv_mujoco/v2.2/gui/replay_load_controls.py\n?? uuv_mujoco/v2.2/gui/replay_playback_controls.py\n?? uuv_mujoco/v2.2/gui/replay_seek_state.py\n?? uuv_mujoco/v2.2/gui/replay_slider_events.py\n?? uuv_mujoco/v2.2/gui/replay_status.py\n?? uuv_mujoco/v2.2/gui/replay_time_math.py\n?? uuv_mujoco/v2.2/gui/replay_timeline.py\n?? uuv_mujoco/v2.2/gui/replay_worker.py\n?? uuv_mujoco/v2.2/gui/replay_worker_finish.py\n?? uuv_mujoco/v2.2/gui/replay_worker_pause.py\n?? uuv_mujoco/v2.2/gui/replay_worker_publish.py\n?? uuv_mujoco/v2.2/gui/replay_worker_seek.py\n?? uuv_mujoco/v2.2/gui/replay_worker_state.py\n?? uuv_mujoco/v2.2/gui/replay_worker_step.py\n?? uuv_mujoco/v2.2/gui/replay_worker_step_phases.py\n?? uuv_mujoco/v2.2/gui/replay_worker_wait.py\n?? uuv_mujoco/v2.2/gui/ros_bash.py\n?? uuv_mujoco/v2.2/gui/ros_env_tools.py\n?? uuv_mujoco/v2.2/gui/ros_log_events.py\n?? uuv_mujoco/v2.2/gui/ros_log_tail_loop.py\n?? uuv_mujoco/v2.2/gui/ros_logged_process_files.py\n?? uuv_mujoco/v2.2/gui/ros_logged_process_finish.py\n?? uuv_mujoco/v2.2/gui/ros_logged_process_launcher.py\n?? uuv_mujoco/v2.2/gui/ros_logged_process_mixin.py\n?? uuv_mujoco/v2.2/gui/ros_logged_process_start.py\n?? uuv_mujoco/v2.2/gui/ros_logged_process_tail.py\n?? uuv_mujoco/v2.2/gui/ros_logged_process_threads.py\n?? uuv_mujoco/v2.2/gui/ros_logged_process_watch.py\n?? uuv_mujoco/v2.2/gui/ros_package_build.py\n?? uuv_mujoco/v2.2/gui/ros_package_mixin.py\n?? uuv_mujoco/v2.2/gui/ros_package_stack.py\n?? uuv_mujoco/v2.2/gui/ros_panel_buttons.py\n?? uuv_mujoco/v2.2/gui/ros_panel_mixin.py\n?? uuv_mujoco/v2.2/gui/ros_panel_process_state.py\n?? uuv_mujoco/v2.2/gui/ros_panel_status.py\n?? uuv_mujoco/v2.2/gui/ros_panel_visibility.py\n?? uuv_mujoco/v2.2/gui/ros_setup_candidates.py\n?? uuv_mujoco/v2.2/gui/ros_setup_paths.py\n?? uuv_mujoco/v2.2/gui/ros_setup_probe.py\n?? uuv_mujoco/v2.2/gui/ros_workspace_setup_paths.py\n?? uuv_mujoco/v2.2/gui/runtime_mavros.py\n?? uuv_mujoco/v2.2/gui/runtime_python_path.py\n?? uuv_mujoco/v2.2/gui/runtime_python_path_filters.py\n?? uuv_mujoco/v2.2/gui/runtime_ros_core.py\n?? uuv_mujoco/v2.2/gui/rviz_config_ping360.py\n?? uuv_mujoco/v2.2/gui/rviz_config_ros2.py\n?? uuv_mujoco/v2.2/gui/rviz_config_tools.py\n?? uuv_mujoco/v2.2/gui/rviz_process_mixin.py\n?? uuv_mujoco/v2.2/gui/sim_stack_env.py\n?? uuv_mujoco/v2.2/gui/sim_stack_env_args.py\n?? uuv_mujoco/v2.2/gui/sim_stack_env_contract.py\n?? uuv_mujoco/v2.2/gui/sim_stack_env_defaults.py\n?? uuv_mujoco/v2.2/gui/sim_stack_env_flags.py\n?? uuv_mujoco/v2.2/gui/sim_stack_env_forced.py\n?? uuv_mujoco/v2.2/gui/sim_stack_env_forced_command.py\n?? uuv_mujoco/v2.2/gui/sim_stack_env_forced_ekf.py\n?? uuv_mujoco/v2.2/gui/sim_stack_env_forced_rc.py\n?? uuv_mujoco/v2.2/gui/sim_stack_env_modes.py\n?? uuv_mujoco/v2.2/gui/sim_stack_env_types.py\n?? uuv_mujoco/v2.2/gui/sim_stack_extra_args.py\n?? uuv_mujoco/v2.2/gui/sim_stack_initial_depth_args.py\n?? uuv_mujoco/v2.2/gui/sim_stack_initial_depth_base_link.py\n?? uuv_mujoco/v2.2/gui/sim_stack_initial_depth_contract.py\n?? uuv_mujoco/v2.2/gui/sim_stack_initial_depth_sources.py\n?? uuv_mujoco/v2.2/gui/sim_stack_launch_args.py\n?? uuv_mujoco/v2.2/gui/sim_stack_launch_command.py\n?? uuv_mujoco/v2.2/gui/sim_stack_launch_logs.py\n?? uuv_mujoco/v2.2/gui/sim_stack_launch_mixin.py\n?? uuv_mujoco/v2.2/gui/sim_stack_launch_process.py\n?? uuv_mujoco/v2.2/gui/sim_stack_launch_runtime.py\n?? uuv_mujoco/v2.2/gui/sim_stack_launch_target.py\n?? uuv_mujoco/v2.2/gui/sim_stack_log_finish.py\n?? uuv_mujoco/v2.2/gui/sim_stack_log_line_handler.py\n?? uuv_mujoco/v2.2/gui/sim_stack_log_reader.py\n?? uuv_mujoco/v2.2/gui/sim_stack_log_status.py\n?? uuv_mujoco/v2.2/gui/sim_stack_log_watcher.py\n?? uuv_mujoco/v2.2/gui/sim_stack_process_mixin.py\n?? uuv_mujoco/v2.2/gui/sim_stack_process_probe.py\n?? uuv_mujoco/v2.2/gui/sim_stack_reset_commands.py\n?? uuv_mujoco/v2.2/gui/sim_stack_reset_mixin.py\n?? uuv_mujoco/v2.2/gui/sim_stack_reset_output.py\n?? uuv_mujoco/v2.2/gui/sim_stack_reset_result.py\n?? uuv_mujoco/v2.2/gui/sim_stack_reset_thread.py\n?? uuv_mujoco/v2.2/gui/sim_stack_reset_worker.py\n?? uuv_mujoco/v2.2/gui/sim_stack_restart_runtime.py\n?? uuv_mujoco/v2.2/gui/sim_stack_start_guards.py\n?? uuv_mujoco/v2.2/gui/sim_stack_start_process.py\n?? uuv_mujoco/v2.2/gui/sim_stack_start_runtime.py\n?? uuv_mujoco/v2.2/gui/sim_stack_start_state.py\n?? uuv_mujoco/v2.2/gui/sim_stack_status_controls.py\n?? uuv_mujoco/v2.2/gui/sim_stack_status_logic.py\n?? uuv_mujoco/v2.2/gui/sim_stack_status_mixin.py\n?? uuv_mujoco/v2.2/gui/sim_stack_status_refresh.py\n?? uuv_mujoco/v2.2/gui/sim_stack_status_text.py\n?? uuv_mujoco/v2.2/gui/sim_stack_viewer_args.py\n?? uuv_mujoco/v2.2/gui/sim_stack_wrapper_args.py\n?? uuv_mujoco/v2.2/gui/virtual_joystick_runtime.py\n?? uuv_mujoco/v2.2/han/\n?? uuv_mujoco/v2.2/physics/ellipsoid_geometry.py\n?? uuv_mujoco/v2.2/physics/ellipsoid_hydro_coefficients.py\n?? uuv_mujoco/v2.2/physics/ellipsoid_hydro_types.py\n?? uuv_mujoco/v2.2/physics/ellipsoid_hydrodynamics.py\n?? uuv_mujoco/v2.2/physics/hydrodynamics_math.py\n?? uuv_mujoco/v2.2/physics/hydrostatic_fraction_helpers.py\n?? uuv_mujoco/v2.2/physics/sim_profile_defaults.py\n?? uuv_mujoco/v2.2/physics/sim_profile_ellipsoid.py\n?? uuv_mujoco/v2.2/physics/sim_profile_hydrodynamics.py\n?? uuv_mujoco/v2.2/physics/sim_profile_hydrodynamics_damping.py\n?? uuv_mujoco/v2.2/physics/sim_profile_hydrodynamics_hydrostatic.py\n?? uuv_mujoco/v2.2/physics/sim_profile_hydrostatic_body_components.py\n?? uuv_mujoco/v2.2/physics/sim_profile_hydrostatic_buoyancy_point_fields.py\n?? uuv_mujoco/v2.2/physics/sim_profile_hydrostatic_buoyancy_points.py\n?? uuv_mujoco/v2.2/physics/sim_profile_hydrostatic_component_builder.py\n?? uuv_mujoco/v2.2/physics/sim_profile_hydrostatic_component_fields.py\n?? uuv_mujoco/v2.2/physics/sim_profile_hydrostatic_component_numbers.py\n?? uuv_mujoco/v2.2/physics/sim_profile_hydrostatic_normalize.py\n?? uuv_mujoco/v2.2/physics/sim_profile_hydrostatic_points.py\n?? uuv_mujoco/v2.2/physics/sim_profile_hydrostatic_restoring.py\n?? uuv_mujoco/v2.2/physics/sim_profile_parse_array.py\n?? uuv_mujoco/v2.2/physics/sim_profile_parse_common.py\n?? uuv_mujoco/v2.2/physics/sim_profile_parse_scalar.py\n?? uuv_mujoco/v2.2/physics/sim_profile_parse_vectors.py\n?? uuv_mujoco/v2.2/physics/sim_profile_parsing.py\n?? uuv_mujoco/v2.2/physics/sim_profile_types.py\n?? uuv_mujoco/v2.2/physics/thruster_curve_helpers.py\n?? uuv_mujoco/v2.2/physics/thruster_performance_curves.py\n?? uuv_mujoco/v2.2/physics/thruster_performance_parse.py\n?? uuv_mujoco/v2.2/physics/thruster_performance_payload.py\n?? uuv_mujoco/v2.2/physics/thruster_performance_select.py\n?? uuv_mujoco/v2.2/physics/thruster_performance_values.py\n?? uuv_mujoco/v2.2/research_workspace/\n?? uuv_mujoco/v2.2/run_uuv_mujoco.py\n?? uuv_mujoco/v2.2/sim/\n?? uuv_mujoco/v2.2/tools/actuator_wrench_audit.py\n?? uuv_mujoco/v2.2/tools/actuator_wrench_axis.py\n?? uuv_mujoco/v2.2/tools/actuator_wrench_calc.py\n?? uuv_mujoco/v2.2/tools/actuator_wrench_common.py\n?? uuv_mujoco/v2.2/tools/actuator_wrench_gains.py\n?? uuv_mujoco/v2.2/tools/actuator_wrench_model.py\n?? uuv_mujoco/v2.2/tools/actuator_wrench_report.py\n?? uuv_mujoco/v2.2/tools/actuator_wrench_site_adjustments.py\n?? uuv_mujoco/v2.2/tools/actuator_wrench_sites.py\n?? uuv_mujoco/v2.2/tools/actuator_wrench_summary.py\n?? uuv_mujoco/v2.2/tools/althold_contract_bin.py\n?? uuv_mujoco/v2.2/tools/althold_contract_bin_message_loop.py\n?? uuv_mujoco/v2.2/tools/althold_contract_bin_paths.py\n?? uuv_mujoco/v2.2/tools/althold_contract_bin_reader.py\n?? uuv_mujoco/v2.2/tools/althold_contract_bin_schema.py\n?? uuv_mujoco/v2.2/tools/althold_contract_bin_streams.py\n?? uuv_mujoco/v2.2/tools/althold_contract_model.py\n?? uuv_mujoco/v2.2/tools/althold_contract_plot.py\n?? uuv_mujoco/v2.2/tools/althold_contract_plot_modes.py\n?? uuv_mujoco/v2.2/tools/althold_contract_plot_panels.py\n?? uuv_mujoco/v2.2/tools/althold_contract_segments.py\n?? uuv_mujoco/v2.2/tools/althold_contract_signal_math.py\n?? uuv_mujoco/v2.2/tools/althold_contract_signals.py\n?? uuv_mujoco/v2.2/tools/althold_contract_summary.py\n?? uuv_mujoco/v2.2/tools/althold_diagnostics_callbacks.py\n?? uuv_mujoco/v2.2/tools/althold_diagnostics_contract.py\n?? uuv_mujoco/v2.2/tools/althold_diagnostics_csv.py\n?? uuv_mujoco/v2.2/tools/althold_diagnostics_depth_callbacks.py\n?? uuv_mujoco/v2.2/tools/althold_diagnostics_node.py\n?? uuv_mujoco/v2.2/tools/althold_diagnostics_output.py\n?? uuv_mujoco/v2.2/tools/althold_diagnostics_plot.py\n?? uuv_mujoco/v2.2/tools/althold_diagnostics_rc_callbacks.py\n?? uuv_mujoco/v2.2/tools/althold_diagnostics_ros_imports.py\n?? uuv_mujoco/v2.2/tools/althold_diagnostics_runtime.py\n?? uuv_mujoco/v2.2/tools/althold_diagnostics_series.py\n?? uuv_mujoco/v2.2/tools/althold_diagnostics_status_callbacks.py\n?? uuv_mujoco/v2.2/tools/althold_diagnostics_subscriptions.py\n?? uuv_mujoco/v2.2/tools/althold_diagnostics_summary.py\n?? uuv_mujoco/v2.2/tools/ardusub_thruster_contract_constants.py\n?? uuv_mujoco/v2.2/tools/ardusub_thruster_contract_response.py\n?? uuv_mujoco/v2.2/tools/ardusub_thruster_contract_scene.py\n?? uuv_mujoco/v2.2/tools/audit_closed_loop_param_compare.py\n?? uuv_mujoco/v2.2/tools/audit_closed_loop_param_io.py\n?? uuv_mujoco/v2.2/tools/audit_closed_loop_param_lines.py\n?? uuv_mujoco/v2.2/tools/audit_closed_loop_param_start_sitl.py\n?? uuv_mujoco/v2.2/tools/audit_closed_loop_param_watchlist.py\n?? uuv_mujoco/v2.2/tools/audit_closed_loop_params.py\n?? uuv_mujoco/v2.2/tools/audit_closed_loop_payload.py\n?? uuv_mujoco/v2.2/tools/audit_closed_loop_profile.py\n?? uuv_mujoco/v2.2/tools/audit_closed_loop_profile_active.py\n?? uuv_mujoco/v2.2/tools/audit_closed_loop_profile_keys.py\n?? uuv_mujoco/v2.2/tools/audit_closed_loop_profile_load.py\n?? uuv_mujoco/v2.2/tools/audit_closed_loop_sitl_params.py\n?? uuv_mujoco/v2.2/tools/audit_closed_loop_thruster_curve.py\n?? uuv_mujoco/v2.2/tools/audit_closed_loop_thruster_curve_candidates.py\n?? uuv_mujoco/v2.2/tools/audit_closed_loop_thruster_curve_forces.py\n?? uuv_mujoco/v2.2/tools/audit_closed_loop_thruster_curve_parse.py\n?? uuv_mujoco/v2.2/tools/audit_closed_loop_thruster_curve_values.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_ardupilot_identity.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_ardupilot_identity_checks.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_ardupilot_identity_info.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_checks.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_common.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_firmware_baro.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_firmware_checks.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_firmware_json_checks.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_firmware_json_sensor.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_firmware_json_servo.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_firmware_rc_checks.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_firmware_servo_output.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_gate_summary.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_markdown_sections.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_matrix.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_matrix_domains.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_matrix_eval.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_matrix_issue.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_paths.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_report.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_atm_pressure.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_baro.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_checks.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_dynamic_fluidcoef.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_dynamic_fluidcoef_eval.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_dynamic_fluidcoef_evidence.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_flow_coupling.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_identity.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_identity_check.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_identity_eval.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_identity_inputs.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_identity_report.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_identity_sources.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_json_altitude.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_plant_input.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_rc.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_sensor_io.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_static_pressure.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_surface_ext.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_time.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_runtime_time_sources.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_source_identity.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_sources.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_thruster_conversion.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_thruster_conversion_evidence.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_thruster_conversion_rules.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_thruster_gate_checks.py\n?? uuv_mujoco/v2.2/tools/audit_code_contract_types.py\n?? uuv_mujoco/v2.2/tools/axis_rc_arm_service.py\n?? uuv_mujoco/v2.2/tools/axis_rc_arm_state.py\n?? uuv_mujoco/v2.2/tools/axis_rc_cli_args.py\n?? uuv_mujoco/v2.2/tools/axis_rc_command_values.py\n?? uuv_mujoco/v2.2/tools/axis_rc_contract.py\n?? uuv_mujoco/v2.2/tools/axis_rc_health_flags.py\n?? uuv_mujoco/v2.2/tools/axis_rc_health_metrics.py\n?? uuv_mujoco/v2.2/tools/axis_rc_health_phase.py\n?? uuv_mujoco/v2.2/tools/axis_rc_health_phase_rules.py\n?? uuv_mujoco/v2.2/tools/axis_rc_health_response_rules.py\n?? uuv_mujoco/v2.2/tools/axis_rc_health_rules.py\n?? uuv_mujoco/v2.2/tools/axis_rc_health_sign.py\n?? uuv_mujoco/v2.2/tools/axis_rc_health_status.py\n?? uuv_mujoco/v2.2/tools/axis_rc_manual_messages.py\n?? uuv_mujoco/v2.2/tools/axis_rc_messages.py\n?? uuv_mujoco/v2.2/tools/axis_rc_metric_math.py\n?? uuv_mujoco/v2.2/tools/axis_rc_metrics.py\n?? uuv_mujoco/v2.2/tools/axis_rc_mode_service.py\n?? uuv_mujoco/v2.2/tools/axis_rc_node.py\n?? uuv_mujoco/v2.2/tools/axis_rc_node_callbacks.py\n?? uuv_mujoco/v2.2/tools/axis_rc_node_control.py\n?? uuv_mujoco/v2.2/tools/axis_rc_node_publish.py\n?? uuv_mujoco/v2.2/tools/axis_rc_node_services.py\n?? uuv_mujoco/v2.2/tools/axis_rc_node_spin.py\n?? uuv_mujoco/v2.2/tools/axis_rc_output_files.py\n?? uuv_mujoco/v2.2/tools/axis_rc_override_messages.py\n?? uuv_mujoco/v2.2/tools/axis_rc_plot_render.py\n?? uuv_mujoco/v2.2/tools/axis_rc_plot_series.py\n?? uuv_mujoco/v2.2/tools/axis_rc_plotting.py\n?? uuv_mujoco/v2.2/tools/axis_rc_report.py\n?? uuv_mujoco/v2.2/tools/axis_rc_sample_channels.py\n?? uuv_mujoco/v2.2/tools/axis_rc_sample_motion.py\n?? uuv_mujoco/v2.2/tools/axis_rc_sampling.py\n?? uuv_mujoco/v2.2/tools/axis_rc_sequence.py\n?? uuv_mujoco/v2.2/tools/axis_rc_sequence_env.py\n?? uuv_mujoco/v2.2/tools/axis_rc_sequence_phases.py\n?? uuv_mujoco/v2.2/tools/axis_rc_service_spin.py\n?? uuv_mujoco/v2.2/tools/axis_rc_services.py\n?? uuv_mujoco/v2.2/tools/axis_rc_stack_wait.py\n?? uuv_mujoco/v2.2/tools/axis_rc_summary_metrics.py\n?? uuv_mujoco/v2.2/tools/axis_rc_trigger_service.py\n?? uuv_mujoco/v2.2/tools/axis_rc_vehicle_prepare.py\n?? uuv_mujoco/v2.2/tools/check_axis_rc_health_contract.py\n?? uuv_mujoco/v2.2/tools/check_bridge_live_imports.py\n?? uuv_mujoco/v2.2/tools/check_dev_os_compat.py\n?? uuv_mujoco/v2.2/tools/check_dynamic_fluidcoef_contract.py\n?? uuv_mujoco/v2.2/tools/check_filter_ping360_stl_io.py\n?? uuv_mujoco/v2.2/tools/check_fossen_residual_wrench.py\n?? uuv_mujoco/v2.2/tools/check_fossen_runtime_builders.py\n?? uuv_mujoco/v2.2/tools/check_gui_arm_mode_command_contract.py\n?? uuv_mujoco/v2.2/tools/check_gui_backend_selection.py\n?? uuv_mujoco/v2.2/tools/check_gui_entry_contract.py\n?? uuv_mujoco/v2.2/tools/check_gui_initial_depth_contract.py\n?? uuv_mujoco/v2.2/tools/check_gui_pilot_auto_enable_contract.py\n?? uuv_mujoco/v2.2/tools/check_gui_pilot_toggle_contract.py\n?? uuv_mujoco/v2.2/tools/check_gui_rc_replay_decode.py\n?? uuv_mujoco/v2.2/tools/check_gui_readiness_contract.py\n?? uuv_mujoco/v2.2/tools/check_gui_ros_python_contract.py\n?? uuv_mujoco/v2.2/tools/check_hydrostatic_buoyancy_points.py\n?? uuv_mujoco/v2.2/tools/check_immediate_sensor_replay_reply.py\n?? uuv_mujoco/v2.2/tools/check_initial_depth_auto_release_contract.py\n?? uuv_mujoco/v2.2/tools/check_initial_hold_pose.py\n?? uuv_mujoco/v2.2/tools/check_json_servo_receiver.py\n?? uuv_mujoco/v2.2/tools/check_mavlink_message_interval.py\n?? uuv_mujoco/v2.2/tools/check_mavros_rcout_publish_policy.py\n?? uuv_mujoco/v2.2/tools/check_model_runtime_setup.py\n?? uuv_mujoco/v2.2/tools/check_mujoco_velocity_contract.py\n?? uuv_mujoco/v2.2/tools/check_odometry_publish_builders.py\n?? uuv_mujoco/v2.2/tools/check_physics_contract_geometry.py\n?? uuv_mujoco/v2.2/tools/check_physics_runtime_hydrostatic.py\n?? uuv_mujoco/v2.2/tools/check_plant_input_gate.py\n?? uuv_mujoco/v2.2/tools/check_plant_input_gate_csv.py\n?? uuv_mujoco/v2.2/tools/check_rc_frame_contract.py\n?? uuv_mujoco/v2.2/tools/check_real_start_measurements.py\n?? uuv_mujoco/v2.2/tools/check_ros2_command_payload.py\n?? uuv_mujoco/v2.2/tools/check_ros2_dvl_messages.py\n?? uuv_mujoco/v2.2/tools/check_ros2_ping360_messages.py\n?? uuv_mujoco/v2.2/tools/check_ros2_replay_rcout.py\n?? uuv_mujoco/v2.2/tools/check_ros2_sitl_command_override.py\n?? uuv_mujoco/v2.2/tools/check_runtime_freshness.py\n?? uuv_mujoco/v2.2/tools/check_runtime_readiness_policy.py\n?? uuv_mujoco/v2.2/tools/check_sitl_command_link_readiness.py\n?? uuv_mujoco/v2.2/tools/check_sitl_external_nav_contract.py\n?? uuv_mujoco/v2.2/tools/check_sitl_servo_runtime.py\n?? uuv_mujoco/v2.2/tools/check_static_context_publisher.py\n?? uuv_mujoco/v2.2/tools/check_thruster_param_loader.py\n?? uuv_mujoco/v2.2/tools/check_thruster_performance_curves.py\n?? uuv_mujoco/v2.2/tools/control_loop_golden_compare_logic.py\n?? uuv_mujoco/v2.2/tools/control_loop_golden_compare_metrics.py\n?? uuv_mujoco/v2.2/tools/control_loop_golden_compare_phases.py\n?? uuv_mujoco/v2.2/tools/control_loop_golden_compare_records.py\n?? uuv_mujoco/v2.2/tools/control_loop_golden_fingerprint.py\n?? uuv_mujoco/v2.2/tools/control_loop_golden_fingerprint_fields.py\n?? uuv_mujoco/v2.2/tools/control_loop_golden_fingerprint_metadata.py\n?? uuv_mujoco/v2.2/tools/control_loop_golden_fingerprint_phase.py\n?? uuv_mujoco/v2.2/tools/control_loop_golden_math.py\n?? uuv_mujoco/v2.2/tools/control_loop_golden_phase_metrics.py\n?? uuv_mujoco/v2.2/tools/control_loop_golden_phase_windows.py\n?? uuv_mujoco/v2.2/tools/control_loop_golden_thruster_columns.py\n?? uuv_mujoco/v2.2/tools/control_loop_golden_thruster_io.py\n?? uuv_mujoco/v2.2/tools/control_loop_golden_thruster_metrics.py\n?? uuv_mujoco/v2.2/tools/control_loop_golden_thruster_rows.py\n?? uuv_mujoco/v2.2/tools/control_loop_golden_thrusters.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_common.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_display.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_docker.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_exec.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_mjpython.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_mjpython_probe.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_mjpython_result.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_path_checks.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_python_candidates.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_python_checks.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_python_eval.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_python_import_probe.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_python_probe.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_python_runtime.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_python_select.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_ros.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_run_groups.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_runtime.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_sitl_alias.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_sitl_paths.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_system.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_ubuntu.py\n?? uuv_mujoco/v2.2/tools/dev_os_compat_viewer.py\n?? uuv_mujoco/v2.2/tools/dynamic_fluidcoef_smoke_cases.py\n?? uuv_mujoco/v2.2/tools/filter_ping360_component_classify.py\n?? uuv_mujoco/v2.2/tools/filter_ping360_component_stats.py\n?? uuv_mujoco/v2.2/tools/filter_ping360_stl_components.py\n?? uuv_mujoco/v2.2/tools/filter_ping360_stl_geometry.py\n?? uuv_mujoco/v2.2/tools/filter_ping360_stl_io.py\n?? uuv_mujoco/v2.2/tools/filter_ping360_stl_pipeline.py\n?? uuv_mujoco/v2.2/tools/filter_ping360_stl_read.py\n?? uuv_mujoco/v2.2/tools/filter_ping360_stl_types.py\n?? uuv_mujoco/v2.2/tools/filter_ping360_stl_write.py\n?? uuv_mujoco/v2.2/tools/filter_ping360_union_find.py\n?? uuv_mujoco/v2.2/tools/fossen_runtime_builder_smoke_cases.py\n?? uuv_mujoco/v2.2/tools/gui_pilot_toggle_smoke_fixture.py\n?? uuv_mujoco/v2.2/tools/initial_hold_pose_smoke_cases.py\n?? uuv_mujoco/v2.2/tools/initial_hold_pose_smoke_fixture.py\n?? uuv_mujoco/v2.2/tools/json_servo_receiver_smoke_assertions.py\n?? uuv_mujoco/v2.2/tools/json_servo_receiver_smoke_cases.py\n?? uuv_mujoco/v2.2/tools/json_servo_receiver_smoke_fixture.py\n?? uuv_mujoco/v2.2/tools/live_topic_liveness_check.py\n?? uuv_mujoco/v2.2/tools/physics_contract_audit.py\n?? uuv_mujoco/v2.2/tools/physics_contract_audit_report.py\n?? uuv_mujoco/v2.2/tools/physics_contract_body.py\n?? uuv_mujoco/v2.2/tools/physics_contract_body_geometry.py\n?? uuv_mujoco/v2.2/tools/physics_contract_buoyancy.py\n?? uuv_mujoco/v2.2/tools/physics_contract_depth_state.py\n?? uuv_mujoco/v2.2/tools/physics_contract_geometry.py\n?? uuv_mujoco/v2.2/tools/physics_contract_model.py\n?? uuv_mujoco/v2.2/tools/physics_contract_mujoco.py\n?? uuv_mujoco/v2.2/tools/physics_contract_neutral_apply.py\n?? uuv_mujoco/v2.2/tools/physics_contract_neutral_buoyancy.py\n?? uuv_mujoco/v2.2/tools/physics_contract_neutral_components.py\n?? uuv_mujoco/v2.2/tools/physics_contract_neutral_context.py\n?? uuv_mujoco/v2.2/tools/physics_contract_neutral_loop.py\n?? uuv_mujoco/v2.2/tools/physics_contract_neutral_output.py\n?? uuv_mujoco/v2.2/tools/physics_contract_neutral_restoring.py\n?? uuv_mujoco/v2.2/tools/physics_contract_neutral_runner.py\n?? uuv_mujoco/v2.2/tools/physics_contract_neutral_sim.py\n?? uuv_mujoco/v2.2/tools/physics_contract_neutral_timing.py\n?? uuv_mujoco/v2.2/tools/physics_contract_profile_runtime.py\n?? uuv_mujoco/v2.2/tools/physics_contract_quat.py\n?? uuv_mujoco/v2.2/tools/physics_contract_report.py\n?? uuv_mujoco/v2.2/tools/physics_contract_report_balance.py\n?? uuv_mujoco/v2.2/tools/physics_contract_report_body.py\n?? uuv_mujoco/v2.2/tools/physics_contract_report_console.py\n?? uuv_mujoco/v2.2/tools/physics_contract_report_hydro.py\n?? uuv_mujoco/v2.2/tools/physics_contract_report_io.py\n?? uuv_mujoco/v2.2/tools/physics_contract_report_sections.py\n?? uuv_mujoco/v2.2/tools/physics_contract_runner.py\n?? uuv_mujoco/v2.2/tools/physics_contract_runner_balances.py\n?? uuv_mujoco/v2.2/tools/physics_contract_runner_context.py\n?? uuv_mujoco/v2.2/tools/physics_contract_runner_depths.py\n?? uuv_mujoco/v2.2/tools/physics_contract_runner_outputs.py\n?? uuv_mujoco/v2.2/tools/physics_contract_site_geometry.py\n?? uuv_mujoco/v2.2/tools/physics_contract_start_depth.py\n?? uuv_mujoco/v2.2/tools/physics_contract_types.py\n?? uuv_mujoco/v2.2/tools/preflight_ardupilot_classify.py\n?? uuv_mujoco/v2.2/tools/preflight_ardupilot_git.py\n?? uuv_mujoco/v2.2/tools/preflight_ardupilot_output.py\n?? uuv_mujoco/v2.2/tools/real_start_angular_velocity.py\n?? uuv_mujoco/v2.2/tools/real_start_attitude_extractors.py\n?? uuv_mujoco/v2.2/tools/real_start_baro.py\n?? uuv_mujoco/v2.2/tools/real_start_baro_candidates.py\n?? uuv_mujoco/v2.2/tools/real_start_baro_row.py\n?? uuv_mujoco/v2.2/tools/real_start_builder.py\n?? uuv_mujoco/v2.2/tools/real_start_common.py\n?? uuv_mujoco/v2.2/tools/real_start_csv.py\n?? uuv_mujoco/v2.2/tools/real_start_depth_extractors.py\n?? uuv_mujoco/v2.2/tools/real_start_dvl_velocity.py\n?? uuv_mujoco/v2.2/tools/real_start_extractors.py\n?? uuv_mujoco/v2.2/tools/real_start_geometry.py\n?? uuv_mujoco/v2.2/tools/real_start_local_velocity.py\n?? uuv_mujoco/v2.2/tools/real_start_measurement_smoke_cases.py\n?? uuv_mujoco/v2.2/tools/real_start_output.py\n?? uuv_mujoco/v2.2/tools/real_start_pressure_state.py\n?? uuv_mujoco/v2.2/tools/real_start_rc_state.py\n?? uuv_mujoco/v2.2/tools/real_start_state.py\n?? uuv_mujoco/v2.2/tools/real_start_velocity_extractors.py\n?? uuv_mujoco/v2.2/tools/real_start_velocity_policy.py\n?? uuv_mujoco/v2.2/tools/real_start_velocity_vectors.py\n?? uuv_mujoco/v2.2/tools/refactor_inventory.py\n?? uuv_mujoco/v2.2/tools/refactor_inventory_analysis.py\n?? uuv_mujoco/v2.2/tools/refactor_inventory_paths.py\n?? uuv_mujoco/v2.2/tools/refactor_inventory_render.py\n?? uuv_mujoco/v2.2/tools/refactor_inventory_scoring.py\n?? uuv_mujoco/v2.2/tools/refactor_inventory_symbols.py\n?? uuv_mujoco/v2.2/tools/refactor_inventory_types.py\n?? uuv_mujoco/v2.2/tools/roll_stability_candidate_catalog.py\n?? uuv_mujoco/v2.2/tools/roll_stability_candidate_diagnostics.py\n?? uuv_mujoco/v2.2/tools/roll_stability_candidate_ellipsoid.py\n?? uuv_mujoco/v2.2/tools/roll_stability_candidate_hydrostatic.py\n?? uuv_mujoco/v2.2/tools/roll_stability_candidate_signs.py\n?? uuv_mujoco/v2.2/tools/roll_stability_candidate_types.py\n?? uuv_mujoco/v2.2/tools/roll_stability_candidates.py\n?? uuv_mujoco/v2.2/tools/roll_stability_command_requests.py\n?? uuv_mujoco/v2.2/tools/roll_stability_command_send.py\n?? uuv_mujoco/v2.2/tools/roll_stability_command_wait.py\n?? uuv_mujoco/v2.2/tools/roll_stability_file_edits.py\n?? uuv_mujoco/v2.2/tools/roll_stability_launch.py\n?? uuv_mujoco/v2.2/tools/roll_stability_launch_process.py\n?? uuv_mujoco/v2.2/tools/roll_stability_launch_readiness.py\n?? uuv_mujoco/v2.2/tools/roll_stability_math.py\n?? uuv_mujoco/v2.2/tools/roll_stability_metrics.py\n?? uuv_mujoco/v2.2/tools/roll_stability_pose_metrics.py\n?? uuv_mujoco/v2.2/tools/roll_stability_probe.py\n?? uuv_mujoco/v2.2/tools/roll_stability_probe_callbacks.py\n?? uuv_mujoco/v2.2/tools/roll_stability_probe_commands.py\n?? uuv_mujoco/v2.2/tools/roll_stability_probe_rc.py\n?? uuv_mujoco/v2.2/tools/roll_stability_probe_runtime.py\n?? uuv_mujoco/v2.2/tools/roll_stability_probe_sequence.py\n?? uuv_mujoco/v2.2/tools/roll_stability_rc_frame.py\n?? uuv_mujoco/v2.2/tools/roll_stability_rc_metrics.py\n?? uuv_mujoco/v2.2/tools/roll_stability_rc_spin.py\n?? uuv_mujoco/v2.2/tools/roll_stability_runner.py\n?? uuv_mujoco/v2.2/tools/roll_stability_score.py\n?? uuv_mujoco/v2.2/tools/roll_stability_stimulus.py\n?? uuv_mujoco/v2.2/tools/roll_stability_summary.py\n?? uuv_mujoco/v2.2/tools/roll_stability_sweep_files.py\n?? uuv_mujoco/v2.2/tools/roll_stability_sweep_loop.py\n?? uuv_mujoco/v2.2/tools/roll_stability_sweep_paths.py\n?? uuv_mujoco/v2.2/tools/roll_stability_wait_loop.py\n?? uuv_mujoco/v2.2/tools/ros2_sitl_command_override_smoke_cases.py\n?? uuv_mujoco/v2.2/tools/ros2_sitl_command_override_smoke_fixture.py\n?? uuv_mujoco/v2.2/tools/run_fast_contract_sanity.py\n?? uuv_mujoco/v2.2/tools/runtime_freshness_dirty_checks.py\n?? uuv_mujoco/v2.2/tools/runtime_freshness_dirty_paths.py\n?? uuv_mujoco/v2.2/tools/runtime_freshness_eval.py\n?? uuv_mujoco/v2.2/tools/runtime_freshness_git_probe.py\n?? uuv_mujoco/v2.2/tools/runtime_freshness_issue.py\n?? uuv_mujoco/v2.2/tools/runtime_freshness_json_io.py\n?? uuv_mujoco/v2.2/tools/runtime_freshness_probe.py\n?? uuv_mujoco/v2.2/tools/runtime_freshness_report.py\n?? uuv_mujoco/v2.2/tools/runtime_freshness_runtime_checks.py\n?? uuv_mujoco/v2.2/tools/runtime_freshness_runtime_resolve.py\n?? uuv_mujoco/v2.2/tools/runtime_freshness_source_checks.py\n?? uuv_mujoco/v2.2/tools/runtime_freshness_version.py\n?? uuv_mujoco/v2.2/tools/runtime_freshness_version_checks.py\n?? uuv_mujoco/v2.2/tools/runtime_freshness_version_constants.py\n?? uuv_mujoco/v2.2/tools/runtime_freshness_version_dirty.py\n?? uuv_mujoco/v2.2/tools/runtime_freshness_version_paths.py\n?? uuv_mujoco/v2.2/tools/runtime_freshness_version_payload.py\n?? uuv_mujoco/v2.2/tools/sitl_external_nav_contract_cases.py\n?? uuv_mujoco/v2.2/tools/sitl_external_nav_contract_fixture.py\n?? uuv_mujoco/v2.2/tools/thruster_param_loader_smoke_assertions.py\n?? uuv_mujoco/v2.2/tools/thruster_param_loader_smoke_cases.py\n?? uuv_mujoco/v2.2/tools/thruster_param_loader_smoke_fixture.py\n?? uuv_mujoco/v2.2/tools/thruster_param_loader_smoke_io.py\n?? uuv_mujoco/v2.2/tools/thruster_performance_curve_smoke_cases.py\n?? uuv_mujoco/v2.2/uuv_mujoco/"
+        }
+      ],
+      "official_refs": [],
+      "status": "PASS",
+      "title": "Active runtime resolves through uuv_mujoco/current"
+    },
+    {
+      "check_id": "ardupilot_source_tag",
+      "conclusion": "Local ArduPilot reports 'ArduSub-4.1.2'; inner worktree status is clean. Use a fresh clone only if this changes.",
+      "evidence": [
+        {
+          "line": null,
+          "path": "ardupilot",
+          "snippet": "git describe: ArduSub-4.1.2"
+        },
+        {
+          "line": null,
+          "path": "ardupilot",
+          "snippet": "git status --short: <clean>"
+        }
+      ],
+      "official_refs": [],
+      "status": "PASS",
+      "title": "Local ArduPilot source identity"
+    },
+    {
+      "check_id": "top_level_ardupilot_gitlink",
+      "conclusion": "The ArduPilot source checkout used for this audit is 2dd0bb7d4c85ac48437f139d66df648fc0e1d4ae. The top-level repository records 6271e15bd4a2ef81a0f4ead439cb18188763c271. If these differ, do not commit the gitlink change unless the project intentionally updates the submodule pointer.",
+      "evidence": [
+        {
+          "line": null,
+          "path": "ardupilot",
+          "snippet": "working checkout commit: 2dd0bb7d4c85ac48437f139d66df648fc0e1d4ae"
+        },
+        {
+          "line": null,
+          "path": ".",
+          "snippet": "top-level gitlink: 6271e15bd4a2ef81a0f4ead439cb18188763c271"
+        }
+      ],
+      "official_refs": [],
+      "status": "WARN",
+      "title": "Top-level ArduPilot gitlink matches the working checkout"
+    },
+    {
+      "check_id": "json_servo_packet_16_raw_pwm",
+      "conclusion": "Closed-loop plant input must consume the raw JSON servo packet as PWM[0..15].",
+      "evidence": [
+        {
+          "line": 43,
+          "path": "ardupilot/libraries/SITL/SIM_JSON.h",
+          "snippet": "uint16_t pwm[16]"
+        },
+        {
+          "line": 105,
+          "path": "ardupilot/libraries/SITL/SIM_JSON.cpp",
+          "snippet": "pkt.pwm[i] = input.servos[i]"
+        }
+      ],
+      "official_refs": [
+        "https://ardupilot.org/dev/docs/sitl-with-JSON.html"
+      ],
+      "status": "PASS",
+      "title": "SITL JSON servo backend is raw 16-channel PWM"
+    },
+    {
+      "check_id": "json_sensor_no_direct_pressure_or_altitude",
+      "conclusion": "Bar30 cannot be injected by a JSON pressure field in this firmware. The pressure contract must be implemented indirectly through position.z.",
+      "evidence": [
+        {
+          "line": 100,
+          "path": "ardupilot/libraries/SITL/SIM_JSON.h",
+          "snippet": "SIM_JSON keytable[16]"
+        },
+        {
+          "line": 104,
+          "path": "ardupilot/libraries/SITL/SIM_JSON.h",
+          "snippet": "position key present"
+        },
+        {
+          "line": null,
+          "path": "ardupilot/libraries/SITL/SIM_JSON.h",
+          "snippet": "pressure/altitude keys absent from keytable"
+        }
+      ],
+      "official_refs": [
+        "https://ardupilot.org/dev/docs/sitl-with-JSON.html"
+      ],
+      "status": "PASS",
+      "title": "ArduPilot JSON sensor parser has no pressure/altitude key"
+    },
+    {
+      "check_id": "baro_sitl_pressure_from_json_position_z",
+      "conclusion": "For ArduSub, AP_Baro_SITL registers a water barometer and converts SITL altitude to underwater pressure. SIM_Aircraft builds that altitude from JSON position.z.",
+      "evidence": [
+        {
+          "line": 21,
+          "path": "ardupilot/libraries/AP_Baro/AP_Baro_SITL.cpp",
+          "snippet": "BARO_TYPE_WATER"
+        },
+        {
+          "line": 56,
+          "path": "ardupilot/libraries/AP_Baro/AP_Baro_SITL.cpp",
+          "snippet": "float sim_alt = _sitl->state.altitude"
+        },
+        {
+          "line": 120,
+          "path": "ardupilot/libraries/AP_Baro/AP_Baro_SITL.cpp",
+          "snippet": "SimpleUnderWaterAtmosphere(-sim_alt * 0.001f"
+        },
+        {
+          "line": 146,
+          "path": "ardupilot/libraries/SITL/SIM_Aircraft.cpp",
+          "snippet": "location.alt  = static_cast<int32_t>(home.alt - position.z * 100.0f)"
+        }
+      ],
+      "official_refs": [
+        "https://bluerobotics.com/store/sensors-cameras/sensors/bar30-sensor-r1-rp/"
+      ],
+      "status": "PASS",
+      "title": "ArduSub SITL Bar30 pressure is derived from altitude built from position.z"
+    },
+    {
+      "check_id": "servo_output_raw_halrcout_telemetry",
+      "conclusion": "Controller parity comparison layer is real /mavros/rc/out versus SITL MAVLink SERVO_OUTPUT_RAW, not the high-rate JSON servo backend.",
+      "evidence": [
+        {
+          "line": 2664,
+          "path": "ardupilot/libraries/GCS_MAVLink/GCS_Common.cpp",
+          "snippet": "void GCS_MAVLINK::send_servo_output_raw()"
+        },
+        {
+          "line": 2667,
+          "path": "ardupilot/libraries/GCS_MAVLink/GCS_Common.cpp",
+          "snippet": "hal.rcout->read(values, 16)"
+        }
+      ],
+      "official_refs": [
+        "https://mavlink.io/en/messages/common.html#SERVO_OUTPUT_RAW"
+      ],
+      "status": "PASS",
+      "title": "SERVO_OUTPUT_RAW is hal.rcout telemetry"
+    },
+    {
+      "check_id": "rc_override_local_16_channel_limit",
+      "conclusion": "The official MAVLink message has extension channels beyond 16, but this local ArduSub 4.1.2 handler builds override_data only through chan16_raw. This is acceptable for the current vehicle if active controls stay within C1..C8, but the old 'preserve 1..18' checklist is not true for this firmware.",
+      "evidence": [
+        {
+          "line": 3239,
+          "path": "ardupilot/libraries/GCS_MAVLink/GCS_Common.cpp",
+          "snippet": "packet.chan16_raw"
+        },
+        {
+          "line": 3248,
+          "path": "ardupilot/libraries/GCS_MAVLink/GCS_Common.cpp",
+          "snippet": "for (uint8_t i=8; i<ARRAY_SIZE(override_data); i++)"
+        }
+      ],
+      "official_refs": [
+        "https://mavlink.io/en/messages/common.html#RC_CHANNELS_OVERRIDE"
+      ],
+      "status": "WARN",
+      "title": "Local ArduSub 4.1.2 RC override handler consumes 1..16, not 1..18"
+    },
+    {
+      "check_id": "rc_override_timeout_policy",
+      "conclusion": "RC override must be streamed faster than RC_OVERRIDE_TIME, whose local default is 3s. A one-shot override is not a valid closed-loop input contract.",
+      "evidence": [
+        {
+          "line": 351,
+          "path": "ardupilot/libraries/RC_Channel/RC_Channel.cpp",
+          "snippet": "override_value = v"
+        },
+        {
+          "line": 368,
+          "path": "ardupilot/libraries/RC_Channel/RC_Channel.cpp",
+          "snippet": "get_override_timeout_ms"
+        },
+        {
+          "line": 86,
+          "path": "ardupilot/libraries/RC_Channel/RC_Channels_VarInfo.h",
+          "snippet": "AP_GROUPINFO(\"_OVERRIDE_TIME\""
+        }
+      ],
+      "official_refs": [
+        "https://mavlink.io/en/messages/common.html#RC_CHANNELS_OVERRIDE"
+      ],
+      "status": "PASS",
+      "title": "RC override has firmware timeout policy"
+    },
+    {
+      "check_id": "ardusub_joystick_axis_mapping",
+      "conclusion": "The real joy/RC override axis mapping checklist is confirmed in ArduSub code.",
+      "evidence": [
+        {
+          "line": 126,
+          "path": "ardupilot/ArduSub/joystick.cpp",
+          "snippet": "RC3 throttle/heave"
+        },
+        {
+          "line": 127,
+          "path": "ardupilot/ArduSub/joystick.cpp",
+          "snippet": "RC4 yaw"
+        },
+        {
+          "line": 132,
+          "path": "ardupilot/ArduSub/joystick.cpp",
+          "snippet": "RC5 forward"
+        },
+        {
+          "line": 133,
+          "path": "ardupilot/ArduSub/joystick.cpp",
+          "snippet": "RC6 lateral"
+        }
+      ],
+      "official_refs": [],
+      "status": "PASS",
+      "title": "ArduSub joystick maps RC3 heave, RC4 yaw, RC5 forward, RC6 lateral"
+    },
+    {
+      "check_id": "active_runtime_baro_contract_frontend_match",
+      "conclusion": "The active runtime converts physical Bar30 pressure/depth into the JSON position.z value that makes AP_Baro_SITL produce the matching water-barometer frontend altitude.",
+      "evidence": [
+        {
+          "line": 66,
+          "path": "uuv_mujoco/current/sim/contracts/baro.py",
+          "snippet": "sitl_depth_m_for_frontend_match"
+        },
+        {
+          "line": 10,
+          "path": "uuv_mujoco/current/bridge/sitl_contract.py",
+          "snippet": "from sim.contracts.baro"
+        },
+        {
+          "line": 38,
+          "path": "uuv_mujoco/current/bridge/ros2_bridge_config_baro.py",
+          "snippet": "ROS2_UUV_SITL_BARO_DEPTH_CONTRACT\", \"frontend_match\""
+        },
+        {
+          "line": 12,
+          "path": "uuv_mujoco/current/bridge/ros2_state_estimation.py",
+          "snippet": "from .ros2_state_vertical import"
+        },
+        {
+          "line": 37,
+          "path": "uuv_mujoco/current/bridge/ros2_state_sitl_vertical.py",
+          "snippet": "sitl_contract_depth_m("
+        },
+        {
+          "line": 38,
+          "path": "uuv_mujoco/current/bridge/ros2_state_sitl_baro.py",
+          "snippet": "sitl_depth_m_for_frontend_match(pressure_pa)"
+        },
+        {
+          "line": 27,
+          "path": "uuv_mujoco/current/bridge/sitl_json_payload.py",
+          "snippet": "json_position[2] = float(vertical_est.depth_m)"
+        }
+      ],
+      "official_refs": [
+        "https://ardupilot.org/dev/docs/sitl-with-JSON.html",
+        "https://bluerobotics.com/store/sensors-cameras/sensors/bar30-sensor-r1-rp/"
+      ],
+      "status": "PASS",
+      "title": "Active runtime injects Bar30 contract through JSON position.z frontend match"
+    },
+    {
+      "check_id": "active_runtime_json_altitude_field_is_compat_only",
+      "conclusion": "The altitude key in the active runtime JSON payload is compatibility/debug data for this firmware. It must not be treated as a controller input contract.",
+      "evidence": [
+        {
+          "line": 31,
+          "path": "uuv_mujoco/current/bridge/sitl_json_payload.py",
+          "snippet": "\"altitude\": float(vertical_est.alt_m)"
+        },
+        {
+          "line": null,
+          "path": "ardupilot/libraries/SITL/SIM_JSON.h",
+          "snippet": "SIM_JSON keytable has no altitude key"
+        }
+      ],
+      "official_refs": [
+        "https://ardupilot.org/dev/docs/sitl-with-JSON.html"
+      ],
+      "status": "WARN",
+      "title": "Active runtime still sends JSON altitude but ArduSub 4.1.2 ignores it"
+    },
+    {
+      "check_id": "active_runtime_static_pressure_external_bar30",
+      "conclusion": "The ROS output surface uses Bar30 absolute pressure for static_pressure by default. For SITL control, the important path remains JSON position.z -> AP_Baro_SITL.",
+      "evidence": [
+        {
+          "line": 15,
+          "path": "uuv_mujoco/current/bridge/ros2_bridge_config_static_pressure.py",
+          "snippet": "ROS2_UUV_STATIC_PRESSURE_SOURCE\", \"external\""
+        },
+        {
+          "line": 73,
+          "path": "uuv_mujoco/current/bridge/ros2_publish_state.py",
+          "snippet": "static_pressure_pa = bar30_pressure_pa"
+        }
+      ],
+      "official_refs": [
+        "https://bluerobotics.com/store/sensors-cameras/sensors/bar30-sensor-r1-rp/"
+      ],
+      "status": "PASS",
+      "title": "/mavros/imu/static_pressure defaults to external Bar30 pressure"
+    },
+    {
+      "check_id": "active_runtime_atm_pressure_excluded_output_surface",
+      "conclusion": "The April 1 real bag has /mavros/imu/atm_pressure around 0.24, not Pa-scale surface pressure. The sim currently publishes Bar30 absolute pressure there, so this topic is excluded from controller parity and plant replay fitting until its real semantics are proven.",
+      "evidence": [
+        {
+          "line": null,
+          "path": "uuv_mujoco/current/bridge/ros2_publish_runtime.py",
+          "snippet": "mavros_atm_pressure_msg = build_pressure_msg"
+        }
+      ],
+      "official_refs": [],
+      "status": "WARN",
+      "title": "/mavros/imu/atm_pressure is not a safe real-bag pressure target"
+    },
+    {
+      "check_id": "active_runtime_time_contract_sim_publish_wall_transport",
+      "conclusion": "ROS sensor output is gated by monotonic sim time and sensor_dt; sensor-replay can use a monotonic JSON-servo frame clock; MAVLink polling, SERVO_OUTPUT_RAW requests, RC keepalive, and viewer catch-up use wall-clock cadence.",
+      "evidence": [
+        {
+          "line": 9,
+          "path": "uuv_mujoco/current/bridge/ros2_bridge_publish_timing.py",
+          "snippet": "self.last_pub_t + self.sensor_dt"
+        },
+        {
+          "line": 21,
+          "path": "uuv_mujoco/current/bridge/sitl_sensor_replay_servo_clock.py",
+          "snippet": "_sensor_replay_last_clock_t_s"
+        },
+        {
+          "line": 9,
+          "path": "uuv_mujoco/current/bridge/sitl_sensor_replay_payload_time.py",
+          "snippet": "_sensor_replay_start_on_rc"
+        },
+        {
+          "line": 9,
+          "path": "uuv_mujoco/current/bridge/sitl_json_servo_poll_loop.py",
+          "snippet": "now_wall = time.monotonic()"
+        },
+        {
+          "line": 20,
+          "path": "uuv_mujoco/current/bridge/sitl_mavlink_request_servo_link.py",
+          "snippet": "_sitl_mavlink_servo_hz"
+        },
+        {
+          "line": 25,
+          "path": "uuv_mujoco/current/bridge/sitl_mavlink_request_command_link.py",
+          "snippet": "_sitl_rcout_telemetry_hz"
+        },
+        {
+          "line": 11,
+          "path": "uuv_mujoco/current/bridge/sitl_transport_extnav_scheduler.py",
+          "snippet": "transport._sitl_extnav_scheduler = \"sim_time\""
+        },
+        {
+          "line": 23,
+          "path": "uuv_mujoco/current/bridge/sitl_transport_extnav_runtime.py",
+          "snippet": "transport._sitl_extnav_start_wall = time.monotonic()"
+        },
+        {
+          "line": 23,
+          "path": "uuv_mujoco/current/sim/runtime/simulation_step_catchup.py",
+          "snippet": "clocks.next_step_wall += cadence.target_dt"
+        },
+        {
+          "line": 22,
+          "path": "uuv_mujoco/current/sim/runtime/simulation_sensor_catchup.py",
+          "snippet": "clocks.next_sensor_wall += cadence.sensor_dt"
+        }
+      ],
+      "official_refs": [
+        "https://mavlink.io/en/messages/common.html#SERVO_OUTPUT_RAW"
+      ],
+      "status": "PASS",
+      "title": "Runtime separates sim-time sensor publishing from wall-time transport polling"
+    },
+    {
+      "check_id": "active_runtime_sensor_io_snapshot_contract",
+      "conclusion": "The active runtime builds one MuJoCo sensor snapshot, sends FRD IMU plus Bar30 pressure/depth to ArduSub JSON SITL, and publishes ROS/MAVROS/DVL observation topics from the same snapshot.",
+      "evidence": [
+        {
+          "line": 25,
+          "path": "uuv_mujoco/current/bridge/ros2_sitl_sensor_feed.py",
+          "snippet": "Ros2SensorSnapshot("
+        },
+        {
+          "line": 33,
+          "path": "uuv_mujoco/current/bridge/ros2_sitl_sensor_transport.py",
+          "snippet": "pressure_pa=vertical.bar30_pressure_pa"
+        },
+        {
+          "line": 32,
+          "path": "uuv_mujoco/current/bridge/sitl_json_payload.py",
+          "snippet": "\"imu\": {"
+        },
+        {
+          "line": 73,
+          "path": "uuv_mujoco/current/bridge/ros2_publish_state.py",
+          "snippet": "static_pressure_pa = bar30_pressure_pa"
+        },
+        {
+          "line": 49,
+          "path": "uuv_mujoco/current/bridge/ros2_publish_core_factories.py",
+          "snippet": "(\"depth\", build_core_depth_msg)"
+        },
+        {
+          "line": 40,
+          "path": "uuv_mujoco/current/bridge/ros2_publish_mavros_cache_factories.py",
+          "snippet": "(\"mavros_static_pressure\", build_static_pressure_msg)"
+        },
+        {
+          "line": 22,
+          "path": "uuv_mujoco/current/bridge/ros2_publish_dvl_factories.py",
+          "snippet": "state.dvl_vel_dvl_frd"
+        }
+      ],
+      "official_refs": [
+        "https://ardupilot.org/dev/docs/sitl-with-JSON.html",
+        "https://bluerobotics.com/store/sensors-cameras/sensors/bar30-sensor-r1-rp/"
+      ],
+      "status": "PASS",
+      "title": "Sensor input/output surfaces share one MuJoCo snapshot contract"
+    },
+    {
+      "check_id": "active_runtime_rc_override_forward_mirror_contract",
+      "conclusion": "The active runtime forwards RC_CHANNELS_OVERRIDE as the first 18 raw channels, uses normalized axes only for local fallback, and mirrors the same raw frame to /mavros/rc/in.",
+      "evidence": [
+        {
+          "line": 9,
+          "path": "uuv_mujoco/current/bridge/ros2_rc_override_frame.py",
+          "snippet": "MAX_RC_OVERRIDE_CHANNELS = 18"
+        },
+        {
+          "line": 15,
+          "path": "uuv_mujoco/current/bridge/ros2_rc_override_forwarding.py",
+          "snippet": "send_rc_override(rc_override_forward_frame(channels))"
+        },
+        {
+          "line": 20,
+          "path": "uuv_mujoco/current/bridge/ros2_rc_override_callback.py",
+          "snippet": "_handle_normalized_cmd(fwd, sway, yaw, heave)"
+        },
+        {
+          "line": 18,
+          "path": "uuv_mujoco/current/bridge/ros2_rc_override_mirror.py",
+          "snippet": "rc_in.channels = rc_override_forward_frame(channels)"
+        }
+      ],
+      "official_refs": [
+        "https://mavlink.io/en/messages/common.html#RC_CHANNELS_OVERRIDE"
+      ],
+      "status": "PASS",
+      "title": "RC override preserves MAVLink 18-channel frame and mirrors /mavros/rc/in"
+    },
+    {
+      "check_id": "active_runtime_plant_input_raw_pwm_contract",
+      "conclusion": "Plant replay owns actuator input only for replay_rcout sources; otherwise raw SITL JSON SERVO PWM is passed through the plant-input handler before physical thruster force conversion.",
+      "evidence": [
+        {
+          "line": 7,
+          "path": "uuv_mujoco/current/bridge/sitl_pwm_source_policy.py",
+          "snippet": "str(source).startswith(\"replay_rcout\")"
+        },
+        {
+          "line": 25,
+          "path": "uuv_mujoco/current/bridge/sitl_pwm_frame_handler.py",
+          "snippet": "dispatch_pwm_callback(self, pwm_values)"
+        },
+        {
+          "line": 8,
+          "path": "uuv_mujoco/current/sim/runtime/thruster_actuator_runtime.py",
+          "snippet": "update_thruster_forces"
+        }
+      ],
+      "official_refs": [
+        "https://ardupilot.org/dev/docs/sitl-with-JSON.html"
+      ],
+      "status": "PASS",
+      "title": "Plant input is raw JSON SERVO or explicit replay RCOU before thruster conversion"
+    },
+    {
+      "check_id": "active_runtime_dynamic_fluidcoef_contract",
+      "conclusion": "Dynamic MuJoCo fluidcoef is profile/env opt-in, restricted to current-mode fluid geoms, configured from pattern-specific five-coefficient reference rows, and updates the five MuJoCo ellipsoid coefficients from geom-local velocity and angular-rate loads. The accepted clean baseline keeps the dynamic path disabled until a validated HAN/CFD profile enables it.",
+      "evidence": [
+        {
+          "line": 271,
+          "path": "uuv_mujoco/current/config/sim_profiles.json",
+          "snippet": "\"dynamic_fluidcoef\": {"
+        },
+        {
+          "line": 272,
+          "path": "uuv_mujoco/current/config/sim_profiles.json",
+          "snippet": "\"active\": false"
+        },
+        {
+          "line": 65,
+          "path": "uuv_mujoco/current/sim/runtime/model_runtime_setup.py",
+          "snippet": "fluidcoef_dynamic_setup = build_dynamic_fluidcoef_setup("
+        },
+        {
+          "line": 41,
+          "path": "uuv_mujoco/current/sim/physics/dynamic_fluidcoef_setup_config.py",
+          "snippet": "env_flag(\"UUV_DYNAMIC_FLUIDCOEF_ENABLE\""
+        },
+        {
+          "line": 42,
+          "path": "uuv_mujoco/current/sim/physics/dynamic_fluidcoef_setup_config.py",
+          "snippet": "str(fluid_model) == \"current\""
+        },
+        {
+          "line": 12,
+          "path": "uuv_mujoco/current/sim/physics/dynamic_fluidcoef_setup_enable.py",
+          "snippet": "dynamic_fluidcoef_enabled_after_patterns"
+        },
+        {
+          "line": 28,
+          "path": "uuv_mujoco/current/sim/physics/dynamic_fluidcoef_setup_rows.py",
+          "snippet": "active_geom_ids"
+        },
+        {
+          "line": 36,
+          "path": "uuv_mujoco/current/sim/physics/dynamic_fluidcoef_pattern_prepare.py",
+          "snippet": "reference_scale.size != 5"
+        },
+        {
+          "line": 75,
+          "path": "uuv_mujoco/current/sim/physics/dynamic_fluidcoef_pattern_prepare.py",
+          "snippet": "matching_fluid_geom_ids(fluid_geom_names, pattern)"
+        },
+        {
+          "line": 47,
+          "path": "uuv_mujoco/current/sim/physics/dynamic_fluidcoef_loads.py",
+          "snippet": "MuJoCo fluidcoef order: blunt, slender, angular, Kutta, Magnus."
+        },
+        {
+          "line": 33,
+          "path": "uuv_mujoco/current/sim/physics/dynamic_fluidcoef_loads.py",
+          "snippet": "axis_loads = np.clip(np.abs(rel) / ref_speed, 0.0, 1.0)"
+        },
+        {
+          "line": 39,
+          "path": "uuv_mujoco/current/sim/physics/dynamic_fluidcoef_runtime_config.py",
+          "snippet": "configure_dynamic_fluidcoef_update_knobs(runtime, env_float=env_float)"
+        },
+        {
+          "line": 23,
+          "path": "uuv_mujoco/current/sim/physics/dynamic_fluidcoef_runtime_update.py",
+          "snippet": "runtime.next_sim_t += runtime.update_dt"
+        },
+        {
+          "line": 44,
+          "path": "uuv_mujoco/current/sim/physics/dynamic_fluidcoef_runtime_update.py",
+          "snippet": "current_local = geom_rot.T @ runtime.water_current_world"
+        },
+        {
+          "line": 55,
+          "path": "uuv_mujoco/current/sim/physics/dynamic_fluidcoef_runtime_update.py",
+          "snippet": "np.clip(runtime.weights[int(geom_id), :] * coeff_loads, 0.0, 1.0)"
+        },
+        {
+          "line": 74,
+          "path": "uuv_mujoco/current/sim/physics/dynamic_fluidcoef_runtime_update.py",
+          "snippet": "runtime.model.geom_fluid[idx, 1:6]"
+        },
+        {
+          "line": 20,
+          "path": "uuv_mujoco/current/sim/physics/dynamic_fluidcoef_runtime.py",
+          "snippet": "class DynamicFluidcoefRuntime"
+        },
+        {
+          "line": 21,
+          "path": "uuv_mujoco/current/sim/runtime/hydrodynamics_runtime_current.py",
+          "snippet": "model.opt.wind[:] = water_current_world"
+        },
+        {
+          "line": 56,
+          "path": "uuv_mujoco/current/sim/runtime/underwater_wrench_runtime.py",
+          "snippet": "self.update_dynamic_fluidcoef(rel_lin_vel_body, ang_vel_body)"
+        }
+      ],
+      "official_refs": [
+        "https://mujoco.readthedocs.io/en/3.3.3/computation/fluid.html"
+      ],
+      "status": "PASS",
+      "title": "Dynamic ellipsoid fluidcoef changes are explicit velocity-load updates"
+    },
+    {
+      "check_id": "active_runtime_integrated_flow_contract",
+      "conclusion": "Each tick spins ROS/transport first, applies raw PWM or direct command targets, updates thruster force on the thruster cadence, updates dynamic fluidcoef inside the underwater wrench phase, then advances MuJoCo. This prevents sensor publishing, RC input, actuator conversion, and dynamic ellipsoid tuning from silently owning the same state surface.",
+      "evidence": [
+        {
+          "line": 21,
+          "path": "uuv_mujoco/current/sim/runtime/simulation_step_runtime.py",
+          "snippet": "self.spin_ros_once()"
+        },
+        {
+          "line": 37,
+          "path": "uuv_mujoco/current/sim/runtime/simulation_step_raw_pwm.py",
+          "snippet": "runtime.sitl_servo_runtime.apply_to_targets("
+        },
+        {
+          "line": 16,
+          "path": "uuv_mujoco/current/sim/runtime/simulation_step_physics.py",
+          "snippet": "owner.update_thruster_forces(thr_dt)"
+        },
+        {
+          "line": 26,
+          "path": "uuv_mujoco/current/sim/runtime/simulation_step_physics.py",
+          "snippet": "owner.mujoco.mj_step(owner.model, owner.data)"
+        },
+        {
+          "line": 56,
+          "path": "uuv_mujoco/current/sim/runtime/underwater_wrench_runtime.py",
+          "snippet": "self.update_dynamic_fluidcoef(rel_lin_vel_body, ang_vel_body)"
+        }
+      ],
+      "official_refs": [
+        "https://ardupilot.org/dev/docs/sitl-with-JSON.html",
+        "https://mujoco.readthedocs.io/en/3.3.3/computation/fluid.html"
+      ],
+      "status": "PASS",
+      "title": "Runtime order keeps RC/PWM, thrusters, fluidcoef, and MuJoCo step separated"
+    },
+    {
+      "check_id": "thruster_contract_final_pwm_not_mot_direction_again",
+      "conclusion": "ArduSub motor factors and MOT_x_DIRECTION are controller-side. The active runtime maps final PWM into MuJoCo actuator-positive force using only physical mount orientation.",
+      "evidence": [
+        {
+          "line": 156,
+          "path": "ardupilot/libraries/AP_Motors/AP_Motors6DOF.cpp",
+          "snippet": "case SUB_FRAME_VECTORED_6DOF:"
+        },
+        {
+          "line": 29,
+          "path": "uuv_mujoco/current/physics/thruster_mapping.py",
+          "snippet": "REAL_ROBOT_MOT_DIRECTIONS"
+        },
+        {
+          "line": 59,
+          "path": "uuv_mujoco/current/physics/thruster_mapping.py",
+          "snippet": "ARDUSUB_VECTORED_6DOF_SERVO_SIGNS"
+        }
+      ],
+      "official_refs": [],
+      "status": "PASS",
+      "title": "Plant maps final SERVO/JSON PWM once, without reapplying MOT_x_DIRECTION"
+    },
+    {
+      "check_id": "active_runtime_thruster_conversion_contract",
+      "conclusion": "The active runtime schedules thruster updates in sim time, then converts raw normalized targets through one first-order actuator state, one T200/direct or polynomial force model, and one water-immersion scale before writing MuJoCo actuator ctrl.",
+      "evidence": [
+        {
+          "line": 34,
+          "path": "uuv_mujoco/current/sim/runtime/physics_step_thruster_callbacks.py",
+          "snippet": "hydro_runtime.thruster_scheduler.due"
+        },
+        {
+          "line": 94,
+          "path": "uuv_mujoco/current/sim/runtime/hydrodynamics_runtime_setup.py",
+          "snippet": "FixedRateSimScheduler(dt=thruster_loop_dt)"
+        },
+        {
+          "line": 16,
+          "path": "uuv_mujoco/current/sim/runtime/thruster_actuator_command.py",
+          "snippet": "runtime.state[name] = first_order_response("
+        },
+        {
+          "line": 48,
+          "path": "uuv_mujoco/current/sim/runtime/thruster_actuator_forces.py",
+          "snippet": "runtime.data.ctrl[aid] = force"
+        },
+        {
+          "line": 26,
+          "path": "uuv_mujoco/current/sim/runtime/thruster_actuator_wrench.py",
+          "snippet": "runtime.last_reaction_torque_world"
+        },
+        {
+          "line": 16,
+          "path": "uuv_mujoco/current/sim/physics/thruster_force_model.py",
+          "snippet": "def force_from_shaped_command"
+        },
+        {
+          "line": 11,
+          "path": "uuv_mujoco/current/sim/physics/thruster_force_performance.py",
+          "snippet": "def pwm_to_force_from_performance"
+        },
+        {
+          "line": 10,
+          "path": "uuv_mujoco/current/sim/physics/thruster_force_polynomial.py",
+          "snippet": "scaled_polynomial_force"
+        },
+        {
+          "line": 20,
+          "path": "uuv_mujoco/current/sim/runtime/thruster_actuator_immersion.py",
+          "snippet": "site_depth_m = float(runtime.water_surface_z - site_z)"
+        }
+      ],
+      "official_refs": [
+        "https://mujoco.readthedocs.io/en/3.3.3/computation/fluid.html"
+      ],
+      "status": "PASS",
+      "title": "Thruster conversion applies timing, motor lag, force curve, and immersion once"
+    },
+    {
+      "check_id": "plant_replay_gate_safe_targets",
+      "conclusion": "Use exact RCOU input, Bar30, IMU, DVL x/y, and gyro targets before HAN/CFD tuning. DVL z and local_position-style estimator surfaces are not safe primary targets yet.",
+      "evidence": [
+        {
+          "line": null,
+          "path": "UUV-HAN/outputs/validate_proposed_added_mass_full90_20260601/contract_gate.json",
+          "snippet": "gate summary: {\"han_cfd_ready\": true, \"overall\": \"warn\", \"passes\": [], \"path\": \"UUV-HAN/outputs/validate_proposed_added_mass_full90_20260601/contract_gate.json\", \"warnings\": []}"
+        }
+      ],
+      "official_refs": [
+        "https://mujoco.readthedocs.io/en/3.3.3/computation/fluid.html"
+      ],
+      "status": "WARN",
+      "title": "Plant replay gate defines safe fitting targets"
+    },
+    {
+      "check_id": "source_contract_matrix_gate",
+      "conclusion": "The source audit includes every required contract axis before controller parity or plant replay tuning. WARN means a known firmware or replay-gate limitation is documented; FAIL means a contract axis is missing or broken.",
+      "evidence": [
+        {
+          "line": null,
+          "path": "uuv_mujoco/v2.2/tools/audit_code_contract_matrix.py",
+          "snippet": "source_identity: WARN (warn:top_level_ardupilot_gitlink)"
+        },
+        {
+          "line": null,
+          "path": "uuv_mujoco/v2.2/tools/audit_code_contract_matrix.py",
+          "snippet": "time_phase: PASS (ok)"
+        },
+        {
+          "line": null,
+          "path": "uuv_mujoco/v2.2/tools/audit_code_contract_matrix.py",
+          "snippet": "sensor_input_output: PASS (ok)"
+        },
+        {
+          "line": null,
+          "path": "uuv_mujoco/v2.2/tools/audit_code_contract_matrix.py",
+          "snippet": "rc_input_output: WARN (warn:rc_override_local_16_channel_limit)"
+        },
+        {
+          "line": null,
+          "path": "uuv_mujoco/v2.2/tools/audit_code_contract_matrix.py",
+          "snippet": "controller_output_and_plant_input: PASS (ok)"
+        },
+        {
+          "line": null,
+          "path": "uuv_mujoco/v2.2/tools/audit_code_contract_matrix.py",
+          "snippet": "thruster_contract: WARN (warn:plant_replay_gate_safe_targets)"
+        },
+        {
+          "line": null,
+          "path": "uuv_mujoco/v2.2/tools/audit_code_contract_matrix.py",
+          "snippet": "dynamic_ellipsoid_fluid: PASS (ok)"
+        }
+      ],
+      "official_refs": [
+        "https://ardupilot.org/dev/docs/sitl-with-JSON.html",
+        "https://mavlink.io/en/messages/common.html#RC_CHANNELS_OVERRIDE",
+        "https://mavlink.io/en/messages/common.html#SERVO_OUTPUT_RAW",
+        "https://mujoco.readthedocs.io/en/3.3.3/computation/fluid.html",
+        "https://bluerobotics.com/store/sensors-cameras/sensors/bar30-sensor-r1-rp/"
+      ],
+      "status": "WARN",
+      "title": "Contract matrix covers time, sensor I/O, RC I/O, thruster, plant input, and dynamic fluidcoef"
+    }
+  ],
+  "counts": {
+    "fail": 0,
+    "pass": 18,
+    "warn": 6
+  },
+  "metadata": {
+    "active_git_branch": "uuv_sim",
+    "active_git_head": "e60cd9383c214a7d6e4700cdeb5c2f2a8cf6d328",
+    "active_runtime_alias": "uuv_mujoco/current -> v2.2",
+    "active_runtime_root": "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/current",
+    "ardupilot_describe": "ArduSub-4.1.2",
+    "ardupilot_inner_commit": "2dd0bb7d4c85ac48437f139d66df648fc0e1d4ae",
+    "ardupilot_status_short": "",
+    "ardupilot_top_level_gitlink": "6271e15bd4a2ef81a0f4ead439cb18188763c271",
+    "compat_v22_root": "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2",
+    "contract_gate_summary": {
+      "han_cfd_ready": true,
+      "overall": "warn",
+      "passes": [],
+      "path": "UUV-HAN/outputs/validate_proposed_added_mass_full90_20260601/contract_gate.json",
+      "warnings": []
+    },
+    "official_refs": {
+      "ardupilot_json_sitl": "https://ardupilot.org/dev/docs/sitl-with-JSON.html",
+      "bar30_pressure_sensor": "https://bluerobotics.com/store/sensors-cameras/sensors/bar30-sensor-r1-rp/",
+      "mavlink_rc_channels_override": "https://mavlink.io/en/messages/common.html#RC_CHANNELS_OVERRIDE",
+      "mavlink_servo_output_raw": "https://mavlink.io/en/messages/common.html#SERVO_OUTPUT_RAW",
+      "mujoco_fluid": "https://mujoco.readthedocs.io/en/3.3.3/computation/fluid.html"
+    },
+    "origin_uuv_sim_head": "e60cd9383c214a7d6e4700cdeb5c2f2a8cf6d328",
+    "repo_root": "/Users/kanghyunmin/Desktop/uuv_sim",
+    "runtime_version_file": "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/RUNTIME_VERSION.json"
+  }
+}

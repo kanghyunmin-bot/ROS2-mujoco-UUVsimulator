@@ -1,1 +1,1 @@
-"""Physics helpers and shared simulation parameter utilities for v2.2."""
+"""Physics helpers and shared simulation parameter utilities for the active runtime."""

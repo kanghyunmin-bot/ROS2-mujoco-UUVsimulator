@@ -193,6 +193,12 @@ ARDUPILOT_DIR="${ARDUPILOT_DIR:-${WORKSPACE_DIR}/ardupilot}"
 ROS_WORKSPACE_DIR="${ROS_WORKSPACE_DIR:-$(resolve_ros_workspace_dir "${WORKSPACE_DIR}")}"
 KMU26_AUV_DIR="${KMU26_AUV_DIR:-$(resolve_kmu26_auv_dir "${WORKSPACE_DIR}" "${ROS_WORKSPACE_DIR}")}"
 ROS_INSTALL_SETUP="${ROS_INSTALL_SETUP:-$(resolve_ros_install_setup "${WORKSPACE_DIR}" "${ROS_WORKSPACE_DIR}")}"
+UUV_MUJOCO_RUNTIME_DIR="${UUV_MUJOCO_RUNTIME_DIR:-${UUV_MUJOCO_DIR}/current}"
+if [[ ! -d "${UUV_MUJOCO_RUNTIME_DIR}" ]]; then
+  echo "[verify] active runtime missing: ${UUV_MUJOCO_RUNTIME_DIR}" >&2
+  echo "[verify] Expected uuv_mujoco/current, or set UUV_MUJOCO_RUNTIME_DIR explicitly." >&2
+  exit 1
+fi
 ROS_DISTRO="${ROS_DISTRO:-humble}"
 ROS_ENV_SETUP="${ROS_ENV_SETUP:-$(resolve_ros_env_setup "${ROS_DISTRO}" 2>/dev/null || true)}"
 MJ311_ROOT="${MJ311_ROOT:-$(resolve_default_mj311_root)}"
@@ -290,6 +296,7 @@ check_path() {
 echo "[verify] workspace: ${WORKSPACE_DIR}"
 echo "[verify] ros workspace: ${ROS_WORKSPACE_DIR}"
 echo "[verify] uuv_mujoco: ${UUV_MUJOCO_DIR}"
+echo "[verify] active runtime: ${UUV_MUJOCO_RUNTIME_DIR}"
 echo "[verify] ardupilot: ${ARDUPILOT_DIR}"
 echo "[verify] kmu26_auv: ${KMU26_AUV_DIR}"
 echo "[verify] venv: ${MJ311_ROOT}"
@@ -302,25 +309,25 @@ check_path "${ROS_WORKSPACE_DIR}" "ros workspace directory"
 check_path "${ARDUPILOT_DIR}" "ardupilot directory"
 check_path "${ARDUPILOT_DIR}/Tools/autotest/sim_vehicle.py" "sim_vehicle.py"
 check_path "${UUV_MUJOCO_DIR}" "uuv_mujoco directory"
-check_path "${UUV_MUJOCO_DIR}/v2.2" "uuv_mujoco/v2.2"
+check_path "${UUV_MUJOCO_RUNTIME_DIR}" "active uuv_mujoco runtime"
 check_path "${WORKSPACE_DIR}/uuv_control_gui.py" "uuv_control_gui.py compatibility wrapper"
-check_path "${UUV_MUJOCO_DIR}/v2.2/gui/uuv_control_gui.py" "uuv_mujoco/v2.2/gui/uuv_control_gui.py"
-check_path "${UUV_MUJOCO_DIR}/v2.2/start_sitl_mujoco_mj311.sh" "start_sitl_mujoco_mj311.sh"
-check_path "${UUV_MUJOCO_DIR}/v2.2/start_ardusub_sitl_mj311.sh" "start_ardusub_sitl_mj311.sh"
-check_path "${UUV_MUJOCO_DIR}/v2.2/launch_uuv_sim.sh" "launch_uuv_sim.sh"
-check_path "${UUV_MUJOCO_DIR}/v2.2/reset_uuv_sim.sh" "reset_uuv_sim.sh"
-check_path "${UUV_MUJOCO_DIR}/v2.2/scenes/tank_legacy_scene.xml" "scenes/tank_legacy_scene.xml"
-check_path "${UUV_MUJOCO_DIR}/v2.2/scenes/tank_current_scene.xml" "scenes/tank_current_scene.xml"
-check_path "${UUV_MUJOCO_DIR}/v2.2/config/sim_profiles.json" "config/sim_profiles.json"
-check_path "${UUV_MUJOCO_DIR}/v2.2/config/thruster_params.json" "config/thruster_params.json"
-check_path "${UUV_MUJOCO_DIR}/v2.2/config/thruster_performance.json" "config/thruster_performance.json"
+check_path "${UUV_MUJOCO_RUNTIME_DIR}/gui/uuv_control_gui.py" "active runtime gui/uuv_control_gui.py"
+check_path "${UUV_MUJOCO_RUNTIME_DIR}/start_sitl_mujoco_mj311.sh" "start_sitl_mujoco_mj311.sh"
+check_path "${UUV_MUJOCO_RUNTIME_DIR}/start_ardusub_sitl_mj311.sh" "start_ardusub_sitl_mj311.sh"
+check_path "${UUV_MUJOCO_RUNTIME_DIR}/launch_uuv_sim.sh" "launch_uuv_sim.sh"
+check_path "${UUV_MUJOCO_RUNTIME_DIR}/reset_uuv_sim.sh" "reset_uuv_sim.sh"
+check_path "${UUV_MUJOCO_RUNTIME_DIR}/scenes/tank_legacy_scene.xml" "scenes/tank_legacy_scene.xml"
+check_path "${UUV_MUJOCO_RUNTIME_DIR}/scenes/tank_current_scene.xml" "scenes/tank_current_scene.xml"
+check_path "${UUV_MUJOCO_RUNTIME_DIR}/config/sim_profiles.json" "config/sim_profiles.json"
+check_path "${UUV_MUJOCO_RUNTIME_DIR}/config/thruster_params.json" "config/thruster_params.json"
+check_path "${UUV_MUJOCO_RUNTIME_DIR}/config/thruster_performance.json" "config/thruster_performance.json"
 check_path "${MJ311_ROOT}/bin/python" "venv python"
 
 for script in \
-  "${UUV_MUJOCO_DIR}/v2.2/start_sitl_mujoco_mj311.sh" \
-  "${UUV_MUJOCO_DIR}/v2.2/start_ardusub_sitl_mj311.sh" \
-  "${UUV_MUJOCO_DIR}/v2.2/launch_uuv_sim.sh" \
-  "${UUV_MUJOCO_DIR}/v2.2/reset_uuv_sim.sh"
+  "${UUV_MUJOCO_RUNTIME_DIR}/start_sitl_mujoco_mj311.sh" \
+  "${UUV_MUJOCO_RUNTIME_DIR}/start_ardusub_sitl_mj311.sh" \
+  "${UUV_MUJOCO_RUNTIME_DIR}/launch_uuv_sim.sh" \
+  "${UUV_MUJOCO_RUNTIME_DIR}/reset_uuv_sim.sh"
 do
   if [[ -f "$script" ]]; then
     if bash -n "$script"; then
@@ -337,7 +344,6 @@ import mujoco
 import numpy
 import matplotlib
 import rosbags
-import pptx
 import pymavlink
 import MAVProxy
 import pexpect
@@ -349,9 +355,19 @@ print("python dependency check ok")
 print("MuJoCo Version:", mujoco.__version__)
 PY
   then
-    pass "python dependencies import successfully"
+    pass "core simulator python dependencies import successfully"
   else
-    fail "python dependency import failed"
+    fail "core simulator python dependency import failed"
+  fi
+
+  if run_clean_env "${MJ311_ROOT}/bin/python" - <<'PY'
+import pptx
+print("optional document dependency check ok")
+PY
+  then
+    pass "optional document python dependencies import successfully"
+  else
+    warn "optional document python dependency missing: python-pptx"
   fi
 fi
 
@@ -477,13 +493,13 @@ if has_cmd ros2 && [[ -f "${ROS_INSTALL_SETUP}" ]]; then
   echo
   cat <<EOF
 # terminal 1 (default: MuJoCo + SITL + ROS2 bridge, QGC video off)
-cd "${UUV_MUJOCO_DIR}/v2.2"
+cd "${UUV_MUJOCO_RUNTIME_DIR}"
 ./reset_uuv_sim.sh --with-qgc-stop
 ./start_sitl_mujoco_mj311.sh --with-qgc-stop -- --fluid-model custom
 
 # optional external MAVROS / kmu26_auv stack
 # terminal 1
-cd "${UUV_MUJOCO_DIR}/v2.2"
+cd "${UUV_MUJOCO_RUNTIME_DIR}"
 ./reset_uuv_sim.sh --with-qgc-stop
 ./start_sitl_mujoco_mj311.sh --ros2-real-pkg-compat -- --fluid-model ellipsoid
 
@@ -500,18 +516,18 @@ elif has_cmd ros2 || [[ -f "/opt/ros/${ROS_DISTRO}/setup.bash" ]]; then
   echo
   cat <<EOF
 # default: MuJoCo + SITL + ROS2 bridge, QGC video off
-cd "${UUV_MUJOCO_DIR}/v2.2"
+cd "${UUV_MUJOCO_RUNTIME_DIR}"
 ./reset_uuv_sim.sh --with-qgc-stop
 ./start_sitl_mujoco_mj311.sh --with-qgc-stop -- --fluid-model custom
 
 # optional no-ROS mode
-cd "${UUV_MUJOCO_DIR}/v2.2"
+cd "${UUV_MUJOCO_RUNTIME_DIR}"
 ./start_sitl_mujoco_mj311.sh --no-ros2 -- --fluid-model ellipsoid
 EOF
 else
   echo
   cat <<EOF
-cd "${UUV_MUJOCO_DIR}/v2.2"
+cd "${UUV_MUJOCO_RUNTIME_DIR}"
 ./reset_uuv_sim.sh --with-qgc-stop
 ./start_sitl_mujoco_mj311.sh --with-qgc-stop -- --fluid-model custom
 EOF

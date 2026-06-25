@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Deque
+from typing import Any, Deque
 
 from .config import RC_FEEDBACK_CHANNEL_COUNT, TELEMETRY_EVENT_LIMIT
 
@@ -45,11 +45,30 @@ class TelemetrySnapshot:
     rc_in_source: str = "unavailable"
     rc_out_source: str = "unavailable"
     rc_feedback_source: str = "unavailable"
+    sitl_mavlink_status: dict[str, Any] = field(default_factory=dict)
+    sitl_mavlink_active: bool = False
+    sitl_mavlink_endpoint: str = ""
+    sitl_mavlink_heartbeat_age_s: float = math.inf
+    sitl_mavlink_command_heartbeat_age_s: float = math.inf
+    sitl_mavlink_rc_channels_age_s: float = math.inf
+    sitl_mavlink_rc_override_ready: bool = False
+    sitl_extnav_required: bool = False
+    sitl_extnav_ready: bool = True
+    sitl_extnav_last_rate_hz: float = 0.0
     events: Deque[str] = field(default_factory=lambda: deque(maxlen=TELEMETRY_EVENT_LIMIT))
     ping360_summary: str = "ping360: no status"
     ping360_enabled: bool | None = None
     ping360_active: bool | None = None
     ping360_age_s: float = math.inf
+
+    real_start_required: bool = False
+    real_start_ok: bool = True
+    real_start_released: bool = False
+    real_start_status: str = "not required"
+    real_start_depth_error_m: float = math.nan
+    real_start_attitude_error_rad: float = math.nan
+    real_start_velocity_error_mps: float = math.nan
+    real_start_age_s: float = math.inf
 
     state_age_s: float = math.inf
     imu_age_s: float = math.inf
@@ -58,6 +77,7 @@ class TelemetrySnapshot:
     rc_age_s: float = math.inf
     rc_in_age_s: float = math.inf
     rc_out_age_s: float = math.inf
+    sitl_mavlink_status_age_s: float = math.inf
 
 
 @dataclass(frozen=True)

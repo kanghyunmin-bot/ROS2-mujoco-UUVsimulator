@@ -31,6 +31,7 @@ resolve_default_workspace_dir() {
   score=0
   while [[ -n "$dir" ]]; do
     current_score=0
+    [[ -d "$dir/ardupilot_sub_stable" ]] && current_score=$((current_score + 20))
     [[ -d "$dir/ardupilot" ]] && current_score=$((current_score + 10))
     [[ -f "$dir/QGroundControl.AppImage" || -f "$dir/QGroundControl-x86_64.AppImage" || -d "$dir/QGroundControl.app" ]] && current_score=$((current_score + 4))
     [[ -d "$dir/kmu26_auv" ]] && current_score=$((current_score + 2))
@@ -53,6 +54,9 @@ resolve_default_workspace_dir() {
 
 DEFAULT_WORKSPACE_DIR="$(resolve_default_workspace_dir)"
 WORKSPACE_DIR="${WORKSPACE_DIR:-$DEFAULT_WORKSPACE_DIR}"
+if [[ -z "${ARDUPILOT_DIR:-}" && -d "${WORKSPACE_DIR}/ardupilot_sub_stable" ]]; then
+  ARDUPILOT_DIR="${WORKSPACE_DIR}/ardupilot_sub_stable"
+fi
 ARDUPILOT_DIR="${ARDUPILOT_DIR:-${WORKSPACE_DIR}/ardupilot}"
 SIM_VEHICLE="${ARDUPILOT_DIR}/Tools/autotest/sim_vehicle.py"
 THRUSTER_MAPPING_SCRIPT="${SCRIPT_DIR}/physics/thruster_mapping.py"
@@ -72,7 +76,7 @@ SITL_COMMAND_MAV_HOST="${SITL_COMMAND_MAV_HOST:-127.0.0.1}"
 SITL_COMMAND_MAV_PORT="${SITL_COMMAND_MAV_PORT:-14661}"
 SITL_QGC_OUTPUT_ENABLE="${SITL_QGC_OUTPUT_ENABLE:-1}"
 SITL_MAVROS_OUTPUT_ENABLE="${SITL_MAVROS_OUTPUT_ENABLE:-0}"
-SITL_DEDICATED_COMMAND_MAVLINK="${SITL_DEDICATED_COMMAND_MAVLINK:-0}"
+SITL_DEDICATED_COMMAND_MAVLINK="${SITL_DEDICATED_COMMAND_MAVLINK:-1}"
 case "$SITL_DEDICATED_COMMAND_MAVLINK" in
   1|true|TRUE|yes|YES|on|ON|enable|enabled)
     SITL_DEDICATED_COMMAND_MAVLINK=1
@@ -90,6 +94,8 @@ Options:
   --param-tune         Start interactive MAVProxy mode for parameter tuning
   --direct-mavlink     Bypass MAVProxy and use direct UDP outputs (experimental)
   --no-ekf-stable      Do not apply default EKF stabilization params
+  --wipe-eeprom        Wipe SITL EEPROM before start so param files are authoritative
+  --keep-eeprom        Reuse existing SITL EEPROM state
   --no-rebuild         Pass -N to sim_vehicle.py (default; avoids rebuilding ArduPilot)
   --rebuild            Rebuild ArduSub before launching
   --force-no-display   Force non-GUI terminal fallback (unset DISPLAY)
@@ -107,9 +113,11 @@ Environment:
   SITL_MAVROS_HOST     MAVROS MAVLink UDP target host (default 127.0.0.1)
   SITL_MUJOCO_MAV_HOST MuJoCo SERVO_OUTPUT_RAW MAVLink UDP target host (default 127.0.0.1)
   SITL_COMMAND_MAV_HOST MuJoCo command MAVLink UDP target host (default 127.0.0.1)
-  SITL_QGC_OUTPUT_ENABLE Enable MAVProxy fan-out to QGC 14550 (default 1)
+  SITL_QGC_OUTPUT_ENABLE Enable QGC MAVLink output to 14550 (default 1)
   SITL_MAVROS_OUTPUT_ENABLE Enable MAVProxy fan-out to external MAVROS 14551 (default 0)
-  SITL_DEDICATED_COMMAND_MAVLINK Enable separate serial4 command link (default 0)
+  SITL_DEDICATED_COMMAND_MAVLINK Enable separate serial4 command link (default 1)
+  SITL_PARAM_AB_PROFILE Optional parameter A/B profile. Defaults to "real".
+                       Supported: real, accz_i_hover, accz_i_soft.
 
 Examples:
   ./start_ardusub_sitl_mj311.sh
@@ -125,8 +133,24 @@ NO_REBUILD="${SITL_NO_REBUILD:-1}"
 FORCE_NO_DISPLAY="${SITL_FORCE_NO_DISPLAY:-1}"
 USER_ARGS=()
 USER_SET_MAVPROXY_ARGS=0
+UUV_EKF_CONTRACT="${UUV_EKF_CONTRACT:-althold_baro}"
+case "$UUV_EKF_CONTRACT" in
+  poshold_extnav|poshold_extnav_412|real_param_parity|real-ekf|real_ekf|extnav)
+    SITL_EKF3_EXTNAV=1
+    ;;
+  althold_baro|baro|baro-ekf|depthhold_baro|"")
+    UUV_EKF_CONTRACT="althold_baro"
+    SITL_EKF3_EXTNAV=0
+    ;;
+  *)
+    echo "[start] unknown UUV_EKF_CONTRACT=$UUV_EKF_CONTRACT" >&2
+    exit 2
+    ;;
+esac
+export UUV_EKF_CONTRACT
+
 SITL_EKF3_EXTNAV_ENABLE=0
-case "${SITL_EKF3_EXTNAV:-1}" in
+case "${SITL_EKF3_EXTNAV:-0}" in
   0|false|FALSE|no|NO|off|OFF|disable|disabled)
     SITL_EKF3_EXTNAV_ENABLE=0
     ;;
@@ -139,12 +163,58 @@ if [[ "$SITL_EKF3_EXTNAV_ENABLE" -eq 1 ]]; then
   SITL_DEFAULT_SURFACE_DEPTH=-10.0
   SITL_DEFAULT_AHRS_GPS_USE=1
 else
-  # Deterministic JSON SITL debug contract: SIM AHRS and Bar30 vertical
-  # position only. Use SITL_EKF3_EXTNAV=0 only when deliberately isolating
-  # ExternalNav/DVL from the ALT_HOLD loop.
+  # Explicit althold_baro profile: Bar30 vertical position plus JSON IMU only.
+  # Do not keep the real dump's GPS/VISO/DVL aiding here; ALT_HOLD parity
+  # should not depend on horizontal/depth sources that are absent underwater.
   SITL_DEFAULT_RNGFND1_TYPE=0
   SITL_DEFAULT_SURFACE_DEPTH=-10.0
   SITL_DEFAULT_AHRS_GPS_USE=0
+fi
+
+SITL_PARAM_AB_PROFILE="${SITL_PARAM_AB_PROFILE:-real}"
+case "$SITL_PARAM_AB_PROFILE" in
+  real|none|"")
+    SITL_PARAM_AB_PROFILE="real"
+    ;;
+  accz_i_hover|vertical_i_hover)
+    # A/B only: this does not edit the real-robot parameter file.  It checks
+    # whether ArduSub 4.1.2 needs a Z-accel hover-bias integrator in SITL
+    # because the simulated plant lacks some real static balance effects.
+    SITL_FORCE_VERTICAL_CONTROLLER_PARAMS=1
+    export SITL_PSC_ACCZ_I="${SITL_PSC_ACCZ_I:-0.10}"
+    export SITL_PSC_ACCZ_IMAX="${SITL_PSC_ACCZ_IMAX:-244.0}"
+    ;;
+  accz_i_soft|vertical_i_soft)
+    # Lower-authority version of accz_i_hover for checking whether only a
+    # small bias integrator is needed before changing the physics model.
+    SITL_FORCE_VERTICAL_CONTROLLER_PARAMS=1
+    export SITL_PSC_ACCZ_I="${SITL_PSC_ACCZ_I:-0.03}"
+    export SITL_PSC_ACCZ_IMAX="${SITL_PSC_ACCZ_IMAX:-80.0}"
+    ;;
+  *)
+    echo "[start] unknown SITL_PARAM_AB_PROFILE=$SITL_PARAM_AB_PROFILE" >&2
+    echo "        supported: real, accz_i_hover, accz_i_soft" >&2
+    exit 2
+    ;;
+esac
+export SITL_PARAM_AB_PROFILE
+export SITL_FORCE_VERTICAL_CONTROLLER_PARAMS="${SITL_FORCE_VERTICAL_CONTROLLER_PARAMS:-0}"
+if [[ "$SITL_PARAM_AB_PROFILE" != "real" ]]; then
+  echo "[start] parameter A/B profile: ${SITL_PARAM_AB_PROFILE}" \
+       "(PSC_ACCZ_I=${SITL_PSC_ACCZ_I:-unset}," \
+       "PSC_ACCZ_IMAX=${SITL_PSC_ACCZ_IMAX:-unset})"
+fi
+
+SITL_WIPE_EEPROM_EFFECTIVE="${SITL_WIPE_EEPROM:-}"
+if [[ -z "$SITL_WIPE_EEPROM_EFFECTIVE" ]]; then
+  case "$UUV_EKF_CONTRACT" in
+    real_param_parity|poshold_extnav|poshold_extnav_412|real-ekf|real_ekf|extnav)
+      SITL_WIPE_EEPROM_EFFECTIVE=1
+      ;;
+    *)
+      SITL_WIPE_EEPROM_EFFECTIVE=0
+      ;;
+  esac
 fi
 
 while [[ $# -gt 0 ]]; do
@@ -159,6 +229,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --no-ekf-stable)
       EKF_STABLE=0
+      shift
+      ;;
+    --wipe-eeprom)
+      SITL_WIPE_EEPROM_EFFECTIVE=1
+      shift
+      ;;
+    --keep-eeprom)
+      SITL_WIPE_EEPROM_EFFECTIVE=0
       shift
       ;;
     --no-rebuild)
@@ -266,6 +344,13 @@ if [[ ! -f "$THRUSTER_MAPPING_SCRIPT" ]]; then
   exit 1
 fi
 
+ARDUSUB_SITL_BINARY="${ARDUPILOT_DIR}/build/sitl/bin/ardusub"
+if [[ "$NO_REBUILD" -eq 1 && ! -x "$ARDUSUB_SITL_BINARY" ]]; then
+  echo "[start-sitl] local ArduSub binary missing: ${ARDUSUB_SITL_BINARY}"
+  echo "[start-sitl] switching local SITL launch from --no-rebuild to --rebuild"
+  NO_REBUILD=0
+fi
+
 # Prefer the selected interpreter's bin directory during the ArduPilot build.
 export PATH="${PYTHON_BIN_DIR}:${PATH}"
 if [[ "$IS_VENV" -eq 1 ]]; then
@@ -332,8 +417,18 @@ case "${SITL_NO_EXTRA_PORTS:-1}" in
     echo "[start-sitl] sim_vehicle default MAVProxy ports disabled; using explicit outputs only"
     ;;
 esac
+case "$SITL_WIPE_EEPROM_EFFECTIVE" in
+  1|true|TRUE|yes|YES|on|ON|enable|enabled)
+    SIM_ARGS+=(-w)
+    echo "[start-sitl] wiping SITL EEPROM so parameter files are authoritative"
+    ;;
+esac
 if [[ "$NO_REBUILD" -eq 1 ]]; then
   SIM_ARGS+=(-N)
+fi
+if [[ -n "${SITL_CUSTOM_LOCATION:-}" ]]; then
+  SIM_ARGS+=(--custom-location "${SITL_CUSTOM_LOCATION}")
+  echo "[start-sitl] custom SITL location: ${SITL_CUSTOM_LOCATION}"
 fi
 
 USE_REAL_PARAM_FILE=0
@@ -343,17 +438,188 @@ case "${SITL_USE_REAL_PARAM_FILE:-1}" in
     ;;
 esac
 DEFAULT_REAL_PARAM_FILE="${SCRIPT_DIR}/config/ardusub_realrobot_contract.param"
-if [[ ! -f "$DEFAULT_REAL_PARAM_FILE" ]]; then
-  DEFAULT_REAL_PARAM_FILE="${WORKSPACE_DIR}/real_robot.param"
-fi
 REAL_PARAM_FILE="${SITL_REAL_PARAM_FILE:-$DEFAULT_REAL_PARAM_FILE}"
 if [[ "$USE_REAL_PARAM_FILE" -eq 1 && -f "$REAL_PARAM_FILE" ]]; then
-  SIM_ARGS+=(--add-param-file "$REAL_PARAM_FILE")
-  echo "[start-sitl] loading real vehicle params: ${REAL_PARAM_FILE}"
+  :
 elif [[ "$USE_REAL_PARAM_FILE" -eq 1 ]]; then
   echo "[error] missing real vehicle contract param file: ${REAL_PARAM_FILE}" >&2
   echo "        Set SITL_USE_REAL_PARAM_FILE=0 only for isolated SITL debug." >&2
   exit 1
+fi
+
+ARDUSUB_FIRMWARE_VERSION="$(
+  awk -F'"' '/#define[[:space:]]+THISFIRMWARE/ { print $2; exit }' \
+    "${ARDUPILOT_DIR}/ArduSub/version.h" 2>/dev/null || true
+)"
+SITL_PARAM_COMPAT_FILTER_EFFECTIVE=0
+case "${SITL_PARAM_COMPAT_FILTER:-auto}" in
+  1|true|TRUE|yes|YES|on|ON|enable|enabled)
+    SITL_PARAM_COMPAT_FILTER_EFFECTIVE=1
+    ;;
+  0|false|FALSE|no|NO|off|OFF|disable|disabled)
+    SITL_PARAM_COMPAT_FILTER_EFFECTIVE=0
+    ;;
+  auto|"")
+    if [[ "$ARDUSUB_FIRMWARE_VERSION" != "ArduSub V4.1.2" ]]; then
+      SITL_PARAM_COMPAT_FILTER_EFFECTIVE=1
+    fi
+    ;;
+  *)
+    echo "[error] unknown SITL_PARAM_COMPAT_FILTER=${SITL_PARAM_COMPAT_FILTER}" >&2
+    exit 2
+    ;;
+esac
+
+SUPPORTED_PARAM_FILE=""
+if [[ "$SITL_PARAM_COMPAT_FILTER_EFFECTIVE" -eq 1 ]]; then
+  SUPPORTED_PARAM_FILE="$(mktemp "${TMPDIR:-/tmp}/sitl_supported_params_XXXXXX")"
+  if (
+    cd "$ARDUPILOT_DIR"
+    "$MJ311_PYTHON" Tools/autotest/param_metadata/param_parse.py --vehicle ArduSub --format json >/dev/null
+  ) && "$MJ311_PYTHON" - "$ARDUPILOT_DIR/apm.pdef.json" >"$SUPPORTED_PARAM_FILE" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], "r", encoding="utf-8") as f:
+    payload = json.load(f)
+
+names = set()
+
+def walk(node):
+    if not isinstance(node, dict):
+        return
+    for key, value in node.items():
+        if isinstance(value, dict) and (
+            "Description" in value
+            or "DisplayName" in value
+            or "User" in value
+            or "Values" in value
+            or "Range" in value
+            or "Units" in value
+        ):
+            names.add(str(key))
+        else:
+            walk(value)
+
+walk(payload)
+for name in sorted(names):
+    print(name)
+PY
+  then
+    echo "[start-sitl] parameter compatibility filter enabled for ${ARDUSUB_FIRMWARE_VERSION:-unknown firmware}"
+    echo "[start-sitl] supported parameter list: ${SUPPORTED_PARAM_FILE}"
+  else
+    echo "[start-sitl] warning: parameter compatibility metadata unavailable; disabling filter" >&2
+    SITL_PARAM_COMPAT_FILTER_EFFECTIVE=0
+    rm -f "$SUPPORTED_PARAM_FILE"
+    SUPPORTED_PARAM_FILE=""
+  fi
+fi
+
+param_supported_by_firmware() {
+  local key="$1"
+  if [[ "$SITL_PARAM_COMPAT_FILTER_EFFECTIVE" -ne 1 ]]; then
+    return 0
+  fi
+  grep -Fxq -- "$key" "$SUPPORTED_PARAM_FILE"
+}
+
+real_param_file_has() {
+  local key="$1"
+  [[ "$USE_REAL_PARAM_FILE" -eq 1 && -f "$REAL_PARAM_FILE" ]] || return 1
+  awk -v key="$key" '
+    /^[[:space:]]*($|#)/ { next }
+    $1 == key { found = 1; exit }
+    $1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ && $3 == key { found = 1; exit }
+    END { exit found ? 0 : 1 }
+  ' "$REAL_PARAM_FILE"
+}
+
+is_sim_forced_param() {
+  case "$1" in
+    # SITL-only safety/runtime contracts. These values describe the desktop
+    # simulator process, not the physical vehicle controller tuning.
+    ARMING_CHECK|BRD_OPTIONS|BRD_SAFETYENABLE|BRD_SAFETYOPTION|BRD_SAFETY_MASK|SCHED_LOOP_RATE|SERIAL0_BAUD|SERIAL1_PROTOCOL|SERIAL1_BAUD|SERIAL2_PROTOCOL|SERIAL2_BAUD|SYSID_MYGCS|RC_OPTIONS|RC_OVERRIDE_TIME|FS_GCS_ENABLE|FS_PILOT_INPUT|FS_PILOT_TIMEOUT|SR0_*|SR1_*|SR2_*)
+      return 0
+      ;;
+    SERIAL3_PROTOCOL|SERIAL3_BAUD|SERIAL4_PROTOCOL|SERIAL4_BAUD|SR3_*|SR4_*|SIM_*|SIM_BAR*|SIM_BATT_*)
+      return 0
+      ;;
+    # Estimator source selection is an explicit run contract
+    # (poshold_extnav vs althold_baro). Do not let the real parameter file pin
+    # one contract when the launcher requests the other.
+    AHRS_EKF_TYPE|AHRS_GPS_USE|EK3_SRC*|EK3_IMU_MASK|GPS_TYPE|GPS_TYPE2|VISO_*|RNGFND1_*)
+      return 0
+      ;;
+    # The MuJoCo bridge does not emulate the physical magnetometer or the
+    # Pixhawk's hardware IMU calibration offsets. Forcing these prevents a real
+    # hardware calibration file from injecting non-sim sensor bias.
+    COMPASS_*)
+      case "${SITL_USE_REAL_COMPASS:-0}" in
+        1|true|TRUE|yes|YES|on|ON|enable|enabled)
+          return 1
+          ;;
+      esac
+      return 0
+      ;;
+    INS_ACCOFFS_*|INS_ACCSCAL_*|INS_GYROFFS_*)
+      return 0
+      ;;
+    # The real Pixhawk dump enables a multi-IMU hardware stack. The JSON SITL
+    # bridge publishes one calibrated IMU sample, so keep EKF3 on that lane and
+    # do not let real hardware lane-selection parameters leak into SITL.
+    INS_ENABLE_MASK|INS_USE2|INS_USE3|INS_ACC2*|INS_GYR2*)
+      return 0
+      ;;
+    # Live GUI/QGC pilot-input contract. ArduSub 4.1.2 passes
+    # channel_throttle->norm_input() into AP_Motors6DOF, where 0.5 is the
+    # neutral bidirectional throttle. Keep the low-end RC3 trim so RC3=1500
+    # maps to 0.5 instead of full negative heave.
+    RC1_DZ|RC2_DZ|RC3_DZ|RC3_MIN|RC3_MAX|RC3_TRIM|RC4_DZ|RC5_DZ|RC6_DZ|THR_DZ|JS_GAIN_DEFAULT|JS_GAIN_MIN|JS_GAIN_MAX|JS_GAIN_STEPS|JS_THR_GAIN)
+      return 0
+      ;;
+    # Keep the real vehicle's P-only vertical controller by default.  For
+    # isolated ArduSub-4.1.2 ALT_HOLD A/B tests, allow an explicit opt-in to
+    # override these values without editing the real-robot contract parameter
+    # file.
+    PSC_ACCZ_P|PSC_ACCZ_I|PSC_ACCZ_IMAX|PSC_ACCZ_D|PSC_ACCZ_FLTD|PSC_ACCZ_FLTE|PSC_ACCZ_FLTT)
+      case "${SITL_FORCE_VERTICAL_CONTROLLER_PARAMS:-0}" in
+        1|true|TRUE|yes|YES|on|ON|enable|enabled)
+          return 0
+          ;;
+      esac
+      return 1
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+FILTERED_REAL_PARAM_FILE=""
+if [[ "$USE_REAL_PARAM_FILE" -eq 1 ]]; then
+  FILTERED_REAL_PARAM_FILE="$(mktemp "${TMPDIR:-/tmp}/sitl_real_params_filtered_XXXXXX")"
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    read -r field1 field2 field3 _rest <<<"$line"
+    key="$field1"
+    if [[ "$field1" =~ ^[0-9]+$ && "$field2" =~ ^[0-9]+$ && -n "${field3:-}" ]]; then
+      key="$field3"
+    fi
+    if [[ -z "${key:-}" || "$key" == \#* ]]; then
+      printf '%s\n' "$line" >> "$FILTERED_REAL_PARAM_FILE"
+      continue
+    fi
+    if is_sim_forced_param "$key"; then
+      continue
+    fi
+    if ! param_supported_by_firmware "$key"; then
+      continue
+    fi
+    printf '%s\n' "$line" >> "$FILTERED_REAL_PARAM_FILE"
+  done < "$REAL_PARAM_FILE"
+  SIM_ARGS+=(--add-param-file "$FILTERED_REAL_PARAM_FILE")
+  echo "[start-sitl] loading real vehicle params: ${REAL_PARAM_FILE}"
+  echo "[start-sitl] filtered sim-forced duplicate params via ${FILTERED_REAL_PARAM_FILE}"
 fi
 
 has_param_override() {
@@ -381,7 +647,14 @@ EXTRA_PARAM_LINES=()
 append_param_if_not_overridden() {
   local key="$1"
   local value="$2"
+  if ! param_supported_by_firmware "$key"; then
+    echo "[start-sitl] skipping unsupported parameter for ${ARDUSUB_FIRMWARE_VERSION:-this firmware}: ${key}"
+    return 0
+  fi
   if ! has_param_override "$key"; then
+    if real_param_file_has "$key" && ! is_sim_forced_param "$key"; then
+      return 0
+    fi
     EXTRA_PARAM_LINES+=("${key} ${value}")
   fi
 }
@@ -414,26 +687,98 @@ append_param_if_not_overridden "MOT_5_DIRECTION" "-1"
 append_param_if_not_overridden "MOT_6_DIRECTION" "1"
 append_param_if_not_overridden "MOT_7_DIRECTION" "1"
 append_param_if_not_overridden "MOT_8_DIRECTION" "-1"
-append_param_if_not_overridden "SERIAL1_PROTOCOL" "2"
+case "${SITL_SERIAL0_UDPCLIENT:-0}" in
+  1|true|TRUE|yes|YES|on|ON|enable|enabled)
+    # Non-blocking bootstrap only for explicit direct-MAVLink experiments. In
+    # the default Docker/QGC path, MAVProxy owns QGC fan-out and serial0 remains
+    # unused by the live control contract.
+    append_param_if_not_overridden "SERIAL0_BAUD" "${SITL_QGC_MAV_BAUD:-921}"
+    append_param_if_not_overridden "SR0_EXTRA1" "${SITL_QGC_SR0_EXTRA1:-0}"
+    append_param_if_not_overridden "SR0_EXTRA2" "${SITL_QGC_SR0_EXTRA2:-0}"
+    append_param_if_not_overridden "SR0_EXTRA3" "${SITL_QGC_SR0_EXTRA3:-0}"
+    append_param_if_not_overridden "SR0_EXT_STAT" "${SITL_QGC_SR0_EXT_STAT:-0}"
+    append_param_if_not_overridden "SR0_POSITION" "${SITL_QGC_SR0_POSITION:-0}"
+    append_param_if_not_overridden "SR0_RAW_SENS" "${SITL_QGC_SR0_RAW_SENS:-0}"
+    append_param_if_not_overridden "SR0_RC_CHAN" "${SITL_QGC_SR0_RC_CHAN:-0}"
+    ;;
+esac
+# Only force MAVLink protocol on serial links that this launcher actually
+# wires to an endpoint. If a SERIAL*_PROTOCOL remains MAVLink while no
+# --serial* transport is provided, ArduSub SITL opens the default TCP port
+# (5761/5762) and blocks at "Waiting for connection", which stalls JSON servo
+# output during controller-parity replay.
+# Direct SITL can still expose an explicit serial1 QGC link for A/B debugging.
+# The default Docker/QGC path does not use this block; it uses MAVProxy fan-out
+# below because that path reliably emits QGC heartbeats with ArduSub 4.1.2.
+case "${SITL_QGC_DIRECT_SERIAL_ENABLE:-0}" in
+  1|true|TRUE|yes|YES|on|ON|enable|enabled)
+    append_param_if_not_overridden "SERIAL1_PROTOCOL" "2"
+    append_param_if_not_overridden "SERIAL1_BAUD" "${SITL_QGC_MAV_BAUD:-921}"
+    append_param_if_not_overridden "SR1_EXTRA1" "${SITL_QGC_SR1_EXTRA1:-4}"
+    append_param_if_not_overridden "SR1_EXTRA2" "${SITL_QGC_SR1_EXTRA2:-2}"
+    append_param_if_not_overridden "SR1_EXTRA3" "${SITL_QGC_SR1_EXTRA3:-2}"
+    append_param_if_not_overridden "SR1_EXT_STAT" "${SITL_QGC_SR1_EXT_STAT:-2}"
+    append_param_if_not_overridden "SR1_POSITION" "${SITL_QGC_SR1_POSITION:-2}"
+    append_param_if_not_overridden "SR1_RAW_SENS" "${SITL_QGC_SR1_RAW_SENS:-2}"
+    append_param_if_not_overridden "SR1_PARAMS" "${SITL_QGC_SR1_PARAMS:-2}"
+    append_param_if_not_overridden "SR1_RC_CHAN" "${SITL_QGC_SR1_RC_CHAN:-2}"
+    ;;
+  *)
+    append_param_if_not_overridden "SERIAL1_PROTOCOL" "-1"
+    ;;
+esac
 append_param_if_not_overridden "SERIAL2_PROTOCOL" "2"
-# This is a SITL-only control/telemetry link to MuJoCo. The real vehicle uses
-# SERIAL3_PROTOCOL=5 for GPS, but in this launch serial3 is explicitly wired to
-# udpclient:<host>:14660. It must therefore be MAVLink or arm/mode/RC commands
-# and SERVO_OUTPUT_RAW never reach the bridge.
-EXTRA_PARAM_LINES+=("SERIAL3_PROTOCOL 2")
+append_param_if_not_overridden "SERIAL2_BAUD" "${SITL_MUJOCO_MAV_BAUD:-921}"
+append_param_if_not_overridden "SR2_EXTRA1" "${SITL_MUJOCO_SR2_EXTRA1:-1}"
+append_param_if_not_overridden "SR2_EXTRA2" "${SITL_MUJOCO_SR2_EXTRA2:-0}"
+append_param_if_not_overridden "SR2_EXTRA3" "${SITL_MUJOCO_SR2_EXTRA3:-0}"
+append_param_if_not_overridden "SR2_EXT_STAT" "${SITL_MUJOCO_SR2_EXT_STAT:-1}"
+append_param_if_not_overridden "SR2_POSITION" "${SITL_MUJOCO_SR2_POSITION:-0}"
+append_param_if_not_overridden "SR2_RAW_SENS" "${SITL_MUJOCO_SR2_RAW_SENS:-0}"
+append_param_if_not_overridden "SR2_PARAMS" "${SITL_MUJOCO_SR2_PARAMS:-0}"
+append_param_if_not_overridden "SR2_RC_CHAN" "${SITL_MUJOCO_SR2_RC_CHAN:-2}"
+# MAVROS-compatible ROS topics are provided by the in-process bridge instead of
+# a separate ArduSub UDP serial in the low-latency QGC contract.
+# Keep unused real-vehicle GPS serial ports disabled in SITL direct mode.
+append_param_if_not_overridden "SERIAL3_PROTOCOL" "-1"
 if [[ "$SITL_DEDICATED_COMMAND_MAVLINK" -eq 1 ]]; then
-  # Optional split command path. The default Docker/Mac path keeps commands on
-  # serial3 to avoid another UDP/heartbeat failure mode.
+  # Split command path. Keep arm/mode/RC override off the telemetry/servo
+  # listener so pilot input is not blocked by the shared MuJoCo peer discovery.
   EXTRA_PARAM_LINES+=("SERIAL4_PROTOCOL 2")
+  # SERIAL4 is not the physical vehicle's low-speed peripheral link here; it
+  # is the desktop-only command/RCOU observation UDP link. Keeping the real
+  # 38400 baud plus all SR4 streams on this synthetic link can queue MAVLink
+  # telemetry for several seconds, making /mavros/rc/out look stale even while
+  # JSON servo plant input is current. Keep only the RCOU stream on this link.
+  append_param_if_not_overridden "SERIAL4_BAUD" "${SITL_COMMAND_MAV_BAUD:-921}"
+  append_param_if_not_overridden "SR4_EXTRA1" "${SITL_COMMAND_SR4_EXTRA1:-0}"
+  append_param_if_not_overridden "SR4_EXTRA2" "${SITL_COMMAND_SR4_EXTRA2:-0}"
+  append_param_if_not_overridden "SR4_EXTRA3" "${SITL_COMMAND_SR4_EXTRA3:-0}"
+  append_param_if_not_overridden "SR4_EXT_STAT" "${SITL_COMMAND_SR4_EXT_STAT:-0}"
+  append_param_if_not_overridden "SR4_POSITION" "${SITL_COMMAND_SR4_POSITION:-0}"
+  append_param_if_not_overridden "SR4_RAW_SENS" "${SITL_COMMAND_SR4_RAW_SENS:-0}"
+  append_param_if_not_overridden "SR4_PARAMS" "${SITL_COMMAND_SR4_PARAMS:-0}"
+  append_param_if_not_overridden "SR4_RC_CHAN" "${SITL_COMMAND_SR4_RC_CHAN:-2}"
 fi
 # real_robot.param has BRD_OPTIONS=1 because the physical Pixhawk watchdog is
 # valid hardware behavior. In SITL that same bit enables the SIGALRM watchdog;
 # a brief Docker/Mac scheduling stall during JSON startup causes watchdog_rst,
 # then ArduSub refuses to arm. Keep this disabled in simulation.
 append_param_if_not_overridden "BRD_OPTIONS" "${SITL_BRD_OPTIONS:-0}"
-# Keep two estimator contracts explicit. The default path matches the real
-# robot vertical EKF contract: POSZ from Baro/Bar30 and VELZ from ExternalNav.
-# Set SITL_EKF3_EXTNAV=0 only for deterministic Bar30-only debugging.
+append_param_if_not_overridden "BRD_SAFETYENABLE" "${SITL_BRD_SAFETYENABLE:-0}"
+append_param_if_not_overridden "BRD_SAFETYOPTION" "${SITL_BRD_SAFETYOPTION:-0}"
+append_param_if_not_overridden "BRD_SAFETY_MASK" "${SITL_BRD_SAFETY_MASK:-0}"
+append_param_if_not_overridden "ARMING_CHECK" "${SITL_ARMING_CHECK:-0}"
+
+# SITL scheduler contract:
+# The real ArduSub-4.1.2 vehicle dump runs the controller scheduler at 400Hz.
+# Controller-parity replay showed that forcing 100Hz changes raw JSON servo
+# output substantially, especially heave. Keep the default at the hardware
+# value and use SITL_SCHED_LOOP_RATE only for explicit A/B debugging.
+append_param_if_not_overridden "SCHED_LOOP_RATE" "${SITL_SCHED_LOOP_RATE:-400}"
+# Keep the estimator contract explicit. The default real-param-parity profile
+# keeps Bar30 POSZ and fuses VISO/DVL VELZ through body-frame VPD; althold_baro
+# is an explicit A/B profile that leaves VELZ un-fused.
 append_param_if_not_overridden "RNGFND1_TYPE" "${SITL_RNGFND1_TYPE:-$SITL_DEFAULT_RNGFND1_TYPE}"
 append_param_if_not_overridden "RNGFND1_MIN_CM" "5"
 append_param_if_not_overridden "RNGFND1_MAX_CM" "3000"
@@ -442,16 +787,29 @@ append_param_if_not_overridden "RNGFND1_ORIENT" "25"
 # throttle; both participate in AltHold surface limiting and bottom behavior.
 append_param_if_not_overridden "SURFACE_DEPTH" "${SITL_SURFACE_DEPTH:-$SITL_DEFAULT_SURFACE_DEPTH}"
 append_param_if_not_overridden "SURFACE_MAX_THR" "${SITL_SURFACE_MAX_THR:-0.1}"
-# ArduSub 4.1.x accepts RC override/manual control only from SYSID_MYGCS.
-# Match the real vehicle dump and QGC joystick path.
-append_param_if_not_overridden "SYSID_MYGCS" "255"
+# ArduSub 4.1.x accepts RC override/MANUAL_CONTROL only from SYSID_MYGCS.
+# Default desktop control authority belongs to the bridge source system, while
+# QGC uses MAVProxy fan-out for monitoring/parameters. This prevents QGC
+# MANUAL_CONTROL frames from fighting GUI/ROS RC override. Set
+# SITL_QGC_CONTROL_AUTHORITY=1 in the Docker launcher for QGC joystick/arm A/B
+# tests; that switches both SITL_MAVLINK_SOURCE_SYSID and SYSID_MYGCS to 255.
+append_param_if_not_overridden "SYSID_MYGCS" "${SITL_SYSID_MYGCS:-${SITL_MAVLINK_SOURCE_SYSID:-254}}"
+append_param_if_not_overridden "FS_GCS_ENABLE" "${SITL_FS_GCS_ENABLE:-0}"
+append_param_if_not_overridden "FS_PILOT_INPUT" "${SITL_FS_PILOT_INPUT:-0}"
+append_param_if_not_overridden "FS_PILOT_TIMEOUT" "${SITL_FS_PILOT_TIMEOUT:-10.0}"
 # Closed-loop pilot-input contract:
 # - GUI and rosbag replay use /mavros/rc/override by default.
-# - RC3 neutral is 1500 because RC override maps heave directly to 1100..1900.
-# - RC3_TRIM may remain the real vehicle value; do not reinterpret it as stick
-#   neutral for the RC override path.
+# - RC3 command neutral is 1500, but ArduSub 4.1.2's MANUAL heave path expects
+#   channel_throttle->norm_input()==0.5 at neutral because AP_Motors6DOF turns
+#   that into bidirectional throttle with 2*(input-0.5).
+# - With RC3_MIN=1100 and RC3_MAX=1900, RC3_TRIM=1100 makes RC3=1500 map to
+#   0.5. RC3_TRIM=1500 maps RC3=1500 to 0.0 and commands full vertical thrust.
 # - MANUAL_CONTROL remains available for QGC-like joystick behavior and is
 #   scaled by JS_GAIN/JS_THR_GAIN inside ArduSub.
+# - Keep GUI/QGC live-control gain at ArduSub's own default. The hardware
+#   dump's JS_GAIN_DEFAULT=0.1 is a replay/parity value; through
+#   MANUAL_CONTROL it shrinks a 30% yaw stick to about 12us and makes heave/yaw
+#   look delayed even when MAVLink transport is current.
 append_param_if_not_overridden "RC_OPTIONS" "${SITL_RC_OPTIONS:-32}"
 append_param_if_not_overridden "RC_OVERRIDE_TIME" "${SITL_RC_OVERRIDE_TIME:-3.0}"
 append_param_if_not_overridden "RC1_DZ" "${SITL_RC1_DZ:-30}"
@@ -461,10 +819,10 @@ append_param_if_not_overridden "RC3_MIN" "1100"
 append_param_if_not_overridden "RC3_MAX" "1900"
 append_param_if_not_overridden "RC3_DZ" "${SITL_RC3_DZ:-30}"
 append_param_if_not_overridden "RC3_TRIM" "${SITL_RC3_TRIM:-1100}"
-append_param_if_not_overridden "JS_GAIN_DEFAULT" "${SITL_JS_GAIN_DEFAULT:-0.1}"
+append_param_if_not_overridden "JS_GAIN_DEFAULT" "${SITL_JS_GAIN_DEFAULT:-0.5}"
 append_param_if_not_overridden "JS_GAIN_MIN" "${SITL_JS_GAIN_MIN:-0.25}"
-append_param_if_not_overridden "JS_GAIN_MAX" "${SITL_JS_GAIN_MAX:-2.0}"
-append_param_if_not_overridden "JS_GAIN_STEPS" "${SITL_JS_GAIN_STEPS:-4}"
+append_param_if_not_overridden "JS_GAIN_MAX" "${SITL_JS_GAIN_MAX:-1.0}"
+append_param_if_not_overridden "JS_GAIN_STEPS" "${SITL_JS_GAIN_STEPS:-1}"
 append_param_if_not_overridden "JS_THR_GAIN" "${SITL_JS_THR_GAIN:-1.0}"
 append_param_if_not_overridden "PILOT_SPEED_UP" "${SITL_PILOT_SPEED_UP:-100}"
 append_param_if_not_overridden "PILOT_SPEED_DN" "${SITL_PILOT_SPEED_DN:-0}"
@@ -530,7 +888,9 @@ append_param_if_not_overridden "PSC_VELZ_D" "${SITL_PSC_VELZ_D:-0.0}"
 append_param_if_not_overridden "PSC_VELZ_FF" "${SITL_PSC_VELZ_FF:-0.0}"
 append_param_if_not_overridden "PSC_VELZ_FLTD" "${SITL_PSC_VELZ_FLTD:-5.0}"
 append_param_if_not_overridden "PSC_VELZ_FLTE" "${SITL_PSC_VELZ_FLTE:-5.0}"
-# Real dump: PSC_ACCZ_P=0.50, PSC_ACCZ_I=0.00, PSC_ACCZ_IMAX=0, PSC_ACCZ_D=0.00
+# Keep the real robot's P-only vertical acceleration contract by default.
+# If these are nonzero, the simulator is no longer proving that the MuJoCo
+# plant matches the vehicle well enough for ArduSub's real ALT_HOLD settings.
 append_param_if_not_overridden "PSC_ACCZ_P" "${SITL_PSC_ACCZ_P:-0.50}"
 append_param_if_not_overridden "PSC_ACCZ_I" "${SITL_PSC_ACCZ_I:-0.0}"
 append_param_if_not_overridden "PSC_ACCZ_IMAX" "${SITL_PSC_ACCZ_IMAX:-0.0}"
@@ -572,15 +932,22 @@ append_param_if_not_overridden "BATT_AMP_PERVLT" "17.000"
 append_param_if_not_overridden "BATT_AMP_OFFSET" "0.0"
 append_param_if_not_overridden "SIM_BATT_VOLTAGE" "${SITL_BATT_VOLTAGE:-24.0}"
 append_param_if_not_overridden "SIM_BATT_CAP_AH" "5.2"
-append_param_if_not_overridden "BARO1_GND_PRESS" "101473.796875"
-append_param_if_not_overridden "BARO2_GND_PRESS" "101640"
-append_param_if_not_overridden "BARO_PRIMARY" "1"
+append_param_if_not_overridden "BARO1_GND_PRESS" "${SITL_BARO1_GND_PRESS:-101473.796875}"
+append_param_if_not_overridden "BARO2_GND_PRESS" "${SITL_BARO2_GND_PRESS:-101640.0}"
+# Keep the controller-side Bar30 selection aligned with the real vehicle
+# contract. Controller-parity replay showed BARO_PRIMARY=0 flips the early
+# ALT_HOLD vertical output away from the real RCOU trend; use 1 by default and
+# leave SITL_BARO_PRIMARY as an explicit backend A/B override.
+append_param_if_not_overridden "BARO_PRIMARY" "${SITL_BARO_PRIMARY:-1}"
 append_param_if_not_overridden "BARO_SPEC_GRAV" "1.0"
 append_param_if_not_overridden "BARO_ALT_OFFSET" "0.0"
 # Depth hold in SITL is driven by the simulated water barometer. The ArduPilot
 # SITL default adds 0.2 m of baro noise, which can create a false vertical error
 # immediately after MuJoCo's initial-depth hold is released.
-append_param_if_not_overridden "SIM_BARO_RND" "${SITL_SIM_BARO_RND:-0}"
+# Keep a small water-depth sensor dither in SITL. With a perfectly constant
+# zero-noise barometer, AP_Baro can under-refresh last_update enough for EKF3
+# to over-rely on inertial vertical prediction in ALT_HOLD.
+append_param_if_not_overridden "SIM_BARO_RND" "${SITL_SIM_BARO_RND:-0.002}"
 append_param_if_not_overridden "SIM_BARO_DRIFT" "${SITL_SIM_BARO_DRIFT:-0}"
 append_param_if_not_overridden "SIM_BARO_GLITCH" "${SITL_SIM_BARO_GLITCH:-0}"
 append_param_if_not_overridden "SIM_BARO_DELAY" "${SITL_SIM_BARO_DELAY:-0}"
@@ -593,36 +960,62 @@ append_param_if_not_overridden "SIM_BAR2_DELAY" "${SITL_SIM_BAR2_DELAY:-0}"
 # samples, so applying the hardware offsets in SITL creates a false vertical
 # acceleration bias (notably INS_ACCOFFS_Z=-1.207 on the real dump) and EKF3
 # enters ALT_HOLD with non-zero down velocity while the vehicle is stationary.
-append_param_if_not_overridden "INS_ACCOFFS_X" "${SITL_INS_ACCOFFS_X:-0.0}"
-append_param_if_not_overridden "INS_ACCOFFS_Y" "${SITL_INS_ACCOFFS_Y:-0.0}"
-append_param_if_not_overridden "INS_ACCOFFS_Z" "${SITL_INS_ACCOFFS_Z:-0.0}"
+#
+# ArduSub 4.1.2 also treats an exactly-zero accel offset vector as "3D Accel
+# calibration needed". Keep a tiny non-zero sentinel so QGC/prearm see the SITL
+# IMU as calibrated without reintroducing the real hardware bias.
+append_param_if_not_overridden "INS_ACCOFFS_X" "${SITL_INS_ACCOFFS_X:-0.001}"
+append_param_if_not_overridden "INS_ACCOFFS_Y" "${SITL_INS_ACCOFFS_Y:-0.001}"
+append_param_if_not_overridden "INS_ACCOFFS_Z" "${SITL_INS_ACCOFFS_Z:-0.001}"
 append_param_if_not_overridden "INS_ACCSCAL_X" "${SITL_INS_ACCSCAL_X:-1.0}"
 append_param_if_not_overridden "INS_ACCSCAL_Y" "${SITL_INS_ACCSCAL_Y:-1.0}"
 append_param_if_not_overridden "INS_ACCSCAL_Z" "${SITL_INS_ACCSCAL_Z:-1.0}"
 append_param_if_not_overridden "INS_GYROFFS_X" "${SITL_INS_GYROFFS_X:-0.0}"
 append_param_if_not_overridden "INS_GYROFFS_Y" "${SITL_INS_GYROFFS_Y:-0.0}"
 append_param_if_not_overridden "INS_GYROFFS_Z" "${SITL_INS_GYROFFS_Z:-0.0}"
+append_param_if_not_overridden "INS_ENABLE_MASK" "${SITL_INS_ENABLE_MASK:-1}"
+append_param_if_not_overridden "INS_USE2" "${SITL_INS_USE2:-0}"
+append_param_if_not_overridden "INS_USE3" "${SITL_INS_USE3:-0}"
 append_param_if_not_overridden "EK3_ALT_M_NSE" "0.1"
 append_param_if_not_overridden "EK3_GBIAS_P_NSE" "0.0005"
 append_param_if_not_overridden "EK3_GND_EFF_DZ" "4"
 append_param_if_not_overridden "EK3_RNG_USE_HGT" "-1"
 append_param_if_not_overridden "EK3_YAW_M_NSE" "0.05236"
-# Match the hardware dump's GPS params. EKF3 source selection below keeps
-# ExternalNav primary for XY/velocity/yaw, so GPS is present but not the source
-# under the default real-robot-like path.
-append_param_if_not_overridden "GPS_TYPE" "1"
-append_param_if_not_overridden "GPS_TYPE2" "0"
-append_param_if_not_overridden "SIM_GPS_TYPE" "0"
+# Match the active estimator contract. The real hardware dump has GPS enabled,
+# but the althold_baro profile is a Bar30+IMU contract and must not let GPS
+# startup transients contaminate AHRS vertical velocity.
+if [[ "$UUV_EKF_CONTRACT" == "althold_baro" ]]; then
+  SITL_DEFAULT_GPS_TYPE=0
+else
+  SITL_DEFAULT_GPS_TYPE=1
+fi
+append_param_if_not_overridden "GPS_TYPE" "${SITL_GPS_TYPE:-$SITL_DEFAULT_GPS_TYPE}"
+append_param_if_not_overridden "GPS_TYPE2" "${SITL_GPS_TYPE2:-0}"
+if [[ "$SITL_EKF3_EXTNAV_ENABLE" -eq 1 ]]; then
+  SITL_DEFAULT_SIM_GPS_TYPE=0
+elif [[ "$UUV_EKF_CONTRACT" == "althold_baro" ]]; then
+  SITL_DEFAULT_SIM_GPS_TYPE=0
+else
+  SITL_DEFAULT_SIM_GPS_TYPE=1
+fi
+append_param_if_not_overridden "SIM_GPS_TYPE" "${SITL_SIM_GPS_TYPE:-$SITL_DEFAULT_SIM_GPS_TYPE}"
 append_param_if_not_overridden "SIM_GPS2_TYPE" "0"
 append_param_if_not_overridden "AHRS_GPS_USE" "${SITL_AHRS_GPS_USE:-$SITL_DEFAULT_AHRS_GPS_USE}"
 append_param_if_not_overridden "GPS_AUTO_CONFIG" "1"
-append_param_if_not_overridden "INS_POS1_X" "0.145"
+append_param_if_not_overridden "INS_POS1_X" "0.0"
 append_param_if_not_overridden "INS_POS1_Y" "0.0"
 append_param_if_not_overridden "INS_POS1_Z" "0.0"
+# Default to no additional SITL lever arm because the replayed JSON IMU sample
+# is normally treated as the simulated IMU measurement point. Keep this
+# environment-overridable for controller-parity A/B runs against the real
+# INS_POS1_* sensor contract.
+append_param_if_not_overridden "SIM_IMU_POS_X" "${SITL_SIM_IMU_POS_X:-0.0}"
+append_param_if_not_overridden "SIM_IMU_POS_Y" "${SITL_SIM_IMU_POS_Y:-0.0}"
+append_param_if_not_overridden "SIM_IMU_POS_Z" "${SITL_SIM_IMU_POS_Z:-0.0}"
 if [[ "$SITL_EKF3_EXTNAV_ENABLE" -eq 1 ]]; then
-  # Real-robot-like estimator path. EKF3 source value 6 is ExternalNav
-  # (VisualOdom). POSZ stays Baro like the hardware dump, while vertical
-  # velocity and yaw come from ExternalNav.
+  # Real-robot-like estimator path. Keep vertical position on Baro/Bar30 while
+  # using ExternalNav/DVL for velocity and yaw, matching the 4.1.2 hardware
+  # parameter dump used for the robot.
   append_param_if_not_overridden "AHRS_EKF_TYPE" "${SITL_AHRS_EKF_TYPE:-3}"
   append_param_if_not_overridden "EK3_SRC1_POSXY" "6"
   append_param_if_not_overridden "EK3_SRC1_VELXY" "6"
@@ -636,30 +1029,70 @@ if [[ "$SITL_EKF3_EXTNAV_ENABLE" -eq 1 ]]; then
   append_param_if_not_overridden "EK3_SRC2_YAW" "6"
   append_param_if_not_overridden "EK3_SRC_OPTIONS" "1"
   append_param_if_not_overridden "VISO_TYPE" "1"
-  append_param_if_not_overridden "VISO_DELAY_MS" "100"
+  append_param_if_not_overridden "VISO_DELAY_MS" "${SITL_VISO_DELAY_MS:-100}"
   append_param_if_not_overridden "VISO_POS_X" "0.0"
   append_param_if_not_overridden "VISO_POS_Y" "0.0"
   append_param_if_not_overridden "VISO_POS_Z" "0.0"
-  append_param_if_not_overridden "VISO_POS_M_NSE" "0.2"
-  append_param_if_not_overridden "VISO_VEL_M_NSE" "0.1"
-  append_param_if_not_overridden "VISO_YAW_M_NSE" "0.050004"
+  append_param_if_not_overridden "VISO_POS_M_NSE" "${SITL_VISO_POS_M_NSE:-0.2}"
+  append_param_if_not_overridden "VISO_VEL_M_NSE" "${SITL_VISO_VEL_M_NSE:-0.1}"
+  append_param_if_not_overridden "VISO_YAW_M_NSE" "${SITL_VISO_YAW_M_NSE:-0.050004}"
 else
   append_param_if_not_overridden "EK3_SRC1_POSXY" "0"
   append_param_if_not_overridden "EK3_SRC1_VELXY" "0"
   append_param_if_not_overridden "EK3_SRC1_POSZ" "1"
   append_param_if_not_overridden "EK3_SRC1_VELZ" "0"
   append_param_if_not_overridden "EK3_SRC1_YAW" "0"
-  append_param_if_not_overridden "EK3_SRC_OPTIONS" "0"
+  append_param_if_not_overridden "EK3_SRC_OPTIONS" "1"
   append_param_if_not_overridden "VISO_TYPE" "0"
-  # The default keeps the deterministic SIM AHRS path for debug stability.
-  # Use SITL_AHRS_EKF_TYPE=3 only together with SITL_EKF3_EXTNAV=1 when
-  # validating estimator behavior against real logs.
-  append_param_if_not_overridden "AHRS_EKF_TYPE" "${SITL_AHRS_EKF_TYPE:-10}"
+  # Keep EKF3 active for ALT_HOLD. This matches the real 4.1.2 DepthHold
+  # parameter dump without enabling VISO/ExternalNav velocity fusion.
+  append_param_if_not_overridden "AHRS_EKF_TYPE" "${SITL_AHRS_EKF_TYPE:-3}"
 fi
 append_param_if_not_overridden "COMPASS_ENABLE" "0"
 append_param_if_not_overridden "COMPASS_USE" "0"
 append_param_if_not_overridden "COMPASS_USE2" "0"
 append_param_if_not_overridden "COMPASS_USE3" "0"
+append_param_if_not_overridden "COMPASS_DEV_ID" "0"
+append_param_if_not_overridden "COMPASS_DEV_ID2" "0"
+append_param_if_not_overridden "COMPASS_DEV_ID3" "0"
+append_param_if_not_overridden "COMPASS_DEV_ID4" "0"
+append_param_if_not_overridden "COMPASS_DEV_ID5" "0"
+append_param_if_not_overridden "COMPASS_DEV_ID6" "0"
+append_param_if_not_overridden "COMPASS_DEV_ID7" "0"
+append_param_if_not_overridden "COMPASS_DEV_ID8" "0"
+append_param_if_not_overridden "COMPASS_PRIO1_ID" "0"
+append_param_if_not_overridden "COMPASS_PRIO2_ID" "0"
+append_param_if_not_overridden "COMPASS_PRIO3_ID" "0"
+append_param_if_not_overridden "COMPASS_OFS_X" "0"
+append_param_if_not_overridden "COMPASS_OFS_Y" "0"
+append_param_if_not_overridden "COMPASS_OFS_Z" "0"
+append_param_if_not_overridden "COMPASS_OFS2_X" "0"
+append_param_if_not_overridden "COMPASS_OFS2_Y" "0"
+append_param_if_not_overridden "COMPASS_OFS2_Z" "0"
+append_param_if_not_overridden "COMPASS_OFS3_X" "0"
+append_param_if_not_overridden "COMPASS_OFS3_Y" "0"
+append_param_if_not_overridden "COMPASS_OFS3_Z" "0"
+append_param_if_not_overridden "COMPASS_DIA_X" "1"
+append_param_if_not_overridden "COMPASS_DIA_Y" "1"
+append_param_if_not_overridden "COMPASS_DIA_Z" "1"
+append_param_if_not_overridden "COMPASS_DIA2_X" "0"
+append_param_if_not_overridden "COMPASS_DIA2_Y" "0"
+append_param_if_not_overridden "COMPASS_DIA2_Z" "0"
+append_param_if_not_overridden "COMPASS_DIA3_X" "0"
+append_param_if_not_overridden "COMPASS_DIA3_Y" "0"
+append_param_if_not_overridden "COMPASS_DIA3_Z" "0"
+append_param_if_not_overridden "COMPASS_ODI_X" "0"
+append_param_if_not_overridden "COMPASS_ODI_Y" "0"
+append_param_if_not_overridden "COMPASS_ODI_Z" "0"
+append_param_if_not_overridden "COMPASS_ODI2_X" "0"
+append_param_if_not_overridden "COMPASS_ODI2_Y" "0"
+append_param_if_not_overridden "COMPASS_ODI2_Z" "0"
+append_param_if_not_overridden "COMPASS_ODI3_X" "0"
+append_param_if_not_overridden "COMPASS_ODI3_Y" "0"
+append_param_if_not_overridden "COMPASS_ODI3_Z" "0"
+append_param_if_not_overridden "COMPASS_SCALE" "0"
+append_param_if_not_overridden "COMPASS_SCALE2" "0"
+append_param_if_not_overridden "COMPASS_SCALE3" "0"
 
 if [[ "$EKF_STABLE" -eq 1 ]]; then
   # Keep a stable EKF lane setup in SITL.
@@ -696,13 +1129,25 @@ if [[ "$USE_DIRECT_MAVLINK" -eq 1 ]]; then
   echo "[start-sitl] transport mode: direct MAVLink outputs (no MAVProxy)"
   echo "[start-sitl] direct endpoints:"
   echo "  JSON     -> ${SITL_JSON_HOST}:${SITL_JSON_SERVO_PORT} (sensors in ${SITL_JSON_SENSOR_PORT})"
-  echo "  SERIAL0  -> udpclient:${SITL_CONSOLE_HOST}:${SITL_CONSOLE_PORT}"
-  echo "  MuJoCo   -> serial3 udpclient:${SITL_MUJOCO_MAV_HOST}:${SITL_MUJOCO_MAV_PORT}"
-  SERIAL_ARGS="--sim-address=${SITL_JSON_HOST} --sim-port-in=${SITL_JSON_SENSOR_PORT} --sim-port-out=${SITL_JSON_SERVO_PORT} --serial0=udpclient:${SITL_CONSOLE_HOST}:${SITL_CONSOLE_PORT} --serial3=udpclient:${SITL_MUJOCO_MAV_HOST}:${SITL_MUJOCO_MAV_PORT}"
+  echo "  MuJoCo   -> serial2 udpclient:${SITL_MUJOCO_MAV_HOST}:${SITL_MUJOCO_MAV_PORT}"
+  SERIAL_ARGS="--sim-address=${SITL_JSON_HOST} --sim-port-in=${SITL_JSON_SENSOR_PORT} --sim-port-out=${SITL_JSON_SERVO_PORT} --serial2=udpclient:${SITL_MUJOCO_MAV_HOST}:${SITL_MUJOCO_MAV_PORT}"
+  case "${SITL_SERIAL0_UDPCLIENT:-0}" in
+    1|true|TRUE|yes|YES|on|ON|enable|enabled)
+      echo "  SERIAL0  -> udpclient:${SITL_CONSOLE_HOST}:${SITL_CONSOLE_PORT} (non-blocking bootstrap)"
+      SERIAL_ARGS+=" --serial0=udpclient:${SITL_CONSOLE_HOST}:${SITL_CONSOLE_PORT}"
+      ;;
+  esac
   case "$SITL_QGC_OUTPUT_ENABLE" in
     1|true|TRUE|yes|YES|on|ON|enable|enabled)
-      echo "  QGC      -> serial1 udpclient:${SITL_QGC_HOST}:${SITL_QGC_PORT}"
-      SERIAL_ARGS+=" --serial1=udpclient:${SITL_QGC_HOST}:${SITL_QGC_PORT}"
+      case "${SITL_QGC_DIRECT_SERIAL_ENABLE:-0}" in
+        1|true|TRUE|yes|YES|on|ON|enable|enabled)
+          echo "  QGC      -> serial1 udpclient:${SITL_QGC_HOST}:${SITL_QGC_PORT}"
+          SERIAL_ARGS+=" --serial1=udpclient:${SITL_QGC_HOST}:${SITL_QGC_PORT}"
+          ;;
+        *)
+          echo "  QGC      -> bridge relay ${SITL_QGC_HOST}:${SITL_QGC_PORT}"
+          ;;
+      esac
       ;;
     *)
       echo "  QGC      -> disabled"
@@ -710,20 +1155,19 @@ if [[ "$USE_DIRECT_MAVLINK" -eq 1 ]]; then
   esac
   case "$SITL_MAVROS_OUTPUT_ENABLE" in
     1|true|TRUE|yes|YES|on|ON|enable|enabled)
-      echo "  MAVROS   -> serial2 udpclient:${SITL_MAVROS_HOST}:${SITL_MAVROS_PORT}"
-      SERIAL_ARGS+=" --serial2=udpclient:${SITL_MAVROS_HOST}:${SITL_MAVROS_PORT}"
+    echo "  MAVROS   -> disabled; serial2 is reserved for MuJoCo in this low-latency QGC contract"
       ;;
     *)
-      echo "  MAVROS   -> disabled"
+      echo "  MAVROS   -> in-process ROS2 bridge"
       ;;
   esac
   if [[ "$SITL_DEDICATED_COMMAND_MAVLINK" -eq 1 ]]; then
     echo "  Command  -> serial4 udpclient:${SITL_COMMAND_MAV_HOST}:${SITL_COMMAND_MAV_PORT}"
     SERIAL_ARGS+=" --serial4=udpclient:${SITL_COMMAND_MAV_HOST}:${SITL_COMMAND_MAV_PORT}"
   else
-    echo "  Command  -> serial3 shared MuJoCo MAVLink link"
+    echo "  Command  -> serial2 shared MuJoCo MAVLink link"
   fi
-  SIM_ARGS+=(--no-mavproxy)
+  SIM_ARGS+=(--no-mavproxy --udp)
   SITL_CMD=("$MJ311_PYTHON" "$SIM_VEHICLE" \
     -L RATBeach \
     -v ArduSub \

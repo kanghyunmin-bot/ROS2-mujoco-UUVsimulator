@@ -1,5 +1,5 @@
 <mujoco model="tank_custom">
-  
+
   <compiler angle="radian" meshdir="../assets/urdf_full/meshes_split/" />
 
   <option density="1000" viscosity="0.001" integrator="implicitfast" />
@@ -27,25 +27,23 @@
     <mesh name="YAW_RF" content_type="model/stl" file="YAW_RF.STL" />
     <mesh name="YAW_RR" content_type="model/stl" file="YAW_RR.STL" />
     <mesh name="t200_prop" content_type="model/stl" file="t200_prop.stl" scale="0.001 0.001 0.001" />
-    <mesh name="ping360_body_no_cable" content_type="model/stl" file="../../ping360/ping360_body_no_cable.stl" scale="0.001 0.001 0.001" />
     <material name="orange" rgba="0.95 0.45 0.05 1" />
     <material name="frame_grey" rgba="0.55 0.55 0.55 1" />
     <material name="enclosure_white" rgba="0.95 0.95 0.95 1" />
     <material name="pool_tile" rgba="0.3 0.5 0.7 1" />
-    <material name="ping360_black" rgba="0.06 0.06 0.055 1" />
   </asset>
 
   <worldbody>
     <light name="sun" pos="0 0 10" dir="0 0 -1" diffuse="0.9 0.9 0.9" specular="0.3 0.3 0.3" />
 
-    <!-- Tank dimensions: 21.96m (x) x 10.96m (y) x 1.32m depth, water surface at z=0. -->
-    <geom name="pool_floor" type="box" pos="0 0 -1.37" size="10.98 5.48 0.05" material="pool_tile" />
-    <geom name="pool_wall_px" type="box" pos="11.03 0 -0.66" size="0.05 5.53 0.66" rgba="0.7 0.7 0.7 1" />
-    <geom name="pool_wall_nx" type="box" pos="-11.03 0 -0.66" size="0.05 5.53 0.66" rgba="0.7 0.7 0.7 1" />
-    <geom name="pool_wall_py" type="box" pos="0 5.53 -0.66" size="11.08 0.05 0.66" rgba="0.7 0.7 0.7 1" />
-    <geom name="pool_wall_ny" type="box" pos="0 -5.53 -0.66" size="11.08 0.05 0.66" rgba="0.7 0.7 0.7 1" />
-    <geom name="water_vis" type="box" pos="0 0 -0.66" size="10.98 5.48 0.66" rgba="0.05 0.45 0.95 0.23" contype="0" conaffinity="0" group="5" />
-    <geom name="water_surface" type="box" pos="0 0 0.004" size="10.98 5.48 0.004" rgba="0.45 0.85 1.00 0.38" contype="0" conaffinity="0" group="5" />
+    <!-- Tank dimensions: 35.0m length (x) x 30.0m width (y) x 11.0m max depth, water surface at z=0. -->
+    <geom name="pool_floor" type="box" pos="0 0 -11.05" size="17.5 15.0 0.05" material="pool_tile" />
+    <geom name="pool_wall_px" type="box" pos="17.55 0 -5.5" size="0.05 15.05 5.5" rgba="0.7 0.7 0.7 1" />
+    <geom name="pool_wall_nx" type="box" pos="-17.55 0 -5.5" size="0.05 15.05 5.5" rgba="0.7 0.7 0.7 1" />
+    <geom name="pool_wall_py" type="box" pos="0 15.05 -5.5" size="17.6 0.05 5.5" rgba="0.7 0.7 0.7 1" />
+    <geom name="pool_wall_ny" type="box" pos="0 -15.05 -5.5" size="17.6 0.05 5.5" rgba="0.7 0.7 0.7 1" />
+    <geom name="water_vis" type="box" pos="0 0 -5.5" size="17.5 15.0 5.5" rgba="0.05 0.45 0.95 0.23" contype="0" conaffinity="0" group="5" />
+    <geom name="water_surface" type="box" pos="0 0 0.004" size="17.5 15.0 0.004" rgba="0.45 0.85 1.00 0.38" contype="0" conaffinity="0" group="5" />
 
     <body name="base_link" pos="0 0 -0.45" quat="1 0 0 0">
       <inertial pos="-0.0015 0 0.03" quat="1 0 0 0" mass="15" diaginertia="0.524 0.370 0.804" />
@@ -88,16 +86,15 @@
       <site name="buoy_ver_rr" pos="-0.171 -0.2344 0.040" size="0.010" rgba="0.1 1 0.6 0.85" />
       <site name="cob_site" pos="0 0 0.04" size="0.015" rgba="0.1 1 0.1 0.7" quat="1 0 0 0" />
 
-      <site name="imu_site" pos="0 0 0" quat="1 0 0 0" size="0.020" rgba="1 1 0 1" />
-      <site name="bar30_site" pos="0 0 -0.06" quat="1 0 0 0" size="0.018" rgba="0.2 0.8 1.0 1" />
-      <site name="dvl_site" pos="0 0 -0.1" quat="0 1 0 0" size="0.020" rgba="0 1 1 1" />
-      <geom name="ping360_visual" type="mesh" mesh="ping360_body_no_cable" material="ping360_black" pos="0 0 0.205" quat="0.7071068 0.7071068 0 0" contype="0" conaffinity="0" density="0" />
+      <site name="imu_site" pos="0.1100 -0.0003 0.0920" quat="1 0 0 0" size="0.020" rgba="1 1 0 1" />
+      <site name="bar30_site" pos="-0.1736 -0.0303 0.0536" quat="1 0 0 0" size="0.018" rgba="0.2 0.8 1.0 1" />
+      <site name="dvl_site" pos="-0.0320 0 -0.0970" quat="0 1 0 0" size="0.020" rgba="0 1 1 1" />
       <site name="ping360_site" pos="0 0 0.205" quat="1 0 0 0" size="0.020" rgba="0.2 0.6 1 1" />
 
       <site name="cam_left_site" pos="0.1493 -0.0225 -0.02" size="0.018" rgba="1 0 1 1" quat="1 0 0 0" />
       <site name="cam_right_site" pos="0.1493 0.0225 -0.02" size="0.018" rgba="1 0.5 0 1" quat="1 0 0 0" />
-      <camera name="stereo_left" pos="0.1493 -0.0225 -0.02" quat="0.6123724 0.3535534 -0.3535534 -0.6123724" fovy="70" />
-      <camera name="stereo_right" pos="0.1493 0.0225 -0.02" quat="0.6123724 0.3535534 -0.3535534 -0.6123724" fovy="70" />
+      <camera name="stereo_left" pos="0.1493 -0.0225 -0.02" xyaxes="0 -1 0 0 0 1" fovy="70" />
+      <camera name="stereo_right" pos="0.1493 0.0225 -0.02" xyaxes="0 -1 0 0 0 1" fovy="70" />
 
       <body name="prop_ver_lf" pos="0.16 0.2345 -0.078408" quat="0 -1 0 0">
         <joint name="prop_ver_lf_j" type="hinge" axis="0 0 1" damping="0.01" />

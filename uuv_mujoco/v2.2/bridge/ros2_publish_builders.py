@@ -1,0 +1,22 @@
+"""Aggregate lazy ROS message builders for publish jobs."""
+
+from __future__ import annotations
+
+from .ros2_publish_builder_core import build_core_publish_builders
+from .ros2_publish_builder_dvl import build_dvl_publish_builders
+from .ros2_publish_builder_mavros import build_mavros_publish_builders
+from .ros2_publish_builder_odometry import build_odometry_publish_builders
+from .ros2_publish_builder_ping360 import build_ping360_publish_builders
+from .ros2_publish_builder_status import build_status_publish_builders
+from .ros2_publish_state import RosPublishState
+
+
+def build_ros_publish_builders(self, data, stamp, state: RosPublishState) -> dict[str, object]:
+    builders: dict[str, object] = {}
+    builders.update(build_core_publish_builders(self, stamp, state))
+    builders.update(build_status_publish_builders(self, stamp, state))
+    builders.update(build_dvl_publish_builders(self, stamp, state))
+    builders.update(build_mavros_publish_builders(self, stamp, state))
+    builders.update(build_odometry_publish_builders(self, stamp, state))
+    builders.update(build_ping360_publish_builders(self, data, stamp, state))
+    return builders

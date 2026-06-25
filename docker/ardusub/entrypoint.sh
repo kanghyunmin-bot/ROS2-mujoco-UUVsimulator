@@ -5,7 +5,13 @@ export PATH="$HOME/.local/bin:$PATH"
 
 WORKSPACE_DIR="${WORKSPACE_DIR:-/workspace}"
 ARDUPILOT_DIR="${ARDUPILOT_DIR:-${WORKSPACE_DIR}/ardupilot}"
-SITL_SCRIPT="${SITL_SCRIPT:-${WORKSPACE_DIR}/uuv_mujoco/v2.2/start_ardusub_sitl_mj311.sh}"
+UUV_MUJOCO_RUNTIME_DIR="${UUV_MUJOCO_RUNTIME_DIR:-${WORKSPACE_DIR}/uuv_mujoco/current}"
+if [[ ! -d "${UUV_MUJOCO_RUNTIME_DIR}" ]]; then
+  echo "[docker-entrypoint] active runtime not found: ${UUV_MUJOCO_RUNTIME_DIR}" >&2
+  echo "[docker-entrypoint] Expected uuv_mujoco/current, or set UUV_MUJOCO_RUNTIME_DIR explicitly." >&2
+  exit 1
+fi
+SITL_SCRIPT="${SITL_SCRIPT:-${UUV_MUJOCO_RUNTIME_DIR}/start_ardusub_sitl_mj311.sh}"
 
 if [[ ! -d "$ARDUPILOT_DIR" ]]; then
   echo "[docker-sitl] missing ArduPilot checkout: ${ARDUPILOT_DIR}" >&2
@@ -53,7 +59,7 @@ fi
 export WORKSPACE_DIR
 export ARDUPILOT_DIR
 export MJ311_PYTHON="${MJ311_PYTHON:-/usr/bin/python3}"
-export SITL_DIRECT_MAVLINK="${SITL_DIRECT_MAVLINK:-1}"
+export SITL_DIRECT_MAVLINK="${SITL_DIRECT_MAVLINK:-0}"
 export SITL_FORCE_NO_DISPLAY="${SITL_FORCE_NO_DISPLAY:-1}"
 export SITL_USE_REAL_PARAM_FILE="${SITL_USE_REAL_PARAM_FILE:-1}"
 export SITL_REAL_PARAM_FILE="${SITL_REAL_PARAM_FILE:-${WORKSPACE_DIR}/real_robot.param}"
@@ -88,7 +94,7 @@ export SITL_MUJOCO_MAV_HOST="$(normalize_host "${SITL_MUJOCO_MAV_HOST:-host.dock
 
 echo "[docker-sitl] JSON target     ${SITL_JSON_HOST}:${SITL_JSON_SERVO_PORT:-9002}"
 echo "[docker-sitl] SERIAL0 target  ${SITL_CONSOLE_HOST}:${SITL_CONSOLE_PORT:-14552}"
-echo "[docker-sitl] QGC MAVLink     ${SITL_QGC_HOST}:${SITL_QGC_PORT:-14550} enable=${SITL_QGC_OUTPUT_ENABLE:-1}"
+echo "[docker-sitl] QGC MAVLink     ${SITL_QGC_HOST}:${SITL_QGC_PORT:-14550} enable=${SITL_QGC_OUTPUT_ENABLE:-0}"
 echo "[docker-sitl] MAVROS MAVLink  ${SITL_MAVROS_HOST}:${SITL_MAVROS_PORT:-14551} enable=${SITL_MAVROS_OUTPUT_ENABLE:-0}"
 echo "[docker-sitl] MuJoCo MAVLink  ${SITL_MUJOCO_MAV_HOST}:${SITL_MUJOCO_MAV_PORT:-14660}"
 case "${SITL_DEDICATED_COMMAND_MAVLINK:-0}" in

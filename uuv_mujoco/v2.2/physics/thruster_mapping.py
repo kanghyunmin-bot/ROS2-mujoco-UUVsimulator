@@ -43,15 +43,29 @@ ARDUSUB_VECTORED_6DOF_SERVO_MAP = (
     ARDUSUB_VECTORED_6DOF_YAW_CHANNEL_ORDER
     + ARDUSUB_VECTORED_6DOF_VERTICAL_CHANNEL_ORDER
 )
-# These signs make a positive ArduSub roll, pitch, throttle, forward, lateral,
-# and yaw command produce the same primary FRD wrench direction in MuJoCo after
-# ArduSub's real MOT_x_DIRECTION parameters have already shaped SERVO_OUTPUT_RAW.
+# These signs convert final JSON/SERVO PWM deltas into MuJoCo actuator-positive
+# force. ArduSub has already applied MOT_x_DIRECTION by the time JSON/SERVO PWM
+# reaches MuJoCo; these signs model only this scene's actuator/prop orientation.
+#
+# Plant contract: final ArduSub JSON/SERVO PWM is converted through the raw
+# T200 force curve once. Per-motor direct gains are not part of this mapping;
+# mounted effectiveness must be modeled through geometry or hydrodynamics.
+#
+# Vertical sign note: April-1 plant replay shows SERVO5..8 signed common
+# (-,+,+,- in final PWM space) produces increasing real depth. With the scene's
+# vertical gear vectors (0,0,-1), the prior signs drove the MuJoCo plant upward
+# for that same final-PWM command. Keep this as a physical actuator-orientation
+# contract, not a controller-output remap.
 ARDUSUB_VECTORED_6DOF_SERVO_SIGNS = (-1, -1, 1, 1, -1, 1, 1, -1)
 
 SENSOR_SITES_FLU = {
-    "imu_site": (0.0, 0.0, 0.0),
-    "bar30_site": (0.0, 0.0, -0.0600),
-    "dvl_site": (0.0, 0.0, -0.1000),
+    # April 1 real bag /tf_static, base_link frame (ROS FLU):
+    #   base_link -> fcu_link -> imu_link: (+0.1100, -0.0003, +0.0920)
+    #   base_link -> depth_link:          (-0.1736, -0.0303, +0.0536)
+    #   base_link -> dvl:                 (-0.0320, +0.0000, -0.0970)
+    "imu_site": (0.1100, -0.0003, 0.0920),
+    "bar30_site": (-0.1736, -0.0303, 0.0536),
+    "dvl_site": (-0.0320, 0.0, -0.0970),
 }
 
 

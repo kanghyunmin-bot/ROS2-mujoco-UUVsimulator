@@ -405,9 +405,26 @@ resolve_python_for_venv() {
 find_extracted_uuv_root() {
   local base="$1"
   local script_path
-  script_path="$(find "$base" -type f -path '*/v2.2/start_sitl_mujoco_mj311.sh' -print -quit)"
+  script_path="$(find "$base" -type f -path '*/current/start_sitl_mujoco_mj311.sh' -print -quit)"
+  if [[ -z "$script_path" ]]; then
+    # Older archives may not contain the current symlink.  Find the runtime by
+    # its launcher contract, then recreate current after extraction.
+    script_path="$(find "$base" -type f -name 'start_sitl_mujoco_mj311.sh' -print -quit)"
+  fi
   [[ -n "$script_path" ]] || return 1
   dirname "$(dirname "$script_path")"
+}
+
+resolve_uuv_runtime_dir() {
+  if [[ -n "${UUV_MUJOCO_RUNTIME_DIR:-}" && -d "${UUV_MUJOCO_RUNTIME_DIR}" ]]; then
+    printf '%s\n' "${UUV_MUJOCO_RUNTIME_DIR}"
+    return 0
+  fi
+  if [[ -d "${UUV_MUJOCO_DIR}/current" ]]; then
+    printf '%s\n' "${UUV_MUJOCO_DIR}/current"
+    return 0
+  fi
+  return 1
 }
 
 extract_zip_if_needed() {
@@ -434,12 +451,14 @@ extract_zip_if_needed() {
 }
 
 ensure_scripts_executable() {
+  local runtime_dir
   local script
+  runtime_dir="$(resolve_uuv_runtime_dir)" || die "could not resolve active uuv_mujoco runtime under ${UUV_MUJOCO_DIR}"
   for script in \
-    "${UUV_MUJOCO_DIR}/v2.2/start_sitl_mujoco_mj311.sh" \
-    "${UUV_MUJOCO_DIR}/v2.2/start_ardusub_sitl_mj311.sh" \
-      "${UUV_MUJOCO_DIR}/v2.2/launch_uuv_sim.sh" \
-      "${UUV_MUJOCO_DIR}/v2.2/reset_uuv_sim.sh"
+    "${runtime_dir}/start_sitl_mujoco_mj311.sh" \
+    "${runtime_dir}/start_ardusub_sitl_mj311.sh" \
+    "${runtime_dir}/launch_uuv_sim.sh" \
+    "${runtime_dir}/reset_uuv_sim.sh"
   do
     [[ -f "$script" ]] || die "missing required script: $script"
     run chmod +x "$script"
@@ -492,6 +511,10 @@ export UUV_MUJOCO_DIR="${UUV_MUJOCO_DIR:-${WORKSPACE_DIR}/uuv_mujoco}"
 export ARDUPILOT_DIR="${ARDUPILOT_DIR:-${WORKSPACE_DIR}/ardupilot}"
 export KMU26_AUV_DIR="${KMU26_AUV_DIR:-${ROS_WORKSPACE_DIR}/kmu26_auv}"
 export ROS_DISTRO="${ROS_DISTRO:-humble}"
+
+if [[ -z "${UUV_MUJOCO_RUNTIME_DIR:-}" ]]; then
+  export UUV_MUJOCO_RUNTIME_DIR="${UUV_MUJOCO_DIR}/current"
+fi
 
 if [[ -z "${ROS_INSTALL_SETUP:-}" ]]; then
   for _candidate in \
@@ -562,7 +585,13 @@ log "kmu26_auv dir: ${KMU26_AUV_DIR}"
 extract_zip_if_needed
 
 [[ -d "$UUV_MUJOCO_DIR" ]] || die "uuv_mujoco directory not found after setup: ${UUV_MUJOCO_DIR}"
-[[ -d "${UUV_MUJOCO_DIR}/v2.2" ]] || die "uuv_mujoco/v2.2 directory missing: ${UUV_MUJOCO_DIR}/v2.2"
+if [[ ! -e "${UUV_MUJOCO_DIR}/current" ]]; then
+  [[ -d "${UUV_MUJOCO_DIR}/v2.2" ]] || die "active runtime alias missing and no compatibility backing directory found: ${UUV_MUJOCO_DIR}/current"
+  warn "active runtime alias missing; recreating current from the extracted runtime backing directory"
+  run ln -s v2.2 "${UUV_MUJOCO_DIR}/current"
+fi
+UUV_MUJOCO_RUNTIME_DIR="$(resolve_uuv_runtime_dir)" || die "could not resolve active uuv_mujoco runtime"
+export UUV_MUJOCO_RUNTIME_DIR
 ensure_scripts_executable
 
 PYTHON_BIN="$(resolve_python_for_venv)"

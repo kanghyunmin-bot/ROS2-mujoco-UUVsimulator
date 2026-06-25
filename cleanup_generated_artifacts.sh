@@ -4,6 +4,12 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOC_DIR="${ROOT_DIR}/document/docsource"
 KEEP_RUN="${KEEP_RUN:-closed_loop_joy_frame_fixed_60_180_20260501_192053}"
+UUV_RUNTIME_DIR="${UUV_MUJOCO_RUNTIME_DIR:-${ROOT_DIR}/uuv_mujoco/current}"
+if [[ ! -d "${UUV_RUNTIME_DIR}" ]]; then
+  echo "[cleanup] active runtime not found: ${UUV_RUNTIME_DIR}" >&2
+  echo "[cleanup] Expected uuv_mujoco/current, or set UUV_MUJOCO_RUNTIME_DIR explicitly." >&2
+  exit 1
+fi
 
 if [[ -d "${DOC_DIR}" ]]; then
   find "${DOC_DIR}" -maxdepth 1 -type d \( \
@@ -44,7 +50,7 @@ find "${ROOT_DIR}" -path "${ROOT_DIR}/ardupilot" -prune -o \( \
   -name '*.pyc' \
 \) -type f -delete
 
-find "${ROOT_DIR}/uuv_mujoco/v2.2/logs" -type f -name '*.log' -delete 2>/dev/null || true
+find "${UUV_RUNTIME_DIR}/logs" -type f -name '*.log' -delete 2>/dev/null || true
 rm -rf "${ROOT_DIR}/document/measurements"
 
 echo "generated artifacts cleaned; kept ${KEEP_RUN}"

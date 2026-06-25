@@ -13,7 +13,15 @@ export ROS_DISTRO="${ROS_DISTRO:-humble}"
 ROS_ENV_SETUP="${ROS_ENV_SETUP:-/opt/ros/${ROS_DISTRO}/setup.bash}"
 ROS_INSTALL_SETUP="${ROS_INSTALL_SETUP:-${ROS_WORKSPACE_DIR}/install/setup.bash}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
-GUI_ENTRY="${UUV_MUJOCO_DIR}/v2.2/gui/uuv_control_gui.py"
+if [[ -z "${UUV_MUJOCO_RUNTIME_DIR:-}" ]]; then
+  UUV_MUJOCO_RUNTIME_DIR="${UUV_MUJOCO_DIR}/current"
+fi
+if [[ "$(basename "${UUV_MUJOCO_RUNTIME_DIR}")" == "v2.2" ]]; then
+  echo "[gui-ubuntu] refusing direct compatibility runtime: ${UUV_MUJOCO_RUNTIME_DIR}" >&2
+  echo "[gui-ubuntu] use ${UUV_MUJOCO_DIR}/current so freshness and launch contracts stay active" >&2
+  exit 2
+fi
+GUI_ENTRY="${UUV_MUJOCO_RUNTIME_DIR:-${UUV_MUJOCO_DIR}/current}/gui/uuv_control_gui.py"
 
 source_ros_setup_safely() {
   local setup_file="$1"
@@ -45,7 +53,17 @@ fi
 
 if [[ ! -f "${GUI_ENTRY}" ]]; then
   echo "[gui-ubuntu] GUI entry not found: ${GUI_ENTRY}" >&2
+  echo "[gui-ubuntu] Active runtime must resolve through uuv_mujoco/current unless UUV_MUJOCO_RUNTIME_DIR is set explicitly." >&2
   exit 1
+fi
+
+if [[ "${UUV_MUJOCO_SKIP_FRESHNESS_CHECK:-0}" != "1" ]]; then
+  "${PYTHON_BIN}" "${UUV_MUJOCO_RUNTIME_DIR}/tools/check_runtime_freshness.py" \
+    --workspace "${ROOT_DIR}" \
+    --runtime-dir "${UUV_MUJOCO_RUNTIME_DIR}" \
+    --fetch \
+    --refresh-version \
+    --warn-only
 fi
 
 exec "${PYTHON_BIN}" "${GUI_ENTRY}" "$@"

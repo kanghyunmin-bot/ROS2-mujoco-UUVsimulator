@@ -18,7 +18,22 @@ dist2/ubuntu22.04/out/**
 uuv_mujoco/v2.2/logs/
 uuv_mujoco/v2.2/generated/
 uuv_mujoco/v2.2/config/*.bak_*
+uuv_mujoco/v2.2/scenes/*.bak_*
+uuv_mujoco/v2.2/debug/
+uuv_mujoco/v2.2/uuv_mujoco/
+uuv_mujoco/generated_meshes/
 log/
+
+# Local research outputs, backups, and alternate checkouts
+/MUJOCO_LOG.TXT
+/archive/
+/debug/
+/generated_meshes/
+/outputs/
+/ardupilot_sub_stable/
+/ardupilot_dirty_backup_*/
+UUV-HAN/outputs/
+UUV-HAN/CFD/results/
 
 # ROS/colcon generated outputs
 rospkg/build/

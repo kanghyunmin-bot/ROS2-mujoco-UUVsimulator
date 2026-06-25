@@ -149,16 +149,17 @@ run_simulator_after_install() {
   local start_args=()
   local mujoco_args=()
 
-  start_script="${WORKSPACE_DIR}/uuv_mujoco/v2.2/start_sitl_mujoco_mj311.sh"
-  [[ -x "$start_script" ]] || {
-    echo "[error] simulator start script missing or not executable: $start_script" >&2
-    exit 1
-  }
-
   if [[ -f "${WORKSPACE_DIR}/.uuv_mujoco_env.sh" ]]; then
     # shellcheck source=/dev/null
     source "${WORKSPACE_DIR}/.uuv_mujoco_env.sh"
   fi
+
+  start_script="${UUV_MUJOCO_RUNTIME_DIR:-${WORKSPACE_DIR}/uuv_mujoco/current}/start_sitl_mujoco_mj311.sh"
+  [[ -x "$start_script" ]] || {
+    echo "[error] simulator start script missing or not executable: $start_script" >&2
+    echo "[error] Active runtime must resolve through uuv_mujoco/current unless UUV_MUJOCO_RUNTIME_DIR is set explicitly." >&2
+    exit 1
+  }
 
   if [[ "$WITH_ROS2" -eq 1 ]]; then
     start_args+=(--ros2)
