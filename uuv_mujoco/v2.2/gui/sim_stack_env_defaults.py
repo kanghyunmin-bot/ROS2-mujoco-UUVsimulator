@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from ctypes.util import find_library
 from typing import Mapping
 
 from .sim_stack_env_flags import env_bool
@@ -10,37 +11,59 @@ from .sim_stack_env_flags import env_bool
 
 def profile_defaults(env: Mapping[str, str], contract_loop_hz: str) -> dict[str, str]:
     defaults = {
-        "UUV_RUNTIME_PROFILE": "balanced",
+        "UUV_RUNTIME_PROFILE": "low",
         "SITL_SENSOR_HZ_DEFAULT": "60",
         "SITL_THRUSTER_LOOP_HZ_DEFAULT": "80",
         "UUV_ROS2_SENSOR_HZ": "60",
         "UUV_THRUSTER_LOOP_HZ": "80",
+        "UUV_MUJOCO_TIMESTEP": "0.003",
+        "UUV_COURSE_BUOY_UPDATE_HZ": "120",
+        "UUV_COURSE_BUOY_TRACK_CSV_ENABLE": "0",
+        "UUV_COURSE_BUOY_TRACK_CSV_INTERVAL_S": "0.50",
         "UUV_MUJOCO_VIEWER_FPS": "30",
-        "UUV_MUJOCO_VIEWER_CAMERA_MODE": "course_overview",
+        "UUV_GUI_MUJOCO_VIEWER": "1",
+        "UUV_MUJOCO_VIEWER_CAMERA_MODE": "follow",
+        "UUV_MUJOCO_CATCHUP_WINDOW_S": "0.080",
+        "UUV_MUJOCO_SENSOR_CATCHUP_WINDOW_S": "0.120",
+        "UUV_MUJOCO_MAX_STEP_LAG_S": "0.080",
+        "UUV_MUJOCO_MAX_SENSOR_LAG_S": "0.120",
+        "UUV_MUJOCO_MAX_SLEEP_S": "0.001",
+        "UUV_MUJOCO_DROP_EXCESS_STEP_LAG": "1",
         "ROS2_UUV_SPIN_HZ": "400",
         "ROS2_UUV_DEMAND_PROBE_PERIOD_S": "1.0",
         "ROS2_UUV_SITL_CMD_DEBUG": "0",
         "ROS2_UUV_SITL_MAVLINK_POLL_HZ": "200",
         "ROS2_UUV_SITL_COMMAND_POLL_HZ": "400",
+        "ROS2_UUV_DEDICATED_SITL_POLL_THREAD": "1",
+        "ROS2_UUV_SITL_POLL_THREAD_HZ": "100",
         "SITL_DEDICATED_COMMAND_MAVLINK": "0",
         "ROS2_UUV_COMMAND_LINK_TELEMETRY": "0",
         "ROS2_UUV_COMMAND_LINK_AP_TELEMETRY": "0",
         "ROS2_UUV_ARM_MODE_BOOT_GUARD_S": "0",
     }
-    raw_profile = str(env.get("UUV_RUNTIME_PROFILE", "balanced")).strip().lower()
-    profile = raw_profile if raw_profile in {"balanced", "low", "high"} else "balanced"
+    raw_profile = str(env.get("UUV_RUNTIME_PROFILE", "low")).strip().lower()
+    profile = raw_profile if raw_profile in {"balanced", "low", "high"} else "low"
     defaults["UUV_RUNTIME_PROFILE"] = profile
     if profile == "low":
         defaults.update(
             {
-                "SITL_SENSOR_HZ_DEFAULT": "30",
-                "SITL_THRUSTER_LOOP_HZ_DEFAULT": "60",
-                "UUV_ROS2_SENSOR_HZ": "30",
-                "UUV_THRUSTER_LOOP_HZ": "60",
-                "UUV_MUJOCO_VIEWER_FPS": "30",
-                "ROS2_UUV_SPIN_HZ": "100",
-                "ROS2_UUV_SITL_MAVLINK_POLL_HZ": "100",
-                "ROS2_UUV_SITL_COMMAND_POLL_HZ": "100",
+                "SITL_SENSOR_HZ_DEFAULT": "10",
+                "SITL_THRUSTER_LOOP_HZ_DEFAULT": "20",
+                "UUV_ROS2_SENSOR_HZ": "10",
+                "UUV_THRUSTER_LOOP_HZ": "20",
+                "UUV_MUJOCO_TIMESTEP": "0.005",
+                "UUV_COURSE_BUOY_UPDATE_HZ": "30",
+                "UUV_COURSE_BUOY_TRACK_CSV_INTERVAL_S": "3.00",
+                "UUV_MUJOCO_VIEWER_FPS": "20",
+                "UUV_MUJOCO_CATCHUP_WINDOW_S": "0.075",
+                "UUV_MUJOCO_SENSOR_CATCHUP_WINDOW_S": "0.150",
+                "UUV_MUJOCO_MAX_STEP_LAG_S": "0.075",
+                "UUV_MUJOCO_MAX_SENSOR_LAG_S": "0.150",
+                "UUV_MUJOCO_MAX_SLEEP_S": "0.006",
+                "ROS2_UUV_SPIN_HZ": "80",
+                "ROS2_UUV_SITL_MAVLINK_POLL_HZ": "30",
+                "ROS2_UUV_SITL_COMMAND_POLL_HZ": "80",
+                "ROS2_UUV_SITL_POLL_THREAD_HZ": "60",
             }
         )
     elif profile == "high":
@@ -50,10 +73,19 @@ def profile_defaults(env: Mapping[str, str], contract_loop_hz: str) -> dict[str,
                 "SITL_THRUSTER_LOOP_HZ_DEFAULT": "100",
                 "UUV_ROS2_SENSOR_HZ": "120",
                 "UUV_THRUSTER_LOOP_HZ": "100",
+                "UUV_MUJOCO_TIMESTEP": "0.002",
+                "UUV_COURSE_BUOY_UPDATE_HZ": "250",
+                "UUV_COURSE_BUOY_TRACK_CSV_INTERVAL_S": "0.25",
                 "UUV_MUJOCO_VIEWER_FPS": "60",
+                "UUV_MUJOCO_CATCHUP_WINDOW_S": "0.120",
+                "UUV_MUJOCO_SENSOR_CATCHUP_WINDOW_S": "0.160",
+                "UUV_MUJOCO_MAX_STEP_LAG_S": "0.120",
+                "UUV_MUJOCO_MAX_SENSOR_LAG_S": "0.160",
+                "UUV_MUJOCO_MAX_SLEEP_S": "0.001",
                 "ROS2_UUV_SPIN_HZ": "400",
                 "ROS2_UUV_SITL_MAVLINK_POLL_HZ": "200",
                 "ROS2_UUV_SITL_COMMAND_POLL_HZ": "400",
+                "ROS2_UUV_SITL_POLL_THREAD_HZ": "200",
             }
         )
     return defaults
@@ -98,28 +130,85 @@ def apply_command_endpoint_defaults(env: dict[str, str], *, backend: str) -> Non
         env["ROS2_UUV_SITL_COMMAND_MAVLINK_ENDPOINT"] = "same"
 
 
+def apply_mujoco_viewer_display_defaults(
+    env: dict[str, str],
+    *,
+    explicit_keys: set[str],
+) -> None:
+    """Prefer XWayland for MuJoCo's GLFW viewer on Wayland desktops.
+
+    GLFW's native Wayland path can lose client-side decorations depending on
+    compositor/libdecor details.  The GUI starts an interactive desktop viewer,
+    so default to the X11/XWayland path when both DISPLAY and WAYLAND_DISPLAY
+    are available.  Users can opt back into native Wayland with
+    UUV_GUI_MUJOCO_XWAYLAND=0.
+    """
+
+    if not env_bool(env, "UUV_GUI_MUJOCO_XWAYLAND", "1"):
+        return
+    if not env.get("DISPLAY") or not env.get("WAYLAND_DISPLAY"):
+        return
+
+    if "GLFW_PLATFORM" not in explicit_keys:
+        env["GLFW_PLATFORM"] = "x11"
+    if "QT_QPA_PLATFORM" not in explicit_keys:
+        env["QT_QPA_PLATFORM"] = "xcb"
+    if "GDK_BACKEND" not in explicit_keys:
+        env["GDK_BACKEND"] = "x11"
+    if "SDL_VIDEODRIVER" not in explicit_keys:
+        env["SDL_VIDEODRIVER"] = "x11"
+    if "PYGLFW_LIBRARY" not in explicit_keys:
+        glfw_library = _system_glfw_library()
+        if glfw_library:
+            env["PYGLFW_LIBRARY"] = glfw_library
+
+    # Removing WAYLAND_DISPLAY is the robust part: it prevents GLFW/MuJoCo from
+    # selecting the native Wayland backend even when the session itself is
+    # Wayland. DISPLAY remains available for XWayland.
+    env.pop("WAYLAND_DISPLAY", None)
+
+
+def _system_glfw_library() -> str:
+    for candidate in (
+        "/lib/x86_64-linux-gnu/libglfw.so.3",
+        "/usr/lib/x86_64-linux-gnu/libglfw.so.3",
+        "/lib/aarch64-linux-gnu/libglfw.so.3",
+        "/usr/lib/aarch64-linux-gnu/libglfw.so.3",
+    ):
+        if Path(candidate).exists():
+            return candidate
+    return find_library("glfw") or ""
+
+
 def apply_native_stable_defaults(
     env: dict[str, str],
     *,
     sim_stack_dir: Path,
     explicit_keys: set[str],
 ) -> None:
-    """Use the macOS native ArduSub stable contract for GUI Start."""
+    """Use the native ArduSub stable contract for GUI Start."""
 
     workspace_dir = sim_stack_dir.resolve().parents[1]
-    stable_dir = env.get("ARDUPILOT_STABLE_DIR", str(workspace_dir / "ardupilot_sub_stable"))
-    env["ARDUPILOT_DIR"] = stable_dir
+    local_libdecor = workspace_dir / ".local_libdecor/usr/lib/x86_64-linux-gnu/libdecor/plugins-1"
+    if "LIBDECOR_PLUGIN_DIR" not in explicit_keys and local_libdecor.exists():
+        env["LIBDECOR_PLUGIN_DIR"] = str(local_libdecor)
+
+    stable_dir = Path(env.get("ARDUPILOT_STABLE_DIR", str(workspace_dir / "ardupilot_sub_stable")))
+    installed_dir = workspace_dir / "ardupilot"
+    if "ARDUPILOT_DIR" not in explicit_keys:
+        env["ARDUPILOT_DIR"] = str(stable_dir if stable_dir.exists() else installed_dir)
 
     defaults = {
-        "SITL_DIRECT_MAVLINK": "1",
+        "SITL_DIRECT_MAVLINK": "0",
         "SITL_QGC_OUTPUT_ENABLE": "1",
-        "SITL_QGC_DIRECT_SERIAL_ENABLE": "1",
+        "SITL_QGC_DIRECT_SERIAL_ENABLE": "0",
         "SITL_SERIAL0_UDPCLIENT": "0",
         "SITL_DEDICATED_COMMAND_MAVLINK": "1",
         "SITL_NO_EXTRA_PORTS": "1",
         "SITL_PARAM_COMPAT_FILTER": "1",
         "SITL_USE_REAL_PARAM_FILE": "0",
         "SITL_WIPE_EEPROM": "1",
+        "ROS2_UUV_SITL_JSON_SERVO_FALLBACK": "1",
         "ROS2_UUV_SITL_COMMAND_MAVLINK_ENDPOINT": "udpin:0.0.0.0:14661",
     }
     for key, value in defaults.items():
@@ -127,4 +216,9 @@ def apply_native_stable_defaults(
             env[key] = value
 
 
-__all__ = ["profile_defaults", "apply_command_endpoint_defaults", "apply_native_stable_defaults"]
+__all__ = [
+    "profile_defaults",
+    "apply_command_endpoint_defaults",
+    "apply_mujoco_viewer_display_defaults",
+    "apply_native_stable_defaults",
+]

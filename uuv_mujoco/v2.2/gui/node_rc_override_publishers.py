@@ -42,7 +42,8 @@ def publish_rc_release(self) -> None:
     if self._rc_override_pub is None:
         return
     msg = make_rc_release_message()
-    self._rc_override_pub.publish(msg)
+    for _ in range(self._rc_override_burst_count):
+        self._rc_override_pub.publish(msg)
 
 
 def publish_rc_channels(self, channels: Iterable[int]) -> bool:
@@ -50,7 +51,8 @@ def publish_rc_channels(self, channels: Iterable[int]) -> bool:
         return False
     msg = OverrideRCIn()
     msg.channels = sanitize_primary_rc_override_channels(channels)
-    self._rc_override_pub.publish(msg)
+    for _ in range(self._rc_override_burst_count):
+        self._rc_override_pub.publish(msg)
     return True
 
 

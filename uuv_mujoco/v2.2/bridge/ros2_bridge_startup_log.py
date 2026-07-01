@@ -15,10 +15,10 @@ def log_ros2_bridge_startup(self) -> None:
             "/ping360/scan_echo and /ping360/echo are disabled. "
             "Build/source rospkg/ping360_sonar_msgs or the upstream ping360_sonar workspace."
         )
-    if self._legacy_image_request:
-        self.node.get_logger().warn(
-            "Legacy image publishing flags were requested, but the lightweight bridge "
-            "does not publish /stereo/* topics."
+    if getattr(self, "_stereo_image_enabled", False):
+        self.node.get_logger().info(
+            "Stereo image bridge active: /stereo/left/image_raw, /stereo/right/image_raw "
+            f"({self._stereo_image_width}x{self._stereo_image_height}@{self._stereo_image_hz:.1f}Hz on demand)."
         )
 
 

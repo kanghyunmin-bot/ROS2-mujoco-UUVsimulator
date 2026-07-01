@@ -5,7 +5,25 @@ from __future__ import annotations
 from typing import Mapping
 
 
+def _command_rate_defaults(env: Mapping[str, str]) -> dict[str, str]:
+    profile = str(env.get("UUV_RUNTIME_PROFILE", "low")).strip().lower()
+    if profile == "low":
+        return {
+            "ROS2_UUV_SPIN_HZ": "80",
+            "ROS2_UUV_SITL_COMMAND_POLL_HZ": "80",
+            "ROS2_UUV_SITL_MAVLINK_POLL_HZ": "30",
+            "ROS2_UUV_MAVROS_RC_OVERRIDE_FORWARD_HZ": "80",
+        }
+    return {
+        "ROS2_UUV_SPIN_HZ": "400",
+        "ROS2_UUV_SITL_COMMAND_POLL_HZ": "400",
+        "ROS2_UUV_SITL_MAVLINK_POLL_HZ": "200",
+        "ROS2_UUV_MAVROS_RC_OVERRIDE_FORWARD_HZ": "400",
+    }
+
+
 def command_readiness_contract(env: Mapping[str, str]) -> dict[str, str]:
+    rate_defaults = _command_rate_defaults(env)
     return {
         # QGC is the primary operator path. Keep auto-arm/mode bootstrap
         # opt-in so startup readiness does not depend on a second command
@@ -16,13 +34,19 @@ def command_readiness_contract(env: Mapping[str, str]) -> dict[str, str]:
         # Explicit GUI/QGC/test arm/mode commands must still reach ArduSub.
         "ROS2_UUV_MAVROS_FORWARD_ARM_MODE": "1",
         "ROS2_UUV_DEDICATED_SPIN_THREAD": "1",
-        "ROS2_UUV_SPIN_HZ": env.get("ROS2_UUV_SPIN_HZ", "400"),
-        "ROS2_UUV_SPIN_TIMEOUT_S": "0.001",
-        "ROS2_UUV_SITL_COMMAND_POLL_HZ": env.get("ROS2_UUV_SITL_COMMAND_POLL_HZ", "400"),
-        "ROS2_UUV_SITL_MAVLINK_POLL_HZ": env.get("ROS2_UUV_SITL_MAVLINK_POLL_HZ", "200"),
+        "ROS2_UUV_SPIN_HZ": env.get("ROS2_UUV_SPIN_HZ", rate_defaults["ROS2_UUV_SPIN_HZ"]),
+        "ROS2_UUV_SPIN_TIMEOUT_S": env.get("ROS2_UUV_SPIN_TIMEOUT_S", "0.010"),
+        "ROS2_UUV_SITL_COMMAND_POLL_HZ": env.get(
+            "ROS2_UUV_SITL_COMMAND_POLL_HZ",
+            rate_defaults["ROS2_UUV_SITL_COMMAND_POLL_HZ"],
+        ),
+        "ROS2_UUV_SITL_MAVLINK_POLL_HZ": env.get(
+            "ROS2_UUV_SITL_MAVLINK_POLL_HZ",
+            rate_defaults["ROS2_UUV_SITL_MAVLINK_POLL_HZ"],
+        ),
         "ROS2_UUV_MAVROS_RC_OVERRIDE_FORWARD_HZ": env.get(
             "ROS2_UUV_MAVROS_RC_OVERRIDE_FORWARD_HZ",
-            "400",
+            rate_defaults["ROS2_UUV_MAVROS_RC_OVERRIDE_FORWARD_HZ"],
         ),
         "ROS2_UUV_CMD_TIMEOUT_S": env.get("ROS2_UUV_CMD_TIMEOUT_S", "0.25"),
         "ROS2_UUV_CMD_DEADBAND": env.get("ROS2_UUV_CMD_DEADBAND", "0.0"),
@@ -40,7 +64,7 @@ def command_readiness_contract(env: Mapping[str, str]) -> dict[str, str]:
         "UUV_GUI_PILOT_CONTROL_MODE": env.get("UUV_GUI_PILOT_CONTROL_MODE", "rc_override"),
         "ROS2_UUV_MAVROS_RC_OVERRIDE_BACKEND": env.get(
             "ROS2_UUV_MAVROS_RC_OVERRIDE_BACKEND",
-            "rc_channels_override",
+            "rc_override",
         ),
         "SITL_SCHED_LOOP_RATE": env.get("SITL_SCHED_LOOP_RATE", "400"),
     }

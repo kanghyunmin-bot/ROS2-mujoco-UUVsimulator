@@ -53,6 +53,7 @@ def initialize_ros2_bridge(bridge: Any, init: dict[str, Any]) -> None:
         sitl_mavlink_source_sysid=int(init["sitl_mavlink_source_sysid"]),
         sitl_mavlink_source_compid=int(init["sitl_mavlink_source_compid"]),
     )
+    bridge._start_sitl_poll_thread()
 
     ros2_bridge_init.configure_ros_runtime_state(bridge)
     if bridge._enable_ros:

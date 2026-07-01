@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -14,6 +15,7 @@ class SitlServoRuntimeState:
     pwm_values: list[int]
     last_wall: dict[str, float]
     scale: float
+    lock: Any
     timeout_s: float = 0.8
 
 

@@ -21,7 +21,7 @@ def add_ros2_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--ros2-images",
         action="store_true",
-        help="Legacy no-op. Stereo ROS2 image publishing is disabled in the lightweight real-robot bridge.",
+        help="Publish stereo_left/stereo_right MuJoCo camera frames as ROS2 Image topics",
     )
     parser.add_argument(
         "--ros2-image-width",

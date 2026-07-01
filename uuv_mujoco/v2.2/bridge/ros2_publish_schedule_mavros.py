@@ -15,7 +15,7 @@ def schedule_mavros_ros_jobs(self, jobs, add_rate_limited, sim_t: float, *, buil
 def _schedule_mavros_status_jobs(self, jobs, sim_t: float, *, builders: dict[str, object]) -> None:
     if self._mavros_surface_enabled and self._mavros_state_pub_hz > 0.0 and sim_t + 1e-9 >= self._mavros_state_next_t:
         self._mavros_state_next_t = sim_t + 1.0 / float(self._mavros_state_pub_hz)
-        jobs.add(self.pub_mavros_state, "/mavros/state", builders["mavros_state"], on_demand=True)
+        jobs.add(self.pub_mavros_state, "/mavros/state", builders["mavros_state"], on_demand=False)
     jobs.add(self.pub_mavros_vfr_hud, "/mavros/vfr_hud", builders["mavros_vfr_hud"], on_demand=True)
 
 

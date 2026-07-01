@@ -33,7 +33,7 @@ def initialize_mavlink_endpoint_state(
     )
     transport._sitl_mavlink_target_sysid = max(0, min(255, int(sitl_mavlink_target_sysid)))
     transport._sitl_mavlink_target_compid = max(0, min(255, int(sitl_mavlink_target_compid)))
-    transport._sitl_mavlink_source_system = max(1, min(255, int(sitl_mavlink_source_sysid or 254)))
+    transport._sitl_mavlink_source_system = max(1, min(255, int(sitl_mavlink_source_sysid or 255)))
     transport._sitl_mavlink_source_component = max(1, min(255, int(sitl_mavlink_source_compid or 190)))
 
 

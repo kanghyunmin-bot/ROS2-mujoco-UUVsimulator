@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from . import node_commanding
+from . import node_stereo_camera
 from . import node_state_runtime
 from . import node_telemetry_callbacks
 from . import node_vehicle_info
@@ -93,6 +94,11 @@ def bind_telemetry_callbacks(cls: type) -> None:
     cls._on_atm_pressure = node_telemetry_callbacks._on_atm_pressure
     cls._on_static_pressure = node_telemetry_callbacks._on_static_pressure
     cls._on_pressure_value = node_telemetry_callbacks._on_pressure_value
+    cls._on_stereo_camera_image = node_stereo_camera.on_stereo_camera_image
+    cls.clear_stereo_camera_frames = node_stereo_camera.clear_stereo_camera_frames
+    cls.set_stereo_camera_enabled = node_stereo_camera.set_stereo_camera_enabled
+    cls.stereo_camera_status = node_stereo_camera.stereo_camera_status
+    cls.stereo_camera_frame = node_stereo_camera.stereo_camera_frame
 
 
 __all__ = [

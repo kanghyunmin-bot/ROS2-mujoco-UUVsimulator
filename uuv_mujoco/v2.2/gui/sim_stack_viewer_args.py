@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Mapping
 
-from .sim_stack_env_flags import any_arg_present, arg_present, env_flag_default
+from .sim_stack_env_flags import any_arg_present, arg_present, env_bool, env_flag_default
 
 
 def display_available(base_env: Mapping[str, str], *, platform_name: str) -> bool:
@@ -12,15 +12,16 @@ def display_available(base_env: Mapping[str, str], *, platform_name: str) -> boo
 
 
 def apply_viewer_args(args: list[str], events: list[str], base_env: Mapping[str, str], *, platform_name: str) -> None:
-    viewer_enabled = env_flag_default(
-        base_env,
-        "UUV_GUI_MUJOCO_VIEWER",
-        display_available(base_env, platform_name=platform_name),
-    )
-    if not viewer_enabled and not arg_present(args, "--headless"):
+    # A local GUI start is expected to show the MuJoCo simulation.  Headless is
+    # still available for explicit stability runs or display-less sessions.
+    default_viewer = "1" if display_available(base_env, platform_name=platform_name) else "0"
+    viewer_enabled = env_bool(base_env, "UUV_GUI_MUJOCO_VIEWER", default_viewer)
+    if arg_present(args, "--headless"):
+        events.append("sim viewer: headless MuJoCo runtime")
+    elif not viewer_enabled:
         args.append("--headless")
         events.append("sim viewer: headless MuJoCo runtime")
-    elif viewer_enabled:
+    else:
         events.append("sim viewer: MuJoCo GLFW viewer enabled")
     if not any_arg_present(args, ("--qgc-video", "--no-qgc-video")):
         if env_flag_default(base_env, "UUV_GUI_QGC_VIDEO", False):

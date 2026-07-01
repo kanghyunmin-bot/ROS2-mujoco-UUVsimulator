@@ -36,6 +36,12 @@ def main() -> int:
     _assert_close(_manual_control_heave_to_norm(650.0), 0.3, "raw z positive")
     _assert_close(_manual_control_heave_to_norm(350.0), -0.3, "raw z negative")
 
+    runtime_text = (ROOT / "bridge" / "sitl_manual_control_runtime.py").read_text(encoding="utf-8")
+    if "_ensure_mavlink_peer(mav, timeout_s=0.0)" in runtime_text:
+        raise AssertionError("MANUAL_CONTROL must not be dropped by a zero-time UDP peer wait")
+    if "send_manual_control_frame(mav" not in runtime_text:
+        raise AssertionError("MANUAL_CONTROL runtime must send a MAVLink manual_control frame")
+
     print("manual_control_input_scaling=PASS")
     return 0
 

@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 ARM_PENDING_TIMEOUT_S = 90.0
-ARM_PENDING_RESEND_PERIOD_S = 0.02
+ARM_PENDING_RESEND_PERIOD_S = 0.25
+ARM_OPPOSITE_COMMAND_GRACE_S = 30.0
 MODE_PENDING_TIMEOUT_S = 30.0
-MODE_PENDING_RESEND_PERIOD_S = 0.02
+MODE_PENDING_RESEND_PERIOD_S = 0.25
 
 
 def pending_arm_target(self) -> bool | None:
@@ -43,6 +44,7 @@ def pending_mode_send_due(self, now_wall: float) -> bool:
 
 __all__ = [
     "ARM_PENDING_RESEND_PERIOD_S",
+    "ARM_OPPOSITE_COMMAND_GRACE_S",
     "ARM_PENDING_TIMEOUT_S",
     "MODE_PENDING_RESEND_PERIOD_S",
     "MODE_PENDING_TIMEOUT_S",

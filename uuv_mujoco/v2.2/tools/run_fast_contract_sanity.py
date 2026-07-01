@@ -54,10 +54,31 @@ def _tail(text: str, *, limit: int = 6000) -> str:
     return text[-limit:]
 
 
+def _runtime_cache_dir(name: str) -> Path:
+    roots = [
+        Path(os.environ["TMPDIR"]) if os.environ.get("TMPDIR") else None,
+        Path("/tmp"),
+        Path.home() / ".cache" / "uuv_mujoco",
+    ]
+    for root in roots:
+        if root is None:
+            continue
+        try:
+            root.mkdir(parents=True, exist_ok=True)
+            path = root / name
+            path.mkdir(parents=True, exist_ok=True)
+            return path
+        except OSError:
+            continue
+    fallback = ROOT / ".cache" / name
+    fallback.mkdir(parents=True, exist_ok=True)
+    return fallback
+
+
 def _env() -> dict[str, str]:
     env = dict(os.environ)
-    env.setdefault("PYTHONPYCACHEPREFIX", "/private/tmp/pycache")
-    env.setdefault("MPLCONFIGDIR", "/private/tmp/matplotlib")
+    env.setdefault("PYTHONPYCACHEPREFIX", str(_runtime_cache_dir("pycache")))
+    env.setdefault("MPLCONFIGDIR", str(_runtime_cache_dir("matplotlib")))
     return env
 
 

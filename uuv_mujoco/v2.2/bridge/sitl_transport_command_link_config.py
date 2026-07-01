@@ -25,6 +25,9 @@ def initialize_vehicle_command_state(transport: object) -> None:
     transport._sitl_pending_arm_start_wall = -1.0
     transport._sitl_pending_arm_last_send_wall = -1.0
     transport._sitl_pending_arm_reached_after_wall = -1.0
+    transport._sitl_pending_arm_neutral_sent = False
+    transport._sitl_last_arm_command_target: bool | None = None
+    transport._sitl_last_arm_command_wall = -1.0
     transport._sitl_pending_mode: str = ""
     transport._sitl_pending_mode_start_wall = -1.0
     transport._sitl_pending_mode_last_send_wall = -1.0

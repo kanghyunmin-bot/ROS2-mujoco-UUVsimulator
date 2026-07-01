@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .readiness_contract import arm_mode_gate_reason
+from .readiness_command_link import sitl_mavlink_command_alive
 from .runtime import Optional, math, time
 
 
@@ -38,12 +39,20 @@ def _arm_mode_gate_reason(self, *, arm_value: Optional[bool] = None, mode: str =
 
 def _arm_target_reached(self, value: bool) -> bool:
     connected, armed, _mode = self._fresh_vehicle_state()
-    return connected and self._state_age_s() < 3.0 and armed == bool(value)
+    fresh_enough = self._state_age_s() < 3.0 or sitl_mavlink_command_alive(
+        self._effective_backend(),
+        self.snapshot(),
+    )
+    return connected and fresh_enough and armed == bool(value)
 
 
 def _mode_target_reached(self, mode: str) -> bool:
     connected, _armed, current_mode = self._fresh_vehicle_state()
-    return connected and self._state_age_s() < 3.0 and current_mode.upper() == str(mode).upper()
+    fresh_enough = self._state_age_s() < 3.0 or sitl_mavlink_command_alive(
+        self._effective_backend(),
+        self.snapshot(),
+    )
+    return connected and fresh_enough and current_mode.upper() == str(mode).upper()
 
 
 __all__ = [

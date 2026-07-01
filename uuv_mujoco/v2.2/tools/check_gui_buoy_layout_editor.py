@@ -49,6 +49,22 @@ def geom_map(root: ET.Element) -> dict[str, ET.Element]:
     }
 
 
+def composite_map(root: ET.Element) -> dict[str, ET.Element]:
+    return {
+        str(composite.get("prefix")): composite
+        for composite in root.findall(".//composite")
+        if composite.get("prefix")
+    }
+
+
+def equality_map(root: ET.Element) -> dict[str, ET.Element]:
+    return {
+        str(equality.get("name")): equality
+        for equality in root.findall(".//equality/*")
+        if equality.get("name")
+    }
+
+
 def pos(element: ET.Element) -> tuple[float, float, float]:
     values = floats(element.get("pos"))
     if len(values) != 3:
@@ -78,13 +94,17 @@ def main() -> int:
         robot_spawn = load_robot_spawn(temp_scene)
 
         red = red_items[0]
-        fixed = next(item for item in fixed_items if item.projection_geom_names)
+        fixed = fixed_items[0]
         before_root = ET.parse(temp_scene).getroot()
         before_geoms = geom_map(before_root)
+        before_composites = composite_map(before_root)
+        before_equalities = equality_map(before_root)
         projection_z = {
             geom_name: pos(before_geoms[geom_name])[2]
             for geom_name in fixed.projection_geom_names
         }
+        before_vertices = floats(before_composites[f"{fixed.prefix}_flex_line_"].get("vertex"))
+        before_anchor = floats(before_equalities[f"{fixed.prefix}_flex_line_bottom_connect"].get("anchor"))
         positions = {item.prefix: (item.x, item.y) for item in items}
         red_target = (red.x + 0.4, red.y - 0.3)
         fixed_target = (-99.0, 99.0)
@@ -98,13 +118,37 @@ def main() -> int:
         root = ET.parse(temp_scene).getroot()
         bodies = body_map(root)
         geoms = geom_map(root)
+        composites = composite_map(root)
+        equalities = equality_map(root)
         assert_xy_z(bodies[red.float_body_name], red_target[0], red_target[1], red.z, red.float_body_name)
         fixed_x = -TANK_X_EDIT_LIMIT_M
         fixed_y = TANK_Y_EDIT_LIMIT_M
+        dx = fixed_x - fixed.x
+        dy = fixed_y - fixed.y
         base = bodies[fixed.magnet_base_name or ""]
         float_body = bodies[fixed.float_body_name]
         assert_xy_z(base, fixed_x, fixed_y, -11.0, fixed.magnet_base_name or "")
+        if fixed.tether_jig_body_name:
+            tether_jig = bodies[fixed.tether_jig_body_name]
+            assert_xy_z(tether_jig, fixed_x, fixed_y, -8.585, fixed.tether_jig_body_name)
         assert_xy_z(float_body, fixed_x, fixed_y, fixed.z, fixed.float_body_name)
+        after_vertices = floats(composites[f"{fixed.prefix}_flex_line_"].get("vertex"))
+        if len(after_vertices) != len(before_vertices):
+            raise AssertionError("flex line vertex count changed during layout save")
+        for index in range(0, len(before_vertices), 3):
+            if not math.isclose(after_vertices[index], before_vertices[index] + dx, abs_tol=1e-6):
+                raise AssertionError("flex line vertex x did not follow magnet base")
+            if not math.isclose(after_vertices[index + 1], before_vertices[index + 1] + dy, abs_tol=1e-6):
+                raise AssertionError("flex line vertex y did not follow magnet base")
+            if not math.isclose(after_vertices[index + 2], before_vertices[index + 2], abs_tol=1e-6):
+                raise AssertionError("flex line vertex z changed during layout save")
+        after_anchor = floats(equalities[f"{fixed.prefix}_flex_line_bottom_connect"].get("anchor"))
+        if not math.isclose(after_anchor[0], before_anchor[0] + dx, abs_tol=1e-6):
+            raise AssertionError("flex line bottom anchor x did not follow magnet base")
+        if not math.isclose(after_anchor[1], before_anchor[1] + dy, abs_tol=1e-6):
+            raise AssertionError("flex line bottom anchor y did not follow magnet base")
+        if not math.isclose(after_anchor[2], before_anchor[2], abs_tol=1e-6):
+            raise AssertionError("flex line bottom anchor z changed during layout save")
         for geom_name in fixed.projection_geom_names:
             projection = geoms[geom_name]
             assert_xy_z(projection, fixed_x, fixed_y, projection_z[geom_name], geom_name)

@@ -29,6 +29,7 @@ class BuoyLayoutItem:
     z: float
     float_body_name: str
     magnet_base_name: str | None = None
+    tether_jig_body_name: str | None = None
     projection_geom_names: tuple[str, ...] = ()
 
     @property
@@ -83,6 +84,41 @@ def geom_map(root: ET.Element) -> dict[str, ET.Element]:
         for geom in root.findall(".//geom")
         if geom.get("name")
     }
+
+
+def composite_map(root: ET.Element) -> dict[str, ET.Element]:
+    return {
+        str(composite.get("prefix")): composite
+        for composite in root.findall(".//composite")
+        if composite.get("prefix")
+    }
+
+
+def equality_map(root: ET.Element) -> dict[str, ET.Element]:
+    return {
+        str(equality.get("name")): equality
+        for equality in root.findall(".//equality/*")
+        if equality.get("name")
+    }
+
+
+def shift_xyz_list_xy(value: str | None, dx: float, dy: float) -> str | None:
+    values = floats(value)
+    if len(values) % 3 != 0:
+        return value
+    rows = []
+    for index in range(0, len(values), 3):
+        rows.append(f"{values[index] + dx:.4f} {values[index + 1] + dy:.4f} {values[index + 2]:.3f}")
+    return "\n      " + "\n      ".join(rows) + "\n      "
+
+
+def shift_anchor_xy(element: ET.Element | None, dx: float, dy: float) -> None:
+    if element is None:
+        return
+    values = floats(element.get("anchor"))
+    if len(values) != 3:
+        return
+    element.set("anchor", f"{values[0] + dx:.4f} {values[1] + dy:.4f} {values[2]:.3f}")
 
 
 def classify_prefix(prefix: str) -> tuple[str, str, str, str]:
@@ -160,6 +196,7 @@ def load_buoy_layout(scene_path: Path) -> list[BuoyLayoutItem]:
             continue
         x, y, z = pos_xyz(float_body)
         base_x, base_y, _ = pos_xyz(base)
+        tether_jig_name = f"{prefix}_tether_jig"
         course, color_name, color_hex, layer = classify_prefix(prefix)
         projection_names = tuple(
             name
@@ -182,6 +219,7 @@ def load_buoy_layout(scene_path: Path) -> list[BuoyLayoutItem]:
                 z=z,
                 float_body_name=float_name,
                 magnet_base_name=base_name,
+                tether_jig_body_name=tether_jig_name if tether_jig_name in bodies else None,
                 projection_geom_names=projection_names,
             )
         )
@@ -224,6 +262,8 @@ def save_buoy_layout(
     root = tree.getroot()
     bodies = body_map(root)
     geoms = geom_map(root)
+    composites = composite_map(root)
+    equalities = equality_map(root)
     current_items = {item.prefix: item for item in load_buoy_layout(scene_path)}
     robot_spawn = load_robot_spawn(scene_path)
 
@@ -238,7 +278,20 @@ def save_buoy_layout(
         if item.magnet_base_name:
             base = bodies.get(item.magnet_base_name)
             if base is not None:
+                base_x, base_y, _ = pos_xyz(base)
+                dx = x - base_x
+                dy = y - base_y
                 set_xy_preserve_z(base, x, y)
+                if item.tether_jig_body_name:
+                    tether_jig = bodies.get(item.tether_jig_body_name)
+                    if tether_jig is not None:
+                        set_xy_preserve_z(tether_jig, x, y)
+                flex_line = composites.get(f"{prefix}_flex_line_")
+                if flex_line is not None:
+                    shifted_vertices = shift_xyz_list_xy(flex_line.get("vertex"), dx, dy)
+                    if shifted_vertices is not None:
+                        flex_line.set("vertex", shifted_vertices)
+                shift_anchor_xy(equalities.get(f"{prefix}_flex_line_bottom_connect"), dx, dy)
             for geom_name in item.projection_geom_names:
                 projection = geoms.get(geom_name)
                 if projection is not None:

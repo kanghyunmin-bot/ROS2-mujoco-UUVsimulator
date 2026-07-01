@@ -43,6 +43,7 @@ def run_simulation_runtime_loop(
                 stop_event=stop_event,
                 viewer_controls=viewer_controls,
                 timestep=float(timestep),
+                ros2_sensor_hz=float(ros2_sensor_hz),
                 run_step=run_step,
             )
             return

@@ -165,12 +165,11 @@ vs
 SITL MAVLink SERVO_OUTPUT_RAW telemetry
 ```
 
-Likewise, closed-loop plant input remains:
+Likewise, closed-loop plant input remains backend-specific:
 
 ```text
-SITL JSON servo backend
-to
-MuJoCo thruster input
+Docker/MAVProxy: SITL JSON servo backend -> MuJoCo thruster input
+Native/direct: SITL MAVLink SERVO_OUTPUT_RAW -> MuJoCo thruster input
 ```
 
 If a host-specific workaround changes these surfaces, the run is invalid.

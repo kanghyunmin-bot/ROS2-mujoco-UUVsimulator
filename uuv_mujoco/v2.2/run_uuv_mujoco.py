@@ -4,7 +4,9 @@ The script keeps simulation, controls, calibration, validation, and optional
 ROS2 publishing in a single entrypoint so that model tuning is reproducible.
 """
 
+import faulthandler
 import os
+import signal
 from pathlib import Path
 
 import mujoco
@@ -42,6 +44,7 @@ def build_parser():
 
 def main() -> None:
     """Parse CLI options, initialize runtime state, and execute selected mode."""
+    _install_debug_traceback_signal()
     args = build_parser().parse_args()
     profile_setup = load_runner_profile_setup(
         args,
@@ -107,6 +110,18 @@ def main() -> None:
         physics_setup=physics_setup,
         step_setup=step_setup,
     )
+
+
+def _install_debug_traceback_signal() -> None:
+    if os.environ.get("UUV_MUJOCO_FAULTHANDLER", "1").strip().lower() in {"0", "false", "no", "off"}:
+        return
+    try:
+        faulthandler.enable(all_threads=True)
+        if hasattr(signal, "SIGUSR1"):
+            faulthandler.register(signal.SIGUSR1, all_threads=True, chain=False)
+            print("[runtime] SIGUSR1 traceback dump enabled", flush=True)
+    except Exception as exc:
+        print(f"[runtime] faulthandler setup skipped: {exc}", flush=True)
 
 
 if __name__ == "__main__":

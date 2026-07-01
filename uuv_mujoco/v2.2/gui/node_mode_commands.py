@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .config import BACKEND_SIM_BRIDGE
 from .node_mode_request_steps import (
     handle_alt_hold_initial_depth_gate,
     handle_mode_gate,
@@ -31,9 +32,16 @@ def _send_mode_request(self, mode: str, deadline: float, attempt: int) -> None:
         return
     if handle_mode_gate(self, mode, deadline, attempt):
         return
+    if _prefer_command_override_topic(self) and publish_mode_override_if_configured(self, mode, deadline, attempt):
+        return
+    if send_mode_service_request(self, mode, deadline, attempt):
+        return
     if publish_mode_override_if_configured(self, mode, deadline, attempt):
         return
-    send_mode_service_request(self, mode, deadline, attempt)
+
+
+def _prefer_command_override_topic(self) -> bool:
+    return self._arm_mode_command_path == "auto" and self._effective_backend() == BACKEND_SIM_BRIDGE
 
 
 def _on_mode_response(self, future, mode: str, deadline: float, attempt: int) -> None:
@@ -54,4 +62,4 @@ def _on_mode_response(self, future, mode: str, deadline: float, attempt: int) ->
     self._retry_mode_request(mode, deadline, attempt)
 
 
-__all__ = ["_on_mode_response", "_send_mode_request", "set_mode"]
+__all__ = ["_on_mode_response", "_prefer_command_override_topic", "_send_mode_request", "set_mode"]

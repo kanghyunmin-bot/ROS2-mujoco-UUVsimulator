@@ -20,6 +20,8 @@ from sim.runtime.parsing import to_float_array, to_float_matrix  # noqa: E402
 
 
 def _env_float(_name: str, default: float) -> float:
+    if _name == "UUV_MUJOCO_TIMESTEP":
+        return 0.025
     return float(default)
 
 
@@ -60,6 +62,11 @@ def main() -> int:
         raise AssertionError(f"fluid geom names missing ids: {missing}")
     if np.asarray(setup.fluidcoef_dynamic_setup.base).shape[-1] != 5:
         raise AssertionError("dynamic fluidcoef base rows must have 5 coefficients")
+    if abs(float(setup.model.opt.timestep) - 0.005) > 1.0e-12:
+        raise AssertionError(
+            "course-buoy scene must cap GUI low-profile timestep to 0.005s, "
+            f"got {float(setup.model.opt.timestep):.4f}s"
+        )
     print("model_runtime_setup=PASS")
     return 0
 

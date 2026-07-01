@@ -18,6 +18,9 @@ def update_pwm_activity_state(self, pwm_values: list[int], now_wall: float, sour
     )
     if since_nonneutral <= 3.0 or now_wall - self._sitl_last_neutral_warn_wall <= 3.0:
         return
+    if not getattr(self, "_sitl_cmd_debug", False):
+        self._sitl_last_neutral_warn_wall = now_wall
+        return
     if not valid_pwm:
         print(
             f"[sitl_transport] SITL({source}) servo stream has no active outputs (all 0/65535). "

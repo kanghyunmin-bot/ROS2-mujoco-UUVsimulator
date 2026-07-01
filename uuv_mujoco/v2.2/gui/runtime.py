@@ -29,7 +29,24 @@ from .runtime_python_path import sanitize_python_import_path
 
 _sanitize_python_import_path = sanitize_python_import_path
 _sanitize_python_import_path()
-os.environ.setdefault("RMW_IMPLEMENTATION", "rmw_cyclonedds_cpp")
+
+
+def _select_default_rmw() -> None:
+    if os.environ.get("RMW_IMPLEMENTATION"):
+        return
+    candidates = ("rmw_fastrtps_cpp", "rmw_cyclonedds_cpp")
+    prefixes = [Path(p) for p in os.environ.get("AMENT_PREFIX_PATH", "").split(os.pathsep) if p]
+    ros_distro = os.environ.get("ROS_DISTRO", "humble")
+    prefixes.append(Path("/opt/ros") / ros_distro)
+    for rmw in candidates:
+        for prefix in prefixes:
+            if (prefix / "lib" / f"lib{rmw}.so").exists() or (prefix / "share" / rmw).exists():
+                os.environ["RMW_IMPLEMENTATION"] = rmw
+                return
+    os.environ["RMW_IMPLEMENTATION"] = "rmw_fastrtps_cpp"
+
+
+_select_default_rmw()
 os.environ.setdefault("ROS_LOCALHOST_ONLY", "0")
 
 from .runtime_mavros import (  # noqa: E402
@@ -52,6 +69,7 @@ from .runtime_ros_core import (  # noqa: E402
     HAVE_ROSBAG2_PY,
     HAVE_STD_SRVS,
     HistoryPolicy,
+    Image,
     Imu,
     MultiThreadedExecutor,
     Node,

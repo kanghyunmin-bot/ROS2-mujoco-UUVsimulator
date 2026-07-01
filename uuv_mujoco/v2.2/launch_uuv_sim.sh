@@ -169,8 +169,8 @@ SCENE_PATH="scenes/tank_current_scene.xml"
 FLUID_MODEL="current"
 SITL_MAVLINK_TARGET_SYSID=1
 SITL_MAVLINK_TARGET_COMPID=1
-SITL_MAVLINK_SOURCE_SYSID="${SITL_MAVLINK_SOURCE_SYSID:-254}"
-SITL_MAVLINK_SOURCE_COMPID="${SITL_MAVLINK_SOURCE_COMPID:-240}"
+SITL_MAVLINK_SOURCE_SYSID="${SITL_MAVLINK_SOURCE_SYSID:-255}"
+SITL_MAVLINK_SOURCE_COMPID="${SITL_MAVLINK_SOURCE_COMPID:-190}"
 
 require_option_value() {
     local opt="$1"
@@ -664,6 +664,74 @@ resolve_ros_setup_for_bash() {
     return 1
 }
 
+env_flag_disabled() {
+    local value
+    value="$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')"
+    case "$value" in
+        0|false|no|off|disable|disabled)
+            return 0
+            ;;
+    esac
+    return 1
+}
+
+mujoco_system_glfw_library() {
+    local candidate
+    for candidate in \
+        "/lib/x86_64-linux-gnu/libglfw.so.3" \
+        "/usr/lib/x86_64-linux-gnu/libglfw.so.3" \
+        "/lib/aarch64-linux-gnu/libglfw.so.3" \
+        "/usr/lib/aarch64-linux-gnu/libglfw.so.3"
+    do
+        if [[ -f "$candidate" ]]; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done
+    if command -v ldconfig >/dev/null 2>&1; then
+        ldconfig -p 2>/dev/null | awk '/libglfw\.so\.3[[:space:]]/ {print $NF; exit}'
+    fi
+}
+
+configure_mujoco_viewer_window_backend() {
+    if [[ "$HOST_OS" != "Linux" || "$HEADLESS" == true ]]; then
+        return
+    fi
+    if [[ -z "${DISPLAY:-}" ]]; then
+        return
+    fi
+    local wayland_session=0
+    case "$(printf '%s' "${XDG_SESSION_TYPE:-}" | tr '[:upper:]' '[:lower:]')" in
+        wayland)
+            wayland_session=1
+            ;;
+    esac
+    if [[ -n "${WAYLAND_DISPLAY:-}" || "${GLFW_PLATFORM:-}" == "x11" ]]; then
+        wayland_session=1
+    fi
+    if [[ "$wayland_session" -ne 1 ]]; then
+        return
+    fi
+    if env_flag_disabled "${UUV_GUI_MUJOCO_XWAYLAND:-1}"; then
+        echo "[launch] Wayland session: native MuJoCo GLFW backend requested (UUV_GUI_MUJOCO_XWAYLAND=0)."
+        return
+    fi
+
+    export GLFW_PLATFORM="${GLFW_PLATFORM:-x11}"
+    export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
+    export GDK_BACKEND="${GDK_BACKEND:-x11}"
+    export SDL_VIDEODRIVER="${SDL_VIDEODRIVER:-x11}"
+    if [[ -z "${PYGLFW_LIBRARY:-}" ]]; then
+        local glfw_library
+        glfw_library="$(mujoco_system_glfw_library || true)"
+        if [[ -n "$glfw_library" ]]; then
+            export PYGLFW_LIBRARY="$glfw_library"
+        fi
+    fi
+    unset WAYLAND_DISPLAY
+    echo "[launch] Wayland session: forcing MuJoCo GLFW viewer through XWayland (DISPLAY=${DISPLAY}, PYGLFW_LIBRARY=${PYGLFW_LIBRARY:-auto})."
+}
+
 collect_existing_mujoco_pids() {
     pgrep -f "run_uuv_mujoco.py" || true
     pgrep -f "run_urdf_full.py" || true
@@ -721,6 +789,8 @@ if [ "$HEADLESS" = true ]; then
     esac
 fi
 
+configure_mujoco_viewer_window_backend
+
 if [[ -n "$SITL_ARG" ]]; then
     # ArduSub/sim2real run-mode contract. Do not patch ArduSub controller
     # behavior here: choose only which actuator stream owns the MuJoCo plant.
@@ -735,10 +805,10 @@ if [[ -n "$SITL_ARG" ]]; then
     esac
     export UUV_RUN_MODE
 
-    # Keep live GUI/QGC-style pilot input on the dist-style RC override path.
+    # Keep live GUI/QGC-style pilot input on ArduSub's raw RC override path.
     # MANUAL_CONTROL remains available as an explicit diagnostic backend.
     export UUV_GUI_PILOT_CONTROL_MODE="${UUV_GUI_PILOT_CONTROL_MODE:-rc_override}"
-    export ROS2_UUV_MAVROS_RC_OVERRIDE_BACKEND="${ROS2_UUV_MAVROS_RC_OVERRIDE_BACKEND:-rc_channels_override}"
+    export ROS2_UUV_MAVROS_RC_OVERRIDE_BACKEND="${ROS2_UUV_MAVROS_RC_OVERRIDE_BACKEND:-rc_override}"
     export UUV_GUI_RC_PWM_SPAN="${UUV_GUI_RC_PWM_SPAN:-300}"
     export ROS2_UUV_MAVROS_RC_PWM_SPAN="${ROS2_UUV_MAVROS_RC_PWM_SPAN:-300}"
     export ROS2_UUV_SITL_ALLOW_DIRECT_CMD="${ROS2_UUV_SITL_ALLOW_DIRECT_CMD:-0}"
@@ -777,6 +847,10 @@ if [[ -n "$SITL_ARG" ]]; then
         export ROS2_UUV_SITL_JSON_SERVO_FALLBACK="${ROS2_UUV_SITL_JSON_SERVO_FALLBACK:-0}"
         export ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE="${ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE:-1}"
         echo "[mode] plant_replay: recorded actuator PWM/RCOU is authoritative plant input"
+    elif [[ "${SITL_DIRECT_MAVLINK:-0}" == "1" ]]; then
+        export ROS2_UUV_SITL_JSON_SERVO_FALLBACK="${ROS2_UUV_SITL_JSON_SERVO_FALLBACK:-0}"
+        export ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE="${ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE:-0}"
+        echo "[mode] closed_loop/native-direct: MAVLink SERVO_OUTPUT_RAW is authoritative plant input"
     else
         export ROS2_UUV_SITL_JSON_SERVO_FALLBACK="${ROS2_UUV_SITL_JSON_SERVO_FALLBACK:-1}"
         export ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE="${ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE:-0}"
@@ -996,6 +1070,9 @@ if [[ -n "$SITL_ARG" ]]; then
     if [[ "$UUV_RUN_MODE" == "plant_replay" ]]; then
         echo "[launch] SITL mode: plant_replay uses recorded actuator PWM/RCOU as plant input."
         echo "[launch] SITL mode: JSON/MAVLink live servo streams remain telemetry/estimator context only."
+    elif [[ "${SITL_DIRECT_MAVLINK:-0}" == "1" ]]; then
+        echo "[launch] SITL mode: using MAVLink SERVO_OUTPUT_RAW as the native/direct plant input."
+        echo "[launch] SITL mode: JSON servo packets remain telemetry/sensor-reply context only."
     else
         echo "[launch] SITL mode: using servo source json (standard ArduPilot SITL UDP servo packets)."
         echo "[launch] SITL mode: MAVLink SERVO_OUTPUT_RAW kept for heartbeat/telemetry only."

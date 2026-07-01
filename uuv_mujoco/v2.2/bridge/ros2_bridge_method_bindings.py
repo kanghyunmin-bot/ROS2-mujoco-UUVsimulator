@@ -9,9 +9,11 @@ from . import (
     ros2_bridge_init,
     ros2_bridge_public_api,
     ros2_bridge_runtime_methods,
+    ros2_sitl_poll_thread,
     ros2_ping360_config,
     ros2_publish_runtime,
     ros2_sitl_sensor_feed,
+    ros2_stereo_image,
     ros2_state_estimation,
 )
 
@@ -27,6 +29,10 @@ def bind_ros2_bridge_methods(cls: type[Any]) -> None:
     cls._safe_publish = ros2_bridge_runtime_methods.safe_publish
     cls._start_ros_spin_thread = ros2_bridge_runtime_methods.start_ros_spin_thread
     cls._ros_spin_loop = ros2_bridge_runtime_methods.ros_spin_loop
+    cls._start_sitl_poll_thread = ros2_sitl_poll_thread.start_sitl_poll_thread
+    cls._sitl_poll_loop = ros2_sitl_poll_thread.sitl_poll_loop
+    cls._stop_sitl_poll_thread = ros2_sitl_poll_thread.stop_sitl_poll_thread
+    cls._sitl_poll_thread_active = ros2_sitl_poll_thread.sitl_poll_thread_active
     cls._ros_topic_due = ros2_bridge_runtime_methods.ros_topic_due
     cls._ros_imu_accel_surface = ros2_bridge_runtime_methods.ros_imu_accel_surface
     cls._sensor_slice = staticmethod(ros2_bridge_runtime_methods.sensor_slice_method)
@@ -82,6 +88,9 @@ def bind_ros2_bridge_methods(cls: type[Any]) -> None:
         ros2_sitl_sensor_feed.build_and_send_sitl_sensor_snapshot
     )
     cls._flush_ros_publish_jobs = ros2_publish_runtime.flush_ros_publish_jobs
+    cls.render_camera_rgb = ros2_stereo_image.render_camera_rgb
+    cls.can_share_camera_renderer = ros2_stereo_image.can_share_camera_renderer
+    cls._close_stereo_image_renderers = ros2_stereo_image.close_stereo_image_renderers
 
     cls.set_sitl_servo_handler = ros2_bridge_public_api.set_sitl_servo_handler
     cls.set_replay_rcout_handler = ros2_bridge_public_api.set_replay_rcout_handler

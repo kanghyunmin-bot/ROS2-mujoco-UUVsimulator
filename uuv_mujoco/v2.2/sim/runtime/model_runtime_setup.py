@@ -42,6 +42,12 @@ def load_model_runtime_setup(
     """Load MJCF, apply runtime fluid overrides, and derive base-state helpers."""
 
     model = mujoco_module.MjModel.from_xml_path(args.scene)
+    _apply_timestep_override(
+        model,
+        mujoco_module=mujoco_module,
+        env_float=env_float,
+        env_flag=env_flag,
+    )
     data = mujoco_module.MjData(model)
     scene_fluid_density, scene_fluid_viscosity = apply_fluid_option_scales(
         model,
@@ -95,6 +101,48 @@ def load_model_runtime_setup(
         fluidcoef_dynamic_setup=fluidcoef_dynamic_setup,
         base_state=base_state,
     )
+
+
+def _apply_timestep_override(
+    model: Any,
+    *,
+    mujoco_module: Any,
+    env_float: Callable[[str, float], float],
+    env_flag: Callable[[str, bool], bool],
+) -> None:
+    current_timestep = float(model.opt.timestep)
+    requested_timestep = float(env_float("UUV_MUJOCO_TIMESTEP", current_timestep))
+    if requested_timestep <= 0.0:
+        return
+    guard_course_buoy_contacts = env_flag("UUV_COURSE_BUOY_TIMESTEP_GUARD", True)
+    if guard_course_buoy_contacts and requested_timestep > 0.005 and _model_has_course_buoys(
+        model,
+        mujoco_module=mujoco_module,
+    ):
+        print(
+            "[runtime] course buoy contact timestep guard: "
+            f"requested={requested_timestep:.4f}s capped=0.0050s",
+            flush=True,
+        )
+        requested_timestep = 0.005
+    bounded_timestep = max(0.001, min(0.030, requested_timestep))
+    if abs(bounded_timestep - current_timestep) <= 1.0e-12:
+        return
+    model.opt.timestep = bounded_timestep
+    print(
+        "[runtime] MuJoCo timestep override: "
+        f"{current_timestep:.4f}s -> {bounded_timestep:.4f}s",
+        flush=True,
+    )
+
+
+def _model_has_course_buoys(model: Any, *, mujoco_module: Any) -> bool:
+    obj_body = mujoco_module.mjtObj.mjOBJ_BODY
+    for body_id in range(int(model.nbody)):
+        body_name = mujoco_module.mj_id2name(model, obj_body, body_id) or ""
+        if body_name.startswith("course_buoy_"):
+            return True
+    return False
 
 
 __all__ = ["ModelRuntimeSetup", "load_model_runtime_setup"]

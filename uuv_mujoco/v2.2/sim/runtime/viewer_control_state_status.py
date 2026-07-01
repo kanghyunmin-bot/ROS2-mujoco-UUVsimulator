@@ -14,10 +14,7 @@ def viewer_is_paused(state, viewer: Any) -> bool:
 
 
 def viewer_base_overlay_line(state) -> str:
-    overlay_line = "C: follow, 1/2: stereo cam, 0: free, I: sensors, L: thruster labels"
-    if state.enable_pause:
-        overlay_line = "Space: pause, " + overlay_line
-    return overlay_line
+    return "1/2: stereo cam, 3: overview, 5/KP5: follow, 6: sensors"
 
 
 __all__ = ["viewer_base_overlay_line", "viewer_is_paused"]

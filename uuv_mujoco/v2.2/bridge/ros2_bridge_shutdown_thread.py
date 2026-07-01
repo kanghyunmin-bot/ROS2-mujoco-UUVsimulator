@@ -16,4 +16,10 @@ def stop_ros_spin_thread(self) -> None:
     self._ros_spin_thread = None
 
 
-__all__ = ["stop_ros_spin_thread"]
+def stop_sitl_poll_thread(self) -> None:
+    stop_poll = getattr(self, "_stop_sitl_poll_thread", None)
+    if callable(stop_poll):
+        stop_poll()
+
+
+__all__ = ["stop_ros_spin_thread", "stop_sitl_poll_thread"]

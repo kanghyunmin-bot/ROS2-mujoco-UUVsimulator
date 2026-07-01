@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 import signal
 import traceback
@@ -83,15 +84,23 @@ def parse_args() -> argparse.Namespace:
         default="UUV Control GUI",
         help="GUI window title",
     )
+    parser.add_argument(
+        "--node-name",
+        default=os.environ.get("UUV_TK_ROS_NODE_NAME", "uuv_control_gui"),
+        help="ROS node name for the Tk GUI",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    _gui_log(f"starting backend={args.backend} namespace={args.namespace} title={args.title!r}")
+    _gui_log(
+        f"starting backend={args.backend} namespace={args.namespace} "
+        f"node={args.node_name} title={args.title!r}"
+    )
     try:
         rclpy.init(args=None)
-        node = UuvGuiNode(namespace=args.namespace, backend=args.backend)
+        node = UuvGuiNode(namespace=args.namespace, backend=args.backend, node_name=args.node_name)
         app = UuvControlGui(node=node, title=args.title)
 
         def request_close(_signum, _frame) -> None:

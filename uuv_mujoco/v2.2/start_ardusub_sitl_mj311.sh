@@ -539,7 +539,7 @@ is_sim_forced_param() {
   case "$1" in
     # SITL-only safety/runtime contracts. These values describe the desktop
     # simulator process, not the physical vehicle controller tuning.
-    ARMING_CHECK|BRD_OPTIONS|BRD_SAFETYENABLE|BRD_SAFETYOPTION|BRD_SAFETY_MASK|SCHED_LOOP_RATE|SERIAL0_BAUD|SERIAL1_PROTOCOL|SERIAL1_BAUD|SERIAL2_PROTOCOL|SERIAL2_BAUD|SYSID_MYGCS|RC_OPTIONS|RC_OVERRIDE_TIME|FS_GCS_ENABLE|FS_PILOT_INPUT|FS_PILOT_TIMEOUT|SR0_*|SR1_*|SR2_*)
+    ARMING_CHECK|BRD_OPTIONS|BRD_SAFETYENABLE|BRD_SAFETYOPTION|BRD_SAFETY_MASK|SCHED_LOOP_RATE|SERIAL0_BAUD|SERIAL1_PROTOCOL|SERIAL1_BAUD|SERIAL2_PROTOCOL|SERIAL2_BAUD|SYSID_MYGCS|MAV_GCS_SYSID|MAV_GCS_SYSID_HI|RC_OPTIONS|RC_OVERRIDE_TIME|FS_GCS_ENABLE|FS_PILOT_INPUT|FS_PILOT_TIMEOUT|SR0_*|SR1_*|SR2_*)
       return 0
       ;;
     SERIAL3_PROTOCOL|SERIAL3_BAUD|SERIAL4_PROTOCOL|SERIAL4_BAUD|SR3_*|SR4_*|SIM_*|SIM_BAR*|SIM_BATT_*)
@@ -571,11 +571,10 @@ is_sim_forced_param() {
     INS_ENABLE_MASK|INS_USE2|INS_USE3|INS_ACC2*|INS_GYR2*)
       return 0
       ;;
-    # Live GUI/QGC pilot-input contract. ArduSub 4.1.2 passes
-    # channel_throttle->norm_input() into AP_Motors6DOF, where 0.5 is the
-    # neutral bidirectional throttle. Keep the low-end RC3 trim so RC3=1500
-    # maps to 0.5 instead of full negative heave.
-    RC1_DZ|RC2_DZ|RC3_DZ|RC3_MIN|RC3_MAX|RC3_TRIM|RC4_DZ|RC5_DZ|RC6_DZ|THR_DZ|JS_GAIN_DEFAULT|JS_GAIN_MIN|JS_GAIN_MAX|JS_GAIN_STEPS|JS_THR_GAIN)
+    # Live GUI/QGC pilot-input contract. Keep RC mapping and neutral trims
+    # deterministic regardless of the hardware parameter dump or AP_RCMapper
+    # library defaults.
+    FRAME_CONFIG|RCMAP_ROLL|RCMAP_PITCH|RCMAP_THROTTLE|RCMAP_YAW|RCMAP_FORWARD|RCMAP_LATERAL|RC1_DZ|RC2_DZ|RC3_DZ|RC3_MIN|RC3_MAX|RC3_TRIM|RC4_DZ|RC5_DZ|RC6_DZ|THR_DZ|JS_GAIN_DEFAULT|JS_GAIN_MIN|JS_GAIN_MAX|JS_GAIN_STEPS|JS_THR_GAIN)
       return 0
       ;;
     # Keep the real vehicle's P-only vertical controller by default.  For
@@ -660,7 +659,15 @@ append_param_if_not_overridden() {
 }
 
 # Core frame/output layout (keep deterministic across runs and EEPROM states).
-append_param_if_not_overridden "FRAME_CONFIG" "2"
+# The MuJoCo model exposes the full 8-thruster 6DOF layout; allow quick
+# native validation against alternate ArduSub frames without editing params.
+append_param_if_not_overridden "FRAME_CONFIG" "${SITL_FRAME_CONFIG:-2}"
+append_param_if_not_overridden "RCMAP_ROLL" "2"
+append_param_if_not_overridden "RCMAP_PITCH" "1"
+append_param_if_not_overridden "RCMAP_THROTTLE" "3"
+append_param_if_not_overridden "RCMAP_YAW" "4"
+append_param_if_not_overridden "RCMAP_FORWARD" "5"
+append_param_if_not_overridden "RCMAP_LATERAL" "6"
 append_param_if_not_overridden "SERVO1_FUNCTION" "33"
 append_param_if_not_overridden "SERVO2_FUNCTION" "34"
 append_param_if_not_overridden "SERVO3_FUNCTION" "35"
@@ -787,23 +794,25 @@ append_param_if_not_overridden "RNGFND1_ORIENT" "25"
 # throttle; both participate in AltHold surface limiting and bottom behavior.
 append_param_if_not_overridden "SURFACE_DEPTH" "${SITL_SURFACE_DEPTH:-$SITL_DEFAULT_SURFACE_DEPTH}"
 append_param_if_not_overridden "SURFACE_MAX_THR" "${SITL_SURFACE_MAX_THR:-0.1}"
-# ArduSub 4.1.x accepts RC override/MANUAL_CONTROL only from SYSID_MYGCS.
-# Default desktop control authority belongs to the bridge source system, while
-# QGC uses MAVProxy fan-out for monitoring/parameters. This prevents QGC
-# MANUAL_CONTROL frames from fighting GUI/ROS RC override. Set
-# SITL_QGC_CONTROL_AUTHORITY=1 in the Docker launcher for QGC joystick/arm A/B
-# tests; that switches both SITL_MAVLINK_SOURCE_SYSID and SYSID_MYGCS to 255.
-append_param_if_not_overridden "SYSID_MYGCS" "${SITL_SYSID_MYGCS:-${SITL_MAVLINK_SOURCE_SYSID:-254}}"
+# ArduSub accepts RC override/MANUAL_CONTROL only from the configured GCS sysid.
+# ArduSub 4.8 uses MAV_GCS_SYSID; 4.1.x used SYSID_MYGCS. Emit both so the
+# compatibility filter keeps the key supported by the active firmware.
+SITL_GCS_SYSID="${SITL_MAV_GCS_SYSID:-${SITL_SYSID_MYGCS:-${SITL_MAVLINK_SOURCE_SYSID:-255}}}"
+append_param_if_not_overridden "MAV_GCS_SYSID" "$SITL_GCS_SYSID"
+append_param_if_not_overridden "MAV_GCS_SYSID_HI" "${SITL_MAV_GCS_SYSID_HI:-0}"
+append_param_if_not_overridden "SYSID_MYGCS" "$SITL_GCS_SYSID"
 append_param_if_not_overridden "FS_GCS_ENABLE" "${SITL_FS_GCS_ENABLE:-0}"
 append_param_if_not_overridden "FS_PILOT_INPUT" "${SITL_FS_PILOT_INPUT:-0}"
 append_param_if_not_overridden "FS_PILOT_TIMEOUT" "${SITL_FS_PILOT_TIMEOUT:-10.0}"
 # Closed-loop pilot-input contract:
 # - GUI and rosbag replay use /mavros/rc/override by default.
-# - RC3 command neutral is 1500, but ArduSub 4.1.2's MANUAL heave path expects
-#   channel_throttle->norm_input()==0.5 at neutral because AP_Motors6DOF turns
-#   that into bidirectional throttle with 2*(input-0.5).
-# - With RC3_MIN=1100 and RC3_MAX=1900, RC3_TRIM=1100 makes RC3=1500 map to
-#   0.5. RC3_TRIM=1500 maps RC3=1500 to 0.0 and commands full vertical thrust.
+# - RC3 command neutral is 1500. ArduSub MANUAL converts
+#   channel_throttle->norm_input() to motors throttle with (norm + 1) / 2, then
+#   AP_Motors6DOF converts 0.5 back to bidirectional neutral. RC3_TRIM=1500 is
+#   therefore the only neutral trim for the live MANUAL heave path.
+# - RC5 is forward and RC6 is lateral. ArduSub's Sub defaults also say 5/6, but
+#   AP_RCMapper's library defaults are 6/7; force the Sub live-control mapping
+#   above so RC override and QGC/manual-control telemetry reach the same axes.
 # - MANUAL_CONTROL remains available for QGC-like joystick behavior and is
 #   scaled by JS_GAIN/JS_THR_GAIN inside ArduSub.
 # - Keep GUI/QGC live-control gain at ArduSub's own default. The hardware
@@ -818,7 +827,7 @@ append_param_if_not_overridden "THR_DZ" "${SITL_THR_DZ:-100}"
 append_param_if_not_overridden "RC3_MIN" "1100"
 append_param_if_not_overridden "RC3_MAX" "1900"
 append_param_if_not_overridden "RC3_DZ" "${SITL_RC3_DZ:-30}"
-append_param_if_not_overridden "RC3_TRIM" "${SITL_RC3_TRIM:-1100}"
+append_param_if_not_overridden "RC3_TRIM" "${SITL_RC3_TRIM:-1500}"
 append_param_if_not_overridden "JS_GAIN_DEFAULT" "${SITL_JS_GAIN_DEFAULT:-0.5}"
 append_param_if_not_overridden "JS_GAIN_MIN" "${SITL_JS_GAIN_MIN:-0.25}"
 append_param_if_not_overridden "JS_GAIN_MAX" "${SITL_JS_GAIN_MAX:-1.0}"
@@ -912,7 +921,11 @@ append_param_if_not_overridden "LOIT_ANG_MAX" "0.0"
 append_param_if_not_overridden "LOIT_BRK_ACCEL" "250.0"
 append_param_if_not_overridden "LOIT_BRK_DELAY" "1.0"
 append_param_if_not_overridden "LOIT_BRK_JERK" "500.0"
-append_param_if_not_overridden "MOT_FV_CPLNG_K" "1.0"
+# ArduSub's vectored-frame forward/vertical coupling limiter can clamp one
+# direction of MANUAL forward thrust when the simulated heave-neutral contract
+# is active. Keep live RC symmetric by default; opt back in with
+# SITL_MOT_FV_CPLNG_K for coupling A/B tests.
+append_param_if_not_overridden "MOT_FV_CPLNG_K" "${SITL_MOT_FV_CPLNG_K:-0.0}"
 append_param_if_not_overridden "MOT_SPIN_ARM" "0.1"
 append_param_if_not_overridden "MOT_SPIN_MIN" "0.15"
 append_param_if_not_overridden "MOT_SPIN_MAX" "0.95"

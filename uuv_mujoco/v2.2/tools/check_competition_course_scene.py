@@ -172,7 +172,6 @@ def check_red_buoys(bodies: dict[str, ET.Element], failures: list[str]) -> None:
         require(child_by_name(body, "site", f"{prefix}_attach_site") is None, f"{body_name} must not have magnet attach site", failures)
         required_geoms = [
             f"{prefix}_float_geom",
-            f"{prefix}_viewer_surface_disc",
             f"{prefix}_top_stem",
             f"{prefix}_top_bolt",
             f"{prefix}_top_jig",
@@ -183,15 +182,31 @@ def check_red_buoys(bodies: dict[str, ET.Element], failures: list[str]) -> None:
         ]
         for geom_name in required_geoms:
             require(child_by_name(body, "geom", geom_name) is not None, f"{body_name} missing {geom_name}", failures)
-        viewer_disc = child_by_name(body, "geom", f"{prefix}_viewer_surface_disc")
-        if viewer_disc is not None:
-            require(viewer_disc.get("group") == "5", f"{prefix} viewer surface disc must stay in hidden helper group 5", failures)
+        require(
+            child_by_name(body, "geom", f"{prefix}_viewer_surface_disc") is None,
+            f"{prefix}_viewer_surface_disc must not exist; it creates distracting contact-time discs",
+            failures,
+        )
+        float_geom = child_by_name(body, "geom", f"{prefix}_float_geom")
+        if float_geom is not None:
+            require(float_geom.get("contype") == "2", f"{prefix}_float_geom must use buoy collision contype=2", failures)
+            require(float_geom.get("conaffinity") == "1", f"{prefix}_float_geom must collide with vehicle/collector but not other buoys", failures)
         bands = [geom for geom in body.findall("geom") if "_equator_band_" in (geom.get("name") or "")]
         require(len(bands) == 8, f"{body_name} must have 8 equator-band segments", failures)
 
 
 def check_fixed_buoys(root: ET.Element, bodies: dict[str, ET.Element], failures: list[str]) -> None:
     geoms = {geom.get("name"): geom for geom in root.findall(".//geom") if geom.get("name")}
+    composites = {
+        composite.get("prefix"): composite
+        for composite in root.findall("./worldbody/composite")
+        if composite.get("prefix")
+    }
+    connects = {
+        connect.get("name"): connect
+        for connect in root.findall("./equality/connect")
+        if connect.get("name")
+    }
     welds = {weld.get("name"): weld for weld in root.findall("./equality/weld") if weld.get("name")}
     bases = sorted(name for name in bodies if name.startswith("course_buoy_") and name.endswith("_magnet_base"))
     require(len(bases) == 15, f"expected 15 magnet-attached yellow/orange/white buoys, got {len(bases)}", failures)
@@ -214,6 +229,7 @@ def check_fixed_buoys(root: ET.Element, bodies: dict[str, ET.Element], failures:
             continue
 
         require(math.isclose(pos_z(base), -11.0, abs_tol=1e-6), f"{base_name} must sit on 11m floor", failures)
+        require(f"{prefix}_tether_jig" not in bodies, f"{prefix}_tether_jig free body must not exist; visible jig rides on the float for stability", failures)
         require(math.isclose(pos_z(float_body), -8.5, abs_tol=1e-6), f"{prefix}_float must be 2.5m above floor", failures)
         require(
             math.isclose(float_attr(float_body, "gravcomp"), 0.0, abs_tol=1e-9),
@@ -231,23 +247,30 @@ def check_fixed_buoys(root: ET.Element, bodies: dict[str, ET.Element], failures:
             f"{prefix}_float 0.98N net-lift equilibrium must keep center visibly above water after release; got z={surface_float_center_z(mass_kg):.3f}m",
             failures,
         )
+        float_geom = child_by_name(float_body, "geom", f"{prefix}_float_geom")
+        require(float_geom is not None, f"{prefix}_float missing float geom", failures)
+        if float_geom is not None:
+            require(float_geom.get("contype") == "2", f"{prefix}_float_geom must use buoy collision contype=2", failures)
+            require(float_geom.get("conaffinity") == "1", f"{prefix}_float_geom must collide with vehicle/collector but not other buoys", failures)
         require(child_by_name(float_body, "joint", f"{prefix}_free") is not None, f"{prefix}_float must keep a free joint for future magnet release", failures)
-        require(f"{prefix}_surface_projection" in geoms, f"{prefix} missing viewer surface projection", failures)
-        require(f"{prefix}_surface_projection_outline" in geoms, f"{prefix} missing viewer surface projection outline", failures)
-        for helper_name in (f"{prefix}_surface_projection", f"{prefix}_surface_projection_outline"):
-            helper = geoms.get(helper_name)
-            if helper is not None:
-                require(helper.get("group") == "5", f"{helper_name} must stay in hidden helper group 5", failures)
+        require(f"{prefix}_surface_projection" not in geoms, f"{prefix} surface projection disc must not exist", failures)
+        require(
+            f"{prefix}_surface_projection_outline" not in geoms,
+            f"{prefix} surface projection outline disc must not exist",
+            failures,
+        )
 
         magnet_site = child_by_name(base, "site", f"{prefix}_magnet_site")
         attach_site = child_by_name(float_body, "site", f"{prefix}_attach_site")
-        require(magnet_site is not None, f"{base_name} missing magnet site", failures)
+        require(magnet_site is not None, f"{base_name} missing invisible magnet site", failures)
         require(attach_site is not None, f"{prefix}_float missing attach site", failures)
         weld = welds.get(f"{prefix}_magnet_weld")
         require(weld is not None, f"{prefix} missing magnet weld equality", failures)
         if weld is not None:
             require(weld.get("site1") == f"{prefix}_magnet_site", f"{prefix} magnet weld must use magnet site as site1", failures)
             require(weld.get("site2") == f"{prefix}_attach_site", f"{prefix} magnet weld must use attach site as site2", failures)
+            require(weld.get("solref") == "0.030 1", f"{prefix} magnet weld must be soft enough to tilt before release", failures)
+            require(weld.get("solimp") == "0.75 0.95 0.002", f"{prefix} magnet weld must be soft enough to tilt before release", failures)
         if magnet_site is not None and attach_site is not None:
             magnet_world_z = pos_z(base) + pos_z(magnet_site)
             attach_world_z = pos_z(float_body) + pos_z(attach_site)
@@ -264,17 +287,68 @@ def check_fixed_buoys(root: ET.Element, bodies: dict[str, ET.Element], failures:
             if (geom.get("name") or "").startswith(f"{prefix}_nylon_line_seg_")
         ]
         pvc = child_by_name(base, "geom", f"{prefix}_pvc_pipe")
-        magnet = child_by_name(base, "geom", f"{prefix}_magnet")
+        magnet = child_by_name(float_body, "geom", f"{prefix}_magnet")
         weight = child_by_name(base, "geom", f"{prefix}_diver_weight")
         require(nylon is None, f"{base_name} must not use a single rigid nylon cylinder", failures)
-        require(len(nylon_segments) >= 6, f"{base_name} must use segmented visual nylon rope", failures)
+        require(len(nylon_segments) == 0, f"{base_name} must use flex-line cable composite, not rigid rope segments", failures)
+        flex_line = composites.get(f"{prefix}_flex_line_")
+        require(flex_line is not None, f"{prefix} missing flexible cable composite", failures)
+        if flex_line is not None:
+            vertices = floats(flex_line.get("vertex"))
+            require(flex_line.get("type") == "cable", f"{prefix} flexible line must be a MuJoCo cable composite", failures)
+            require(flex_line.get("initial") == "none", f"{prefix} flexible line must use explicit world vertices", failures)
+            require(len(vertices) >= 21 and len(vertices) % 3 == 0, f"{prefix} flexible line must have at least 7 vertices", failures)
+            if len(vertices) >= 9 and len(vertices) % 3 == 0:
+                points = [vertices[index : index + 3] for index in range(0, len(vertices), 3)]
+                start_xy = points[0][:2]
+                end_xy = points[-1][:2]
+                max_slack_xy = 0.0
+                for index, point in enumerate(points[1:-1], start=1):
+                    t = index / (len(points) - 1)
+                    line_x = start_xy[0] + (end_xy[0] - start_xy[0]) * t
+                    line_y = start_xy[1] + (end_xy[1] - start_xy[1]) * t
+                    max_slack_xy = max(max_slack_xy, math.hypot(point[0] - line_x, point[1] - line_y))
+                require(max_slack_xy >= 0.025, f"{prefix} flexible line must have visible slack, not a straight rod", failures)
+            plugin = flex_line.find("plugin")
+            require(
+                plugin is not None and plugin.get("plugin") == "mujoco.elasticity.cable",
+                f"{prefix} flexible line must use mujoco.elasticity.cable",
+                failures,
+            )
+            if plugin is not None:
+                configs = {str(config.get("key")): str(config.get("value")) for config in plugin.findall("config")}
+                require(configs.get("twist") == "80", f"{prefix} flexible line twist must be soft, not rod-like", failures)
+                require(configs.get("bend") == "1.2", f"{prefix} flexible line bend must be soft, not rod-like", failures)
+                require(configs.get("vmax") == "0.30", f"{prefix} flexible line vmax must allow visible rope motion", failures)
+            joint = flex_line.find("joint")
+            require(joint is not None and joint.get("kind") == "main", f"{prefix} flexible line missing main joint", failures)
+            if joint is not None:
+                require(joint.get("damping") == "0.010", f"{prefix} flexible line joint damping must stay rope-like", failures)
+                require(joint.get("armature") == "0.00002", f"{prefix} flexible line joint armature must stay low", failures)
+            cable_geom = flex_line.find("geom")
+            require(cable_geom is not None, f"{prefix} flexible line missing capsule geom", failures)
+            if cable_geom is not None:
+                require(cable_geom.get("type") == "capsule", f"{prefix} flexible line geom must be a capsule", failures)
+                require(cable_geom.get("size") == "0.0100", f"{prefix} flexible line must be thick enough to see and catch", failures)
+                require(cable_geom.get("rgba") == "1 1 1 1", f"{prefix} flexible line must be opaque white", failures)
+                require(cable_geom.get("contype") == "0", f"{prefix} flexible line must avoid self-collision", failures)
+                require(cable_geom.get("conaffinity") == "1", f"{prefix} flexible line must collide with robot/collector geoms", failures)
+                require(cable_geom.get("condim") == "4", f"{prefix} flexible line must use frictional contacts", failures)
+        bottom_connect = connects.get(f"{prefix}_flex_line_bottom_connect")
+        top_weld = welds.get(f"{prefix}_flex_line_top_connect")
+        require(bottom_connect is not None, f"{prefix} flexible line missing bottom connect", failures)
+        require(top_weld is not None, f"{prefix} flexible line missing moving jig top weld", failures)
+        if bottom_connect is not None:
+            require(bottom_connect.get("body1") == f"{prefix}_flex_line_B_first", f"{prefix} bottom connect must attach first cable body", failures)
+            require(bottom_connect.get("body2") == f"{prefix}_magnet_base", f"{prefix} bottom connect must attach to magnet base", failures)
+        if top_weld is not None:
+            require(top_weld.get("body1") == f"{prefix}_flex_line_B_last", f"{prefix} top weld must attach last cable body", failures)
+            require(top_weld.get("body2") == f"{prefix}_float", f"{prefix} top weld must attach to the moving float underside jig", failures)
+            require(top_weld.get("solref") == "0.004 1", f"{prefix} top weld must keep the cable end on the moving float underside jig", failures)
+            require(top_weld.get("solimp") == "0.95 0.99 0.0005", f"{prefix} top weld must keep the cable end on the moving float underside jig", failures)
         require(pvc is not None, f"{base_name} missing visible PVC pipe", failures)
-        require(magnet is not None, f"{base_name} missing magnet", failures)
+        require(magnet is not None, f"{prefix}_float missing moving visible magnet", failures)
         require(weight is not None, f"{base_name} missing diver weight", failures)
-        for segment in nylon_segments:
-            require(segment.get("type") == "capsule", f"{segment.get('name')} must be a capsule rope segment", failures)
-            require(segment.get("contype") == "0", f"{segment.get('name')} must not collide as a rigid obstacle", failures)
-            require(segment.get("conaffinity") == "0", f"{segment.get('name')} must not collide as a rigid obstacle", failures)
         if pvc is not None:
             rgba = floats(pvc.get("rgba"))
             require(len(rgba) == 4 and rgba[:3] == (1.0, 1.0, 1.0) and rgba[3] == 1.0, f"{prefix} PVC must be opaque white", failures)
@@ -290,6 +364,30 @@ def check_fixed_buoys(root: ET.Element, bodies: dict[str, ET.Element], failures:
         require(len(bands) == 8, f"{prefix}_float must have 8 equator-band segments", failures)
         require(child_by_name(float_body, "geom", f"{prefix}_top_jig") is not None, f"{prefix}_float missing top jig", failures)
         require(child_by_name(float_body, "geom", f"{prefix}_bottom_socket") is not None, f"{prefix}_float missing bottom socket", failures)
+        tether_link = child_by_name(float_body, "geom", f"{prefix}_tether_socket_link")
+        require(tether_link is not None, f"{prefix}_float missing moving visible tether socket link", failures)
+        if tether_link is not None:
+            require(tether_link.get("type") == "capsule", f"{prefix}_tether_socket_link must be a capsule", failures)
+            if attach_site is not None:
+                fromto = floats(tether_link.get("fromto"))
+                attach_z = pos_z(attach_site)
+                require(len(fromto) == 6, f"{prefix}_tether_socket_link must have a valid fromto", failures)
+                if len(fromto) == 6:
+                    require(math.isclose(fromto[2], attach_z - 0.031, abs_tol=1e-6), f"{prefix}_tether_socket_link must start below the attach site", failures)
+                    require(math.isclose(fromto[5], attach_z - 0.008, abs_tol=1e-6), f"{prefix}_tether_socket_link must end below the attach site", failures)
+            require(tether_link.get("size") == "0.0075", f"{prefix}_tether_socket_link must be thick enough to see", failures)
+            require(tether_link.get("rgba") == "1 1 1 1", f"{prefix}_tether_socket_link must be white", failures)
+            require(tether_link.get("contype") == "0", f"{prefix}_tether_socket_link must be visual-only", failures)
+            require(tether_link.get("conaffinity") == "0", f"{prefix}_tether_socket_link must be visual-only", failures)
+        tether_collar = child_by_name(float_body, "geom", f"{prefix}_tether_collar")
+        require(tether_collar is not None, f"{prefix}_float missing moving visible tether collar", failures)
+        if tether_collar is not None:
+            require(tether_collar.get("type") == "cylinder", f"{prefix}_tether_collar must be a cylinder", failures)
+            if attach_site is not None:
+                collar_pos = floats(tether_collar.get("pos"))
+                require(len(collar_pos) == 3 and math.isclose(collar_pos[2], pos_z(attach_site) - 0.013, abs_tol=1e-6), f"{prefix}_tether_collar must sit on the moving jig cable top", failures)
+            require(tether_collar.get("contype") == "0", f"{prefix}_tether_collar must be visual-only", failures)
+            require(tether_collar.get("conaffinity") == "0", f"{prefix}_tether_collar must be visual-only", failures)
 
     pinger = bodies.get("course_buoy_pinger_white_1_float")
     require(pinger is not None, "missing pinger white float", failures)

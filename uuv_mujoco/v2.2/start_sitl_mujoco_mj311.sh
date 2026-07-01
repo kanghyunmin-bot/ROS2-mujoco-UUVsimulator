@@ -9,7 +9,7 @@ set -euo pipefail
 WIPE_EEPROM=1
 NO_RESET=0
 SITL_PARAM_TUNE=0
-SITL_DIRECT_MAVLINK="${SITL_DIRECT_MAVLINK:-1}"
+SITL_DIRECT_MAVLINK="${SITL_DIRECT_MAVLINK:-0}"
 SITL_NO_REBUILD="${SITL_NO_REBUILD:-1}"
 SITL_FORCE_NO_DISPLAY=1
 SITL_EKF_STABLE=1
@@ -48,8 +48,8 @@ Options:
   --ros2-real-pkg-compat
                     Launch MuJoCo with ROS2 sensors + compat MAVROS surface only
   --param-tune      Enable parameter-tuning pipeline (QGC/MAVProxy background mode)
-  --direct-mavlink  Use direct UDP outputs without MAVProxy (default)
-  --legacy-mavproxy Use legacy MAVProxy fan-out instead of direct UDP outputs
+  --direct-mavlink  Use direct UDP outputs without MAVProxy (experimental)
+  --legacy-mavproxy Use legacy MAVProxy fan-out instead of direct UDP outputs (default)
   --no-ekf-stable   Do not apply default EKF stabilization params for SITL
   --sitl-no-rebuild Pass -N to sim_vehicle.py (default; avoids rebuilding ArduPilot)
   --sitl-rebuild    Rebuild ArduSub before launching

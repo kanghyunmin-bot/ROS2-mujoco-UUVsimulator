@@ -14,7 +14,7 @@ from rclpy.qos import (
     ReliabilityPolicy,
     qos_profile_sensor_data,
 )
-from sensor_msgs.msg import BatteryState, FluidPressure, Imu
+from sensor_msgs.msg import BatteryState, FluidPressure, Image, Imu
 from std_msgs.msg import Float32, String
 
 try:
@@ -47,6 +47,7 @@ __all__ = [
     "HAVE_ROSBAG2_PY",
     "HAVE_STD_SRVS",
     "HistoryPolicy",
+    "Image",
     "Imu",
     "MultiThreadedExecutor",
     "Node",

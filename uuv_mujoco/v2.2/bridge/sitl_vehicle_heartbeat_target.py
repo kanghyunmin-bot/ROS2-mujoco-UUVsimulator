@@ -16,10 +16,6 @@ def heartbeat_source_matches_target(self, msg) -> bool:
 
 
 def heartbeat_autopilot_matches(self, msg) -> bool:
-    target_sys = int(self._sitl_mavlink_target_sysid)
-    target_comp = int(self._sitl_mavlink_target_compid)
-    if target_sys > 0 or target_comp > 0:
-        return True
     autopilot_mega = int(self._sitl_mavutil.mavlink.MAV_AUTOPILOT_ARDUPILOTMEGA)
     return int(getattr(msg, "autopilot", -1)) == autopilot_mega
 

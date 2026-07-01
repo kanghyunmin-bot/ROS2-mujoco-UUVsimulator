@@ -17,6 +17,8 @@ class CourseBuoy:
     attach_site_id: int
     magnet_site_id: int
     eq_id: int
+    flex_line_bottom_eq_id: int
+    flex_line_top_eq_id: int
     free_qposadr: int
     free_dofadr: int
     geom_ids: frozenset[int]
@@ -25,6 +27,9 @@ class CourseBuoy:
     detached: bool = False
     surface_on_waterline: bool = False
     release_time_s: float = -1.0
+    last_vehicle_contact_time_s: float = -1.0
+    contact_break_start_time_s: float = -1.0
+    contact_break_peak_n: float = 0.0
     last_runtime_wrench: np.ndarray = field(default_factory=lambda: np.zeros(6, dtype=np.float64))
 
 
@@ -45,17 +50,21 @@ class CourseBuoyRuntime:
     float_half_height_m: float
     surface_spring_npm: float
     surface_capture_band_m: float
+    vehicle_contact_grace_s: float
     release_stabilize_s: float
     release_max_down_speed_mps: float
     break_force_n: float
+    contact_break_hold_s: float
     magnet_stiffness_npm: float
     magnet_damping_nspm: float
     water_surface_z: float
+    update_period_s: float
     track_csv_path: Path | None
     track_interval_s: float
     log: Callable[[str], None]
     _last_track_time_s: float = -1.0
     _track_header_written: bool = False
+    _next_update_time_s: float = -1.0
 
     @classmethod
     def from_model(
@@ -90,6 +99,16 @@ class CourseBuoyRuntime:
             attach_site_id = mujoco_module.mj_name2id(model, obj_site, f"{prefix}_attach_site")
             magnet_site_id = mujoco_module.mj_name2id(model, obj_site, f"{prefix}_magnet_site")
             eq_id = mujoco_module.mj_name2id(model, obj_equality, f"{prefix}_magnet_weld")
+            flex_line_top_eq_id = mujoco_module.mj_name2id(
+                model,
+                obj_equality,
+                f"{prefix}_flex_line_top_connect",
+            )
+            flex_line_bottom_eq_id = mujoco_module.mj_name2id(
+                model,
+                obj_equality,
+                f"{prefix}_flex_line_bottom_connect",
+            )
             free_qposadr, free_dofadr = cls._free_joint_addresses(
                 mujoco_module=mujoco_module,
                 model=model,
@@ -116,6 +135,8 @@ class CourseBuoyRuntime:
                     attach_site_id=int(attach_site_id),
                     magnet_site_id=int(magnet_site_id),
                     eq_id=int(eq_id),
+                    flex_line_bottom_eq_id=int(flex_line_bottom_eq_id),
+                    flex_line_top_eq_id=int(flex_line_top_eq_id),
                     free_qposadr=free_qposadr,
                     free_dofadr=free_dofadr,
                     geom_ids=geom_ids,
@@ -140,12 +161,15 @@ class CourseBuoyRuntime:
             float_half_height_m=float(env_float("UUV_COURSE_BUOY_FLOAT_HALF_HEIGHT_M", 0.085)),
             surface_spring_npm=float(env_float("UUV_COURSE_BUOY_SURFACE_SPRING_NPM", 2.0)),
             surface_capture_band_m=float(env_float("UUV_COURSE_BUOY_SURFACE_CAPTURE_BAND_M", 0.25)),
+            vehicle_contact_grace_s=float(env_float("UUV_COURSE_BUOY_VEHICLE_CONTACT_GRACE_S", 0.45)),
             release_stabilize_s=float(env_float("UUV_COURSE_BUOY_RELEASE_STABILIZE_S", 0.0)),
             release_max_down_speed_mps=float(env_float("UUV_COURSE_BUOY_RELEASE_MAX_DOWN_SPEED_MPS", 0.05)),
             break_force_n=float(env_float("UUV_COURSE_BUOY_MAGNET_BREAK_N", 15.0)),
+            contact_break_hold_s=float(env_float("UUV_COURSE_BUOY_CONTACT_BREAK_HOLD_S", 0.12)),
             magnet_stiffness_npm=float(env_float("UUV_COURSE_BUOY_MAGNET_STIFFNESS_NPM", 1200.0)),
             magnet_damping_nspm=float(env_float("UUV_COURSE_BUOY_MAGNET_DAMPING_NSPM", 8.0)),
             water_surface_z=float(water_surface_z),
+            update_period_s=cls._update_period_s(env_float),
             track_csv_path=cls._track_csv_path(env_flag("UUV_COURSE_BUOY_TRACK_CSV_ENABLE", True)),
             track_interval_s=float(env_float("UUV_COURSE_BUOY_TRACK_CSV_INTERVAL_S", 0.25)),
             log=log,
@@ -154,7 +178,8 @@ class CourseBuoyRuntime:
             log(
                 "[course] buoys enabled: "
                 f"count={len(buoys)}, full_immersion_net_lift={runtime.buoyancy_n:.3f}N, "
-                f"magnet_break={runtime.break_force_n:.3f}N"
+                f"magnet_break={runtime.break_force_n:.3f}N, "
+                f"contact_break_hold={runtime.contact_break_hold_s:.3f}s"
             )
             runtime._log_float_contract()
             runtime._log_track_contract()
@@ -183,12 +208,15 @@ class CourseBuoyRuntime:
             float_half_height_m=0.085,
             surface_spring_npm=2.0,
             surface_capture_band_m=0.25,
+            vehicle_contact_grace_s=0.45,
             release_stabilize_s=0.0,
             release_max_down_speed_mps=0.0,
             break_force_n=0.0,
+            contact_break_hold_s=0.0,
             magnet_stiffness_npm=0.0,
             magnet_damping_nspm=0.0,
             water_surface_z=float(water_surface_z),
+            update_period_s=0.0,
             track_csv_path=None,
             track_interval_s=0.25,
             log=log,
@@ -197,21 +225,26 @@ class CourseBuoyRuntime:
     def apply(self, dt: float) -> None:
         if not self.buoys:
             return
+        if not self._update_due():
+            return
 
         for buoy in self.buoys:
             self._clear_persisted_runtime_wrench(buoy)
+            vehicle_contact = self._has_vehicle_contact(buoy)
+            if vehicle_contact:
+                buoy.last_vehicle_contact_time_s = float(getattr(self.data, "time", 0.0))
             if buoy.has_magnet and not buoy.detached:
                 self._release_if_break_force_exceeded(buoy)
 
             wrench = np.zeros(6, dtype=np.float64)
-            wrench += self._float_buoyancy_wrench(buoy)
-            wrench += self._water_drag_wrench(buoy)
+            wrench += self._float_buoyancy_wrench(buoy, vehicle_contact=vehicle_contact)
+            wrench += self._water_drag_wrench(buoy, vehicle_contact=vehicle_contact)
             if buoy.has_magnet and not buoy.detached:
                 wrench += self._magnet_hold_wrench(buoy, dt)
 
             self.data.xfrc_applied[buoy.body_id, :] += wrench
             buoy.last_runtime_wrench = wrench
-            self._apply_surface_float_guard(buoy)
+            self._apply_surface_float_guard(buoy, vehicle_contact=vehicle_contact)
         self._write_tracking_sample()
 
     def _clear_persisted_runtime_wrench(self, buoy: CourseBuoy) -> None:
@@ -232,7 +265,7 @@ class CourseBuoyRuntime:
             self.data.xfrc_applied[buoy.body_id, removable] -= last[removable]
         buoy.last_runtime_wrench[:] = 0.0
 
-    def _float_buoyancy_wrench(self, buoy: CourseBuoy) -> np.ndarray:
+    def _float_buoyancy_wrench(self, buoy: CourseBuoy, *, vehicle_contact: bool) -> np.ndarray:
         wrench = np.zeros(6, dtype=np.float64)
         if self.buoyancy_n <= 0.0:
             return wrench
@@ -244,7 +277,7 @@ class CourseBuoyRuntime:
         velocity_z = float(self._body_linear_velocity(buoy.body_id)[2])
         target_z = self._surface_target_center_z(buoy)
         neutral_upthrust_n = self._body_weight_n(buoy)
-        if self._has_vehicle_contact(buoy) and center_z < target_z:
+        if vehicle_contact and center_z < target_z:
             wrench[2] = neutral_upthrust_n + self.buoyancy_n
             return wrench
 
@@ -254,14 +287,14 @@ class CourseBuoyRuntime:
         wrench[2] = upthrust_n
         return wrench
 
-    def _water_drag_wrench(self, buoy: CourseBuoy) -> np.ndarray:
+    def _water_drag_wrench(self, buoy: CourseBuoy, *, vehicle_contact: bool) -> np.ndarray:
         wrench = np.zeros(6, dtype=np.float64)
         center_z = float(self.data.xipos[buoy.body_id, 2])
         if not self._touches_float_waterline(buoy, center_z):
             return wrench
 
         velocity = self._body_linear_velocity(buoy.body_id)
-        if self._has_vehicle_contact(buoy):
+        if vehicle_contact:
             velocity = velocity.copy()
             velocity[2] = 0.0
         speed = float(np.linalg.norm(velocity))
@@ -328,10 +361,31 @@ class CourseBuoyRuntime:
         if self.track_csv_path is None:
             self.log("[course] buoy live tracking disabled")
             return
+        update_hz = (1.0 / self.update_period_s) if self.update_period_s > 0.0 else 0.0
         self.log(
             "[course] buoy live tracking: "
-            f"path={self.track_csv_path}, interval={max(self.track_interval_s, 0.0):.3f}s"
+            f"path={self.track_csv_path}, interval={max(self.track_interval_s, 0.0):.3f}s, "
+            f"update_hz={'physics' if update_hz <= 0.0 else f'{update_hz:.1f}'}"
         )
+
+    @staticmethod
+    def _update_period_s(env_float: Callable[[str, float], float]) -> float:
+        update_hz = float(env_float("UUV_COURSE_BUOY_UPDATE_HZ", 0.0))
+        if update_hz <= 0.0:
+            return 0.0
+        return 1.0 / max(1.0, min(500.0, update_hz))
+
+    def _update_due(self) -> bool:
+        period_s = float(self.update_period_s)
+        if period_s <= 0.0:
+            return True
+        now_s = float(getattr(self.data, "time", 0.0))
+        if self._next_update_time_s < 0.0:
+            self._next_update_time_s = now_s
+        if now_s + 1.0e-9 < self._next_update_time_s:
+            return False
+        self._next_update_time_s = now_s + period_s
+        return True
 
     @staticmethod
     def _track_csv_path(enabled: bool) -> Path | None:
@@ -390,7 +444,7 @@ class CourseBuoyRuntime:
         if velocity_z < min_velocity_z:
             self.data.qvel[buoy.free_dofadr + 2] = min_velocity_z
 
-    def _apply_surface_float_guard(self, buoy: CourseBuoy) -> None:
+    def _apply_surface_float_guard(self, buoy: CourseBuoy, *, vehicle_contact: bool) -> None:
         """Keep released floats on the waterline without locking horizontal motion."""
 
         if not buoy.detached or buoy.free_qposadr < 0 or buoy.free_dofadr < 0:
@@ -401,18 +455,24 @@ class CourseBuoyRuntime:
         if center_z < target_z - self.surface_capture_band_m:
             buoy.surface_on_waterline = False
             return
-        if self._has_vehicle_contact(buoy):
+        if vehicle_contact or self._recent_vehicle_contact(buoy):
             return
 
         if not buoy.surface_on_waterline:
             buoy.surface_on_waterline = True
 
         velocity_z = float(self.data.qvel[buoy.free_dofadr + 2])
-        emergency_floor_z = target_z - 0.030
-        if center_z < emergency_floor_z and velocity_z < 0.0:
+        waterline_floor_z = target_z - 0.005
+        if center_z < waterline_floor_z and velocity_z < 0.0:
             self.data.qvel[buoy.free_dofadr + 2] = 0.0
-        if center_z < emergency_floor_z:
-            self.data.qpos[buoy.free_qposadr + 2] = emergency_floor_z
+        if center_z < waterline_floor_z:
+            self.data.qpos[buoy.free_qposadr + 2] = waterline_floor_z
+
+    def _recent_vehicle_contact(self, buoy: CourseBuoy) -> bool:
+        if buoy.last_vehicle_contact_time_s < 0.0 or self.vehicle_contact_grace_s <= 0.0:
+            return False
+        elapsed_s = float(getattr(self.data, "time", 0.0)) - buoy.last_vehicle_contact_time_s
+        return 0.0 <= elapsed_s <= self.vehicle_contact_grace_s
 
     def _has_vehicle_contact(self, buoy: CourseBuoy) -> bool:
         if not buoy.geom_ids or not self.vehicle_geom_ids:
@@ -438,16 +498,42 @@ class CourseBuoyRuntime:
         damping = self.magnet_damping_nspm * velocity if dt > 0.0 else 0.0
         magnet_force = -(self.magnet_stiffness_npm * displacement + damping)
         force_norm = float(np.linalg.norm(magnet_force))
-        if force_norm >= self.break_force_n:
-            self._detach(buoy, reason="spring", force_n=force_norm)
-            return wrench
+        if self.break_force_n > 0.0 and force_norm > self.break_force_n:
+            magnet_force *= self.break_force_n / force_norm
         wrench[0:3] = magnet_force
         return wrench
 
     def _release_if_break_force_exceeded(self, buoy: CourseBuoy) -> None:
         force_n, reason = self._release_force_sample(buoy)
-        if force_n >= self.break_force_n:
+        if force_n < self.break_force_n:
+            self._reset_contact_break_sample(buoy)
+            return
+        if reason == "contact" and not self._contact_break_sustained(buoy, force_n):
+            return
+        if reason == "contact":
+            force_n = max(force_n, float(buoy.contact_break_peak_n))
+        self._reset_contact_break_sample(buoy)
+        if not buoy.detached:
             self._detach(buoy, reason=reason, force_n=force_n)
+
+    def _contact_break_sustained(self, buoy: CourseBuoy, force_n: float) -> bool:
+        hold_s = max(0.0, float(self.contact_break_hold_s))
+        if hold_s <= 0.0:
+            return True
+        now_s = float(getattr(self.data, "time", 0.0))
+        if buoy.contact_break_start_time_s < 0.0:
+            buoy.contact_break_start_time_s = now_s
+            buoy.contact_break_peak_n = float(force_n)
+            return False
+        buoy.contact_break_peak_n = max(float(buoy.contact_break_peak_n), float(force_n))
+        if now_s - buoy.contact_break_start_time_s < hold_s:
+            return False
+        return True
+
+    @staticmethod
+    def _reset_contact_break_sample(buoy: CourseBuoy) -> None:
+        buoy.contact_break_start_time_s = -1.0
+        buoy.contact_break_peak_n = 0.0
 
     def _release_force_sample(self, buoy: CourseBuoy) -> tuple[float, str]:
         # Do not use equality/weld solver force here. It includes the magnet's
@@ -490,6 +576,8 @@ class CourseBuoyRuntime:
         buoy.surface_on_waterline = False
         if buoy.eq_id >= 0 and hasattr(self.data, "eq_active"):
             self.data.eq_active[buoy.eq_id] = 0
+        if buoy.flex_line_top_eq_id >= 0 and hasattr(self.data, "eq_active"):
+            self.data.eq_active[buoy.flex_line_top_eq_id] = 0
         self._limit_release_velocity(buoy)
         self._hide_surface_projection(buoy)
         self.log(f"[course] magnet detached: {buoy.name} reason={reason} force={force_n:.3f}N")

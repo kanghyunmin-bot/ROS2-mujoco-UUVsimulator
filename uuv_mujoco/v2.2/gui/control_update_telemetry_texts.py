@@ -28,12 +28,12 @@ def build_telemetry_texts(
         pose=_pose_text(px, py, pz),
         velocity=_velocity_text(vx, vy, vz, snap.velocity_source),
         imu=(
-            f"imu: roll={snap.roll_deg:+.1f}  pitch={snap.pitch_deg:+.1f}  yaw={snap.yaw_deg:+.1f}  "
-            f"gyro=({wx:+.2f}, {wy:+.2f}, {wz:+.2f})"
+            f"imu: roll={snap.roll_deg:+.2f}  pitch={snap.pitch_deg:+.2f}  yaw={snap.yaw_deg:+.2f}  "
+            f"gyro=({wx:+.3f}, {wy:+.3f}, {wz:+.3f})"
         ),
         motion_summary=_motion_summary(vx, vy, vz, snap),
         autopilot=autopilot_text(snap, rc_mapping_summary, vehicle_info_supported),
-        depth_target=f"depth: {snap.depth_m:.2f} m" if math.isfinite(snap.depth_m) else "depth: n/a",
+        depth_target=f"depth: {snap.depth_m:.3f} m" if math.isfinite(snap.depth_m) else "depth: n/a",
         depth_source=f"depth source: {snap.depth_source}",
         age=age_text(snap),
         ping360_summary=f"{snap.ping360_summary}  age={format_age(snap.ping360_age_s)}",
@@ -41,7 +41,7 @@ def build_telemetry_texts(
 
 
 def _vehicle_summary(snap, mode_display: str) -> str:
-    depth_summary = f"{snap.depth_m:.2f} m" if math.isfinite(snap.depth_m) else "n/a"
+    depth_summary = f"{snap.depth_m:.3f} m" if math.isfinite(snap.depth_m) else "n/a"
     vehicle_state = "connected" if snap.connected else "disconnected"
     arm_state = "armed" if snap.armed else "disarmed"
     return f"{vehicle_state} | {arm_state} | {mode_display} | depth {depth_summary}"
@@ -61,12 +61,12 @@ def _pose_text(px: float, py: float, pz: float) -> str:
 def _velocity_text(vx: float, vy: float, vz: float, source: str) -> str:
     if not math.isfinite(vx):
         return f"velocity: n/a  src={source}"
-    return f"velocity: x={vx:+.2f}  y={vy:+.2f}  z={vz:+.2f}  src={source}"
+    return f"velocity: x={vx:+.4f}  y={vy:+.4f}  z={vz:+.4f}  src={source}"
 
 
 def _motion_summary(vx: float, vy: float, vz: float, snap) -> str:
-    vel_summary = f"vel ({vx:+.2f}, {vy:+.2f}, {vz:+.2f}) m/s" if math.isfinite(vx) else "vel n/a"
-    return f"{vel_summary} | rpy ({snap.roll_deg:+.1f}, {snap.pitch_deg:+.1f}, {snap.yaw_deg:+.1f})"
+    vel_summary = f"vel ({vx:+.4f}, {vy:+.4f}, {vz:+.4f}) m/s" if math.isfinite(vx) else "vel n/a"
+    return f"{vel_summary} | rpy ({snap.roll_deg:+.2f}, {snap.pitch_deg:+.2f}, {snap.yaw_deg:+.2f})"
 
 
 __all__ = ["build_telemetry_texts"]

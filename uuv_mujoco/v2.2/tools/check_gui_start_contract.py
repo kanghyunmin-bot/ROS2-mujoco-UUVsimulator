@@ -25,6 +25,7 @@ from gui.sim_stack_launch_target import resolve_sim_stack_launch_target, sim_sta
 from gui.process_env import default_sim_stack_backend  # noqa: E402
 from gui.sim_stack_start_process import StartedSimStackProcess  # noqa: E402
 from gui.sim_stack_viewer_args import apply_viewer_args  # noqa: E402
+from sim.runtime.simulation_loop_cadence import build_viewer_loop_cadence  # noqa: E402
 
 
 def _assert_equal(actual: object, expected: object, label: str) -> None:
@@ -47,7 +48,7 @@ def check_default_gui_start_env() -> None:
     _assert_key(env, "ROS2_UUV_SITL_AUTO_READY_MODE", "MANUAL")
     _assert_key(env, "ROS2_UUV_MAVROS_FORWARD_ARM_MODE", "1")
     _assert_key(env, "ROS2_UUV_MAVROS_RC_OVERRIDE_LOCAL_FALLBACK", "0")
-    _assert_key(env, "ROS2_UUV_MAVROS_RC_OVERRIDE_BACKEND", "rc_channels_override")
+    _assert_key(env, "ROS2_UUV_MAVROS_RC_OVERRIDE_BACKEND", "rc_override")
     _assert_key(env, "UUV_GUI_PILOT_CONTROL_MODE", "rc_override")
     _assert_key(env, "ROS2_UUV_MAVROS_RC_PWM_SPAN", "300")
     _assert_key(env, "UUV_GUI_RC_PWM_SPAN", "300")
@@ -58,13 +59,23 @@ def check_default_gui_start_env() -> None:
     _assert_key(env, "SITL_DEDICATED_COMMAND_MAVLINK", "0")
     _assert_key(env, "ROS2_UUV_COMMAND_LINK_TELEMETRY", "0")
     _assert_key(env, "ROS2_UUV_SITL_COMMAND_MAVLINK_ENDPOINT", "same")
-    _assert_key(env, "ROS2_UUV_SPIN_HZ", "400")
-    _assert_key(env, "ROS2_UUV_SITL_MAVLINK_POLL_HZ", "200")
-    _assert_key(env, "ROS2_UUV_SITL_COMMAND_POLL_HZ", "400")
+    _assert_key(env, "UUV_RUNTIME_PROFILE", "low")
+    _assert_key(env, "ROS2_UUV_SPIN_HZ", "80")
+    _assert_key(env, "ROS2_UUV_SITL_MAVLINK_POLL_HZ", "30")
+    _assert_key(env, "ROS2_UUV_SITL_COMMAND_POLL_HZ", "80")
     _assert_key(env, "SITL_SCHED_LOOP_RATE", "400")
-    _assert_key(env, "UUV_ROS2_SENSOR_HZ", "60")
-    _assert_key(env, "UUV_THRUSTER_LOOP_HZ", "80")
-    _assert_key(env, "UUV_MUJOCO_VIEWER_FPS", "30")
+    _assert_key(env, "UUV_ROS2_SENSOR_HZ", "10")
+    _assert_key(env, "UUV_THRUSTER_LOOP_HZ", "20")
+    _assert_key(env, "UUV_MUJOCO_TIMESTEP", "0.005")
+    _assert_key(env, "UUV_COURSE_BUOY_UPDATE_HZ", "30")
+    _assert_key(env, "UUV_COURSE_BUOY_TRACK_CSV_ENABLE", "0")
+    _assert_key(env, "UUV_MUJOCO_VIEWER_FPS", "20")
+    _assert_key(env, "UUV_MUJOCO_CATCHUP_WINDOW_S", "0.075")
+    _assert_key(env, "UUV_MUJOCO_SENSOR_CATCHUP_WINDOW_S", "0.150")
+    _assert_key(env, "UUV_MUJOCO_MAX_STEP_LAG_S", "0.075")
+    _assert_key(env, "UUV_MUJOCO_MAX_SENSOR_LAG_S", "0.150")
+    _assert_key(env, "UUV_MUJOCO_MAX_SLEEP_S", "0.006")
+    _assert_key(env, "UUV_MUJOCO_DROP_EXCESS_STEP_LAG", "1")
     if "UUV_GUI_HOLD_INITIAL_DEPTH_UNTIL_RELEASE" in env:
         raise AssertionError("default GUI Start must not inject initial-depth hold")
 
@@ -74,24 +85,38 @@ def check_native_gui_start_env() -> None:
     _assert_key(env, "UUV_RUN_MODE", "closed_loop")
     _assert_key(env, "UUV_EKF_CONTRACT", "althold_baro")
     _assert_key(env, "SITL_EKF3_EXTNAV", "0")
-    _assert_key(env, "SITL_DIRECT_MAVLINK", "1")
+    _assert_key(env, "SITL_DIRECT_MAVLINK", "0")
     _assert_key(env, "SITL_QGC_OUTPUT_ENABLE", "1")
-    _assert_key(env, "SITL_QGC_DIRECT_SERIAL_ENABLE", "1")
+    _assert_key(env, "SITL_QGC_DIRECT_SERIAL_ENABLE", "0")
     _assert_key(env, "SITL_SERIAL0_UDPCLIENT", "0")
     _assert_key(env, "SITL_DEDICATED_COMMAND_MAVLINK", "1")
     _assert_key(env, "SITL_NO_EXTRA_PORTS", "1")
     _assert_key(env, "SITL_PARAM_COMPAT_FILTER", "1")
     _assert_key(env, "SITL_USE_REAL_PARAM_FILE", "0")
     _assert_key(env, "SITL_WIPE_EEPROM", "1")
+    _assert_key(env, "ROS2_UUV_SITL_JSON_SERVO_FALLBACK", "1")
+    _assert_key(env, "ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE", "0")
     _assert_key(env, "ROS2_UUV_SITL_COMMAND_MAVLINK_ENDPOINT", "udpin:0.0.0.0:14661")
-    _assert_key(env, "ROS2_UUV_SPIN_HZ", "400")
-    _assert_key(env, "ROS2_UUV_SITL_MAVLINK_POLL_HZ", "200")
-    _assert_key(env, "ROS2_UUV_SITL_COMMAND_POLL_HZ", "400")
+    _assert_key(env, "UUV_RUNTIME_PROFILE", "low")
+    _assert_key(env, "ROS2_UUV_SPIN_HZ", "80")
+    _assert_key(env, "ROS2_UUV_SITL_MAVLINK_POLL_HZ", "30")
+    _assert_key(env, "ROS2_UUV_SITL_COMMAND_POLL_HZ", "80")
     _assert_key(env, "SITL_SCHED_LOOP_RATE", "400")
-    _assert_key(env, "UUV_ROS2_SENSOR_HZ", "60")
-    _assert_key(env, "UUV_THRUSTER_LOOP_HZ", "80")
-    _assert_key(env, "UUV_MUJOCO_VIEWER_FPS", "30")
-    expected_ardupilot = str(SIM_STACK_DIR.resolve().parents[1] / "ardupilot_sub_stable")
+    _assert_key(env, "UUV_ROS2_SENSOR_HZ", "10")
+    _assert_key(env, "UUV_THRUSTER_LOOP_HZ", "20")
+    _assert_key(env, "UUV_MUJOCO_TIMESTEP", "0.005")
+    _assert_key(env, "UUV_COURSE_BUOY_UPDATE_HZ", "30")
+    _assert_key(env, "UUV_COURSE_BUOY_TRACK_CSV_ENABLE", "0")
+    _assert_key(env, "UUV_MUJOCO_VIEWER_FPS", "20")
+    _assert_key(env, "UUV_MUJOCO_CATCHUP_WINDOW_S", "0.075")
+    _assert_key(env, "UUV_MUJOCO_SENSOR_CATCHUP_WINDOW_S", "0.150")
+    _assert_key(env, "UUV_MUJOCO_MAX_STEP_LAG_S", "0.075")
+    _assert_key(env, "UUV_MUJOCO_MAX_SENSOR_LAG_S", "0.150")
+    _assert_key(env, "UUV_MUJOCO_MAX_SLEEP_S", "0.006")
+    _assert_key(env, "UUV_MUJOCO_DROP_EXCESS_STEP_LAG", "1")
+    workspace = SIM_STACK_DIR.resolve().parents[1]
+    stable_ardupilot = workspace / "ardupilot_sub_stable"
+    expected_ardupilot = str(stable_ardupilot if stable_ardupilot.exists() else workspace / "ardupilot")
     _assert_key(env, "ARDUPILOT_DIR", expected_ardupilot)
 
 
@@ -102,10 +127,14 @@ def check_gui_default_backend_is_native() -> None:
 def check_launcher_mavlink_source_matches_gcs() -> None:
     launch_script = SIM_STACK_DIR / "launch_uuv_sim.sh"
     text = launch_script.read_text(encoding="utf-8")
-    if 'SITL_MAVLINK_SOURCE_SYSID="${SITL_MAVLINK_SOURCE_SYSID:-254}"' not in text:
-        raise AssertionError("launcher MAVLink source sysid must be bridge-owned by default")
-    if 'SITL_MAVLINK_SOURCE_COMPID="${SITL_MAVLINK_SOURCE_COMPID:-240}"' not in text:
-        raise AssertionError("launcher MAVLink source compid must be bridge-owned by default")
+    if 'SITL_MAVLINK_SOURCE_SYSID="${SITL_MAVLINK_SOURCE_SYSID:-255}"' not in text:
+        raise AssertionError("launcher MAVLink source sysid must match ArduSub GCS authority by default")
+    if 'SITL_MAVLINK_SOURCE_COMPID="${SITL_MAVLINK_SOURCE_COMPID:-190}"' not in text:
+        raise AssertionError("launcher MAVLink source compid must use MAV_COMP_ID_MISSIONPLANNER by default")
+    if 'elif [[ "${SITL_DIRECT_MAVLINK:-0}" == "1" ]]' not in text:
+        raise AssertionError("native/direct closed-loop must use a dedicated plant input branch")
+    if "closed_loop/native-direct: MAVLink SERVO_OUTPUT_RAW is authoritative plant input" not in text:
+        raise AssertionError("native/direct closed-loop must use MAVLink SERVO_OUTPUT_RAW as plant input")
     if "SITL_MAVLINK_TARGET_COMPID=1" not in text:
         raise AssertionError("launcher MAVLink target compid must address ArduSub autopilot component 1 for arm/mode commands")
     if "append_extra_arg_if_missing \"--sitl-mavlink-source-sysid\"" not in text:
@@ -116,15 +145,31 @@ def check_ardusub_rc_override_heave_trim() -> None:
     start_script = SIM_STACK_DIR / "start_ardusub_sitl_mj311.sh"
     text = start_script.read_text(encoding="utf-8")
     docker_text = (SIM_STACK_DIR / "start_docker_sitl_mujoco_mj311.sh").read_text(encoding="utf-8")
-    expected_gcs = 'append_param_if_not_overridden "SYSID_MYGCS" "${SITL_SYSID_MYGCS:-${SITL_MAVLINK_SOURCE_SYSID:-254}}"'
+    expected_gcs = 'append_param_if_not_overridden "MAV_GCS_SYSID" "$SITL_GCS_SYSID"'
     if expected_gcs not in text:
-        raise AssertionError("Docker/QGC startup must bind ArduSub pilot authority to bridge sysid by default")
-    expected = 'append_param_if_not_overridden "RC3_TRIM" "${SITL_RC3_TRIM:-1100}"'
+        raise AssertionError("startup must bind ArduSub 4.8 pilot authority to bridge sysid by default")
+    expected_gcs_legacy = 'append_param_if_not_overridden "SYSID_MYGCS" "$SITL_GCS_SYSID"'
+    if expected_gcs_legacy not in text:
+        raise AssertionError("startup must keep ArduSub 4.1 pilot authority compatibility")
+    expected = 'append_param_if_not_overridden "RC3_TRIM" "${SITL_RC3_TRIM:-1500}"'
     if expected not in text:
-        raise AssertionError("Docker/QGC RC override heave requires default RC3_TRIM=1100 for neutral 1500 PWM")
+        raise AssertionError("GUI/QGC MANUAL heave requires default RC3_TRIM=1500 for neutral 1500 PWM")
+    expected = 'append_param_if_not_overridden "FRAME_CONFIG" "${SITL_FRAME_CONFIG:-2}"'
+    if expected not in text:
+        raise AssertionError("GUI/QGC forward RC requires the 8-thruster 6DOF frame by default with a SITL_FRAME_CONFIG override for diagnostics")
+    for expected_rcmap in (
+        'append_param_if_not_overridden "RCMAP_ROLL" "2"',
+        'append_param_if_not_overridden "RCMAP_PITCH" "1"',
+        'append_param_if_not_overridden "RCMAP_THROTTLE" "3"',
+        'append_param_if_not_overridden "RCMAP_YAW" "4"',
+        'append_param_if_not_overridden "RCMAP_FORWARD" "5"',
+        'append_param_if_not_overridden "RCMAP_LATERAL" "6"',
+    ):
+        if expected_rcmap not in text:
+            raise AssertionError("GUI/QGC RC override must force ArduSub Sub channel mapping")
     if "sitl_real_params_filtered_" not in text or "filtered sim-forced duplicate params" not in text:
         raise AssertionError("Docker/QGC startup must filter real-param keys that SITL forcibly overrides")
-    if "RC3_TRIM|RC4_DZ|RC5_DZ|RC6_DZ|THR_DZ|JS_GAIN_DEFAULT|JS_GAIN_MIN|JS_GAIN_MAX|JS_GAIN_STEPS|JS_THR_GAIN" not in text:
+    if "FRAME_CONFIG|RCMAP_ROLL|RCMAP_PITCH|RCMAP_THROTTLE|RCMAP_YAW|RCMAP_FORWARD|RCMAP_LATERAL|RC1_DZ|RC2_DZ|RC3_DZ|RC3_MIN|RC3_MAX|RC3_TRIM|RC4_DZ|RC5_DZ|RC6_DZ|THR_DZ|JS_GAIN_DEFAULT|JS_GAIN_MIN|JS_GAIN_MAX|JS_GAIN_STEPS|JS_THR_GAIN" not in text:
         raise AssertionError("Docker/QGC pilot-input params must override the real-robot replay dump")
     expected = 'append_param_if_not_overridden "JS_GAIN_DEFAULT" "${SITL_JS_GAIN_DEFAULT:-0.5}"'
     if expected not in text:
@@ -147,6 +192,9 @@ def check_ardusub_rc_override_heave_trim() -> None:
     expected = 'append_param_if_not_overridden "BRD_SAFETYENABLE" "${SITL_BRD_SAFETYENABLE:-0}"'
     if expected not in text:
         raise AssertionError("Docker/QGC arm path must force the SITL safety switch off")
+    expected = 'append_param_if_not_overridden "MOT_FV_CPLNG_K" "${SITL_MOT_FV_CPLNG_K:-0.0}"'
+    if expected not in text:
+        raise AssertionError("GUI/QGC MANUAL forward RC must not be clamped by forward/vertical coupling by default")
     expected = 'export SITL_DIRECT_MAVLINK="${SITL_DIRECT_MAVLINK:-0}"'
     if expected not in docker_text:
         raise AssertionError("Docker/QGC must use dist-compatible MAVProxy fan-out by default")
@@ -236,6 +284,42 @@ def check_dedicated_command_link_opt_in() -> None:
     _assert_key(env, "ROS2_UUV_SITL_COMMAND_MAVLINK_ENDPOINT", "udpin:0.0.0.0:14661")
 
 
+def check_wayland_viewer_prefers_xwayland() -> None:
+    env = build_gui_sim_stack_env(
+        {
+            "DISPLAY": ":0",
+            "WAYLAND_DISPLAY": "wayland-0",
+            "XDG_SESSION_TYPE": "wayland",
+        },
+        backend="docker",
+        sim_stack_dir=SIM_STACK_DIR,
+    )
+    _assert_key(env, "DISPLAY", ":0")
+    if "WAYLAND_DISPLAY" in env:
+        raise AssertionError("GUI MuJoCo viewer must force XWayland by dropping WAYLAND_DISPLAY")
+    _assert_key(env, "GLFW_PLATFORM", "x11")
+    _assert_key(env, "QT_QPA_PLATFORM", "xcb")
+    _assert_key(env, "GDK_BACKEND", "x11")
+    _assert_key(env, "SDL_VIDEODRIVER", "x11")
+    if not env.get("PYGLFW_LIBRARY"):
+        raise AssertionError("GUI MuJoCo viewer must prefer the system X11 GLFW library on Wayland sessions")
+
+
+def check_wayland_viewer_native_opt_out() -> None:
+    env = build_gui_sim_stack_env(
+        {
+            "DISPLAY": ":0",
+            "WAYLAND_DISPLAY": "wayland-0",
+            "UUV_GUI_MUJOCO_XWAYLAND": "0",
+        },
+        backend="docker",
+        sim_stack_dir=SIM_STACK_DIR,
+    )
+    _assert_key(env, "WAYLAND_DISPLAY", "wayland-0")
+    if env.get("GLFW_PLATFORM") == "x11":
+        raise AssertionError("UUV_GUI_MUJOCO_XWAYLAND=0 must not force GLFW_PLATFORM=x11")
+
+
 def check_default_initial_depth_args() -> None:
     initial_depth = build_initial_depth_args({}, launch_extra_args=())
     _assert_equal(initial_depth.args, ("--initial-bar30-depth-m", "auto"), "default initial-depth args")
@@ -247,9 +331,33 @@ def check_default_initial_depth_args() -> None:
 def check_default_qgc_video_args() -> None:
     args: list[str] = []
     events: list[str] = []
-    apply_viewer_args(args, events, {}, platform_name="darwin")
+    apply_viewer_args(args, events, {"DISPLAY": ":0"}, platform_name="linux")
+    if "--headless" in args:
+        raise AssertionError("GUI Start must show the MuJoCo viewer by default when a display is available")
+    if not any("GLFW viewer enabled" in event for event in events):
+        raise AssertionError("GUI Start must report the default MuJoCo viewer")
     if "--no-qgc-video" not in args:
         raise AssertionError("GUI Start must keep QGC video off by default")
+
+    args = []
+    events = []
+    apply_viewer_args(args, events, {}, platform_name="linux")
+    if "--headless" not in args:
+        raise AssertionError("GUI Start must fall back to headless MuJoCo when no display is available")
+
+    args = []
+    events = []
+    apply_viewer_args(args, events, {"DISPLAY": ":0", "UUV_GUI_MUJOCO_VIEWER": "0"}, platform_name="linux")
+    if "--headless" not in args:
+        raise AssertionError("UUV_GUI_MUJOCO_VIEWER=0 must force headless MuJoCo")
+
+    args = []
+    events = []
+    apply_viewer_args(args, events, {"UUV_GUI_MUJOCO_VIEWER": "1"}, platform_name="linux")
+    if "--headless" in args:
+        raise AssertionError("UUV_GUI_MUJOCO_VIEWER=1 must keep explicit GLFW viewer opt-in")
+    if not any("GLFW viewer enabled" in event for event in events):
+        raise AssertionError("UUV_GUI_MUJOCO_VIEWER=1 must report the viewer opt-in")
 
     args = []
     events = []
@@ -262,6 +370,16 @@ def check_default_qgc_video_args() -> None:
     apply_viewer_args(args, events, {"UUV_GUI_QGC_VIDEO": "0"}, platform_name="darwin")
     if "--no-qgc-video" not in args:
         raise AssertionError("UUV_GUI_QGC_VIDEO=0 must keep the explicit video-off opt-out")
+
+
+def check_sim_loop_catchup_not_tied_to_frame_time() -> None:
+    cadence = build_viewer_loop_cadence(timestep=0.002, ros2_sensor_hz=60.0, viewer_fps=30.0)
+    if cadence.max_step_lag_s < 0.200:
+        raise AssertionError("simulation loop must tolerate more than a few dropped render frames before losing physics time")
+    if cadence.max_catchup_steps < 100:
+        raise AssertionError("simulation loop must catch up at least 200ms of 2ms physics steps by default")
+    if cadence.max_sleep_s > 0.001:
+        raise AssertionError("simulation loop sleep quantum must stay small for low-latency catch-up")
 
 
 def check_launch_targets_exist() -> None:
@@ -326,7 +444,7 @@ class _LaunchOwner:
         return str(raw).lower() in {"1", "true", "yes", "on", "enable", "enabled"}
 
     def _arg_present(self, args: list[str], needle: str) -> bool:
-        return needle in args
+        return any(arg == needle or arg.startswith(f"{needle}=") for arg in args)
 
     def _normalized_sim_extra_args(self, extra_args: list[str] | None) -> list[str]:
         return list(extra_args or [])
@@ -428,6 +546,19 @@ def check_gui_start_uses_dist_like_transport_default() -> None:
     )
     if "--sitl-no-rebuild" not in native_cmd:
         raise AssertionError("native GUI Start must skip rebuild and use the existing stable ArduSub binary")
+    if "--ros2-images" not in native_cmd:
+        raise AssertionError("native GUI Start must enable ROS2 stereo camera image topics")
+    _assert_equal(
+        native_cmd[native_cmd.index("--ros2-image-width") + 1],
+        "640",
+        "default stereo image width",
+    )
+    _assert_equal(
+        native_cmd[native_cmd.index("--ros2-image-height") + 1],
+        "360",
+        "default stereo image height",
+    )
+    _assert_equal(native_cmd[native_cmd.index("--ros2-image-hz") + 1], "4", "default stereo image Hz")
     if "--direct-mavlink" in native_cmd:
         raise AssertionError("native GUI Start must get direct MAVLink from env, not duplicate wrapper args")
 
@@ -448,6 +579,62 @@ def check_gui_start_uses_dist_like_transport_default() -> None:
     )
     if "--direct-mavlink" not in opt_in:
         raise AssertionError("explicit UUV_GUI_SITL_DIRECT_MAVLINK=1 must still opt into direct MAVLink")
+
+    disabled = build_sim_stack_launch_command(
+        _LaunchOwner({"UUV_GUI_STEREO_CAMERA_ENABLE": "0"}),
+        start_script=SIM_STACK_DIR / "start_sitl_mujoco_mj311.sh",
+        backend="native",
+        extra_args=[],
+    )
+    if "--ros2-images" in disabled:
+        raise AssertionError("UUV_GUI_STEREO_CAMERA_ENABLE=0 must disable default stereo image topics")
+
+    env_size = build_sim_stack_launch_command(
+        _LaunchOwner(
+            {
+                "UUV_GUI_CAMERA_WIDTH": "800",
+                "UUV_GUI_CAMERA_HEIGHT": "450",
+                "UUV_GUI_CAMERA_HZ": "3",
+            }
+        ),
+        start_script=SIM_STACK_DIR / "start_sitl_mujoco_mj311.sh",
+        backend="native",
+        extra_args=[],
+    )
+    _assert_equal(env_size[env_size.index("--ros2-image-width") + 1], "800", "env stereo image width")
+    _assert_equal(env_size[env_size.index("--ros2-image-height") + 1], "450", "env stereo image height")
+    _assert_equal(env_size[env_size.index("--ros2-image-hz") + 1], "3", "env stereo image Hz")
+
+    selected_owner = _LaunchOwner()
+    selected_owner._camera_config = {"preset_id": "hd720_fast"}
+    selected_size = build_sim_stack_launch_command(
+        selected_owner,
+        start_script=SIM_STACK_DIR / "start_sitl_mujoco_mj311.sh",
+        backend="native",
+        extra_args=[],
+    )
+    _assert_equal(selected_size[selected_size.index("--ros2-image-width") + 1], "1280", "GUI stereo image width")
+    _assert_equal(selected_size[selected_size.index("--ros2-image-height") + 1], "720", "GUI stereo image height")
+    _assert_equal(selected_size[selected_size.index("--ros2-image-hz") + 1], "10", "GUI stereo image Hz")
+
+    explicit_size = build_sim_stack_launch_command(
+        _LaunchOwner(),
+        start_script=SIM_STACK_DIR / "start_sitl_mujoco_mj311.sh",
+        backend="native",
+        extra_args=["--ros2-image-width=640", "--ros2-image-height", "360", "--ros2-image-hz", "12"],
+    )
+    if "--ros2-image-width" in explicit_size:
+        raise AssertionError("explicit --ros2-image-width must not be duplicated")
+    _assert_equal(
+        explicit_size[explicit_size.index("--ros2-image-height") + 1],
+        "360",
+        "explicit stereo image height",
+    )
+    _assert_equal(
+        explicit_size[explicit_size.index("--ros2-image-hz") + 1],
+        "12",
+        "explicit stereo image Hz",
+    )
 
 
 def check_docker_reset_stops_docker_first() -> None:
@@ -588,8 +775,11 @@ def main() -> int:
     check_qgc_default_sim_profile_contract()
     check_command_link_same_opt_out()
     check_dedicated_command_link_opt_in()
+    check_wayland_viewer_prefers_xwayland()
+    check_wayland_viewer_native_opt_out()
     check_default_initial_depth_args()
     check_default_qgc_video_args()
+    check_sim_loop_catchup_not_tied_to_frame_time()
     check_launch_targets_exist()
     check_external_stack_blocks_command_ready()
     check_gui_start_uses_dist_like_transport_default()

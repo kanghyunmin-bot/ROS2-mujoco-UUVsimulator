@@ -6,7 +6,13 @@ from typing import Optional
 
 from .models import TelemetrySnapshot
 from .readiness_command_link import sitl_mavlink_command_alive
-from .readiness_feedback_gate import FRESH_FEEDBACK_MAX_AGE_S, feedback_gate_reason
+from .readiness_feedback_gate import (
+    FRESH_FEEDBACK_MAX_AGE_S,
+    depth_feedback_reason,
+    feedback_gate_reason,
+    imu_feedback_reason,
+    vehicle_state_feedback_reason,
+)
 
 
 def request_is_always_allowed(*, arm_value: Optional[bool], mode: str) -> bool:
@@ -28,10 +34,14 @@ def arm_mode_gate_reason(
     if request_is_always_allowed(arm_value=arm_value, mode=mode):
         return ""
 
-    feedback_reason = feedback_gate_reason(snap)
+    command_alive = sitl_mavlink_command_alive(backend, snap)
+    vehicle_reason = vehicle_state_feedback_reason(snap)
+    if vehicle_reason and not command_alive:
+        return vehicle_reason
+    feedback_reason = depth_feedback_reason(snap) or imu_feedback_reason(snap)
     if feedback_reason:
         return feedback_reason
-    if not sitl_mavlink_command_alive(backend, snap):
+    if not command_alive:
         return "waiting for SITL MAVLink command link"
     if settle_left_s > 0.0:
         return f"waiting EKF/ExternalNav settle ({settle_left_s:.1f}s left)"

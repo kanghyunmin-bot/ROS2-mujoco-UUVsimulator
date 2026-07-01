@@ -5,6 +5,10 @@ from __future__ import annotations
 
 def send_pending_arm_to_any_link(self, target_arm: bool) -> bool:
     sent_any = False
+    send_initial_neutral = bool(target_arm) and not bool(
+        getattr(self, "_sitl_pending_arm_neutral_sent", False)
+    )
+    neutral_sent = False
     for mav in self._mavs_for_arm_mode_commands():
         target = self._resolve_mav_target(mav)
         if target is None:
@@ -15,8 +19,9 @@ def send_pending_arm_to_any_link(self, target_arm: bool) -> bool:
         # reliably changing HEARTBEAT armed state. Use ArduPilot's force
         # magic in both directions so GUI/QGC smoke commands are deterministic.
         sent = self._send_arm_disarm_mavlink(mav, target_sys, target_comp, target_arm, force=True)
-        if target_arm:
+        if send_initial_neutral:
             send_arm_neutral_rc(self, mav, target_sys, target_comp)
+            neutral_sent = True
         sent_any = bool(sent) or sent_any
         if self._sitl_cmd_debug and not sent:
             print(
@@ -24,6 +29,8 @@ def send_pending_arm_to_any_link(self, target_arm: bool) -> bool:
                 f"armed={bool(target_arm)}",
                 flush=True,
             )
+    if neutral_sent:
+        self._sitl_pending_arm_neutral_sent = True
     return sent_any
 
 

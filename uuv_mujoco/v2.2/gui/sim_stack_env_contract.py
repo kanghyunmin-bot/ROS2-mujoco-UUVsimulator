@@ -7,6 +7,7 @@ from typing import Mapping
 
 from .sim_stack_env_defaults import (
     apply_command_endpoint_defaults,
+    apply_mujoco_viewer_display_defaults,
     apply_native_stable_defaults,
     profile_defaults,
 )
@@ -39,6 +40,7 @@ def build_gui_sim_stack_env(
         sim_stack_dir=sim_stack_dir,
     )
     apply_command_endpoint_defaults(env, backend=backend)
+    apply_mujoco_viewer_display_defaults(env, explicit_keys=explicit_keys)
     if str(backend).strip().lower() != "docker":
         apply_native_stable_defaults(env, sim_stack_dir=sim_stack_dir, explicit_keys=explicit_keys)
     return env

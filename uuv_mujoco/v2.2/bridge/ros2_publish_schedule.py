@@ -7,6 +7,7 @@ from .ros2_publish_schedule_dvl import schedule_dvl_ros_jobs, schedule_real_dvl_
 from .ros2_publish_schedule_mavros import schedule_mavros_ros_jobs
 from .ros2_publish_schedule_odometry import schedule_odometry_ros_jobs
 from .ros2_publish_schedule_ping360 import schedule_ping360_ros_jobs
+from .ros2_stereo_image import schedule_stereo_image_jobs
 
 
 def schedule_ros_publish_jobs(
@@ -23,6 +24,7 @@ def schedule_ros_publish_jobs(
 
     schedule_core_ros_jobs(self, jobs, add_rate_limited, builders=builders)
     schedule_ping360_ros_jobs(self, jobs, add_rate_limited, builders=builders)
+    schedule_stereo_image_jobs(self, jobs, add_rate_limited, builders=builders)
     schedule_dvl_ros_jobs(
         self,
         add_rate_limited,

@@ -15,6 +15,7 @@ from .ros2_bridge_config import (
     configure_mavros_state_and_rates,
     configure_pressure_vertical_contract,
 )
+from .ros2_stereo_image import configure_stereo_image_runtime
 from .sitl_env import env_to_float, env_to_int
 
 
@@ -37,10 +38,17 @@ def configure_bridge_runtime_state(
 ) -> None:
     """Initialize constructor state that is independent from ROS message types."""
 
-    bridge._legacy_image_request = bool(publish_images)
-    del image_width, image_height, image_hz, camera_calib_left, camera_calib_right
-
+    bridge._legacy_image_request = False
     bridge.model = model
+    configure_stereo_image_runtime(
+        bridge,
+        publish_images=publish_images,
+        image_width=image_width,
+        image_height=image_height,
+        image_hz=image_hz,
+    )
+    del camera_calib_left, camera_calib_right
+
     bridge.command_callback = command_callback
     bridge.cmd_limit = float(cmd_limit)
     bridge.sensor_dt = 1.0 / max(float(sensor_hz), 1e-6)
@@ -91,6 +99,19 @@ def configure_command_runtime_state(bridge: Any) -> None:
     )
     bridge._ros_spin_stop = threading.Event()
     bridge._ros_spin_thread: threading.Thread | None = None
+    bridge._sitl_poll_thread_enabled = bool(
+        env_to_int("ROS2_UUV_DEDICATED_SITL_POLL_THREAD", 1)
+    )
+    default_sitl_poll_hz = env_to_float(
+        "ROS2_UUV_SITL_MAVLINK_POLL_HZ",
+        100.0,
+    )
+    bridge._sitl_poll_thread_hz = float(
+        np.clip(env_to_float("ROS2_UUV_SITL_POLL_THREAD_HZ", default_sitl_poll_hz), 5.0, 200.0)
+    )
+    bridge._sitl_poll_stop = threading.Event()
+    bridge._sitl_poll_thread: threading.Thread | None = None
+    bridge._sitl_poll_error_reported = False
 
 
 def configure_bridge_contracts(bridge: Any) -> None:

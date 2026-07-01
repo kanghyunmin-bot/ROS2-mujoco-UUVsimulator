@@ -8,8 +8,8 @@ from .runtime import Node
 
 
 class UuvGuiNode(Node):
-    def __init__(self, namespace: str, backend: str):
-        super().__init__("uuv_control_gui")
+    def __init__(self, namespace: str, backend: str, node_name: str = "uuv_control_gui"):
+        super().__init__(node_name or "uuv_control_gui")
         initialize_uuv_gui_node(self, namespace, backend)
 
     def _topic(self, suffix: str) -> str:

@@ -21,7 +21,37 @@ if [[ "$(basename "${UUV_MUJOCO_RUNTIME_DIR}")" == "v2.2" ]]; then
   echo "[gui-ubuntu] use ${UUV_MUJOCO_DIR}/current so freshness and launch contracts stay active" >&2
   exit 2
 fi
-GUI_ENTRY="${UUV_MUJOCO_RUNTIME_DIR:-${UUV_MUJOCO_DIR}/current}/gui/uuv_control_gui.py"
+GUI_FRONTEND="${UUV_GUI_FRONTEND:-tk}"
+GUI_ARGS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --web)
+      GUI_FRONTEND="web"
+      shift
+      ;;
+    --tk|--desktop)
+      GUI_FRONTEND="tk"
+      shift
+      ;;
+    *)
+      GUI_ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+
+case "${GUI_FRONTEND}" in
+  web)
+    GUI_ENTRY="${UUV_MUJOCO_RUNTIME_DIR:-${UUV_MUJOCO_DIR}/current}/gui/web_control_gui.py"
+    ;;
+  tk|desktop|"")
+    GUI_ENTRY="${UUV_MUJOCO_RUNTIME_DIR:-${UUV_MUJOCO_DIR}/current}/gui/uuv_control_gui.py"
+    ;;
+  *)
+    echo "[gui-ubuntu] unknown UUV_GUI_FRONTEND=${GUI_FRONTEND}; expected tk or web" >&2
+    exit 2
+    ;;
+esac
 
 source_ros_setup_safely() {
   local setup_file="$1"
@@ -51,6 +81,20 @@ else
   echo "[gui-ubuntu] Continuing with system ROS only; use the GUI Build pkg button or run colcon build when package topics are needed." >&2
 fi
 
+select_default_rmw() {
+  [[ -z "${RMW_IMPLEMENTATION:-}" ]] || return 0
+  local ros_prefix="${ROS_ENV_SETUP%/setup.bash}"
+  if [[ -f "${ros_prefix}/lib/librmw_fastrtps_cpp.so" ]]; then
+    export RMW_IMPLEMENTATION="rmw_fastrtps_cpp"
+  elif [[ -f "${ros_prefix}/lib/librmw_cyclonedds_cpp.so" ]]; then
+    export RMW_IMPLEMENTATION="rmw_cyclonedds_cpp"
+  else
+    export RMW_IMPLEMENTATION="rmw_fastrtps_cpp"
+  fi
+}
+
+select_default_rmw
+
 if [[ ! -f "${GUI_ENTRY}" ]]; then
   echo "[gui-ubuntu] GUI entry not found: ${GUI_ENTRY}" >&2
   echo "[gui-ubuntu] Active runtime must resolve through uuv_mujoco/current unless UUV_MUJOCO_RUNTIME_DIR is set explicitly." >&2
@@ -66,4 +110,4 @@ if [[ "${UUV_MUJOCO_SKIP_FRESHNESS_CHECK:-0}" != "1" ]]; then
     --warn-only
 fi
 
-exec "${PYTHON_BIN}" "${GUI_ENTRY}" "$@"
+exec "${PYTHON_BIN}" "${GUI_ENTRY}" "${GUI_ARGS[@]}"

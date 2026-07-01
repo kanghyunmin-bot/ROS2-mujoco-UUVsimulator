@@ -56,6 +56,37 @@ dist2/ubuntu22.04/out/latest/
 
 Upload the zip in `out/latest/` together with `SHA256SUMS`.
 
+## Package Installable Release Zip
+
+For the desktop-friendly release asset that installs a deb package and starts
+the web GUI, build the current installer bundle:
+
+```bash
+git submodule update --init rospkg/kmu26_auv
+./dist2/ubuntu22.04/package_current_installer.sh --version 2026.07.01-dist2
+```
+
+Output:
+
+```text
+dist2/ubuntu22.04/out/current-installer/
+  UUV_Sim_Install_and_Run_2026.07.01-dist2.zip
+  uuv-sim-current_2026.07.01-dist2_amd64.deb
+  uuv_sim_current_ubuntu22.04.zip
+```
+
+If you want to reuse the previous binary double-click launcher from an already
+published installer zip, pass it as a template:
+
+```bash
+./dist2/ubuntu22.04/package_current_installer.sh \
+  --version 2026.07.01-dist2 \
+  --template-zip ~/Downloads/UUV_Sim_Install_and_Run_2026.07.01-3.zip
+```
+
+Upload `UUV_Sim_Install_and_Run_<version>.zip` as the GitHub Release asset. Do
+not commit generated zip or deb files.
+
 ## Package Current Worktree
 
 Only use this for deliberate local test bundles. By default it refuses tracked

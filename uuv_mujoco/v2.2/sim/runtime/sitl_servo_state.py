@@ -29,7 +29,8 @@ class SitlServoRuntime(SitlServoRuntimeState):
         ))
 
     def on_packet(self, pwm_values: list[int]) -> None:
-        apply_servo_packet(self, pwm_values)
+        with self.lock:
+            apply_servo_packet(self, pwm_values)
 
     def mapping_label(self) -> str:
         return sitl_servo_mapping_label(self.raw_map, self.servo_signs)
@@ -45,12 +46,13 @@ class SitlServoRuntime(SitlServoRuntimeState):
 
         Returns true when the packet stream is stale and targets were cleared.
         """
-        return apply_servo_commands_to_targets(
-            self,
-            targets,
-            now_wall=now_wall,
-            timeout_s=timeout_s,
-        )
+        with self.lock:
+            return apply_servo_commands_to_targets(
+                self,
+                targets,
+                now_wall=now_wall,
+                timeout_s=timeout_s,
+            )
 
 
 __all__ = ["SitlServoRuntime"]

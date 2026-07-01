@@ -6,7 +6,7 @@ from .node_command_attempts import should_log_attempt
 
 
 def publish_mode_override_if_configured(self, mode: str, deadline: float, attempt: int) -> bool:
-    if self._arm_mode_command_path != "topic":
+    if self._arm_mode_command_path not in {"auto", "topic"}:
         return False
     if not self._publish_command_override({"mode": str(mode)}):
         return False

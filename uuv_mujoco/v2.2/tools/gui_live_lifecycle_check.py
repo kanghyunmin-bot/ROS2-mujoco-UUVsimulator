@@ -192,12 +192,29 @@ if [[ -n "${{ROS_INSTALL_SETUP:-}}" && -f "${{ROS_INSTALL_SETUP}}" ]]; then
 elif [[ -f "${{ROS_WORKSPACE_DIR:-$PWD/rospkg}}/install/setup.bash" ]]; then
   source_ros_setup_safely "${{ROS_WORKSPACE_DIR:-$PWD/rospkg}}/install/setup.bash"
 fi
-export RMW_IMPLEMENTATION="${{RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}}" ROS_LOCALHOST_ONLY="${{ROS_LOCALHOST_ONLY:-0}}" ROS_DISABLE_DAEMON="${{ROS_DISABLE_DAEMON:-1}}"
+if [[ -z "${{RMW_IMPLEMENTATION:-}}" ]]; then
+  if [[ -f "/opt/ros/${{ROS_DISTRO:-humble}}/lib/librmw_fastrtps_cpp.so" ]]; then
+    export RMW_IMPLEMENTATION="rmw_fastrtps_cpp"
+  elif [[ -f "/opt/ros/${{ROS_DISTRO:-humble}}/lib/librmw_cyclonedds_cpp.so" ]]; then
+    export RMW_IMPLEMENTATION="rmw_cyclonedds_cpp"
+  else
+    export RMW_IMPLEMENTATION="rmw_fastrtps_cpp"
+  fi
+fi
+export ROS_LOCALHOST_ONLY="${{ROS_LOCALHOST_ONLY:-0}}" ROS_DISABLE_DAEMON="${{ROS_DISABLE_DAEMON:-1}}"
+AXIS_RC_MODE="${{UUV_AXIS_RC_MODE:-ALT_HOLD}}"
+AXIS_RC_INPUT_MODE="${{UUV_AXIS_RC_INPUT_MODE:-rc-override}}"
+AXIS_RC_PUBLISH_HZ="${{UUV_AXIS_RC_PUBLISH_HZ:-100}}"
+AXIS_RC_SAMPLE_HZ="${{UUV_AXIS_RC_SAMPLE_HZ:-30}}"
+AXIS_RC_BASELINE_S="${{UUV_AXIS_RC_BASELINE_S:-1.0}}"
+AXIS_RC_AXIS_S="${{UUV_AXIS_RC_AXIS_S:-1.8}}"
+AXIS_RC_NEUTRAL_S="${{UUV_AXIS_RC_NEUTRAL_S:-1.2}}"
 python3 uuv_mujoco/v2.2/tools/axis_rc_override_check.py \\
-  --mode MANUAL --input-mode rc-override \\
+  --mode "$AXIS_RC_MODE" --input-mode "$AXIS_RC_INPUT_MODE" \\
   --axes {axes_args} \\
-  --command 0.5 --baseline-s 1.0 --axis-s 1.8 --neutral-s 1.2 \\
-  --sample-hz 30 \\
+  --command 0.5 \\
+  --baseline-s "$AXIS_RC_BASELINE_S" --axis-s "$AXIS_RC_AXIS_S" --neutral-s "$AXIS_RC_NEUTRAL_S" \\
+  --sample-hz "$AXIS_RC_SAMPLE_HZ" --publish-hz "$AXIS_RC_PUBLISH_HZ" \\
   --out-dir {out_dir} \\
   --disarm-at-end
 """

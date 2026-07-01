@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .config import SIM_STACK_DIR
 from .models import TelemetrySnapshot
+from .node_stereo_camera import initialize_stereo_camera_state
 from .runtime import os, threading
 
 
@@ -24,6 +25,7 @@ def initialize_node_state(self) -> None:
     self._manual_control_subscribers = 0
     self._one_shot_timers = []
     self._vehicle_connected_since_wall = -1.0
+    initialize_stereo_camera_state(self)
 
 
 def initialize_command_contract_state(self) -> None:
@@ -34,10 +36,10 @@ def initialize_command_contract_state(self) -> None:
     )
     self._arm_mode_command_path = os.environ.get(
         "UUV_GUI_ARM_MODE_COMMAND_PATH",
-        "topic",
+        "auto",
     ).strip().lower()
-    if self._arm_mode_command_path not in {"topic", "service"}:
-        self._arm_mode_command_path = "topic"
+    if self._arm_mode_command_path not in {"auto", "topic", "service"}:
+        self._arm_mode_command_path = "auto"
     self._require_arm_mode_settle = os.environ.get(
         "UUV_GUI_REQUIRE_ARM_MODE_EKF_SETTLE",
         "0",

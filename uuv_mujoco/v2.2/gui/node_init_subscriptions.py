@@ -12,6 +12,8 @@ from .node_subscription_mavros import (
 )
 from .node_subscription_qos import build_best_effort_qos, build_state_qos
 from .node_subscription_status import initialize_status_subscriptions
+from .node_stereo_camera import initialize_stereo_camera_subscriptions
+from .runtime import Image
 
 
 def initialize_subscriptions(self) -> None:
@@ -24,6 +26,7 @@ def initialize_subscriptions(self) -> None:
     initialize_mavros_rc_status_subscriptions(self, best_effort_qos=best_effort_qos)
     initialize_depth_subscriptions(self, best_effort_qos=best_effort_qos)
     initialize_mavros_pressure_subscriptions(self)
+    initialize_stereo_camera_subscriptions(self, image_type=Image, qos=best_effort_qos)
 
 
 __all__ = ["initialize_subscriptions"]

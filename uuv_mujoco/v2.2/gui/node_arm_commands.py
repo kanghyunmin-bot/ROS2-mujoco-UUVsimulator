@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .config import BACKEND_SIM_BRIDGE
 from .node_arm_request_steps import (
     arm_deadline,
     handle_arm_gate,
@@ -21,9 +22,12 @@ def _send_arm_request(self, value: bool, deadline: Optional[float] = None, attem
         return
     if handle_arm_gate(self, value, deadline, attempt):
         return
+    if _prefer_command_override_topic(self) and publish_arm_override_if_configured(self, value, deadline, attempt):
+        return
+    if send_arm_service_request(self, value, deadline, attempt):
+        return
     if publish_arm_override_if_configured(self, value, deadline, attempt):
         return
-    send_arm_service_request(self, value, deadline, attempt)
 
 
 def arm(self, value: bool) -> None:
@@ -31,6 +35,10 @@ def arm(self, value: bool) -> None:
     self._arm_request_in_flight = False
     deadline = time.monotonic() + self._control_request_timeout_s
     self._send_arm_request(value, deadline, 1)
+
+
+def _prefer_command_override_topic(self) -> bool:
+    return self._arm_mode_command_path == "auto" and self._effective_backend() == BACKEND_SIM_BRIDGE
 
 
 def _on_arm_response(
@@ -58,4 +66,4 @@ def _on_arm_response(
     self._retry_arm_request(target_value, deadline, attempt)
 
 
-__all__ = ["_on_arm_response", "_send_arm_request", "arm"]
+__all__ = ["_on_arm_response", "_prefer_command_override_topic", "_send_arm_request", "arm"]

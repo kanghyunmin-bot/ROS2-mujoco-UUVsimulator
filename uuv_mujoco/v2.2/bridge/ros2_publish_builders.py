@@ -9,6 +9,7 @@ from .ros2_publish_builder_odometry import build_odometry_publish_builders
 from .ros2_publish_builder_ping360 import build_ping360_publish_builders
 from .ros2_publish_builder_status import build_status_publish_builders
 from .ros2_publish_state import RosPublishState
+from .ros2_stereo_image import build_stereo_publish_builders
 
 
 def build_ros_publish_builders(self, data, stamp, state: RosPublishState) -> dict[str, object]:
@@ -19,4 +20,5 @@ def build_ros_publish_builders(self, data, stamp, state: RosPublishState) -> dic
     builders.update(build_mavros_publish_builders(self, stamp, state))
     builders.update(build_odometry_publish_builders(self, stamp, state))
     builders.update(build_ping360_publish_builders(self, data, stamp, state))
+    builders.update(build_stereo_publish_builders(self, data, stamp))
     return builders

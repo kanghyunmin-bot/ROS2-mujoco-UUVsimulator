@@ -18,13 +18,18 @@ SITL MAVLink SERVO_OUTPUT_RAW telemetry
 Plant input:
 
 ```text
-SITL JSON servo backend
-to
-MuJoCo thruster input
+Docker/MAVProxy closed-loop:
+  SITL JSON servo backend -> MuJoCo thruster input
+
+Native/direct closed-loop:
+  SITL MAVLink SERVO_OUTPUT_RAW -> MuJoCo thruster input
+
+Plant replay:
+  recorded actuator PWM/RCOU -> MuJoCo thruster input
 ```
 
-Never compare real `/mavros/rc/out` directly to the JSON servo backend for
-controller parity.
+Never compare real `/mavros/rc/out` directly to a backend-specific plant input
+surface for controller parity.
 
 ## RC contract
 
@@ -41,7 +46,13 @@ Known guardrails:
 
 - The replay/CSV surface can preserve 18 MAVLink2 override channels, but local
   ArduSub 4.1.2 handler code applies override fields only through channel 16.
-- Do not change `RC3_TRIM=1100` to hide heave mismatch.
+- Keep `RC3_TRIM=1500` for MANUAL heave neutral, and force `RCMAP_FORWARD=5`
+  plus `RCMAP_LATERAL=6` so RC override/QGC axes reach ArduSub's Sub mapping.
+- Keep the bridge MAVLink source sysid equal to ArduSub's GCS authority
+  (`MAV_GCS_SYSID` on 4.8, `SYSID_MYGCS` on 4.1); native GUI defaults are
+  source sysid `255`, compid `190`.
+- GUI-started pilot input defaults to MANUAL_CONTROL. The GUI can still publish
+  `/mavros/rc/override`; the bridge converts that surface to MANUAL_CONTROL.
 - Do not change `PILOT_SPEED_DN=0` as a controller-parity fix.
 - Treat RC timing and hold policy as a contract, not a tuning parameter.
 - Stream RC override faster than the local `RC_OVERRIDE_TIME` timeout policy;
@@ -115,7 +126,10 @@ These are contract failures, not physics failures:
 
 - `full_mujoco_rcout.csv` has only a header row.
 - Logs repeat `SITL(json) servo output ignored while disarmed`.
-- Logs show neutral JSON servo output while the test expects actuator motion.
+- Native/direct logs show neutral `SERVO_OUTPUT_RAW` plant input while the test
+  expects actuator motion.
+- Docker/MAVProxy logs show neutral JSON servo output while the test expects
+  actuator motion.
 - GUI says ready before arm/mode/RC override reaches the runtime command path.
 
 GUI `READY` must mean more than process startup.  For the internal sim bridge

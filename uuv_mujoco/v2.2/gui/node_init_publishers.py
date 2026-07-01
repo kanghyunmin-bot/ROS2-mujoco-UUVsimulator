@@ -24,7 +24,7 @@ def initialize_command_publishers_and_clients(self) -> None:
     )
 
     if HAVE_MAVROS_MSGS:
-        self._rc_override_pub = self.create_publisher(OverrideRCIn, self._topic("rc/override"), 1)
+        self._rc_override_pub = self.create_publisher(OverrideRCIn, self._topic("rc/override"), 3)
         self._manual_control_pub = self.create_publisher(ManualControl, self._topic("manual_control/send"), 1)
         self._arm_client = self.create_client(CommandBool, self._topic("cmd/arming"))
         self._mode_client = self.create_client(SetMode, self._topic("set_mode"))
@@ -36,9 +36,9 @@ def initialize_command_publishers_and_clients(self) -> None:
         self._mode_client = None
         self._vehicle_info_client = None
     try:
-        rc_burst_count = int(float(os.environ.get("UUV_GUI_RC_OVERRIDE_BURST_COUNT", "1")))
+        rc_burst_count = int(float(os.environ.get("UUV_GUI_RC_OVERRIDE_BURST_COUNT", "3")))
     except (TypeError, ValueError):
-        rc_burst_count = 1
+        rc_burst_count = 3
     self._rc_override_burst_count = max(1, min(6, rc_burst_count))
 
     if HAVE_STD_SRVS and self._initial_depth_hold_opt_in:

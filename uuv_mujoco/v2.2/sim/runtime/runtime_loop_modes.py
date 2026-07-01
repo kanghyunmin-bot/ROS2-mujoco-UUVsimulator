@@ -15,6 +15,7 @@ def run_headless_runtime(
     stop_event: Any,
     viewer_controls: Any,
     timestep: float,
+    ros2_sensor_hz: float,
     run_step: Callable[..., tuple[float, float, float, float]],
 ) -> None:
     print("[runtime] headless mode enabled: running without GLFW viewer", flush=True)
@@ -22,6 +23,7 @@ def run_headless_runtime(
         stop_event=stop_event,
         viewer_controls=viewer_controls,
         timestep=float(timestep),
+        ros2_sensor_hz=float(ros2_sensor_hz),
         run_step=run_step,
     )
 

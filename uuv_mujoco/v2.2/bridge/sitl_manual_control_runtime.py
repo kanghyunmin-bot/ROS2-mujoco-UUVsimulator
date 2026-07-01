@@ -29,9 +29,6 @@ def send_manual_control(
     target_sys, _target_comp = target
 
     try:
-        # High-rate pilot commands must not block while peer discovery catches up.
-        if not self._ensure_mavlink_peer(mav, timeout_s=0.0):
-            return False
         self._send_gcs_heartbeat(force=True, mav=mav)
         frame = build_manual_control_frame(
             x=x,

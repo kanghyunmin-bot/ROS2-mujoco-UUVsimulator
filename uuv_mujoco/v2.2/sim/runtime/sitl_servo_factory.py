@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from threading import RLock
+
 import numpy as np
 
 
@@ -21,6 +23,7 @@ def build_sitl_servo_runtime_kwargs(
         "pwm_values": [1500] * 8,
         "last_wall": {"value": -1.0},
         "scale": float(np.clip(sitl_servo_scale, 0.0, 2.0)),
+        "lock": RLock(),
         "timeout_s": float(max(timeout_s, 0.0)),
     }
 

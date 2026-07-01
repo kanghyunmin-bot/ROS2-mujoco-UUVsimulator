@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 
 from .ros2_rc_override_forwarding import forward_rc_override_to_sitl
-from .ros2_rc_override_forward_cache import store_pending_rc_override
+from .ros2_rc_override_forward_cache import clear_pending_rc_override, store_pending_rc_override
 from .ros2_rc_override_frame import normalized_rc_override_axes, rc_override_channels_from_msg
 from .ros2_rc_override_mirror import _mirror_rc_override_to_rc_in
 
@@ -21,6 +21,7 @@ def _on_mavros_rc_override(self, msg) -> None:
     else:
         if forward_rc_override_to_sitl(self, channels, axes=(fwd, sway, yaw, heave)):
             self._mavros_last_forwarded_rc_override_wall = time.monotonic()
+            clear_pending_rc_override(self)
         else:
             store_pending_rc_override(self, channels)
 

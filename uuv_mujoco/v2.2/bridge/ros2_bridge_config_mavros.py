@@ -49,7 +49,7 @@ def configure_mavros_rc_contract(bridge: object) -> None:
 def _rc_override_backend_from_env() -> str:
     backend = os.environ.get(
         "ROS2_UUV_MAVROS_RC_OVERRIDE_BACKEND",
-        "manual_control",
+        "rc_override",
     ).strip().lower().replace("-", "_")
     if backend in {"manual_control", "manual"}:
         return "manual_control"
@@ -57,10 +57,10 @@ def _rc_override_backend_from_env() -> str:
         return "rc_channels_override"
     print(
         "[ros2_bridge] warning: unknown ROS2_UUV_MAVROS_RC_OVERRIDE_BACKEND="
-        f"{backend!r}; using manual_control",
+        f"{backend!r}; using rc_override",
         flush=True,
     )
-    return "manual_control"
+    return "rc_channels_override"
 
 
 def configure_mavros_setpoint_contract(bridge: object) -> None:

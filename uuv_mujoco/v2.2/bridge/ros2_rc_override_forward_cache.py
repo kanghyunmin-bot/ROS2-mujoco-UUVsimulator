@@ -18,12 +18,19 @@ def store_pending_rc_override(self, channels: Sequence[int]) -> None:
         self._mavros_pending_rc_override_wall = now
 
 
+def clear_pending_rc_override(self) -> None:
+    with self._mavros_rc_override_cache_lock:
+        self._mavros_pending_rc_override_channels = None
+        self._mavros_pending_rc_override_wall = -1.0
+
+
 def service_pending_rc_override_forward(self) -> None:
     channels = _pending_frame_due(self, time.monotonic())
     if channels is None:
         return
     if forward_rc_override_to_sitl(self, channels):
         self._mavros_last_forwarded_rc_override_wall = time.monotonic()
+        clear_pending_rc_override(self)
     else:
         _warn_rc_override_not_forwarded(self)
 
@@ -42,4 +49,8 @@ def _pending_frame_due(self, now: float) -> list[int] | None:
     return list(channels)
 
 
-__all__ = ["service_pending_rc_override_forward", "store_pending_rc_override"]
+__all__ = [
+    "clear_pending_rc_override",
+    "service_pending_rc_override_forward",
+    "store_pending_rc_override",
+]
