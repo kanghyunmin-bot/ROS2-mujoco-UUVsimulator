@@ -1,5 +1,42 @@
 # ROS2 MuJoCo UUV Simulator
 
+![UUV simulator robot and web control GUI](docs/assets/uuv-sim-web-gui-overview.png)
+
+Ubuntu 22.04 simulator bundle for the KMU26 UUV workflow. It brings up the
+MuJoCo vehicle model, ArduSub SITL, ROS 2/MAVROS bridge utilities, Ping360
+helpers, and the web control GUI with stereo camera preview, joystick control,
+telemetry, tuning, and course layout tools.
+
+## Quick Start
+
+For a normal Ubuntu install, download the release asset:
+
+```text
+UUV_Sim_Install_and_Run_2026.07.01-dist2.zip
+```
+
+Then run:
+
+```bash
+unzip UUV_Sim_Install_and_Run_2026.07.01-dist2.zip
+cd UUV_Sim_Install_and_Run_2026.07.01-dist2
+./install_and_run_uuv_sim.sh
+```
+
+After installation, the main launcher is:
+
+```bash
+uuv-sim-current-web
+```
+
+The current `dist2` installer refreshes existing `~/uuv_sim_current` workspaces
+when the packaged runtime version changes. The web GUI includes the camera
+feed on/off switch, selectable camera profiles up to `1280x720 @ 10Hz`, zoomed
+camera view, joystick drag control, and the MuJoCo Wayland/XWayland viewer
+defaults.
+
+## Overview
+
 This repository contains a local UUV simulation workspace that connects:
 
 - MuJoCo based UUV dynamics and sensor simulation
