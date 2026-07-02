@@ -4,22 +4,23 @@
 
 Ubuntu 22.04 simulator bundle for the KMU26 UUV workflow. It brings up the
 MuJoCo vehicle model, ArduSub SITL, ROS 2/MAVROS bridge utilities, Ping360
-helpers, and the web control GUI with stereo camera preview, joystick control,
-telemetry, tuning, and course layout tools.
+helpers, and the web control GUI with stereo camera preview, YOLO buoy
+detection overlay, joystick control, telemetry, tuning, and course layout
+tools.
 
 ## Quick Start
 
 For a normal Ubuntu install, download the release asset:
 
 ```text
-UUV_Sim_Install_and_Run_2026.07.01-dist2.zip
+UUV_Sim_Install_and_Run_2026.07.02-dist2.zip
 ```
 
 Then run:
 
 ```bash
-unzip UUV_Sim_Install_and_Run_2026.07.01-dist2.zip
-cd UUV_Sim_Install_and_Run_2026.07.01-dist2
+unzip UUV_Sim_Install_and_Run_2026.07.02-dist2.zip
+cd UUV_Sim_Install_and_Run_2026.07.02-dist2
 ./install_and_run_uuv_sim.sh
 ```
 
@@ -33,7 +34,8 @@ The current `dist2` installer refreshes existing `~/uuv_sim_current` workspaces
 when the packaged runtime version changes. The web GUI includes the camera
 feed on/off switch, selectable camera profiles up to `1280x720 @ 10Hz`, zoomed
 camera view, joystick drag control, and the MuJoCo Wayland/XWayland viewer
-defaults.
+defaults. The bundled YOLO model is used by the GUI camera stream to draw
+OpenCV bounding boxes and labels for buoy detections.
 
 ## Overview
 
@@ -59,6 +61,7 @@ freshness boundary.  The active-runtime metadata is recorded in
 .
 |-- ardupilot/                 # ArduPilot submodule
 |-- dist2/ubuntu22.04/         # Ubuntu 22.04 distribution packaging workflow
+|-- YOLO/                      # Bundled buoy detector model for GUI overlay
 |-- rospkg/kmu26_auv/          # KMU26 AUV ROS 2 package submodule
 |-- rospkg/dvl_msgs/           # Bundled DVL message package for dist2 builds
 |-- setup/                     # Install and verification scripts

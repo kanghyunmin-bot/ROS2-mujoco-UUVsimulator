@@ -34,6 +34,7 @@ def main() -> int:
     web_rc_replay = ROOT / "gui" / "web_rc_replay.py"
     web_tool_files = ROOT / "gui" / "web_tool_files.py"
     stereo_camera_node = ROOT / "gui" / "node_stereo_camera.py"
+    yolo_detector = ROOT / "gui" / "yolo_buoy_detector.py"
     web_entry = ROOT / "gui" / "web_control_gui.py"
     mavros_schedule = ROOT / "bridge" / "ros2_publish_schedule_mavros.py"
     index = ROOT / "gui" / "web_static" / "index.html"
@@ -47,6 +48,7 @@ def main() -> int:
         web_rc_replay,
         web_tool_files,
         stereo_camera_node,
+        yolo_detector,
         web_entry,
         mavros_schedule,
         index,
@@ -174,6 +176,7 @@ def main() -> int:
     require_text(app_js, "setPilotControlDocked", "expanded camera view must move pilot controls above the camera layer")
     require_text(app_js, "document.body.appendChild(pilot)", "expanded camera pilot controls must dock at body level")
     require_text(app_js, "renderStereoCamera", "web UI must render stereo camera status")
+    require_text(app_js, "yoloStatusText", "web UI must render YOLO buoy overlay status")
     require_text(app_js, "renderCameraConfig", "web UI must render stereo camera profile status")
     require_text(app_js, "applyCameraConfig", "web UI must apply stereo camera launch profiles")
     require_text(
@@ -187,6 +190,13 @@ def main() -> int:
     reject_text(app_js, 'updateStereoView("right"', "web UI must refresh only one stereo camera pane")
     require_text(stereo_camera_node, 'SUBSCRIBED_SIDES = ("left",)', "web GUI ROS node must subscribe only to the visible stereo camera")
     require_text(stereo_camera_node, "destroy_subscription", "web GUI ROS node must drop camera subscription when disabled")
+    require_text(stereo_camera_node, "create_yolo_buoy_detector", "web GUI camera cache must enable YOLO buoy overlay")
+    require_text(stereo_camera_node, "detector.process_rgb", "web GUI camera cache must draw detection overlays before JPEG encoding")
+    require_text(stereo_camera_node, '"detection"', "web GUI camera status must expose YOLO detection status")
+    require_text(yolo_detector, "from ultralytics import YOLO", "YOLO detector must support the provided .pt model")
+    require_text(yolo_detector, "draw_buoy_detections", "YOLO detector must draw OpenCV bounding boxes")
+    require_text(yolo_detector, "cv2.rectangle", "YOLO detector must use OpenCV rectangle drawing")
+    require_text(yolo_detector, "cv2.putText", "YOLO detector must use OpenCV label drawing")
     require_text(style_css, ".pilot-group.camera-pilot-docked", "expanded camera view must keep the joystick reachable")
     require_text(style_css, "z-index: 1000", "docked pilot controls must stay above expanded camera layers")
     require_text(app_js, 'fetch("/api/rc"', "web UI must publish RC commands")

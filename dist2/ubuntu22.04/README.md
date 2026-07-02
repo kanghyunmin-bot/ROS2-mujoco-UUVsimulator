@@ -4,6 +4,7 @@
 install path uses native `/usr/bin/python3` plus user-site pip packages, matching
 the known-good Ubuntu install zip. The installer brings up MuJoCo, ArduSub SITL,
 ROS 2/MAVROS helper nodes, QGroundControl, and the control GUI.
+The web GUI camera stream can draw YOLO/OpenCV buoy detection boxes and labels.
 
 ## Included
 
@@ -11,6 +12,7 @@ ROS 2/MAVROS helper nodes, QGroundControl, and the control GUI.
 - `rospkg/kmu26_auv.zip`: ROS 2 helper package
 - `rospkg/dvl_msgs.zip`: Water Linked DVL message package required by `hit25_auv_ros2`
 - `rospkg/ping360_sonar_msgs.zip`: Ping360 `SonarEcho` message package
+- `YOLO/yolo26m_underwater_batch4_last.pt`: buoy detector model for GUI overlay
 - `uuv_control_gui.py`
 - `run_control_gui.sh` (Ubuntu-native launcher)
 - `run_control_gui_ubuntu.sh`
@@ -63,7 +65,7 @@ the web GUI, build the current installer bundle:
 
 ```bash
 git submodule update --init rospkg/kmu26_auv
-./dist2/ubuntu22.04/package_current_installer.sh --version 2026.07.01-dist2
+./dist2/ubuntu22.04/package_current_installer.sh --version 2026.07.02-dist2
 ```
 
 Output:
@@ -80,7 +82,7 @@ published installer zip, pass it as a template:
 
 ```bash
 ./dist2/ubuntu22.04/package_current_installer.sh \
-  --version 2026.07.01-dist2 \
+  --version 2026.07.02-dist2 \
   --template-zip ~/Downloads/UUV_Sim_Install_and_Run_2026.07.01-3.zip
 ```
 

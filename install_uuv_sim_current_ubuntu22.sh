@@ -538,9 +538,14 @@ setup_python_env() {
   [[ -x "$py" ]] || { echo "[install] venv python missing: $py" >&2; exit 1; }
   run env -u PYTHONPATH -u PYTHONHOME "$py" -m pip install -U pip "setuptools<80" wheel packaging
   run env -u PYTHONPATH -u PYTHONHOME "$py" -m pip install -U \
+    --index-url https://download.pytorch.org/whl/cpu \
+    torch torchvision
+  run env -u PYTHONPATH -u PYTHONHOME "$py" -m pip install -U \
     numpy matplotlib rosbags python-pptx "$MUJOCO_PIP_SPEC" \
-    pymavlink MAVProxy pexpect pillow future dronecan gnureadline "empy==3.3.4"
+    pymavlink MAVProxy pexpect pillow future dronecan gnureadline "empy==3.3.4" \
+    "opencv-python-headless<5" ultralytics
   env -u PYTHONPATH -u PYTHONHOME "$py" - <<'PY'
+import cv2
 import mujoco
 import mujoco.viewer
 import numpy
@@ -550,8 +555,13 @@ import pexpect
 import PIL
 import rosbags
 import pptx
+import torch
+import ultralytics
 print("python deps ok")
 print("mujoco", mujoco.__version__)
+print("opencv", cv2.__version__)
+print("torch", torch.__version__)
+print("ultralytics", ultralytics.__version__)
 PY
 }
 

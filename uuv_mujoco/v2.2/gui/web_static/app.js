@@ -372,7 +372,26 @@ function renderStereoCamera(camera) {
   }
   updateStereoView("left", frame);
   const errorText = camera.error ? ` | ${camera.error}` : "";
-  setText("stereoCameraStatus", `camera: ${stereoStatusText(frame)}${errorText}`);
+  setText("stereoCameraStatus", `camera: ${stereoStatusText(frame)}${yoloStatusText(camera.detection)}${errorText}`);
+}
+
+function yoloStatusText(detection) {
+  if (!detection) {
+    return "";
+  }
+  if (!detection.enabled) {
+    return " | yolo: off";
+  }
+  if (!detection.model_found) {
+    return " | yolo: model missing";
+  }
+  if (detection.error) {
+    return ` | yolo: ${detection.error}`;
+  }
+  const count = Number(detection.count) || 0;
+  const timeMs = Number(detection.last_inference_ms);
+  const timeText = Number.isFinite(timeMs) && timeMs > 0 ? `, ${fixed(timeMs, 0)} ms` : "";
+  return ` | yolo: ${count} detection${count === 1 ? "" : "s"}${timeText}`;
 }
 
 function renderCameraConfig(config) {

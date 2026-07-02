@@ -25,10 +25,12 @@ http://127.0.0.1:8878/
 ## What This Dist Pins
 
 - Runtime path: `uuv_mujoco/current`
+- YOLO buoy model: `YOLO/yolo26m_underwater_batch4_last.pt`
 - GUI low-profile MuJoCo timestep: `0.005s`
 - Course-buoy CSV tracking: disabled by default
 - Course-buoy contact timestep guard: enabled
 - Web GUI and Tk GUI both available through `run_control_gui.sh`
+- Web GUI camera stream can draw YOLO/OpenCV buoy boxes and labels
 
 ## Wayland And X11
 

@@ -177,6 +177,7 @@ check_python_imports() {
   "$PYTHON_BIN" - <<'PY' || {
 import importlib
 mods = [
+    "cv2",
     "numpy",
     "mujoco",
     "mujoco.viewer",
@@ -186,6 +187,8 @@ mods = [
     "PIL",
     "rosbags",
     "pptx",
+    "torch",
+    "ultralytics",
 ]
 missing = []
 for name in mods:

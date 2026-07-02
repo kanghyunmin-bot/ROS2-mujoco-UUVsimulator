@@ -114,6 +114,7 @@ require_file "install_and_run_web.sh"
 require_file "run_control_gui.sh"
 require_file "cleanup_generated_artifacts.sh"
 require_file "uuv_control_gui.py"
+require_file "YOLO/yolo26m_underwater_batch4_last.pt"
 require_dir "uuv_mujoco"
 require_dir "rospkg/kmu26_auv"
 require_dir "rospkg/dvl_msgs"
@@ -138,7 +139,7 @@ source_branch="$(git -C "${ROOT_DIR}" branch --show-current 2>/dev/null || print
 source_commit="$(git -C "${ROOT_DIR}" rev-parse HEAD 2>/dev/null || printf 'unknown')"
 
 rm -rf "$OUT_DIR"
-mkdir -p "$INNER_STAGE/rospkg" "$OUT_DIR" "$(dirname "$RUNTIME_STAGE")"
+mkdir -p "$INNER_STAGE/rospkg" "$INNER_STAGE/YOLO" "$OUT_DIR" "$(dirname "$RUNTIME_STAGE")"
 
 install -m 755 "${ROOT_DIR}/install_uuv_sim_current_ubuntu22.sh" "${INNER_STAGE}/install_uuv_sim_current_ubuntu22.sh"
 install -m 755 "${ROOT_DIR}/preflight_uuv_sim_current.sh" "${INNER_STAGE}/preflight_uuv_sim_current.sh"
@@ -147,6 +148,7 @@ install -m 755 "${ROOT_DIR}/install_and_run_web.sh" "${INNER_STAGE}/install_and_
 install -m 755 "${ROOT_DIR}/run_control_gui.sh" "${INNER_STAGE}/run_control_gui.sh"
 install -m 755 "${ROOT_DIR}/cleanup_generated_artifacts.sh" "${INNER_STAGE}/cleanup_generated_artifacts.sh"
 install -m 644 "${ROOT_DIR}/uuv_control_gui.py" "${INNER_STAGE}/uuv_control_gui.py"
+install -m 644 "${ROOT_DIR}/YOLO/yolo26m_underwater_batch4_last.pt" "${INNER_STAGE}/YOLO/yolo26m_underwater_batch4_last.pt"
 if [[ -f "${ROOT_DIR}/README_FIRST_CURRENT.md" ]]; then
   install -m 644 "${ROOT_DIR}/README_FIRST_CURRENT.md" "${INNER_STAGE}/README_FIRST.md"
 else
@@ -255,11 +257,13 @@ Included:
 - preflight_uuv_sim_current.sh
 - install_and_run_web.sh
 - run_control_gui.sh / uuv_control_gui.py
+- YOLO/yolo26m_underwater_batch4_last.pt
 - uuv_mujoco.zip
 - rospkg/*.zip
 
 This bundle includes the web GUI camera, joystick drag, telemetry refresh, and
-MuJoCo Wayland/XWayland viewer fixes from the current Git source.
+MuJoCo Wayland/XWayland viewer fixes from the current Git source. The camera
+feed can draw OpenCV YOLO buoy bounding boxes when the stream is enabled.
 EOF
 
 cat > "${INNER_STAGE}/RELEASE_MANIFEST.txt" <<EOF
@@ -274,6 +278,7 @@ included_changes:
 - Web GUI camera panel with stream on/off, zoom, and selectable resolution/FPS profiles.
 - Stereo stream displays one camera view only to reduce GUI load.
 - Camera profiles include 960x540@10Hz, 1280x720@5Hz, and 1280x720@10Hz.
+- YOLO buoy detection overlay draws OpenCV bounding boxes and labels on the GUI camera feed.
 - Joystick pointer handling supports click-and-drag, release centering, and pilot-input auto-enable.
 - Vehicle summary, attitude, depth, and speed display refresh fixes.
 - MuJoCo viewer defaults force XWayland/system GLFW on Wayland unless explicitly opted out.
@@ -502,6 +507,7 @@ Source:
 
 Highlights:
 - Web GUI camera panel with stream on/off, zoom, and selectable profiles.
+- YOLO buoy detection overlay in the GUI camera feed using the bundled model.
 - 1280x720 camera profile support, including 10 Hz.
 - Joystick click-and-drag handling and pilot-input auto-enable.
 - Vehicle summary, attitude, depth, and speed refresh fixes.

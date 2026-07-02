@@ -8,7 +8,10 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+import numpy as np
 from PIL import Image as PILImage
+
+from .yolo_buoy_detector import create_yolo_buoy_detector
 
 
 @dataclass(frozen=True)
@@ -40,6 +43,7 @@ def initialize_stereo_camera_state(owner: Any) -> None:
     owner._stereo_camera_subscriptions: dict[str, Any] = {}
     owner._stereo_camera_image_type = None
     owner._stereo_camera_qos = None
+    owner._stereo_camera_buoy_detector = create_yolo_buoy_detector()
     owner._stereo_camera_jpeg_quality = _env_int(
         "UUV_GUI_CAMERA_JPEG_QUALITY",
         DEFAULT_JPEG_QUALITY,
@@ -99,7 +103,11 @@ def on_stereo_camera_image(owner: Any, side: str, msg: Any) -> None:
     if side not in SIDES or not bool(getattr(owner, "_stereo_camera_enabled", True)):
         return
     try:
-        jpeg = _image_msg_to_jpeg(msg, quality=int(owner._stereo_camera_jpeg_quality))
+        rgb = _image_msg_to_rgb_array(msg)
+        detector = getattr(owner, "_stereo_camera_buoy_detector", None)
+        if detector is not None:
+            rgb, _status = detector.process_rgb(rgb)
+        jpeg = _rgb_array_to_jpeg(rgb, quality=int(owner._stereo_camera_jpeg_quality))
     except Exception as exc:
         owner._stereo_camera_last_error = str(exc)
         return
@@ -132,6 +140,9 @@ def stereo_camera_status(owner: Any) -> dict[str, Any]:
         "jpeg_quality": jpeg_quality,
         "subscribed_sides": subscribed_sides,
     }
+    detector = getattr(owner, "_stereo_camera_buoy_detector", None)
+    if detector is not None:
+        payload["detection"] = detector.status_payload()
     for side in SIDES:
         frame = frames.get(side)
         if frame is None or not _frame_fresh(frame, now):
@@ -169,7 +180,7 @@ def _frame_fresh(frame: StereoCameraFrame, now: float) -> bool:
     return max(0.0, now - frame.wall_s) <= STALE_FRAME_MAX_AGE_S
 
 
-def _image_msg_to_jpeg(msg: Any, *, quality: int) -> bytes:
+def _image_msg_to_rgb_array(msg: Any) -> np.ndarray:
     width = int(msg.width)
     height = int(msg.height)
     encoding = str(msg.encoding).lower()
@@ -207,6 +218,11 @@ def _image_msg_to_jpeg(msg: Any, *, quality: int) -> bytes:
         ).convert("RGB")
     else:
         raise ValueError(f"unsupported stereo image encoding: {msg.encoding}")
+    return np.ascontiguousarray(np.asarray(image.convert("RGB")), dtype=np.uint8)
+
+
+def _rgb_array_to_jpeg(rgb: np.ndarray, *, quality: int) -> bytes:
+    image = PILImage.fromarray(np.ascontiguousarray(rgb, dtype=np.uint8), mode="RGB")
     out = io.BytesIO()
     image.save(out, format="JPEG", quality=int(quality), subsampling=0, optimize=False)
     return out.getvalue()

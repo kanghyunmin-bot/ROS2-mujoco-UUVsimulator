@@ -47,6 +47,7 @@ for path in \
   uuv_control_gui.py \
   cleanup_generated_artifacts.sh \
   uuv_mujoco.zip \
+  YOLO/yolo26m_underwater_batch4_last.pt \
   rospkg/kmu26_auv.zip \
   rospkg/dvl_msgs.zip \
   rospkg/ping360_sonar_msgs.zip
@@ -71,6 +72,9 @@ for marker in \
   "libglfw3" \
   "QT_QPA_PLATFORM" \
   "mujoco.viewer" \
+  "opencv-python-headless<5" \
+  "ultralytics" \
+  "download.pytorch.org/whl/cpu" \
   "mavros-extras" \
   "rqt-image-view" \
   "--run-headless" \
@@ -108,10 +112,12 @@ for path in \
   "${CURRENT}/launch_uuv_sim.sh" \
   "${CURRENT}/start_sitl_mujoco_mj311.sh" \
   "${CURRENT}/gui/web_control_gui.py" \
+  "${CURRENT}/gui/yolo_buoy_detector.py" \
   "${CURRENT}/gui/sim_stack_env_defaults.py" \
   "${CURRENT}/sim/runtime/model_runtime_setup.py" \
   "${CURRENT}/tools/check_buoy_collector_capture.py" \
   "${CURRENT}/tools/check_gui_start_contract.py" \
+  "${CURRENT}/tools/check_yolo_buoy_overlay_contract.py" \
   "${CURRENT}/tools/check_web_gui_contract.py" \
   "${CURRENT}/tools/check_model_runtime_setup.py" \
   "${CURRENT}/scenes/tank_current_scene.xml" \
@@ -144,12 +150,14 @@ python3 -m py_compile \
   "${CURRENT}/sim/runtime/course_buoy_runtime.py" \
   "${CURRENT}/tools/check_buoy_collector_capture.py" \
   "${CURRENT}/tools/check_gui_start_contract.py" \
+  "${CURRENT}/tools/check_yolo_buoy_overlay_contract.py" \
   "${CURRENT}/tools/check_web_gui_contract.py" \
   "${CURRENT}/tools/check_model_runtime_setup.py" \
   "${CURRENT}/tools/check_competition_course_scene.py"
 pass "python syntax ok for packaged current runtime"
 
 python3 "${CURRENT}/tools/check_gui_start_contract.py"
+python3 "${CURRENT}/tools/check_yolo_buoy_overlay_contract.py"
 UUV_WEB_GUI_WORKSPACE="${ROOT}" python3 "${CURRENT}/tools/check_web_gui_contract.py"
 python3 "${CURRENT}/tools/check_model_runtime_setup.py"
 python3 "${CURRENT}/tools/check_competition_course_scene.py"

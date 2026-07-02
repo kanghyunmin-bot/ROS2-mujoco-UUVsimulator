@@ -5,6 +5,9 @@ This package is a runtime-focused Ubuntu 22.04 installer. It uses native
 known-good Ubuntu install path. It does not include large documents, full
 rosbag archives, macOS QGroundControl, or ArduPilot source.
 
+The GUI camera stream can draw YOLO/OpenCV buoy boxes and labels using the
+bundled `YOLO/yolo26m_underwater_batch4_last.pt` model.
+
 If you are uploading a new distribution, use the zip under:
 
 ```text

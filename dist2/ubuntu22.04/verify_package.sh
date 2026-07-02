@@ -48,6 +48,7 @@ for path in \
   "uuv_control_gui.py" \
   "cleanup_generated_artifacts.sh" \
   "uuv_mujoco.zip" \
+  "YOLO/yolo26m_underwater_batch4_last.pt" \
   "rospkg/kmu26_auv.zip" \
   "rospkg/dvl_msgs.zip" \
   "rospkg/ping360_sonar_msgs.zip" \
@@ -89,6 +90,9 @@ for marker in \
   "ros-\${ROS_DISTRO}-mavros-extras" \
   "ros-\${ROS_DISTRO}-rqt-image-view" \
   "python-pptx" \
+  "opencv-python-headless<5" \
+  "ultralytics" \
+  "download.pytorch.org/whl/cpu" \
   "rosbags" \
   "dvl_msgs" \
   "ping360_sonar_msgs"
@@ -153,6 +157,8 @@ for path in \
   "${TMP_DIR}/runtime/uuv_mujoco/v2.2/reset_uuv_sim.sh" \
   "${TMP_DIR}/runtime/uuv_mujoco/v2.2/gui/uuv_control_gui.py" \
   "${TMP_DIR}/runtime/uuv_mujoco/v2.2/gui/app.py" \
+  "${TMP_DIR}/runtime/uuv_mujoco/v2.2/gui/yolo_buoy_detector.py" \
+  "${TMP_DIR}/runtime/uuv_mujoco/v2.2/tools/check_yolo_buoy_overlay_contract.py" \
   "${TMP_DIR}/runtime/uuv_mujoco/v2.2/config/sim_profiles.json" \
   "${TMP_DIR}/runtime/uuv_mujoco/v2.2/config/thruster_params.json" \
   "${TMP_DIR}/runtime/uuv_mujoco/v2.2/scenes/tank_current_scene.xml" \
@@ -206,5 +212,8 @@ python3 -m py_compile \
   "${TMP_DIR}/rospkg/kmu26_auv/launch/"*.py \
   "${TMP_DIR}/rospkg/kmu26_auv/scripts/"*.py
 pass "python syntax ok"
+
+python3 "${TMP_DIR}/runtime/uuv_mujoco/v2.2/tools/check_yolo_buoy_overlay_contract.py"
+pass "YOLO buoy overlay contract ok"
 
 echo "[verify-dist2] package ok: ${ARCHIVE_PATH}"

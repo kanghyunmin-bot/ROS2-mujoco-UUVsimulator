@@ -115,6 +115,7 @@ require_file "dist2/ubuntu22.04/README_FIRST.md"
 require_file "dist2/ubuntu22.04/README.md"
 require_file "dist2/ubuntu22.04/DIST_GUIDE.md"
 require_file "dist2/ubuntu22.04/PORTABILITY_AUDIT.md"
+require_file "YOLO/yolo26m_underwater_batch4_last.pt"
 require_dir "uuv_mujoco/v2.2"
 require_dir "rospkg/kmu26_auv"
 require_dir "rospkg/dvl_msgs"
@@ -125,7 +126,7 @@ for file in "${DOCSOURCE_FILES[@]}"; do
 done
 
 rm -rf "${STAGE_DIR}" "${ARCHIVE_PATH}"
-mkdir -p "${STAGE_DIR}/document/docsource" "${STAGE_DIR}/rospkg" "${OUT_DIR}"
+mkdir -p "${STAGE_DIR}/document/docsource" "${STAGE_DIR}/rospkg" "${STAGE_DIR}/YOLO" "${OUT_DIR}"
 
 cp "${DIST_DIR}/install_uuv_sim_ubuntu22.sh" "${STAGE_DIR}/install_uuv_sim_ubuntu22.sh"
 cp "${DIST_DIR}/README_FIRST.md" "${STAGE_DIR}/README_FIRST.md"
@@ -136,6 +137,7 @@ cp "${ROOT_DIR}/uuv_control_gui.py" "${STAGE_DIR}/uuv_control_gui.py"
 cp "${ROOT_DIR}/run_control_gui_ubuntu.sh" "${STAGE_DIR}/run_control_gui.sh"
 cp "${ROOT_DIR}/run_control_gui_ubuntu.sh" "${STAGE_DIR}/run_control_gui_ubuntu.sh"
 cp "${ROOT_DIR}/cleanup_generated_artifacts.sh" "${STAGE_DIR}/cleanup_generated_artifacts.sh"
+cp "${ROOT_DIR}/YOLO/yolo26m_underwater_batch4_last.pt" "${STAGE_DIR}/YOLO/yolo26m_underwater_batch4_last.pt"
 cat > "${STAGE_DIR}/install_and_run.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -215,6 +217,10 @@ Top-level install:
 
 Headless install/run:
   ./install_uuv_sim_ubuntu22.sh --noninteractive --run-headless
+
+Camera:
+  The GUI camera stream can draw YOLO buoy detections using
+  YOLO/yolo26m_underwater_batch4_last.pt.
 EOF
 
 cat > "${STAGE_DIR}/BUNDLE_CONTENTS.txt" <<EOF
@@ -236,6 +242,7 @@ Included:
 - ROS2 helper package zip
 - DVL message package zip
 - Ping360 SonarEcho message package zip
+- YOLO buoy detector model
 - control GUI
 - Ubuntu-native GUI launcher
 - minimal replay/autotune helper scripts

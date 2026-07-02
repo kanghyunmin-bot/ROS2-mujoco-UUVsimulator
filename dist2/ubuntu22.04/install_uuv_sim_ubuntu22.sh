@@ -662,18 +662,27 @@ setup_python_env() {
     [[ -x "$venv_python" ]] || { echo "[error] venv python missing: $venv_python" >&2; exit 1; }
     runtime_python="$venv_python"
     run env -u PYTHONPATH -u PYTHONHOME "$runtime_python" -m pip install -U pip "setuptools<80" wheel
+    run env -u PYTHONPATH -u PYTHONHOME "$runtime_python" -m pip install -U \
+      --index-url https://download.pytorch.org/whl/cpu \
+      torch torchvision
     run env -u PYTHONPATH -u PYTHONHOME "$runtime_python" -m pip install \
       numpy matplotlib rosbags python-pptx \
-      "$MUJOCO_PIP_SPEC" pymavlink MAVProxy pexpect pillow future dronecan gnureadline "empy==3.3.4"
+      "$MUJOCO_PIP_SPEC" pymavlink MAVProxy pexpect pillow future dronecan gnureadline "empy==3.3.4" \
+      "opencv-python-headless<5" ultralytics
   else
     runtime_python="$python_bin"
     pip_user_args=(--user)
     log "installing native Python dependencies into user site"
     run env -u PYTHONPATH -u PYTHONHOME "$runtime_python" -m pip install "${pip_user_args[@]}" -U pip packaging "setuptools<80" wheel
     run env -u PYTHONPATH -u PYTHONHOME "$runtime_python" -m pip install "${pip_user_args[@]}" -U \
-      rosbags python-pptx "$MUJOCO_PIP_SPEC" pymavlink MAVProxy pexpect pillow future dronecan gnureadline "empy==3.3.4"
+      --index-url https://download.pytorch.org/whl/cpu \
+      torch torchvision
+    run env -u PYTHONPATH -u PYTHONHOME "$runtime_python" -m pip install "${pip_user_args[@]}" -U \
+      rosbags python-pptx "$MUJOCO_PIP_SPEC" pymavlink MAVProxy pexpect pillow future dronecan gnureadline "empy==3.3.4" \
+      "opencv-python-headless<5" ultralytics
   fi
   env -u PYTHONPATH -u PYTHONHOME "$runtime_python" - <<'PY'
+import cv2
 import mujoco
 import numpy
 import matplotlib
@@ -686,8 +695,13 @@ import PIL
 import future
 import dronecan
 import em
+import torch
+import ultralytics
 print("python deps ok")
 print("MuJoCo Version:", mujoco.__version__)
+print("OpenCV Version:", cv2.__version__)
+print("Torch Version:", torch.__version__)
+print("Ultralytics Version:", ultralytics.__version__)
 PY
 }
 
