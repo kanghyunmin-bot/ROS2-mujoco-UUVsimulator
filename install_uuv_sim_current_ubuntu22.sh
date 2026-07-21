@@ -6,7 +6,7 @@ INSTALL_ROOT="${INSTALL_ROOT:-${SCRIPT_DIR}}"
 UUV_ZIP="${UUV_ZIP:-${SCRIPT_DIR}/uuv_mujoco.zip}"
 ROS_DISTRO="${ROS_DISTRO:-humble}"
 ARDUPILOT_REMOTE="${ARDUPILOT_REMOTE:-https://github.com/ArduPilot/ardupilot.git}"
-ARDUPILOT_BRANCH="${ARDUPILOT_BRANCH:-}"
+ARDUPILOT_BRANCH="${ARDUPILOT_BRANCH:-ArduSub-4.1.2}"
 QGC_URL="${QGC_URL:-https://d176tv9ibo4jno.cloudfront.net/latest/QGroundControl-x86_64.AppImage}"
 QGC_APP="${QGC_APP:-}"
 VENV_ROOT="${VENV_ROOT:-${HOME}/.venvs/uuv_mujoco}"
@@ -200,11 +200,30 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# A rebuilt installer can intentionally reuse the public dist version while
+# carrying corrected payload bytes.  The one-click wrapper sets this flag so
+# reinstalling the same version still refreshes the runtime and ROS sources.
+case "${UUV_SIM_FORCE_REFRESH:-0}" in
+  1|true|TRUE|yes|YES|on|ON)
+    FORCE_REEXTRACT=1
+    ;;
+esac
+
 INSTALL_ROOT="$(mkdir -p "${INSTALL_ROOT}" && cd "${INSTALL_ROOT}" && pwd)"
 UUV_ZIP="$(cd "$(dirname "${UUV_ZIP}")" && pwd)/$(basename "${UUV_ZIP}")"
-ARDUPILOT_DIR="${ARDUPILOT_DIR:-${INSTALL_ROOT}/ardupilot}"
+ARDUPILOT_DIR="${ARDUPILOT_DIR:-${INSTALL_ROOT}/ardupilot_sub_stable}"
 UUV_MUJOCO_DIR="${UUV_MUJOCO_DIR:-${INSTALL_ROOT}/uuv_mujoco}"
 ROS_WORKSPACE_DIR="${ROS_WORKSPACE_DIR:-${INSTALL_ROOT}/rospkg}"
+ROS_SOURCE_DIR="${ROS_SOURCE_DIR:-${ROS_WORKSPACE_DIR}/src}"
+PAYLOAD_REFRESH="$FORCE_REEXTRACT"
+WORKSPACE_VERSION_FILE="${INSTALL_ROOT}/.uuv_sim_current_version"
+INSTALLED_WORKSPACE_VERSION=""
+if [[ -f "$WORKSPACE_VERSION_FILE" ]]; then
+  INSTALLED_WORKSPACE_VERSION="$(tr -d '[:space:]' <"$WORKSPACE_VERSION_FILE")"
+fi
+if [[ -n "$DIST_VERSION" && "$DIST_VERSION" != "unknown" && "$INSTALLED_WORKSPACE_VERSION" != "$DIST_VERSION" ]]; then
+  PAYLOAD_REFRESH=1
+fi
 if [[ -z "$QGC_APP" ]]; then
   QGC_APP="${INSTALL_ROOT}/QGroundControl-x86_64.AppImage"
 fi
@@ -357,6 +376,8 @@ install_system_packages() {
     build-essential ccache gawk make cmake pkg-config gcc g++ \
     python3 python3-venv python3-pip python3-dev python3-tk python3-numpy \
     ffmpeg jq xz-utils file lsof iproute2 net-tools ripgrep can-utils \
+    libeigen3-dev libboost-dev libboost-thread-dev \
+    libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
     libgl1 libegl1 libglfw3 libgl1-mesa-dri libglvnd0 libglx0 libopengl0 \
     libxrender1 libxext6 libxi6 libxrandr2 libxxf86vm1 libxinerama1 libxcursor1
 
@@ -370,8 +391,12 @@ install_system_packages() {
     libxcb-render0 libxcb-glx0
 
   apt_install_available "GStreamer video helpers" \
-    gstreamer1.0-plugins-bad gstreamer1.0-libav gstreamer1.0-gl \
+    gstreamer1.0-alsa gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+    gstreamer1.0-plugins-ugly gstreamer1.0-plugins-bad gstreamer1.0-libav gstreamer1.0-gl \
     python3-gi python3-gst-1.0
+
+  apt_install_available "KMU26 web GUI runtime" \
+    python3-fastapi python3-uvicorn python3-yaml python3-websockets
 
   if [[ "$WITH_ROS2" -eq 1 ]]; then
     ensure_ros_apt_repo
@@ -385,6 +410,8 @@ install_system_packages() {
       "ros-${ROS_DISTRO}-ament-cmake"
       "ros-${ROS_DISTRO}-ament-index-python"
       "ros-${ROS_DISTRO}-rclcpp"
+      "ros-${ROS_DISTRO}-rclcpp-components"
+      "ros-${ROS_DISTRO}-diagnostic-updater"
       "ros-${ROS_DISTRO}-rclpy"
       "ros-${ROS_DISTRO}-launch"
       "ros-${ROS_DISTRO}-launch-ros"
@@ -406,11 +433,15 @@ install_system_packages() {
       "ros-${ROS_DISTRO}-rosbag2-py"
       "ros-${ROS_DISTRO}-rosbag2-storage-default-plugins"
       "ros-${ROS_DISTRO}-rosidl-runtime-py"
+      "ros-${ROS_DISTRO}-rosidl-default-generators"
+      "ros-${ROS_DISTRO}-rosidl-default-runtime"
       "ros-${ROS_DISTRO}-rqt-bag"
       "ros-${ROS_DISTRO}-rqt-image-view"
       "ros-${ROS_DISTRO}-image-transport"
       "ros-${ROS_DISTRO}-rviz2"
       "ros-${ROS_DISTRO}-robot-state-publisher"
+      "ros-${ROS_DISTRO}-robot-localization"
+      "ros-${ROS_DISTRO}-launch-xml"
       "ros-${ROS_DISTRO}-xacro"
     )
     apt_install_available "ROS 2 ${ROS_DISTRO} runtime packages" "${ros_pkgs[@]}"
@@ -443,13 +474,12 @@ extract_uuv_mujoco() {
   [[ -f "$UUV_ZIP" ]] || { echo "[install] uuv_mujoco.zip not found: $UUV_ZIP" >&2; exit 1; }
   require_cmd unzip
   local runtime_version_file="${UUV_MUJOCO_DIR}/.uuv_runtime_payload_version"
-  local workspace_version_file="${INSTALL_ROOT}/.uuv_sim_current_version"
   local installed_version=""
   local should_reextract="$FORCE_REEXTRACT"
   if [[ -f "$runtime_version_file" ]]; then
     installed_version="$(tr -d '[:space:]' <"$runtime_version_file")"
-  elif [[ -f "$workspace_version_file" ]]; then
-    installed_version="$(tr -d '[:space:]' <"$workspace_version_file")"
+  elif [[ -f "$WORKSPACE_VERSION_FILE" ]]; then
+    installed_version="$(tr -d '[:space:]' <"$WORKSPACE_VERSION_FILE")"
   fi
   if [[ -d "$UUV_MUJOCO_DIR" && "$should_reextract" -eq 0 && -n "$DIST_VERSION" && "$DIST_VERSION" != "unknown" ]]; then
     if [[ "$installed_version" != "$DIST_VERSION" ]]; then
@@ -460,20 +490,76 @@ extract_uuv_mujoco() {
   if [[ -d "$UUV_MUJOCO_DIR" && "$should_reextract" -eq 0 ]]; then
     log "reusing existing runtime: $UUV_MUJOCO_DIR"
   else
-    [[ ! -d "$UUV_MUJOCO_DIR" ]] || run rm -rf "$UUV_MUJOCO_DIR"
-    local tmpdir extracted_root
-    tmpdir="$(mktemp -d)"
+    PAYLOAD_REFRESH=1
+    local tmpdir extracted_root previous_runtime runtime_parent had_previous=0
+    local rel source_path destination_path
+    runtime_parent="$(dirname "$UUV_MUJOCO_DIR")"
+    run mkdir -p "$runtime_parent"
+    # Stage beside the destination so the final directory rename stays on the
+    # same filesystem and cannot expose a half-copied runtime tree.
+    tmpdir="$(mktemp -d "${runtime_parent}/.uuv-runtime-stage.XXXXXX")"
     trap 'rm -rf "${tmpdir:-}"' RETURN
     run unzip -q "$UUV_ZIP" -d "$tmpdir"
     extracted_root="$(find "$tmpdir" -type f -path '*/uuv_mujoco/current/run_uuv_mujoco.py' -print -quit)"
     [[ -n "$extracted_root" ]] || { echo "[install] current runtime not found in zip" >&2; exit 1; }
     extracted_root="$(dirname "$(dirname "$extracted_root")")"
-    run mv "$extracted_root" "$UUV_MUJOCO_DIR"
+    previous_runtime="${UUV_MUJOCO_DIR}.upgrade_tmp.$$"
+    if [[ -d "$UUV_MUJOCO_DIR" ]]; then
+      local installed_stack_processes=""
+      installed_stack_processes="$(
+        pgrep -af 'run_uuv_mujoco.py|start_sitl_mujoco_mj311.sh|launch_uuv_sim.sh|Tools/autotest/sim_vehicle.py|build/sitl/bin/ardusub' 2>/dev/null \
+          | grep -F -- "$INSTALL_ROOT" || true
+      )"
+      if [[ -n "$installed_stack_processes" && -x "${UUV_MUJOCO_DIR}/current/reset_uuv_sim.sh" ]]; then
+        log "stopping the simulator running from this install root before replacing runtime files"
+        WORKSPACE_DIR="$INSTALL_ROOT" ARDUPILOT_DIR="$ARDUPILOT_DIR" \
+          "${UUV_MUJOCO_DIR}/current/reset_uuv_sim.sh" || \
+          log "warning: runtime reset reported an error; continuing the versioned file swap"
+      else
+        log "no simulator process is running from this install root; upgrading files in place"
+      fi
+      # Merge mutable user state into the fully extracted staging tree before
+      # either live directory is renamed.  A copy failure therefore leaves the
+      # installed runtime untouched.
+      for rel in \
+        current/config/course_layout.json \
+        current/config/ping360.json \
+        current/config/sim_profiles.json \
+        current/config/thruster_params.json \
+        current/config/thruster_performance.json
+      do
+        source_path="${UUV_MUJOCO_DIR}/${rel}"
+        destination_path="${extracted_root}/${rel}"
+        [[ -f "$source_path" ]] || continue
+        run mkdir -p "$(dirname "$destination_path")"
+        run cp -a "$source_path" "$destination_path"
+      done
+      for rel in current/logs current/generated; do
+        source_path="${UUV_MUJOCO_DIR}/${rel}"
+        destination_path="${extracted_root}/${rel}"
+        [[ -d "$source_path" ]] || continue
+        run mkdir -p "$destination_path"
+        run cp -a "${source_path}/." "${destination_path}/"
+      done
+      log "user course, sonar, physics settings, logs, and generated state were preserved"
+      run rm -rf "$previous_runtime"
+      run mv "$UUV_MUJOCO_DIR" "$previous_runtime"
+      had_previous=1
+    fi
+    if ! mv "$extracted_root" "$UUV_MUJOCO_DIR"; then
+      if [[ "$had_previous" -eq 1 && -d "$previous_runtime" && ! -e "$UUV_MUJOCO_DIR" ]]; then
+        mv "$previous_runtime" "$UUV_MUJOCO_DIR" || true
+      fi
+      echo "[install] failed to activate the new runtime; restored the previous runtime" >&2
+      exit 1
+    fi
+    if [[ "$had_previous" -eq 1 ]]; then
+      run rm -rf "$previous_runtime"
+    fi
     rm -rf "$tmpdir"
     trap - RETURN
   fi
   printf '%s\n' "$DIST_VERSION" >"$runtime_version_file"
-  printf '%s\n' "$DIST_VERSION" >"$workspace_version_file"
   for script in \
     "$UUV_MUJOCO_DIR/current/launch_uuv_sim.sh" \
     "$UUV_MUJOCO_DIR/current/start_sitl_mujoco_mj311.sh" \
@@ -499,12 +585,21 @@ install_support_files() {
     fi
     [[ ! -f "${INSTALL_ROOT}/${rel}" ]] || chmod +x "${INSTALL_ROOT}/${rel}" 2>/dev/null || true
   done
+  if [[ -s "${SCRIPT_DIR}/YOLO/best.pt" ]]; then
+    run mkdir -p "${INSTALL_ROOT}/YOLO"
+    if [[ "${SCRIPT_DIR}/YOLO/best.pt" != "${INSTALL_ROOT}/YOLO/best.pt" ]]; then
+      run cp -f "${SCRIPT_DIR}/YOLO/best.pt" "${INSTALL_ROOT}/YOLO/best.pt"
+    fi
+  else
+    echo "[install] bundled YOLO model missing: ${SCRIPT_DIR}/YOLO/best.pt" >&2
+    exit 1
+  fi
 }
 
 setup_ardupilot() {
   [[ "$SKIP_ARDUPILOT" -eq 0 ]] || { log "skipping ArduPilot setup"; return 0; }
   require_cmd git
-  if [[ -d "$ARDUPILOT_DIR/.git" ]]; then
+  if [[ -e "$ARDUPILOT_DIR/.git" ]] && git -C "$ARDUPILOT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
     log "updating existing ArduPilot checkout: $ARDUPILOT_DIR"
   elif [[ -e "$ARDUPILOT_DIR" ]]; then
     echo "[install] ARDUPILOT_DIR exists but is not a git checkout: $ARDUPILOT_DIR" >&2
@@ -568,9 +663,27 @@ PY
 extract_ros_zip() {
   local pkg="$1"
   local zip_path="$2"
+  local destination="${ROS_SOURCE_DIR}/${pkg}"
+  local legacy_destination="${ROS_WORKSPACE_DIR}/${pkg}"
   [[ -f "$zip_path" ]] || return 0
-  if [[ -d "${ROS_WORKSPACE_DIR}/${pkg}" ]]; then
-    log "reusing ROS package: ${ROS_WORKSPACE_DIR}/${pkg}"
+  if [[ "$PAYLOAD_REFRESH" -eq 1 ]]; then
+    if [[ -e "$destination" || -L "$destination" ]]; then
+      log "distribution changed; refreshing ROS package: ${destination}"
+      run rm -rf "$destination"
+    fi
+    if [[ -e "$legacy_destination" || -L "$legacy_destination" ]]; then
+      log "removing pre-src ROS package layout: ${legacy_destination}"
+      run rm -rf "$legacy_destination"
+    fi
+  fi
+  if [[ -d "$destination" ]]; then
+    log "reusing ROS package: ${destination}"
+    return 0
+  fi
+  if [[ -d "$legacy_destination" ]]; then
+    log "migrating ROS package into src/: ${legacy_destination}"
+    run mkdir -p "$ROS_SOURCE_DIR"
+    run mv "$legacy_destination" "$destination"
     return 0
   fi
   local tmpdir package_root
@@ -579,19 +692,49 @@ extract_ros_zip() {
   run unzip -q "$zip_path" -d "$tmpdir"
   package_root="$(find "$tmpdir" -type f -path "*/${pkg}/package.xml" -print -quit)"
   [[ -n "$package_root" ]] || { echo "[install] ${pkg}/package.xml not found in $zip_path" >&2; exit 1; }
-  run mkdir -p "$ROS_WORKSPACE_DIR"
-  run mv "$(dirname "$package_root")" "${ROS_WORKSPACE_DIR}/${pkg}"
+  run mkdir -p "$ROS_SOURCE_DIR"
+  run mv "$(dirname "$package_root")" "$destination"
   rm -rf "$tmpdir"
   trap - RETURN
 }
 
 setup_ros_packages() {
-  [[ "$WITH_ROS2" -eq 1 && "$SKIP_ROSPKG_BUILD" -eq 0 ]] || { log "skipping ROS helper package build"; return 0; }
-  [[ -f "/opt/ros/${ROS_DISTRO}/setup.bash" ]] || { log "ROS setup missing; skipping ROS helper package build"; return 0; }
-  require_cmd colcon
+  [[ "$WITH_ROS2" -eq 1 ]] || { log "skipping bundled ROS package extraction and build"; return 0; }
+  run mkdir -p "$ROS_SOURCE_DIR"
+  if [[ "$PAYLOAD_REFRESH" -eq 1 ]]; then
+    # dist4 has one active vision implementation. Remove the superseded custom
+    # package and its isolated colcon prefix so an in-place upgrade cannot keep
+    # exposing duplicate FSM/RC executables from an older release.
+    for obsolete_path in \
+      "${ROS_SOURCE_DIR}/kmu26_vision_mission_fsm" \
+      "${ROS_WORKSPACE_DIR}/kmu26_vision_mission_fsm" \
+      "${ROS_WORKSPACE_DIR}/build/kmu26_vision_mission_fsm" \
+      "${ROS_WORKSPACE_DIR}/install/kmu26_vision_mission_fsm"
+    do
+      if [[ -e "$obsolete_path" || -L "$obsolete_path" ]]; then
+        log "removing superseded vision FSM from previous release: ${obsolete_path}"
+        run rm -rf "$obsolete_path"
+      fi
+    done
+  fi
+  if [[ -f "${SCRIPT_DIR}/rospkg/README.md" ]]; then
+    run cp -a "${SCRIPT_DIR}/rospkg/README.md" "${ROS_SOURCE_DIR}/README.md"
+  fi
   extract_ros_zip dvl_msgs "${SCRIPT_DIR}/rospkg/dvl_msgs.zip"
   extract_ros_zip ping360_sonar_msgs "${SCRIPT_DIR}/rospkg/ping360_sonar_msgs.zip"
+  extract_ros_zip kmu26_auv_msg "${SCRIPT_DIR}/rospkg/kmu26_auv_msg.zip"
   extract_ros_zip kmu26_auv "${SCRIPT_DIR}/rospkg/kmu26_auv.zip"
+  extract_ros_zip audio_common_msgs "${SCRIPT_DIR}/rospkg/audio_common_msgs.zip"
+  extract_ros_zip audio_common "${SCRIPT_DIR}/rospkg/audio_common.zip"
+  extract_ros_zip audio_capture "${SCRIPT_DIR}/rospkg/audio_capture.zip"
+  extract_ros_zip kmu26_auv_buoy_vision_control "${SCRIPT_DIR}/rospkg/kmu26_auv_buoy_vision_control.zip"
+  extract_ros_zip kmu26_mission_fsm "${SCRIPT_DIR}/rospkg/kmu26_mission_fsm.zip"
+  extract_ros_zip kmu26_auv_web_gui "${SCRIPT_DIR}/rospkg/kmu26_auv_web_gui.zip"
+  extract_ros_zip kmu26_pinger_homing "${SCRIPT_DIR}/rospkg/kmu26_pinger_homing.zip"
+  extract_ros_zip robot_localization "${SCRIPT_DIR}/rospkg/robot_localization.zip"
+  [[ "$SKIP_ROSPKG_BUILD" -eq 0 ]] || { log "ROS sources refreshed; skipping ROS helper package build"; return 0; }
+  [[ -f "/opt/ros/${ROS_DISTRO}/setup.bash" ]] || { log "ROS setup missing; skipping ROS helper package build"; return 0; }
+  require_cmd colcon
   (
     set +u
     # shellcheck source=/dev/null
@@ -599,7 +742,13 @@ setup_ros_packages() {
     set -u
     cd "$ROS_WORKSPACE_DIR"
     python3 -m pip install --user 'setuptools<80'
-    colcon build --symlink-install --packages-select dvl_msgs ping360_sonar_msgs hit25_auv_ros2
+    env CMAKE_BUILD_PARALLEL_LEVEL="${UUV_DIST_BUILD_JOBS:-1}" \
+      colcon build --symlink-install --executor sequential --packages-select \
+        dvl_msgs ping360_sonar_msgs hit25_auv_ros2_msg hit25_auv_ros2 \
+        audio_common_msgs audio_common audio_capture auv_buoy_vision_control \
+        kmu26_mission_fsm kmu26_auv_web_gui kmu26_pinger_homing \
+        robot_localization \
+        --cmake-args -DBUILD_TESTING=OFF
   )
 }
 
@@ -620,10 +769,17 @@ write_env_file() {
 #!/usr/bin/env bash
 export WORKSPACE_DIR="${INSTALL_ROOT}"
 export ROS_WORKSPACE_DIR="\${ROS_WORKSPACE_DIR:-\${WORKSPACE_DIR}/rospkg}"
+export ROS_SOURCE_DIR="\${ROS_SOURCE_DIR:-\${ROS_WORKSPACE_DIR}/src}"
 export UUV_MUJOCO_DIR="\${UUV_MUJOCO_DIR:-\${WORKSPACE_DIR}/uuv_mujoco}"
 export UUV_MUJOCO_RUNTIME_DIR="\${UUV_MUJOCO_RUNTIME_DIR:-\${UUV_MUJOCO_DIR}/current}"
-export ARDUPILOT_DIR="\${ARDUPILOT_DIR:-\${WORKSPACE_DIR}/ardupilot}"
-export KMU26_AUV_DIR="\${KMU26_AUV_DIR:-\${ROS_WORKSPACE_DIR}/kmu26_auv}"
+export ARDUPILOT_DIR="\${ARDUPILOT_DIR:-\${WORKSPACE_DIR}/ardupilot_sub_stable}"
+export KMU26_AUV_DIR="\${KMU26_AUV_DIR:-\${ROS_SOURCE_DIR}/kmu26_auv}"
+export KMU26_AUV_MSG_DIR="\${KMU26_AUV_MSG_DIR:-\${ROS_SOURCE_DIR}/kmu26_auv_msg}"
+export KMU26_VISION_DIR="\${KMU26_VISION_DIR:-\${ROS_SOURCE_DIR}/kmu26_auv_buoy_vision_control}"
+export KMU26_MISSION_FSM_DIR="\${KMU26_MISSION_FSM_DIR:-\${ROS_SOURCE_DIR}/kmu26_mission_fsm}"
+export KMU26_WEB_GUI_DIR="\${KMU26_WEB_GUI_DIR:-\${ROS_SOURCE_DIR}/kmu26_auv_web_gui}"
+export KMU26_PINGER_HOMING_DIR="\${KMU26_PINGER_HOMING_DIR:-\${ROS_SOURCE_DIR}/kmu26_pinger_homing}"
+export UUV_YOLO_MODEL="\${UUV_YOLO_MODEL:-\${WORKSPACE_DIR}/YOLO/best.pt}"
 export ROS_DISTRO="\${ROS_DISTRO:-${ROS_DISTRO}}"
 export MJ311_ROOT="\${MJ311_ROOT:-${VENV_ROOT}}"
 export MJ311_PYTHON="\${MJ311_PYTHON:-\${MJ311_ROOT}/bin/python}"
@@ -649,14 +805,43 @@ verify_install() {
   local fail=0 py="${VENV_ROOT}/bin/python"
   [[ -d "$UUV_MUJOCO_DIR/current" ]] || { echo "[FAIL] current runtime missing"; fail=1; }
   [[ -x "$INSTALL_ROOT/run_control_gui.sh" ]] || { echo "[FAIL] run_control_gui.sh missing"; fail=1; }
-  [[ -x "$py" ]] || { echo "[FAIL] Python venv missing"; fail=1; }
+  if [[ "$SKIP_PYTHON_ENV" -eq 0 && ! -x "$py" ]]; then
+    echo "[FAIL] Python venv missing"
+    fail=1
+  fi
   if [[ "$SKIP_ARDUPILOT" -eq 0 && ! -f "$ARDUPILOT_DIR/Tools/autotest/sim_vehicle.py" ]]; then
     echo "[FAIL] ArduPilot sim_vehicle.py missing"
     fail=1
   fi
-  if ! grep -Fq '"UUV_MUJOCO_TIMESTEP": "0.005"' "$UUV_MUJOCO_DIR/current/gui/sim_stack_env_defaults.py"; then
-    echo "[FAIL] current runtime does not have 0.005 GUI timestep default"
+  if ! grep -Fq '"UUV_MUJOCO_TIMESTEP": "0.008"' "$UUV_MUJOCO_DIR/current/gui/sim_stack_env_defaults.py"; then
+    echo "[FAIL] current runtime does not have 0.008 stable timestep default"
     fail=1
+  fi
+  if [[ ! -s "${INSTALL_ROOT}/YOLO/best.pt" ]]; then
+    echo "[FAIL] YOLO/best.pt missing"
+    fail=1
+  fi
+  if [[ "$WITH_ROS2" -eq 1 ]]; then
+    local package_dir
+    for package_dir in \
+      dvl_msgs ping360_sonar_msgs kmu26_auv_msg kmu26_auv \
+      audio_common_msgs audio_common audio_capture kmu26_auv_buoy_vision_control \
+      kmu26_mission_fsm kmu26_auv_web_gui kmu26_pinger_homing \
+      robot_localization
+    do
+      if [[ ! -f "${ROS_SOURCE_DIR}/${package_dir}/package.xml" ]]; then
+        echo "[FAIL] bundled ROS source missing: ${package_dir}/package.xml"
+        fail=1
+      fi
+    done
+    if [[ ! -s "${ROS_SOURCE_DIR}/kmu26_auv_buoy_vision_control/models/best.pt" ]]; then
+      echo "[FAIL] packaged vision model missing"
+      fail=1
+    elif ! cmp -s "${INSTALL_ROOT}/YOLO/best.pt" \
+      "${ROS_SOURCE_DIR}/kmu26_auv_buoy_vision_control/models/best.pt"; then
+      echo "[FAIL] GUI and ROS vision model files differ"
+      fail=1
+    fi
   fi
   if [[ "$fail" -ne 0 ]]; then
     exit 1
@@ -664,6 +849,11 @@ verify_install() {
   if [[ -x "${INSTALL_ROOT}/preflight_uuv_sim_current.sh" ]]; then
     "${INSTALL_ROOT}/preflight_uuv_sim_current.sh" --install-root "$INSTALL_ROOT" --python "$py" --ros-distro "$ROS_DISTRO" --post-install || true
   fi
+}
+
+mark_install_complete() {
+  printf '%s\n' "$DIST_VERSION" >"$WORKSPACE_VERSION_FILE"
+  log "workspace version committed: ${INSTALLED_WORKSPACE_VERSION:-none} -> ${DIST_VERSION}"
 }
 
 print_next_steps() {
@@ -732,6 +922,7 @@ download_qgc
 setup_python_env
 write_env_file
 verify_install
+mark_install_complete
 print_next_steps
 if [[ "$RUN_AFTER_INSTALL" -eq 1 ]]; then
   run_after_install

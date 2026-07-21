@@ -1,0 +1,16 @@
+std_msgs/Header header
+bool detected
+int32 class_id
+string class_label
+float32 confidence
+float32 bbox_center_x
+float32 bbox_center_y
+float32 bbox_width
+float32 bbox_height
+uint32 image_width
+uint32 image_height
+float32 normalized_error_x
+float32 normalized_error_y
+float32 bearing_rad
+float32 range_m
+bool range_valid

@@ -256,11 +256,12 @@ check_runtime_files() {
     fi
   done
 
-  if grep -Fq '"UUV_MUJOCO_TIMESTEP": "0.005"' "${runtime}/gui/sim_stack_env_defaults.py" \
-    && grep -Fq 'course buoy contact timestep guard' "${runtime}/sim/runtime/model_runtime_setup.py"; then
-    pass "current runtime includes buoy-contact timestep stability patch"
+  if grep -Fq '"UUV_MUJOCO_TIMESTEP": "0.008"' "${runtime}/gui/sim_stack_env_defaults.py" \
+    && grep -Fq '"UUV_COURSE_BUOY_TRACK_CSV_ENABLE": "0"' "${runtime}/gui/sim_stack_env_defaults.py" \
+    && grep -Fq 'DEFAULT_CAMERA_PRESET_ID = "hd720_realtime"' "${runtime}/gui/sim_stack_launch_command.py"; then
+    pass "current runtime includes balanced physics and 720p camera defaults"
   else
-    fail "current runtime does not include expected buoy-contact stability patch"
+    fail "current runtime does not include expected dist4 runtime defaults"
   fi
 }
 

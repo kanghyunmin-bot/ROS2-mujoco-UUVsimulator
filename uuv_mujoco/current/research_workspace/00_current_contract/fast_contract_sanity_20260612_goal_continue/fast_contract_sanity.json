@@ -1,0 +1,235 @@
+{
+  "counts": {
+    "fail": 0,
+    "pass": 18
+  },
+  "generated_at_unix": 1781215443.324689,
+  "results": [
+    {
+      "command": [
+        "/Users/kanghyunmin/.venvs/mujoco311/bin/python",
+        "-m",
+        "compileall",
+        "-q",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/bridge",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/sim",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/physics",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/gui"
+      ],
+      "duration_s": 0.414,
+      "name": "compileall_core",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "/Users/kanghyunmin/.venvs/mujoco311/bin/python",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_rc_frame_contract.py"
+      ],
+      "duration_s": 0.021,
+      "name": "rc_frame_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "rc_frame_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/Users/kanghyunmin/.venvs/mujoco311/bin/python",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_ros2_command_payload.py"
+      ],
+      "duration_s": 0.184,
+      "name": "ros2_command_payload",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "ros2_command_payload=PASS\n"
+    },
+    {
+      "command": [
+        "/Users/kanghyunmin/.venvs/mujoco311/bin/python",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_bridge_live_imports.py"
+      ],
+      "duration_s": 0.131,
+      "name": "bridge_live_imports",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "bridge_live_imports=PASS\n"
+    },
+    {
+      "command": [
+        "/Users/kanghyunmin/.venvs/mujoco311/bin/python",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_sitl_command_link_readiness.py"
+      ],
+      "duration_s": 0.029,
+      "name": "sitl_command_link_readiness",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "sitl_command_link_readiness=PASS\n"
+    },
+    {
+      "command": [
+        "/Users/kanghyunmin/.venvs/mujoco311/bin/python",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_runtime_readiness_policy.py"
+      ],
+      "duration_s": 0.022,
+      "name": "runtime_readiness_policy",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "runtime_readiness_policy=PASS\n"
+    },
+    {
+      "command": [
+        "/Users/kanghyunmin/.venvs/mujoco311/bin/python",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_gui_backend_selection.py"
+      ],
+      "duration_s": 0.026,
+      "name": "gui_backend_selection",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_backend_selection=PASS\n"
+    },
+    {
+      "command": [
+        "/Users/kanghyunmin/.venvs/mujoco311/bin/python",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_gui_readiness_contract.py"
+      ],
+      "duration_s": 0.028,
+      "name": "gui_readiness_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_readiness_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/Users/kanghyunmin/.venvs/mujoco311/bin/python",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_gui_initial_depth_contract.py"
+      ],
+      "duration_s": 0.023,
+      "name": "gui_initial_depth_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_initial_depth_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/Users/kanghyunmin/.venvs/mujoco311/bin/python",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_initial_hold_pose.py"
+      ],
+      "duration_s": 0.054,
+      "name": "initial_hold_pose",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "initial_hold_pose=PASS\n"
+    },
+    {
+      "command": [
+        "/Users/kanghyunmin/.venvs/mujoco311/bin/python",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_real_start_measurements.py"
+      ],
+      "duration_s": 0.055,
+      "name": "real_start_measurements",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "real_start_measurements=PASS\n"
+    },
+    {
+      "command": [
+        "/Users/kanghyunmin/.venvs/mujoco311/bin/python",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_physics_contract_geometry.py"
+      ],
+      "duration_s": 0.053,
+      "name": "physics_contract_geometry",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "physics_contract_geometry=PASS\n"
+    },
+    {
+      "command": [
+        "/Users/kanghyunmin/.venvs/mujoco311/bin/python",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_model_runtime_setup.py"
+      ],
+      "duration_s": 0.494,
+      "name": "model_runtime_setup",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "[physics] MuJoCo fluid geom size scale applied: pattern='fluid_center_enclosure', count=1, scale_xyz=[1. 1. 1.]\n[physics] MuJoCo fluid geom size scale applied: pattern='fluid_*_lower_body', count=2, scale_xyz=[1. 1. 1.]\n[physics] MuJoCo fluidcoef scale applied: count=3, coeff=(blunt, slender, angular, Kutta, Magnus)=[1. 1. 1. 1. 1.]\n[physics] MuJoCo fluidcoef per-geom scale applied: pattern='fluid_center_enclosure', count=1, geoms=fluid_center_enclosure, coeff=(blunt, slender, angular, Kutta, Magnus)=[4.   6.8  3.   0.16 0.04]\n[physics] MuJoCo fluidcoef per-geom scale applied: pattern='fluid_*_lower_body', count=2, geoms=fluid_port_lower_body, fluid_starboard_lower_body, coeff=(blunt, slender, angular, Kutta, Magnus)=[6.   6.3  1.25 0.35 0.07]\nmodel_runtime_setup=PASS\n"
+    },
+    {
+      "command": [
+        "/Users/kanghyunmin/.venvs/mujoco311/bin/python",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_physics_runtime_hydrostatic.py"
+      ],
+      "duration_s": 0.067,
+      "name": "physics_runtime_hydrostatic",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "physics_runtime_hydrostatic=PASS\n"
+    },
+    {
+      "command": [
+        "/Users/kanghyunmin/.venvs/mujoco311/bin/python",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_thruster_param_loader.py"
+      ],
+      "duration_s": 0.072,
+      "name": "thruster_param_loader",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "thruster_param_loader=PASS\n"
+    },
+    {
+      "command": [
+        "/Users/kanghyunmin/.venvs/mujoco311/bin/python",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_odometry_publish_builders.py"
+      ],
+      "duration_s": 0.057,
+      "name": "odometry_publish_builders",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "odometry_publish_builders=PASS\n"
+    },
+    {
+      "command": [
+        "/Users/kanghyunmin/.venvs/mujoco311/bin/python",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_ros2_sitl_command_override.py"
+      ],
+      "duration_s": 0.016,
+      "name": "ros2_sitl_command_override",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "[bridge] /uuv_mujoco/sitl/command_override sensor_replay_start accepted\n[bridge] /uuv_mujoco/sitl/command_override arm=True forwarded=True\n[bridge] /uuv_mujoco/sitl/command_override mode='ALT_HOLD' forwarded=True\nros2_sitl_command_override=PASS\n"
+    },
+    {
+      "command": [
+        "/Users/kanghyunmin/.venvs/mujoco311/bin/python",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/audit_code_contract_sources.py",
+        "--out-dir",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/research_workspace/00_current_contract/fast_contract_sanity_20260612_goal_continue/source_contract_audit"
+      ],
+      "duration_s": 0.546,
+      "name": "source_contract_audit",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "wrote /Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/research_workspace/00_current_contract/fast_contract_sanity_20260612_goal_continue/source_contract_audit/contract_source_audit.json\nwrote /Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/research_workspace/00_current_contract/fast_contract_sanity_20260612_goal_continue/source_contract_audit/contract_source_audit.md\n{\"fail\": 0, \"pass\": 18, \"warn\": 6}\n"
+    }
+  ],
+  "root": "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2"
+}

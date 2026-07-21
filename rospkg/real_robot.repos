@@ -1,0 +1,33 @@
+repositories:
+  dvl_msgs:
+    type: git
+    url: https://github.com/paagutie/dvl_msgs.git
+    version: 555525ebc027f4ca21fdd654a6f30cecd259772f
+  kmu26_auv:
+    type: git
+    url: https://github.com/2026-kmu-underwater-robot/kmu26_auv.git
+    version: 426ea6eb33f1af2c61aab83401c2e9c01d291a19
+  kmu26_auv_hydrophone:
+    type: git
+    url: https://github.com/mink0730/kmu26_auv_hydrophone.git
+    version: 3e72c19e32004a8511998de425e16e7dea00f655
+  kmu26_auv_msg:
+    type: git
+    url: https://github.com/2026-kmu-underwater-robot/kmu26_auv_msg.git
+    version: 2caa9f6a4e959b42a27ecae2ee69ff41747a7df9
+  kmu26_auv_web_gui:
+    type: git
+    url: https://github.com/2026-kmu-underwater-robot/kmu26_auv_web_gui.git
+    version: f5b2764466463c1f666e7ca7eea7d0542b67f02e
+  kmu26_auv_buoy_vision_control:
+    type: git
+    url: https://github.com/2026-kmu-underwater-robot/kmu26_auv_buoy_vision_control.git
+    version: d759c898584b66b554f01c3b17894d1e4fc609ce
+  kmu26_control_packages:
+    type: git
+    url: https://github.com/2026-kmu-underwater-robot/kmu26_mission_fsm.git
+    version: 458ecb237687b4528ec520353eb59c7801552d51
+  robot_localization:
+    type: git
+    url: https://github.com/cra-ros-pkg/robot_localization.git
+    version: 8696ee5a9e4f959fcaae37835dcf2ed12ead581b

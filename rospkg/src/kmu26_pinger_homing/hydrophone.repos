@@ -1,0 +1,5 @@
+repositories:
+  kmu26_auv_hydrophone:
+    type: git
+    url: https://github.com/2026-kmu-underwater-robot/kmu26_auv_hydrophone.git
+    version: 64ccbadad903b6d5b40f641996ce6fe91fd1f69d

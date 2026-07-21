@@ -5,9 +5,10 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 export WORKSPACE_DIR="${WORKSPACE_DIR:-${ROOT_DIR}}"
 export UUV_MUJOCO_DIR="${UUV_MUJOCO_DIR:-${WORKSPACE_DIR}/uuv_mujoco}"
-export ARDUPILOT_DIR="${ARDUPILOT_DIR:-${WORKSPACE_DIR}/ardupilot}"
+export ARDUPILOT_DIR="${ARDUPILOT_DIR:-${WORKSPACE_DIR}/ardupilot_sub_stable}"
 export ROS_WORKSPACE_DIR="${ROS_WORKSPACE_DIR:-${WORKSPACE_DIR}/rospkg}"
-export KMU26_AUV_DIR="${KMU26_AUV_DIR:-${ROS_WORKSPACE_DIR}/kmu26_auv}"
+export ROS_SOURCE_DIR="${ROS_SOURCE_DIR:-${ROS_WORKSPACE_DIR}/src}"
+export KMU26_AUV_DIR="${KMU26_AUV_DIR:-${ROS_SOURCE_DIR}/kmu26_auv}"
 export ROS_DISTRO="${ROS_DISTRO:-humble}"
 
 ROS_ENV_SETUP="${ROS_ENV_SETUP:-/opt/ros/${ROS_DISTRO}/setup.bash}"
