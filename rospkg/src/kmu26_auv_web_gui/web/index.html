@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AUV Localization Test</title>
+    <link rel="stylesheet" href="/static/styles.css?v=20260715-integrated-v3" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div>
+          <h1>AUV Localization Test</h1>
+          <p id="connection-state">Connecting...</p>
+        </div>
+        <div class="status-pills">
+          <span id="stack-pill" class="pill">STACK</span>
+          <span id="mavros-pill" class="pill">MAV</span>
+          <span id="pinger-pill" class="pill">PINGER</span>
+          <span id="bag-pill" class="pill">BAG</span>
+          <span id="joy-pill" class="pill">JOY</span>
+          <span id="battery-pill" class="pill">BAT</span>
+        </div>
+      </header>
+
+      <section class="controls">
+        <button id="start-stack" class="primary">Start Robot Stack</button>
+        <button id="stop-stack">Stop Robot Stack</button>
+      </section>
+
+      <section class="tabs" role="tablist">
+        <button id="dashboard-tab-button" class="tab-button active" data-tab="dashboard" role="tab">Dashboard</button>
+        <button id="state-tab-button" class="tab-button" data-tab="state" role="tab">State</button>
+        <button id="control-tab-button" class="tab-button" data-tab="control" role="tab">Control</button>
+        <button id="vision-tab-button" class="tab-button" data-tab="vision" role="tab">Vision Control</button>
+        <button id="pinger-tab-button" class="tab-button" data-tab="pinger" role="tab">Pinger Homing</button>
+        <button id="bag-tab-button" class="tab-button" data-tab="bag" role="tab">Rosbag</button>
+        <button id="ekf-tab-button" class="tab-button" data-tab="ekf" role="tab">EKF Params</button>
+      </section>
+
+      <section id="dashboard-tab" class="tab-view active">
+      <section class="grid dashboard-grid">
+        <article class="panel telemetry">
+          <h2>Telemetry</h2>
+          <dl>
+            <div>
+              <dt>Position</dt>
+              <dd id="pose-value">0.00, 0.00, 0.00</dd>
+            </div>
+            <div>
+              <dt>Yaw</dt>
+              <dd id="yaw-value">0.0 deg</dd>
+            </div>
+            <div>
+              <dt>DVL Velocity</dt>
+              <dd id="velocity-value">0.00, 0.00, 0.00</dd>
+            </div>
+            <div>
+              <dt>DVL Quality</dt>
+              <dd id="dvl-quality-value">--</dd>
+            </div>
+            <div>
+              <dt>Tilt</dt>
+              <dd id="attitude-tilt-value">--</dd>
+            </div>
+            <div>
+              <dt>Test Ready</dt>
+              <dd id="precheck-ready-value">--</dd>
+            </div>
+            <div>
+              <dt>Depth Z</dt>
+              <dd id="depth-value">0.00 m</dd>
+            </div>
+            <div>
+              <dt>MAVROS Connected</dt>
+              <dd id="mavros-connected">--</dd>
+            </div>
+            <div>
+              <dt>Arming</dt>
+              <dd id="mavros-armed">--</dd>
+            </div>
+            <div>
+              <dt>Flight Mode</dt>
+              <dd id="mavros-mode">--</dd>
+            </div>
+            <div>
+              <dt>Control</dt>
+              <dd id="mavros-control">--</dd>
+            </div>
+            <div>
+              <dt>Battery Voltage</dt>
+              <dd id="battery-voltage">--</dd>
+            </div>
+            <div>
+              <dt>Battery Current</dt>
+              <dd id="battery-current">--</dd>
+            </div>
+            <div>
+              <dt>Battery SOC</dt>
+              <dd id="battery-soc">--</dd>
+            </div>
+            <div>
+              <dt>Battery Temp</dt>
+              <dd id="battery-temp">--</dd>
+            </div>
+          </dl>
+        </article>
+
+        <article class="panel path-panel">
+          <div class="panel-header">
+            <h2>Path</h2>
+            <div class="path-meta">
+              <span id="path-point-count">0 points</span>
+              <span id="path-view-state">--</span>
+            </div>
+          </div>
+          <div class="path-controls">
+            <label>
+              <span>View</span>
+              <select id="path-view-mode">
+                <option value="fit">Fit</option>
+                <option value="map">Map</option>
+                <option value="follow">Follow</option>
+              </select>
+            </label>
+            <label>
+              <span>Color</span>
+              <input id="path-color" type="color" value="#6ec6ff" />
+            </label>
+            <label>
+              <span>Width</span>
+              <input id="path-width" type="range" min="1" max="12" step="0.5" value="2.5" />
+              <strong id="path-width-value">2.5 px</strong>
+            </label>
+            <label>
+              <span>Scale</span>
+              <input id="path-scale" type="range" min="5" max="200" step="1" value="40" />
+              <strong id="path-scale-value">40 px/m</strong>
+            </label>
+            <label>
+              <span>Step</span>
+              <input id="path-grid-step" type="number" min="0.1" max="20" step="0.1" value="1" />
+            </label>
+            <label class="path-toggle">
+              <input id="path-show-grid" type="checkbox" checked />
+              <span>Grid</span>
+            </label>
+            <label class="path-toggle">
+              <input id="path-show-axes" type="checkbox" checked />
+              <span>Axes</span>
+            </label>
+            <label class="path-toggle">
+              <input id="path-show-robot" type="checkbox" checked />
+              <span>Robot</span>
+            </label>
+            <button id="path-set-origin" class="primary">Reset Origin</button>
+            <button id="path-clear" class="danger">Clear Path</button>
+          </div>
+          <canvas id="path-canvas" width="640" height="360"></canvas>
+        </article>
+
+        <article class="panel logs">
+          <h2>Logs</h2>
+          <pre id="log-output"></pre>
+        </article>
+      </section>
+      </section>
+
+      <section id="state-tab" class="tab-view">
+        <section class="grid state-grid">
+          <article class="panel topics">
+            <h2>Topic Health</h2>
+            <div id="topic-list" class="topic-list"></div>
+          </article>
+
+          <article class="panel dvl-panel">
+            <h2>DVL Commands</h2>
+            <div class="dvl-command-grid">
+              <button id="test-start" class="primary">Run Test</button>
+              <button id="test-stop" class="danger">Stop</button>
+              <button data-dvl-command="get_config">Get Config</button>
+              <button data-dvl-command="set_config" data-dvl-param="acoustic_enabled" data-dvl-value="true">Acoustic On</button>
+              <button data-dvl-command="set_config" data-dvl-param="acoustic_enabled" data-dvl-value="false">Acoustic Off</button>
+              <button data-dvl-command="set_config" data-dvl-param="dark_mode_enabled" data-dvl-value="true">Dark On</button>
+              <button data-dvl-command="set_config" data-dvl-param="dark_mode_enabled" data-dvl-value="false">Dark Off</button>
+              <button data-dvl-command="set_config" data-dvl-param="range_mode" data-dvl-value="auto">Range Auto</button>
+              <button data-dvl-command="set_config" data-dvl-param="range_mode" data-dvl-value="=1">Range 1</button>
+              <button data-dvl-command="calibrate_gyro">Calibrate Gyro</button>
+              <button data-dvl-command="reset_dead_reckoning" class="danger">Reset DR</button>
+            </div>
+            <dl class="dvl-config">
+              <div>
+                <dt>Test</dt>
+                <dd id="test-state">Idle</dd>
+              </div>
+              <div>
+                <dt>Updated</dt>
+                <dd id="dvl-updated">--</dd>
+              </div>
+              <div>
+                <dt>Range</dt>
+                <dd id="dvl-range">--</dd>
+              </div>
+              <div>
+                <dt>Acoustic</dt>
+                <dd id="dvl-acoustic">--</dd>
+              </div>
+              <div>
+                <dt>Dark</dt>
+                <dd id="dvl-dark">--</dd>
+              </div>
+              <div>
+                <dt>Sound</dt>
+                <dd id="dvl-sound">--</dd>
+              </div>
+              <div>
+                <dt>Rotation</dt>
+                <dd id="dvl-rotation">--</dd>
+              </div>
+              <div>
+                <dt>Last</dt>
+                <dd id="dvl-last">--</dd>
+              </div>
+              <div>
+                <dt>Error</dt>
+                <dd id="dvl-error">--</dd>
+              </div>
+            </dl>
+            <pre id="dvl-config-json">--</pre>
+            <pre id="dvl-events"></pre>
+          </article>
+
+          <article class="panel joy-panel">
+            <h2>Joy</h2>
+            <div class="ps4-pad" aria-label="Joystick state">
+              <div class="ps4-controller">
+                <div class="ps4-shoulders">
+                  <div class="trigger-group">
+                    <div id="joy-btn-l2" class="trigger-meter ps4-trigger" aria-label="L2">
+                      <span id="joy-lt-fill"></span>
+                      <strong>L2</strong>
+                    </div>
+                    <span id="joy-btn-l1" class="ps4-button">L1</span>
+                  </div>
+                  <div class="trigger-group">
+                    <div id="joy-btn-r2" class="trigger-meter ps4-trigger" aria-label="R2">
+                      <span id="joy-rt-fill"></span>
+                      <strong>R2</strong>
+                    </div>
+                    <span id="joy-btn-r1" class="ps4-button">R1</span>
+                  </div>
+                </div>
+
+                <div class="ps4-body">
+                  <section class="pad-left">
+                    <div class="dpad-cluster">
+                      <div class="dpad">
+                        <span id="joy-dpad-up" class="dpad-button dpad-up">▲</span>
+                        <span id="joy-dpad-left" class="dpad-button dpad-left">◀</span>
+                        <span class="dpad-center"></span>
+                        <span id="joy-dpad-right" class="dpad-button dpad-right">▶</span>
+                        <span id="joy-dpad-down" class="dpad-button dpad-down">▼</span>
+                      </div>
+                    </div>
+                    <div class="stick-shell">
+                      <div class="stick">
+                        <span id="joy-left-stick-dot" class="stick-dot"></span>
+                        <strong>L3</strong>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="pad-center">
+                    <div class="touchpad-row">
+                      <span id="joy-btn-share" class="ps4-side-button">SHARE</span>
+                      <span id="joy-btn-touchpad" class="ps4-touchpad" aria-label="Touchpad">
+                        <span class="touchpad-texture"></span>
+                      </span>
+                      <span id="joy-btn-options" class="ps4-side-button">OPTIONS</span>
+                    </div>
+                    <div class="ps4-speaker" aria-hidden="true">
+                      <span></span><span></span><span></span><span></span><span></span>
+                      <span></span><span></span><span></span><span></span><span></span>
+                      <span></span><span></span>
+                    </div>
+                    <div class="center-buttons">
+                      <span id="joy-btn-ps" class="ps4-guide-button">PS</span>
+                    </div>
+                    <div class="stick-buttons">
+                      <span id="joy-btn-l3" class="ps4-mini-button">L3</span>
+                      <span id="joy-btn-r3" class="ps4-mini-button">R3</span>
+                    </div>
+                    <p id="joy-gamepad-state">No Joy data</p>
+                    <span class="ps4-port" aria-hidden="true"></span>
+                  </section>
+
+                  <section class="pad-right">
+                    <div class="face-cluster">
+                      <div class="face-buttons">
+                        <span id="joy-btn-triangle" class="face-button face-triangle">△</span>
+                        <span id="joy-btn-square" class="face-button face-square">□</span>
+                        <span id="joy-btn-circle" class="face-button face-circle">○</span>
+                        <span id="joy-btn-cross" class="face-button face-cross">×</span>
+                      </div>
+                    </div>
+                    <div class="stick-shell">
+                      <div class="stick">
+                        <span id="joy-right-stick-dot" class="stick-dot"></span>
+                        <strong>R3</strong>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+      </section>
+
+      <section id="control-tab" class="tab-view">
+        <article class="panel control-panel">
+          <div class="panel-header">
+            <h2>Web Control</h2>
+            <div class="control-status">
+              <span id="control-state" class="pill">WEB OFF</span>
+              <span id="control-publish-state">--</span>
+            </div>
+          </div>
+
+          <div class="control-layout">
+            <section class="control-drive">
+              <div class="control-enable-row">
+                <label class="control-enable">
+                  <input id="control-enable" type="checkbox" />
+                  <span>Enable Web Control</span>
+                </label>
+                <button id="control-deadman" class="primary">Hold to Drive</button>
+                <button id="control-stop" class="danger">Stop</button>
+              </div>
+
+              <div class="control-sliders">
+                <label>
+                  <span>Forward</span>
+                  <input id="control-forward" type="range" min="-1" max="1" step="0.05" value="0" />
+                  <strong id="control-forward-value">0.00</strong>
+                </label>
+                <label>
+                  <span>Lateral</span>
+                  <input id="control-lateral" type="range" min="-1" max="1" step="0.05" value="0" />
+                  <strong id="control-lateral-value">0.00</strong>
+                </label>
+                <label>
+                  <span>Vertical</span>
+                  <input id="control-vertical" type="range" min="-1" max="1" step="0.05" value="0" />
+                  <strong id="control-vertical-value">0.00</strong>
+                </label>
+                <label>
+                  <span>Yaw</span>
+                  <input id="control-yaw" type="range" min="-1" max="1" step="0.05" value="0" />
+                  <strong id="control-yaw-value">0.00</strong>
+                </label>
+              </div>
+            </section>
+
+            <section class="control-actions">
+              <h2>Vehicle</h2>
+              <div class="control-command-grid">
+                <button id="control-arm" class="danger">Arm</button>
+                <button id="control-disarm">Disarm</button>
+              </div>
+              <h2>Mode</h2>
+              <div class="control-command-grid">
+                <button data-control-mode="MANUAL">MANUAL</button>
+                <button data-control-mode="STABILIZE">STABILIZE</button>
+                <button data-control-mode="ALT_HOLD">ALT HOLD</button>
+                <button data-control-mode="POSHOLD">POSHOLD</button>
+                <button data-control-mode="GUIDED">GUIDED</button>
+              </div>
+            </section>
+          </div>
+        </article>
+      </section>
+
+      <section id="vision-tab" class="tab-view">
+        <div class="vision-shell">
+          <header class="vision-command-bar panel">
+            <div>
+              <p class="vision-kicker">BUOY AUTONOMY</p>
+              <h2>Vision Mission Console</h2>
+            </div>
+            <div class="vision-pills">
+              <span id="vision-camera-pill" class="pill">YOLO FEED</span>
+              <span id="vision-yolo-pill" class="pill">YOLO</span>
+              <span id="vision-mission-pill" class="pill">MISSION</span>
+              <span id="vision-control-pill" class="pill">CONTROL OFF</span>
+            </div>
+            <div class="vision-master-actions">
+              <button id="vision-start-all" class="primary">Start Vision Stack</button>
+              <button id="vision-enable-control" class="vision-enable">Enable Auto Mission</button>
+              <button id="vision-emergency-stop" class="danger">Emergency Stop</button>
+              <button id="vision-stop-all">Stop Vision Stack</button>
+            </div>
+          </header>
+
+          <div class="vision-monitor-grid">
+            <article class="panel vision-feed-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="vision-kicker">LIVE INFERENCE</p>
+                  <h2>Completed YOLO Inference Frames</h2>
+                </div>
+                <span id="vision-frame-meta" class="vision-frame-meta">Waiting for completed YOLO frame</span>
+              </div>
+              <div class="vision-canvas-wrap">
+                <canvas id="vision-canvas" width="960" height="540"></canvas>
+                <div id="vision-feed-empty" class="vision-feed-empty">
+                  <strong>NO YOLO FRAME</strong>
+                  <span>/vision/yolo/annotated/compressed</span>
+                </div>
+              </div>
+              <div id="vision-detections" class="vision-detections">
+                <div class="vision-detection-empty">No YOLO detections</div>
+              </div>
+            </article>
+
+            <article class="panel vision-state-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="vision-kicker">MISSION EXECUTION</p>
+                  <h2 id="vision-state-value">UNKNOWN</h2>
+                </div>
+                <span id="vision-state-age">--</span>
+              </div>
+              <div id="vision-state-flow" class="vision-state-flow">
+                <span data-vision-state="IDLE">IDLE</span>
+                <span data-vision-state="DIVE">DIVE</span>
+                <span data-vision-state="SEARCH">SEARCH</span>
+                <span data-vision-state="APPROACH_BUOY">APPROACH</span>
+                <span data-vision-state="ALIGN_STICK">ALIGN</span>
+                <span data-vision-state="INSERT_FORK">INSERT</span>
+                <span data-vision-state="DETACH">DETACH</span>
+                <span data-vision-state="BACKOFF">BACKOFF</span>
+                <span data-vision-state="VERIFY_RELEASE">VERIFY</span>
+                <span data-vision-state="AREA_VERIFY">AREA</span>
+                <span data-vision-state="ASCEND">ASCEND</span>
+                <span data-vision-state="COMPLETE">COMPLETE</span>
+                <span data-vision-state="FAILSAFE">FAILSAFE</span>
+              </div>
+              <dl class="vision-telemetry">
+                <div><dt>Depth input</dt><dd id="vision-depth-value">--</dd></div>
+                <div><dt>Detection</dt><dd id="vision-detection-value">--</dd></div>
+                <div><dt>Target error</dt><dd id="vision-error-value">--</dd></div>
+                <div><dt>Target area</dt><dd id="vision-area-value">--</dd></div>
+              </dl>
+              <div class="vision-rc-header">
+                <h2>Mission PWM Command · 18 Channels</h2>
+                <span id="vision-rc-meta">No output</span>
+              </div>
+              <div id="vision-rc-grid" class="vision-rc-grid"></div>
+            </article>
+          </div>
+
+          <article class="panel vision-config-panel">
+            <div class="panel-header">
+              <div>
+                <p class="vision-kicker">LAUNCH CONFIGURATION</p>
+                <h2>Detector and Mission Parameters</h2>
+              </div>
+              <span>Changes apply on next process start</span>
+            </div>
+            <div class="vision-config-grid">
+              <fieldset>
+                <legend>YOLO Detector</legend>
+                <label class="vision-field-wide"><span>Model path</span><input id="vision-model-path" data-vision-yolo="model_path" type="text" value="/home/pc/Downloads/best.pt" /></label>
+                <label><span>Device</span><select id="vision-device" data-vision-yolo="device"><option value="auto">Auto</option><option value="cuda:0">CUDA 0</option><option value="cpu">CPU</option></select></label>
+                <label><span>Confidence</span><input data-vision-yolo="confidence_threshold" type="number" min="0.01" max="1" step="0.01" value="0.35" /></label>
+                <label><span>Image size</span><input data-vision-yolo="imgsz" type="number" min="160" max="1920" step="32" value="640" /></label>
+                <label><span>Target class ID</span><input data-vision-yolo="target_class_id" type="number" min="-1" step="1" value="-1" /></label>
+                <label><span>Target class name</span><input data-vision-yolo="target_class_name" type="text" value="" placeholder="empty = all" /></label>
+                <label class="vision-field-wide"><span>Camera topic</span><input data-vision-yolo="image_topic" type="text" value="/camera/camera/color/image_raw/compressed" readonly /></label>
+                <label class="vision-field-wide"><span>BBox topic</span><input data-vision-yolo="bbox_topic" type="text" value="/vision/buoy_bbox" readonly /></label>
+                <label class="vision-field-wide"><span>Annotated image topic</span><input data-vision-yolo="annotated_image_topic" type="text" value="/vision/yolo/annotated/compressed" readonly /></label>
+                <label><span>JPEG quality</span><input data-vision-yolo="annotated_jpeg_quality" type="number" min="1" max="100" step="1" value="80" /></label>
+                <label class="vision-check"><input data-vision-yolo="publish_annotated_image" type="checkbox" checked /><span>Stream completed YOLO frames</span></label>
+                <label class="vision-check"><input data-vision-yolo="publish_per_class" type="checkbox" checked /><span>Publish best bbox for each class</span></label>
+                <div class="vision-process-actions vision-field-wide">
+                  <button id="vision-start-yolo" class="primary">Start YOLO</button>
+                  <button id="vision-stop-yolo">Stop YOLO</button>
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>Mission Controller</legend>
+                <label class="vision-field-wide"><span>BBox topic</span><input data-vision-mission="bbox_topic" type="text" value="/vision/buoy_bbox" readonly /></label>
+                <label class="vision-field-wide"><span>PWM monitor topic</span><input data-vision-mission="rc_monitor_topic" type="text" value="/mission/rc_command" readonly /></label>
+                <label class="vision-field-wide"><span>Depth pose topic</span><input data-vision-mission="depth_pose_topic" type="text" value="/depth/pose" readonly /></label>
+                <label><span>Depth pose scale</span><input data-vision-mission="depth_pose_scale" type="number" step="0.1" value="-1.0" /></label>
+                <label><span>Depth pose offset</span><input data-vision-mission="depth_pose_offset_m" type="number" step="0.1" value="0.0" /></label>
+                <label><span>Work depth (m)</span><input data-vision-mission="work_depth_m" type="number" step="0.1" value="9.5" /></label>
+                <label><span>Surface depth (m)</span><input data-vision-mission="surface_depth_m" type="number" step="0.1" value="0.4" /></label>
+                <label><span>Maximum depth (m)</span><input data-vision-mission="max_depth_m" type="number" step="0.1" value="10.5" /></label>
+                <label><span>Approach area</span><input data-vision-mission="approach_area_ratio" type="number" min="0" max="1" step="0.01" value="0.12" /></label>
+                <label><span>Buoy class ID</span><input id="vision-buoy-class" data-vision-mission="buoy_class_id" type="number" step="1" value="0" /></label>
+                <label><span>Stick class ID</span><input id="vision-stick-class" data-vision-mission="stick_class_id" type="number" step="1" value="1" /></label>
+                <label><span>Fork target X</span><input data-vision-mission="fork_target_x" type="number" min="0" max="1" step="0.01" value="0.5" /></label>
+                <label><span>Fork target Y</span><input data-vision-mission="fork_target_y" type="number" min="0" max="1" step="0.01" value="0.5" /></label>
+                <label><span>Min PWM</span><input data-vision-mission="min_pwm" type="number" min="1300" max="1700" step="1" value="1300" /></label>
+                <label><span>Neutral PWM</span><input data-vision-mission="neutral_pwm" type="number" min="1300" max="1700" step="1" value="1500" /></label>
+                <label><span>Max PWM</span><input data-vision-mission="max_pwm" type="number" min="1300" max="1700" step="1" value="1700" /></label>
+                <label><span>Max yaw delta</span><input data-vision-mission="max_yaw_delta" type="number" min="0" max="400" step="1" value="180" /></label>
+                <label><span>Approach PWM</span><input data-vision-mission="forward_pwm" type="number" min="1300" max="1700" step="1" value="1560" /></label>
+                <label><span>Insert PWM</span><input data-vision-mission="insert_pwm" type="number" min="1300" max="1700" step="1" value="1560" /></label>
+                <label><span>Detach PWM</span><input data-vision-mission="detach_pwm" type="number" min="1300" max="1700" step="1" value="1620" /></label>
+                <label><span>Backoff PWM</span><input data-vision-mission="backoff_pwm" type="number" min="1300" max="1700" step="1" value="1420" /></label>
+                <label class="vision-check"><input data-vision-mission="yaw_invert" type="checkbox" /><span>Invert yaw</span></label>
+                <label class="vision-check"><input data-vision-mission="vertical_positive_is_up" type="checkbox" checked /><span>Positive throttle is up</span></label>
+                <details class="vision-advanced vision-field-wide">
+                  <summary>Advanced mission timing and channel mapping</summary>
+                  <div class="vision-advanced-grid">
+                    <label><span>Control rate (Hz)</span><input data-vision-mission="control_rate_hz" type="number" min="1" max="100" step="1" value="20" /></label>
+                    <label><span>Search timeout (s)</span><input data-vision-mission="search_timeout_sec" type="number" min="0" step="0.1" value="20.0" /></label>
+                    <label><span>Area verify (s)</span><input data-vision-mission="area_verify_sec" type="number" min="0" step="0.1" value="12.0" /></label>
+                    <label><span>Align stable (s)</span><input data-vision-mission="align_stable_sec" type="number" min="0" step="0.1" value="0.7" /></label>
+                    <label><span>Stick deadband X</span><input data-vision-mission="stick_deadband_x" type="number" min="0" max="1" step="0.01" value="0.06" /></label>
+                    <label><span>Stick deadband Y</span><input data-vision-mission="stick_deadband_y" type="number" min="0" max="1" step="0.01" value="0.08" /></label>
+                    <label><span>Insert duration (s)</span><input data-vision-mission="insert_duration_sec" type="number" min="0" step="0.1" value="0.8" /></label>
+                    <label><span>Detach duration (s)</span><input data-vision-mission="detach_duration_sec" type="number" min="0" step="0.1" value="0.3" /></label>
+                    <label><span>Backoff duration (s)</span><input data-vision-mission="backoff_duration_sec" type="number" min="0" step="0.1" value="0.5" /></label>
+                    <label><span>Throttle channel</span><input data-vision-mission="throttle_channel" type="number" min="1" max="18" step="1" value="3" /></label>
+                    <label><span>Yaw channel</span><input data-vision-mission="yaw_channel" type="number" min="1" max="18" step="1" value="4" /></label>
+                    <label><span>Forward channel</span><input data-vision-mission="forward_channel" type="number" min="1" max="18" step="1" value="5" /></label>
+                  </div>
+                </details>
+                <div class="vision-process-actions vision-field-wide">
+                  <button id="vision-start-mission" class="primary">Start Mission Controller</button>
+                  <button id="vision-stop-mission">Stop Mission Controller</button>
+                </div>
+              </fieldset>
+            </div>
+            <pre id="vision-log-output" class="vision-log-output"></pre>
+          </article>
+        </div>
+      </section>
+
+      <section id="pinger-tab" class="tab-view">
+        <section class="grid pinger-grid">
+          <article class="panel pinger-control-panel">
+            <div class="panel-header">
+              <div>
+                <h2>Real-vehicle Pinger Homing</h2>
+                <p class="panel-note">Dry Run은 추정과 제어 계산만 수행하고 MAVROS RC 채널을 모두 release합니다.</p>
+              </div>
+              <div class="panel-actions">
+                <button id="pinger-preflight">Preflight</button>
+                <button id="start-pinger-dry" class="primary">Start Dry Run</button>
+                <button id="start-pinger-live" class="danger">Start Live RC</button>
+                <button id="stop-pinger">Stop</button>
+              </div>
+            </div>
+
+            <div class="pinger-option-row">
+              <label><span>Homing mode</span>
+                <select id="pinger-homing-mode">
+                  <option value="phase">PHASE (odometry)</option>
+                  <option value="no_odom_phase">NO_ODOM_PHASE</option>
+                  <option value="snr">SNR gradient 3D</option>
+                </select>
+              </label>
+              <label class="check-field">
+                <input id="pinger-use-estimator" type="checkbox" checked />
+                <span>Run hydrophone estimator</span>
+              </label>
+              <label class="check-field">
+                <input id="pinger-use-capture" type="checkbox" checked />
+                <span>Start audio capture</span>
+              </label>
+              <label class="check-field">
+                <input id="pinger-use-stamped-audio" type="checkbox" checked />
+                <span>Stamped audio</span>
+              </label>
+            </div>
+            <p id="pinger-navigation-note" class="panel-note">PHASE · /odometry/filtered required</p>
+
+            <section id="pinger-phase-selection" class="phase-peak-selection" aria-labelledby="phase-peak-heading">
+              <div class="phase-peak-header">
+                <div>
+                  <h3 id="phase-peak-heading">1. Confirm the Pinger Phase peak</h3>
+                  <p>시작 전 정지 상태에서 FFT 후보를 스캔하고 실제 핑거 주파수 하나를 선택하십시오.</p>
+                </div>
+                <div class="panel-actions">
+                  <button id="pinger-phase-scan" type="button" class="primary">Scan peaks</button>
+                  <button id="pinger-phase-scan-stop" type="button">Stop scan</button>
+                  <button id="pinger-phase-manual-confirm" type="button" title="Stop scanning first; use only when peak discovery is unavailable">Confirm manual Hz</button>
+                </div>
+              </div>
+              <div id="pinger-phase-peak-list" class="phase-peak-list" role="radiogroup" aria-label="Detected Phase peak candidates">
+                <p class="phase-peak-empty">스캔을 시작하면 상위 주파수 후보가 여기에 표시됩니다.</p>
+              </div>
+              <p id="pinger-phase-selection-state" class="phase-selection-state warn" aria-live="polite">Phase frequency not confirmed · homing start is blocked</p>
+            </section>
+
+            <div class="pinger-option-row">
+              <label><span>Vehicle mode</span>
+                <select id="pinger-mode">
+                  <option value="MANUAL">MANUAL</option>
+                  <option value="STABILIZE" selected>STABILIZE</option>
+                  <option value="ALT_HOLD">ALT_HOLD</option>
+                  <option value="POSHOLD">POSHOLD</option>
+                  <option value="GUIDED">GUIDED</option>
+                </select>
+              </label>
+              <button id="pinger-set-mode">Set Mode</button>
+              <button id="pinger-arm" class="danger">ARM</button>
+              <button id="pinger-disarm">DISARM</button>
+              <span id="pinger-preflight-result">Preflight not run</span>
+            </div>
+
+            <section class="pinger-parameters" aria-labelledby="pinger-parameters-heading">
+              <div class="pinger-parameter-header">
+                <div>
+                  <h3 id="pinger-parameters-heading">Homing parameters</h3>
+                  <p>값을 바꾸면 아래 요약과 검증 상태가 즉시 갱신됩니다. 변경값은 다음 시작부터 적용됩니다.</p>
+                </div>
+                <div class="pinger-parameter-actions">
+                  <span id="pinger-parameter-state" class="pinger-parameter-state" aria-live="polite">Defaults loaded</span>
+                  <button id="pinger-parameter-reset" type="button">Reset defaults</button>
+                </div>
+              </div>
+
+              <div id="pinger-parameter-summary" class="pinger-parameter-summary" aria-live="polite"></div>
+
+              <div class="pinger-parameter-groups">
+                <fieldset class="pinger-parameter-group">
+                  <legend>Signal &amp; environment</legend>
+                  <div class="pinger-parameter-grid">
+                    <label><span>Audio device</span><input id="pinger-audio-device" data-pinger-param type="text" placeholder="ALSA device (optional)" /><small>비우면 시스템 기본 입력</small></label>
+                    <label><span>Reference frequency</span><input id="pinger-reference-frequency" data-pinger-param type="number" value="21164" min="15000" max="25000" step="any" required /><small>Hz · scanner가 확정한 소수 주파수를 그대로 사용</small></label>
+                    <label><span>Peak scan minimum</span><input id="pinger-scan-min-frequency" data-pinger-param type="number" value="15000" min="15000" max="25000" step="100" required /><small>Hz · 실물 탐색 대역을 좁힐 때 조정</small></label>
+                    <label><span>Peak scan maximum</span><input id="pinger-scan-max-frequency" data-pinger-param type="number" value="25000" min="15000" max="25000" step="100" required /><small>Hz · 계약 상한 25 kHz</small></label>
+                    <label><span>Tank max depth</span><input id="pinger-tank-depth" data-pinger-param type="number" value="11.0" min="0.5" max="50" step="0.1" required /><small>m · 수직 탐색 안전 경계</small></label>
+                    <label><span>Control rate</span><input id="pinger-rate" data-pinger-param type="number" value="30" min="1" max="120" step="1" required /><small>Hz · RC 명령 갱신 속도</small></label>
+                  </div>
+                </fieldset>
+
+                <fieldset class="pinger-parameter-group">
+                  <legend>Motion tuning</legend>
+                  <div class="pinger-parameter-grid pinger-motion-grid">
+                    <label><span>Probe PWM delta</span><input id="pinger-probe-pwm-delta" data-pinger-param type="number" value="20" min="15" max="25" step="1" required /><small>1500 ± µs · 실물 방향 추정 이동량</small></label>
+                    <label><span>Approach PWM delta</span><input id="pinger-approach-pwm-delta" data-pinger-param type="number" value="120" min="20" max="200" step="5" required /><small>1500 + µs · Forward max × 400 이하</small></label>
+                    <label><span>Approach duration</span><input id="pinger-approach-duration" data-pinger-param type="number" value="4.0" min="0.5" max="20" step="0.1" required /><small>s · 전진 후 정지·재추정 간격</small></label>
+                    <label><span>Forward max</span><input id="pinger-forward-max" data-pinger-param type="number" value="0.48" min="0.05" max="0.8" step="0.01" required /><small>0–1 · 기존 odometry/SNR 제어 상한</small></label>
+                    <label><span>Yaw gain</span><input id="pinger-yaw-gain" data-pinger-param type="number" value="0.85" min="0.1" max="2" step="0.01" required /><small>방위 오차 반응 강도</small></label>
+                    <label><span>Yaw command limit</span><input id="pinger-yaw-limit" data-pinger-param type="number" value="0.42" min="0.05" max="0.7" step="0.01" required /><small>0–1 · 최대 회전 명령</small></label>
+                  </div>
+                </fieldset>
+
+                <fieldset class="pinger-parameter-group">
+                  <legend>Arrival &amp; completion</legend>
+                  <div class="pinger-parameter-grid">
+                    <label><span>Arrival radius</span><input id="pinger-arrival-radius" data-pinger-param type="number" value="1.5" min="0.2" max="20" step="0.1" required /><small>m · 근접 완료 반경</small></label>
+                    <label><span>Arrival hold</span><input id="pinger-arrival-hold" data-pinger-param type="number" value="1.0" min="0.1" max="10" step="0.1" required /><small>s · 반경 내 유지 시간</small></label>
+                    <label><span>Max runtime</span><input id="pinger-max-runtime" data-pinger-param type="number" value="180" min="5" max="3600" step="5" required /><small>s · 자동 정지 시간</small></label>
+                  </div>
+                  <details class="pinger-calibration">
+                    <summary>Calibrated range stop <span>Advanced</span></summary>
+                    <div class="pinger-parameter-grid">
+                      <label><span>Success hold</span><input id="pinger-success-hold" data-pinger-param type="number" value="0.8" min="0.1" max="10" step="0.1" required /><small>s · 거리 조건 유지</small></label>
+                      <label><span>Success range</span><input id="pinger-success-range" data-pinger-param type="number" value="0.0" min="0" max="20" step="0.1" required /><small>m · 0이면 거리 완료 OFF</small></label>
+                      <label><span>IQ range constant</span><input id="pinger-range-constant" data-pinger-param type="number" value="0.0" min="0" max="10" step="0.001" required /><small>실측 보정 후에만 입력</small></label>
+                    </div>
+                  </details>
+                </fieldset>
+              </div>
+            </section>
+            <p class="safety-note">IQ range constant 0은 실물에서 미보정 절대거리 판정을 끕니다. 실측 보정 전에는 0으로 두십시오. Live RC는 자동 아밍하지 않으며, MAVROS가 실제 armed일 때만 출력됩니다.</p>
+          </article>
+
+          <article class="panel pinger-status-panel">
+            <h2>Pinger Status</h2>
+            <dl class="pinger-status">
+              <div><dt>Process</dt><dd id="pinger-process-state">--</dd></div>
+              <div><dt>Output</dt><dd id="pinger-control-mode">--</dd></div>
+              <div><dt>RC Mux</dt><dd id="pinger-mux-state">--</dd></div>
+              <div><dt>Controller State</dt><dd id="pinger-controller-state">--</dd></div>
+              <div><dt>Inputs</dt><dd id="pinger-input-state">--</dd></div>
+              <div><dt>Estimate</dt><dd id="pinger-estimate">--</dd></div>
+              <div><dt>Quality</dt><dd id="pinger-quality">--</dd></div>
+              <div><dt>Requested RC</dt><dd id="pinger-requested-command">--</dd></div>
+              <div><dt>Applied RC</dt><dd id="pinger-command">--</dd></div>
+              <div><dt>Depth Safety</dt><dd id="pinger-depth-safety">--</dd></div>
+              <div><dt>Direction Source</dt><dd id="pinger-direction-source">--</dd></div>
+              <div><dt>Phase Frequency</dt><dd id="pinger-frequency-selection">--</dd></div>
+              <div><dt>Samples</dt><dd id="pinger-samples">--</dd></div>
+              <div><dt>Result</dt><dd id="pinger-result">--</dd></div>
+            </dl>
+          </article>
+
+          <article class="panel pinger-log-panel">
+            <h2>Pinger Homing Logs</h2>
+            <pre id="pinger-log-output"></pre>
+          </article>
+        </section>
+      </section>
+
+      <section id="bag-tab" class="tab-view">
+        <article class="panel bag-panel">
+          <div class="panel-header">
+            <h2>Rosbag Recording</h2>
+            <div class="panel-actions">
+              <button id="start-bag" class="primary">Start Bag</button>
+              <button id="stop-bag">Stop Bag</button>
+              <button id="analyze-bag">Analyze Bag</button>
+              <button id="bag-refresh-topics">Refresh Topics</button>
+            </div>
+          </div>
+          <div class="bag-mode">
+            <label>
+              <input type="radio" name="bag-mode" value="all" />
+              <span>All Topics</span>
+            </label>
+            <label>
+              <input type="radio" name="bag-mode" value="selected" checked />
+              <span>Selected Topics</span>
+            </label>
+          </div>
+          <dl class="bag-status">
+            <div>
+              <dt>Status</dt>
+              <dd id="bag-state">--</dd>
+            </div>
+            <div>
+              <dt>Output</dt>
+              <dd id="bag-output">--</dd>
+            </div>
+            <div>
+              <dt>Analysis</dt>
+              <dd id="bag-analysis-state">--</dd>
+            </div>
+          </dl>
+          <div id="bag-analysis-summary" class="analysis-summary"></div>
+          <canvas id="analysis-canvas" class="analysis-canvas" width="640" height="320"></canvas>
+          <pre id="bag-analysis-output">--</pre>
+          <div id="bag-topic-list" class="bag-topic-list"></div>
+          <pre id="bag-log-output"></pre>
+        </article>
+      </section>
+
+      <section id="ekf-tab" class="tab-view">
+        <article class="panel ekf-panel">
+          <div class="panel-header">
+            <h2>EKF Process Noise</h2>
+            <div class="panel-actions">
+              <button id="ekf-reload">Reload</button>
+              <button id="ekf-save" class="primary">Save</button>
+            </div>
+          </div>
+          <div class="ekf-meta">
+            <span id="ekf-path">--</span>
+            <span id="ekf-save-state">Idle</span>
+          </div>
+          <div id="ekf-diagonal" class="ekf-diagonal"></div>
+          <div id="ekf-matrix" class="ekf-matrix"></div>
+        </article>
+      </section>
+    </main>
+
+    <script src="/static/app.js?v=20260715-integrated-v3"></script>
+  </body>
+</html>

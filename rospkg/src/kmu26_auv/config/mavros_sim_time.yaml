@@ -1,0 +1,13 @@
+/**:
+  ros__parameters:
+    # Every MAVROS component in this process must observe the MuJoCo clock.
+    use_sim_time: true
+
+/**/time:
+  ros__parameters:
+    # ArduSub SITL reports a wall-clock FCU offset.  Applying that offset to
+    # messages while robot_localization uses /clock mixes Unix and simulation
+    # epochs.  NONE makes UAS::synchronise_stamp() use the MAVROS node clock.
+    timesync_mode: NONE
+    timesync_rate: 0.0
+    system_time_rate: 0.0

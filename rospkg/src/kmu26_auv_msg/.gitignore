@@ -1,0 +1,12 @@
+# ROS build artifacts
+build/
+install/
+log/
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store

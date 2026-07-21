@@ -2,7 +2,3 @@
 	path = ardupilot
 	url = https://github.com/ArduPilot/ardupilot.git
 	branch = master
-[submodule "rospkg/kmu26_auv"]
-	path = rospkg/kmu26_auv
-	url = https://github.com/kanghyunmin-bot/kmu26_auv.git
-	branch = khm

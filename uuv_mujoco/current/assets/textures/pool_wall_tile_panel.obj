@@ -1,0 +1,14 @@
+# Unit square visual panel in the local XZ plane.
+# Explicit UVs keep the source texture square instead of using MuJoCo's
+# automatic box mapping on a vertical wall.
+v -0.5 0.0 -0.5
+v 0.5 0.0 -0.5
+v 0.5 0.0 0.5
+v -0.5 0.0 0.5
+vt 0.0 0.0
+vt 1.0 0.0
+vt 1.0 1.0
+vt 0.0 1.0
+vn 0.0 1.0 0.0
+f 1/1/1 4/4/1 3/3/1
+f 1/1/1 3/3/1 2/2/1

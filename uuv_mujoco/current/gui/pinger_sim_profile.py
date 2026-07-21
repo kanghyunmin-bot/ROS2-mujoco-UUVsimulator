@@ -1,0 +1,96 @@
+"""Validated simulator profile used when Pinger Start owns a stopped sim.
+
+The normal GUI ``Start Sim`` path intentionally keeps its camera-oriented
+defaults.  Pinger homing lowers viewer/camera/auxiliary load so the 96 kHz
+audio producer, odometry and ``/clock`` stay synchronized, while retaining the
+validated 100 Hz attitude feedback and plant-update cadence.
+"""
+
+from __future__ import annotations
+
+
+PINGER_HOMING_SIM_PURPOSE = "pinger_homing"
+
+
+def normalize_sim_start_purpose(purpose: str | None) -> str:
+    value = str(purpose or "default").strip().lower()
+    if value in {"", "default", "sim"}:
+        return "default"
+    if value == PINGER_HOMING_SIM_PURPOSE:
+        return value
+    raise ValueError(f"unsupported simulator start purpose: {purpose}")
+
+
+def pinger_sim_environment() -> dict[str, str]:
+    """Mirror ``tools/start_pinger_homing_sim.sh --lightweight``."""
+
+    return {
+        "UUV_RUNTIME_PROFILE": "balanced",
+        "UUV_MUJOCO_TIMESTEP": "0.005",
+        "UUV_COURSE_BUOY_TIMESTEP_GUARD": "1",
+        "UUV_COURSE_BUOY_TRACK_CSV_ENABLE": "0",
+        "UUV_COURSE_BUOY_UPDATE_HZ": "10",
+        # Pinger Start is still the canonical competition scene.  Disabling
+        # this runtime leaves visible buoy bodies with no buoyancy, rake
+        # release, or collector-net state machine and makes the viewer physics
+        # fundamentally different from a normal simulation run.  Keep the
+        # cheap camera/YOLO paths disabled instead; buoy physics stays live.
+        "UUV_COURSE_BUOYS_ENABLE": "1",
+        "UUV_MUJOCO_VIEWER_FPS": "12",
+        "UUV_MUJOCO_VIEWER_WIDTH": "960",
+        "UUV_MUJOCO_VIEWER_HEIGHT": "540",
+        "UUV_MUJOCO_SHADOW_SIZE": "512",
+        "UUV_MUJOCO_OFFSAMPLES": "1",
+        "UUV_MUJOCO_VIEWER_TEXT_OVERLAY": "1",
+        # Do not trade attitude-loop stability for audio/rendering headroom.
+        # 100/100 Hz is the validated STABILIZE/ALT_HOLD safety floor.
+        "UUV_ROS2_SENSOR_HZ": "100",
+        "UUV_THRUSTER_LOOP_HZ": "100",
+        "SITL_SENSOR_HZ_DEFAULT": "100",
+        "SITL_THRUSTER_LOOP_HZ_DEFAULT": "100",
+        "SITL_MAVLINK_SERVO_HZ_DEFAULT": "30",
+        "SITL_SPEEDUP_DEFAULT": "1",
+        # Homing must exercise the same observable sensor contract as the
+        # vehicle: IMU + DVL + pressure.  ExternalNav is generated from the
+        # MuJoCo pose and is therefore oracle data, not a controller input.
+        "UUV_EKF_CONTRACT": "althold_baro",
+        "ROS2_UUV_ASYNC_CAMERA_RENDER": "1",
+        # Real-package compatibility enables ROS image rendering by default in
+        # launch_uuv_sim.sh.  Homing consumes only PCM/odom/depth, so disable it
+        # explicitly to preserve the audio/clock real-time budget.
+        "UUV_REAL_PKG_CAMERA_ENABLE": "0",
+        "ROS2_UUV_HYDROPHONE_AUDIO_HZ": "23.4375",
+        "ROS2_UUV_HYDROPHONE_SYNC_HZ": "50",
+        "ROS2_UUV_HYDROPHONE_STATUS_HZ": "10",
+        # Do not install the old clean-audio shortcut here. The bridge's
+        # normal profile keeps pool interferers, all eight thruster-correlated
+        # sources, receiver noise and side-band noise active. Exact physical
+        # transfer characteristics still require a recorded hydrophone bag,
+        # but controller acceptance must not run with propulsion noise forced
+        # to zero.
+    }
+
+
+def pinger_sim_launch_args() -> list[str]:
+    return [
+        "--fluid-model",
+        "current",
+        "--initial-bar30-depth-m",
+        "auto",
+        "--ros2-sensor-hz",
+        "100",
+        "--thruster-loop-hz",
+        "100",
+        "--viewer-fps",
+        "12",
+        "--profile",
+        "current",
+    ]
+
+
+__all__ = [
+    "PINGER_HOMING_SIM_PURPOSE",
+    "normalize_sim_start_purpose",
+    "pinger_sim_environment",
+    "pinger_sim_launch_args",
+]

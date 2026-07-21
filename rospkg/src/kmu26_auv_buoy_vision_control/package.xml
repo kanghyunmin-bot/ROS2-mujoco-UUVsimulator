@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>auv_buoy_vision_control</name>
+  <version>0.1.0</version>
+  <description>Compressed camera YOLO detection and MAVROS RC override controller for AUV buoy tracking.</description>
+  <maintainer email="user@example.com">AUV Team</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>rclpy</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>mavros_msgs</depend>
+
+  <exec_depend>python3-opencv</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

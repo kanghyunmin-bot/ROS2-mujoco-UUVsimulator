@@ -1,0 +1,13 @@
+# Install into ROS Humble system python3.10, NOT conda.
+# Example:
+#   source /opt/ros/humble/setup.bash
+#   python3 -m pip install --user -r requirements-yolo.txt
+
+numpy>=1.23,<2
+ultralytics>=8.4.0
+
+# Install ONE of the following torch builds manually if not already present:
+# CPU only:
+#   python3 -m pip install --user torch torchvision --index-url https://download.pytorch.org/whl/cpu
+# CUDA 12.4 laptop example:
+#   python3 -m pip install --user torch torchvision --index-url https://download.pytorch.org/whl/cu124

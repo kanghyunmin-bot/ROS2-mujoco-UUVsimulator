@@ -1,85 +1,73 @@
-# Python / macOS local cache
+# Local environment and editor state
+.uuv_mujoco_env.sh
+.uuv_sim_current_version
+.env
+.venv/
+venv/
+.vscode/
+.idea/
+.cache/
+.ccache/
+.codex/
+.agents/
+.worktrees/
+
+# Python, pytest and native build caches
 __pycache__/
 *.py[cod]
-.DS_Store
+.pytest_cache/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+*.o
+*.so
+*.a
+CMakeFiles/
+CMakeCache.txt
 
-# Local dependency caches and packaged desktop binaries
-.geographiclib/
-QGroundControl.app/
-dist/
-dist2/**
-!dist2/
-!dist2/ubuntu22.04/
-!dist2/ubuntu22.04/**
-dist2/ubuntu22.04/out/
-dist2/ubuntu22.04/out/**
+# ROS/colcon build products
+/build/
+/install/
+/log/
+/rospkg/build/
+/rospkg/install/
+/rospkg/log/
+/rospkg_fresh/
 
-# MuJoCo/SITL runtime logs
-uuv_mujoco/v2.2/logs/
-uuv_mujoco/v2.2/generated/
-uuv_mujoco/v2.2/config/*.bak_*
-uuv_mujoco/v2.2/scenes/*.bak_*
-uuv_mujoco/v2.2/debug/
-uuv_mujoco/v2.2/uuv_mujoco/
-uuv_mujoco/generated_meshes/
-log/
-
-# Local research outputs, backups, and alternate checkouts
-/MUJOCO_LOG.TXT
-/archive/
-/debug/
-/generated_meshes/
+# Runtime output and mutable simulator state
+/logs/
 /outputs/
-/ardupilot_sub_stable/
-/ardupilot_dirty_backup_*/
-UUV-HAN/outputs/
-UUV-HAN/CFD/results/
-
-# ROS/colcon generated outputs
-rospkg/build/
-rospkg/install/
-rospkg/log/
-rospkg/*.zip
-rospkg/*_backup_*/
-
-# Closed-loop replay, autotune, and one-off generated analysis outputs
-document/docsource/closed_loop*/
-document/docsource/autotune_*/
-document/docsource/physics_*/
-document/docsource/rosbag_match_*/
-document/docsource/real_bag_*/
-document/docsource/gui_autotune_*/
-document/docsource/gui_replay*/
-document/docsource/ellipsoid5*/
-document/docsource/ellipsoid_*/
-document/docsource/depth_*/
-document/docsource/current_*/
-document/docsource/yaw_*/
-document/docsource/mujoco_plant_*/
-document/docsource/joy_node*/
-document/docsource/measurements/
-document/measurements/
-document/docsource/*overlay_20260429/
-document/docsource/real_vs_sim_analysis*/
-document/docsource/sensor_sign_plots_20260429/
-document/docsource/thrust_command_comparison_20260430/
-document/docsource/rcout_*_20260430/
-document/docsource/post_reverse_mapping_rcout_eval_20260430/
-document/docsource/depth_hold_neutral_alt_only_70s/
-document/docsource/**/sim_bag/
-document/docsource/**/*.log
-*.npz
-
-# Large runtime captures should stay local unless explicitly versioned with LFS.
-real_robot_ros_bag/
-*.db3
+/test_artifacts/
+/MUJOCO_LOG.TXT
+/uuv_mujoco/current/logs/
+/uuv_mujoco/current/generated/
+/uuv_mujoco/current/test_artifacts/
 *.bag
+*.db3
 *.mcap
+*.tlog
+*.xwd
 
-# LaTeX build byproducts. Keep .tex/.pdf sources and deliverables.
-document/docsource/*.aux
-document/docsource/*.log
-document/docsource/*.nav
-document/docsource/*.out
-document/docsource/*.snm
-document/docsource/*.toc
+# Generated backups and temporary scene edits
+*.bak
+*.bak_*
+*.orig
+*~
+
+# Downloaded/external workspaces. Install scripts recreate these.
+/ardupilot/
+/ardupilot_sub_stable/
+/QGroundControl*.AppImage
+
+# Release artifacts are published separately, not as Git source.
+/dist4_output/
+/dist2/ubuntu22.04/out/
+/uuv_mujoco.zip
+/*.deb
+/*.zip
+
+# Local patches and machine-specific manifests
+/*.patch
+/symlink_install_manifest.txt
+/rospkg/symlink_install_manifest.txt
+

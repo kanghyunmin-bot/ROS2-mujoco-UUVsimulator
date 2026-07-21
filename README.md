@@ -1,263 +1,125 @@
-# ROS2 MuJoCo UUV Simulator
+# KMU26 UUV MuJoCo + ArduSub Simulator
 
-![UUV simulator robot and web control GUI](docs/assets/uuv-sim-web-gui-overview.png)
+Ubuntu 22.04, ROS 2 Humble, MuJoCo and ArduSub SITL을 결합한 수중 로봇
+시뮬레이션 작업공간이다. 활성 시뮬레이터는 `uuv_mujoco/current`이며, 웹/Tk
+GUI, MAVROS 호환 제어면, 카메라·DVL·압력·하이드로폰·Ping360 센서, 부표 수집
+물리를 한 스택에서 제공한다.
 
-Ubuntu 22.04 simulator bundle for the KMU26 UUV workflow. It brings up the
-MuJoCo vehicle model, ArduSub SITL, ROS 2/MAVROS bridge utilities, Ping360
-helpers, and the web control GUI with stereo camera preview, YOLO buoy
-detection overlay, joystick control, telemetry, tuning, and course layout
-tools.
+> 현재 폴더는 배포 산출물과 실험 로그가 함께 있던 개발 작업공간에서 정리한
+> 소스 트리다. Git에는 소스와 문서만 올리고 ArduPilot, QGroundControl, 빌드
+> 결과와 로그는 포함하지 않는다.
 
-## Quick Start
+## 빠른 실행
 
-For a normal Ubuntu install, download the release asset:
-
-```text
-UUV_Sim_Install_and_Run_2026.07.02-dist2.zip
-```
-
-Then run:
+이미 설치가 끝난 작업공간에서는 다음이 기본 실행 경로다.
 
 ```bash
-unzip UUV_Sim_Install_and_Run_2026.07.02-dist2.zip
-cd UUV_Sim_Install_and_Run_2026.07.02-dist2
-./install_and_run_uuv_sim.sh
-```
-
-After installation, the main launcher is:
-
-```bash
-uuv-sim-current-web
-```
-
-The current `dist2` installer refreshes existing `~/uuv_sim_current` workspaces
-when the packaged runtime version changes. The web GUI includes the camera
-feed on/off switch, selectable camera profiles up to `1280x720 @ 10Hz`, zoomed
-camera view, joystick drag control, and the MuJoCo Wayland/XWayland viewer
-defaults. The bundled YOLO model is used by the GUI camera stream to draw
-OpenCV bounding boxes and labels for buoy detections.
-
-## Overview
-
-This repository contains a local UUV simulation workspace that connects:
-
-- MuJoCo based UUV dynamics and sensor simulation
-- ArduSub SITL through ArduPilot
-- ROS 2 bridge utilities for the KMU26 AUV stack
-- QGroundControl integration helpers
-- Analysis scripts and generated technical reports
-
-The current primary branch for this simulator workspace is `uuv_sim`.
-Day-to-day launch commands should use the root wrappers under `uuv_mujoco/`.
-Those wrappers resolve `UUV_MUJOCO_RUNTIME_DIR` first and then
-`uuv_mujoco/current`.  The physical `uuv_mujoco/v2.2` directory is only the
-compatibility backing directory for older reports and scripts; it is not the
-freshness boundary.  The active-runtime metadata is recorded in
-`uuv_mujoco/RUNTIME_VERSION.json`.
-
-## Repository Layout
-
-```text
-.
-|-- ardupilot/                 # ArduPilot submodule
-|-- dist2/ubuntu22.04/         # Ubuntu 22.04 distribution packaging workflow
-|-- YOLO/                      # Bundled buoy detector model for GUI overlay
-|-- rospkg/kmu26_auv/          # KMU26 AUV ROS 2 package submodule
-|-- rospkg/dvl_msgs/           # Bundled DVL message package for dist2 builds
-|-- setup/                     # Install and verification scripts
-|-- uuv_mujoco/current -> v2.2 # Active MuJoCo runtime alias
-|-- uuv_mujoco/RUNTIME_VERSION.json # Active-runtime provenance metadata
-|-- uuv_mujoco/v2.2/           # Compatibility backing directory
-|   `-- gui/                   # Control and tuning GUI implementation
-|-- document/                  # Reports, analysis scripts, figures
-|-- uuv_control_gui.py         # Compatibility wrapper for the GUI entry point
-|-- run_control_gui.sh         # GUI launcher with environment setup
-`-- .uuv_mujoco_env.sh         # Workspace environment resolver
-```
-
-## Clone
-
-```bash
-git clone --recurse-submodules https://github.com/kanghyunmin-bot/ROS2-mujoco-UUVsimulator.git
-cd ROS2-mujoco-UUVsimulator
-git submodule update --init --recursive
-```
-
-If you already cloned without submodules:
-
-```bash
-git submodule update --init --recursive
-```
-
-## Requirements
-
-The setup scripts target an Ubuntu 22.04 style ROS 2 Humble environment. The simulator also expects:
-
-- Python 3 virtual environment for MuJoCo
-- MuJoCo, MAVProxy, pymavlink, DroneCAN, matplotlib, rosbags, and support Python packages
-- ArduPilot SITL dependencies
-- ROS 2 Humble, MAVROS, rosbag2 Python bindings, RViz/rqt image viewers, and colcon when using ROS 2 bridge features
-- Tkinter for the control GUI
-- SocketCAN helpers when using the DroneCAN battery bridge
-- QGroundControl plus AppImage/FUSE/Qt runtime libraries when using the QGC workflow
-
-Large local binaries and captures such as `QGroundControl.app`, `dist/`, `real_robot_ros_bag/`, `*.db3`, `*.bag`, and generated runtime logs are intentionally ignored.
-
-## Setup
-
-Run the full installer:
-
-```bash
-./setup/install_uuv_mujoco.sh --with-ros2
-```
-
-One-command install and run:
-
-```bash
-./install_and_run.sh
-```
-
-Install and start the simulator immediately:
-
-```bash
-./setup/install_uuv_mujoco.sh --with-ros2 --run-after-install
-```
-
-On a headless Ubuntu machine, force headless startup:
-
-```bash
-./setup/install_uuv_mujoco.sh --with-ros2 --run-headless
-```
-
-Useful options:
-
-```bash
-./setup/install_uuv_mujoco.sh --without-ros2
-./setup/install_uuv_mujoco.sh --build-real-pkg
-./setup/install_uuv_mujoco.sh --skip-apt --skip-ardupilot
-./setup/install_uuv_mujoco.sh --recreate-venv
-```
-
-Run verification only:
-
-```bash
-./setup/04_verify_uuv_stack.sh
-```
-
-## Ubuntu 22.04 Dist2 Package
-
-The native Ubuntu distribution is built from the pushed `uuv_sim` branch, not
-from a dirty local workspace:
-
-```bash
-./dist2/ubuntu22.04/package_from_github.sh --branch uuv_sim
-```
-
-For deliberate local validation only:
-
-```bash
-./dist2/ubuntu22.04/package_dist2.sh --allow-dirty --out-dir /tmp/uuvdist2_check
-./dist2/ubuntu22.04/verify_package.sh /tmp/uuvdist2_check/uuv_sim_ubuntu22.04_dist2.zip
-```
-
-Release rules and failure notes live in
-`dist2/ubuntu22.04/DIST_GUIDE.md`. Upload release zips as GitHub Release assets;
-do not commit generated zip files.
-
-## Environment
-
-The helper script resolves workspace paths and common runtime locations:
-
-```bash
+source /opt/ros/humble/setup.bash
 source ./.uuv_mujoco_env.sh
+./run_control_gui.sh --web --host 127.0.0.1 --port 8878
 ```
 
-Common overrides:
+브라우저에서 <http://127.0.0.1:8878/>을 열고 GUI에서 시뮬레이션 스택을
+시작한다. Tk GUI는 `./run_control_gui.sh --tk`로 실행한다.
+
+GUI 없이 SITL과 MuJoCo를 직접 실행하려면:
 
 ```bash
-export ROS_DISTRO=humble
-export ROS_WORKSPACE_DIR="$PWD/rospkg"
-export UUV_MUJOCO_DIR="$PWD/uuv_mujoco"
-export ARDUPILOT_DIR="$PWD/ardupilot"
-export QGC_APP="/Applications/QGroundControl.app"
+cd uuv_mujoco/current
+./start_sitl_mujoco_mj311.sh -- --headless
 ```
 
-## Run
+ROS 2 브리지 없이 물리 런타임만 확인하려면 `--no-ros2`를 추가한다. 실제
+MAVROS/차량 패키지와 동일한 통합면은 `--ros2-real-pkg-compat` 모드를 사용한다.
 
-Start the MuJoCo simulator with SITL:
+## 시스템 구성
+
+```text
+Web/Tk GUI
+    |
+    +-- process manager ---- ArduSub SITL
+    |                            |  JSON sensor/servo UDP
+    |                            v
+    +---------------------- MuJoCo runtime
+                                 |
+                                 +-- ROS 2 sensor/ground-truth bridge
+                                 +-- camera / DVL / depth / hydrophone / Ping360
+                                 +-- course buoy / cable / collector physics
+
+Controller or operator
+    -> /mavros/rc/override
+    -> MAVROS or compatibility bridge
+    -> ArduSub
+    -> thruster PWM
+    -> MuJoCo
+```
+
+기본 폐루프 런타임은 100 Hz 센서/추력 루프와 0.005초 MuJoCo timestep을
+사용한다. 웹 GUI의 기본 카메라 프로필은 CPU 여유를 위해 640x360 @ 4 Hz이며,
+720p 프로필은 GUI에서 선택할 수 있다.
+
+상세한 프로세스, 포트, 토픽 소유권과 부표 수집 상태 머신은
+[시뮬레이터 아키텍처](docs/SIM_ARCHITECTURE.md)에 정리되어 있다.
+
+## 주요 디렉터리
+
+| 경로 | 역할 |
+| --- | --- |
+| `uuv_mujoco/current/` | 활성 MuJoCo 런타임, 브리지, GUI, 장면과 검증 도구 |
+| `uuv_mujoco/current/sim/` | 물리, 런타임, 전송 계층과 계약 모듈 |
+| `uuv_mujoco/current/bridge/` | ROS 2, MAVLink, 센서 및 영상 브리지 |
+| `uuv_mujoco/current/scenes/` | 수조와 경기장 MuJoCo XML |
+| `uuv_mujoco/current/tools/` | 정적·동적 계약 검사와 재현 도구 |
+| `rospkg/src/` | 실제 차량과 공유하는 ROS 2 패키지 소스 |
+| `docs/contracts/` | 실제 스택과 시뮬레이터의 인터페이스 계약 |
+| `dist2/ubuntu22.04/` | Ubuntu 배포 패키징 스크립트 |
+
+## 핵심 ROS 인터페이스
+
+- 상태/제어: `/mavros/state`, `/mavros/rc/in`, `/mavros/rc/override`
+- 항법: `/imu/data`, `/dvl/odometry`, `/depth/pose`, `/odometry/filtered`
+- 카메라: `/camera/camera/color/image_raw/compressed`
+- 음향: `/audio`, `/audio_info`, `/mujoco/hydrophone/direction`
+- 소나: `/ping360/scan`, `/ping360/image`, `/ping360/config`
+- 임무/평가: `/collector/state`, `/mujoco/course_buoys/status`,
+  `/mujoco/ground_truth/pose`
+
+Ground truth는 검증용 oracle이며 실제 차량용 제어기의 입력으로 사용하지 않는다.
+RC를 내는 임무 노드는 동시에 실행하지 않고 mux의 단일 소유권 계약을 지켜야 한다.
+
+## ROS 패키지 빌드
 
 ```bash
-./uuv_mujoco/start_sitl_mujoco.sh
+cd rospkg
+./build_safe.sh --cmake-args -DBUILD_TESTING=OFF
+source install/setup.bash
 ```
 
-Start with ROS 2 bridge compatibility:
+`build_safe.sh`는 메모리 부족을 피하기 위해 컴파일 병렬도를 제한한다.
+
+## 빠른 검증
 
 ```bash
-./uuv_mujoco/start_sitl_mujoco.sh --ros2-real-pkg-compat
+python3 uuv_mujoco/current/tools/check_gui_start_contract.py
+python3 uuv_mujoco/current/tools/check_sim_runtime_smooth_contract.py
+python3 uuv_mujoco/current/tools/check_competition_course_scene.py
+python3 uuv_mujoco/current/tools/check_buoy_collector_capture.py
+python3 uuv_mujoco/current/tools/check_dist_rc_override_path.py
 ```
 
-Run headless:
+실행 중인 외부 MAVROS 경로까지 검사하려면:
 
 ```bash
-./uuv_mujoco/start_sitl_mujoco.sh -- --headless
+python3 uuv_mujoco/current/tools/check_external_fsm_mavros_contract.py
 ```
 
-Launch the control GUI:
+## Git에 게시하기 전에
 
-```bash
-./run_control_gui.sh
-```
+대용량 YOLO 모델은 Git LFS 대상으로 지정되어 있다. 또한 `rospkg/src` 아래에는
+여러 upstream 저장소의 `.git` 메타데이터와 로컬 수정이 남아 있으므로, 최초
+저장소 생성 전에 monorepo 또는 submodule 방식을 결정해야 한다. 안전한 게시
+순서와 현재 주의사항은 [Git 게시 가이드](docs/GIT_PUBLISHING.md)를 따른다.
 
-For native Ubuntu distribution packages, use the stricter launcher that only
-uses system ROS plus the local rospkg install:
+배포 ZIP/DEB 사용자를 위한 설치 안내는 [README_FIRST.md](README_FIRST.md),
+실제 차량 ROS 패키지 설명은 [rospkg/README.md](rospkg/README.md)를 참고한다.
 
-```bash
-./run_control_gui_ubuntu.sh
-```
-
-The canonical GUI implementation is
-`uuv_mujoco/current/gui/uuv_control_gui.py`; the root `uuv_control_gui.py`
-is kept as a compatibility wrapper.
-
-GUI internals are split by responsibility: `app.py` for the Tk application
-shell, `layout_mixin.py` for widget layout, `ros_process_mixin.py` for
-ROS/RViz/Ping360/simulator process controls, `autotune_mixin.py` for
-autotune workflow, `physics_mixin.py` for parameter editing,
-`replay_mixin.py` for RC replay, `control_display_mixin.py` for manual
-control and telemetry drawing, `node.py` for the ROS node, `runtime.py` for
-ROS imports, `ros_tools.py` for ROS/RViz helpers, `helpers.py` for
-RC/math/rosbag helpers, `models.py` for dataclasses, `widgets.py` for reusable
-Tk widgets, and `config.py` for paths and constants.
-
-Reset local simulator processes and ports:
-
-```bash
-./uuv_mujoco/reset_sim.sh
-```
-
-Reset QGroundControl as well:
-
-```bash
-./uuv_mujoco/reset_sim.sh --with-qgc-stop
-```
-
-## Analysis And Tuning
-
-The `document/docsource` scripts support real-bag comparison, closed-loop replay,
-and parameter sweeps. Current tuning helpers include:
-
-```bash
-python3 document/docsource/analyze_april1_real_bags.py --help
-python3 document/docsource/run_uuv_param_autotune.py --help
-python3 uuv_mujoco/current/tools/roll_stability_sweep.py --help
-```
-
-Large generated result folders such as `autotune_*`, `physics_*`,
-`rosbag_match_*`, and raw bag files are local artifacts and are ignored by git.
-
-## Notes
-
-- `ardupilot` and `rospkg/kmu26_auv` are stored as submodules. Keep their own commits pushed before updating the parent repository submodule pointers.
-- Runtime logs, ROS bags, generated colcon outputs, QGroundControl packages, and large analysis arrays are excluded from git.
-- Use `cleanup_generated_artifacts.sh` to remove common generated artifacts from the local workspace.
-- The `document/` directory contains reports, source scripts, and figures used during simulator validation and tuning.

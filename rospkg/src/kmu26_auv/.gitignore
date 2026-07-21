@@ -1,0 +1,16 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# ROS build artifacts (if accidentally generated here)
+build/
+install/
+log/
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
