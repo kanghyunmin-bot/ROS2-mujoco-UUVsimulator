@@ -9,6 +9,22 @@ GUI, MAVROS 호환 제어면, 카메라·DVL·압력·하이드로폰·Ping360 �
 > 소스 트리다. Git에는 소스와 문서만 올리고 ArduPilot, QGroundControl, 빌드
 > 결과와 로그는 포함하지 않는다.
 
+<p align="center">
+  <img src="docs/assets/simulator-overview.png" width="100%" alt="MuJoCo top view and YOLO buoy tracking view">
+</p>
+
+왼쪽은 MuJoCo 수조 전체 시점, 오른쪽은 AUV 전방 카메라와 CPU 기반 YOLO 부표
+추적 화면이다.
+
+## 동작 화면
+
+<p align="center">
+  <img src="docs/assets/simulator-demo.gif" width="800" alt="UUV simulator and YOLO buoy tracking demo">
+</p>
+
+실제 시뮬레이션에서 AUV가 이동하는 동안 카메라 영상, 부표 검출 결과와 top-view
+상태가 함께 갱신되는 모습이다.
+
 ## 빠른 실행
 
 이미 설치가 끝난 작업공간에서는 다음이 기본 실행 경로다.
@@ -122,4 +138,3 @@ python3 uuv_mujoco/current/tools/check_external_fsm_mavros_contract.py
 
 배포 ZIP/DEB 사용자를 위한 설치 안내는 [README_FIRST.md](README_FIRST.md),
 실제 차량 ROS 패키지 설명은 [rospkg/README.md](rospkg/README.md)를 참고한다.
-
