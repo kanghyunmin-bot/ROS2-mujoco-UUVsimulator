@@ -13,7 +13,7 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-setsid ros2 launch kmu26_pinger_homing pinger_homing_test_tank.launch.py "$@" auto_select_top:=false &
+setsid ros2 launch auv_pinger_homing pinger_homing_test_tank.launch.py "$@" auto_select_top:=false &
 launch_pid=$!
 
 echo "[pinger] Waiting for the ten-second frequency scan..."

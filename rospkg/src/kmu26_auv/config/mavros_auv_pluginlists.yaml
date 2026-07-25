@@ -1,0 +1,15 @@
+/**:
+  ros__parameters:
+    # Keep only the ROS interfaces used by the AUV runtime.  The MAVLink
+    # router/GCS connection is independent of this list, so QGC still receives
+    # the full MAVLink stream.
+    plugin_allowlist:
+      - command
+      - imu
+      - rc_io
+      - setpoint_raw
+      - sys_status
+      - sys_time
+      - vision_pose
+      # Custom DVL -> MAVLink VISION_POSITION_DELTA path used by the FCU EKF.
+      - vision_position_delta

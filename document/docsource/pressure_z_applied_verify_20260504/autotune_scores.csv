@@ -1,2 +1,0 @@
-candidate,status,score,fluid_linear_scale,fluid_rot_scale,fluid_blunt_scale,fluid_slender_scale,fluid_angular_scale,fluid_kutta,fluid_magnus,profile_updates,tune_mode,command_source,out_dir
-baseline,ok,2.4336353748970856,1.0,1.0,1.0,1.0,1.0,,,{},plant-rc-out,rc_out,document/docsource/pressure_z_applied_verify_20260504/baseline

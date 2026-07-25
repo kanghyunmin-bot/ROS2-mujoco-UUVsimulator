@@ -44,18 +44,13 @@ def generate_launch_description():
                 default_value="-1",
                 description="Target class id. Overrides target_class_name when >= 0.",
             ),
-            DeclareLaunchArgument("confidence_threshold", default_value="0.35"),
+            DeclareLaunchArgument("confidence_threshold", default_value="0.18"),
             DeclareLaunchArgument(
                 "device",
                 default_value="auto",
                 description="Inference device: auto, cpu, cuda:0, etc.",
             ),
-            DeclareLaunchArgument("imgsz", default_value="640"),
-            DeclareLaunchArgument(
-                "cpu_threads",
-                default_value="1",
-                description="Maximum PyTorch/OpenCV CPU inference threads when device:=cpu.",
-            ),
+            DeclareLaunchArgument("imgsz", default_value="1280"),
             DeclareLaunchArgument(
                 "show_preview",
                 default_value="true",
@@ -98,9 +93,6 @@ def generate_launch_description():
                         ),
                         "device": LaunchConfiguration("device"),
                         "imgsz": ParameterValue(LaunchConfiguration("imgsz"), value_type=int),
-                        "cpu_threads": ParameterValue(
-                            LaunchConfiguration("cpu_threads"), value_type=int
-                        ),
                         "show_preview": ParameterValue(LaunchConfiguration("show_preview"), value_type=bool),
                         "preview_window_name": LaunchConfiguration("preview_window_name"),
                         "publish_per_class": ParameterValue(

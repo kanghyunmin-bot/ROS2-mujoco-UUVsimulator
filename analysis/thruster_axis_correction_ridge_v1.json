@@ -1,0 +1,18 @@
+{
+  "axis_order": [
+    "yaw",
+    "forward",
+    "lateral",
+    "heave"
+  ],
+  "ridge_lambda": 1.0,
+  "source": "v7 real/sim 21-tap FIR DC-gain identification",
+  "matrix": [
+    [1.025754441453, 0.022163110216, 0.264507529771, -0.131732027458],
+    [-0.031631645405, 0.953217539368, 0.12625013596, 0.092558887641],
+    [0.01161706162, 0.027124816069, 0.806420393742, -0.126371066047],
+    [-0.022316661661, -0.032974821409, 0.109509722738, 0.960137844671]
+  ],
+  "condition_number": 1.5478391821401687,
+  "warning": "Same-path regularized A/B candidate. Lateral and heave were weakly excited; validate before adoption."
+}

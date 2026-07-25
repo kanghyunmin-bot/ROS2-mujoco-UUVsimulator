@@ -1,6 +1,0 @@
-{
-  "profile": "current",
-  "profile_config_path": "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/config/sim_profiles.json",
-  "profile_source": "/Users/kanghyunmin/Desktop/uuv_sim/UUV-HAN/outputs/plant_structural_forward_seed_yawpair_v55_20260615/v55_v35_inner_yaw_pair_2p4.sim_profiles.json",
-  "restored_after_run": true
-}

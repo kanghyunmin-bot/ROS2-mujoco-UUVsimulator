@@ -1,2 +1,0 @@
-candidate,status,score,fluid_linear_scale,fluid_rot_scale,fluid_blunt_scale,fluid_slender_scale,fluid_angular_scale,fluid_kutta,fluid_magnus,profile_updates,tune_mode,command_source,out_dir
-baseline,ok,2.098633903906452,1.0,1.0,1.0,1.0,1.0,,,{},plant-joy,joy_node,document/docsource/ellipsoid_surge_size_applied_verify_20260505/baseline

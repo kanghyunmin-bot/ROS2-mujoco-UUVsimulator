@@ -4,7 +4,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <deque>
 #include <string>
 #include <utility>
 
@@ -19,16 +18,23 @@
 #include <std_msgs/msg/empty.hpp>
 #include <std_msgs/msg/string.hpp>
 
+// arena_yaw_rad: 수조 가로축이 위치 지도(odom) 기준으로 얼마나 돌아가 있는지(rad).
+// 초기 대각선·벽 회복 접선 방향을 맞출 때 쓴다.
+// bottom_right에서 안쪽(왼쪽 위)으로 가야 하는데 반대로 가면 0과 π를 바꿔 본다.
+
+
 namespace audio_capture
 {
 // SNR gradient 전용 제어 흐름:
-//   DISABLED
-//      enable=true
-//          -> INITIAL_DIAGONAL: 모서리에서 경기장 중심 방향으로 대각선 이동
-//          -> INITIAL_SEARCH: 전진+yaw 명령으로 원형/호 궤적 생성
-//          -> VERTICAL_SEARCH: SNR 10 dB 지속 시 위·아래 sweep 후 최고 SNR z로 이동
-//          -> HOMING: 유효한 방향과 신뢰도가 일정 시간 유지되면 음원 방향 추종
-//          -> DISABLED: 방향을 일정 시간 잃으면 자동 재탐색 없이 안전하게 제어 해제
+//   INITIAL_DIAGONAL -> INITIAL_SEARCH -> HOMING
+//   HOMING 중 vertical_search_request -> VERTICAL_SEARCH
+//       -> SHORT_REACQUIRE (짧은 수평 재획득) -> HOMING
+//   INITIAL_SEARCH/HOMING/curved recovery 중 명령 방향 진행속도 저하가
+//   충돌 유지 시간 동안 이어지면 WALL_RECOVERY
+//   WALL_RECOVERY 후에는 진입 전 탐색 상태로 복귀한다.
+//   HOMING 중 짧은 direction 손실 -> 저속 curved recovery probe (map 유지)
+//   HOMING 중 장시간 direction 손실 -> INITIAL_SEARCH (map 유지, reset 없음)
+//   /homing/reset_estimator 는 INITIAL_DIAGONAL(미션 시작)에서만 발행한다.
 class SnrGradientHomingControllerNode : public rclcpp::Node
 {
 public:
@@ -38,48 +44,37 @@ public:
     : Node("snr_gradient_homing_controller", options)
     {
         // ROS 입출력 설정.
-        direction_topic_ =
+        const std::string direction_topic =
             declare_parameter<std::string>("direction_topic", "/homing/direction");
-        confidence_topic_ =
+        const std::string confidence_topic =
             declare_parameter<std::string>("confidence_topic", "/homing/snr_confidence");
-        enable_topic_ =
-            declare_parameter<std::string>("enable_topic", "/homing/control_enable");
-        state_topic_ =
+        const std::string state_topic =
             declare_parameter<std::string>("state_topic", "/homing/control_state");
-        estimator_ready_topic_ =
-            declare_parameter<std::string>("estimator_ready_topic", "/homing/estimator_ready");
-        reset_topic_ = declare_parameter<std::string>("reset_topic", "/homing/reset_estimator");
-        odometry_topic_ =
+        const std::string reset_topic =
+            declare_parameter<std::string>("reset_topic", "/homing/reset_estimator");
+        const std::string odometry_topic =
             declare_parameter<std::string>("odometry_topic", "/odometry/filtered");
-        rc_override_topic_ =
+        const std::string rc_override_topic =
             declare_parameter<std::string>("rc_override_topic", "/mavros/rc/override");
-        rc_preview_topic_ =
+        const std::string rc_preview_topic =
             declare_parameter<std::string>("rc_preview_topic", "/homing/rc_override_preview");
         required_direction_frame_ =
             declare_parameter<std::string>("required_direction_frame", "base_link");
 
         // 상태 전환과 방향 유효성 설정.
-        control_enabled_ = declare_parameter<bool>("control_enabled", false);
-        dry_run_ = declare_parameter<bool>("dry_run", true);
         rate_hz_ = clamp(declare_parameter<double>("rate_hz", 30.0), 1.0, 120.0);
-        direction_timeout_s_ =
-            clamp(declare_parameter<double>("direction_timeout_s", 0.8), 0.05, 10.0);
-        confidence_timeout_s_ =
-            clamp(declare_parameter<double>("confidence_timeout_s", 0.8), 0.05, 10.0);
         min_direction_confidence_ =
-            clamp(declare_parameter<double>("min_direction_confidence", 0.15), 0.0, 1.0);
+            clamp(declare_parameter<double>("min_direction_confidence", 0.05), 0.0, 1.0);
         acquire_hold_s_ =
             clamp(declare_parameter<double>("acquire_hold_s", 1.0), 0.0, 30.0);
         search_min_duration_s_ =
             clamp(declare_parameter<double>("search_min_duration_s", 6.0), 0.0, 120.0);
-        direction_loss_hold_s_ =
-            clamp(declare_parameter<double>("direction_loss_hold_s", 1.0), 0.0, 30.0);
-        direction_stability_window_s_ = clamp(
-            declare_parameter<double>("direction_stability_window_s", 1.0), 0.1, 10.0);
-        max_direction_std_rad_ = clamp(
-            declare_parameter<double>("max_direction_std_rad", 0.30), 0.01, PI);
-        estimator_ready_timeout_s_ = clamp(
-            declare_parameter<double>("estimator_ready_timeout_s", 1.0), 0.05, 10.0);
+        short_reacquire_min_duration_s_ = clamp(
+            declare_parameter<double>("short_reacquire_min_duration_s", 1.0), 0.0, 30.0);
+        short_reacquire_timeout_s_ = clamp(
+            declare_parameter<double>("short_reacquire_timeout_s", 3.0), 0.1, 60.0);
+        recovery_to_search_s_ = clamp(
+            declare_parameter<double>("recovery_to_search_s", 3.0), 0.1, 60.0);
 
         // 경기장 좌표와 모서리 이탈 대각선 이동 설정.
         arena_width_m_ = std::max(
@@ -102,16 +97,28 @@ public:
             declare_parameter<double>("arena_start_inset_m", 0.12),
             0.0,
             0.49 * std::min(arena_width_m_, arena_height_m_));
-        geofence_margin_m_ = std::clamp(
-            declare_parameter<double>("geofence_margin_m", 0.20),
-            0.0,
-            0.49 * std::min(arena_width_m_, arena_height_m_));
-        initial_diagonal_distance_m_ = clamp(
-            declare_parameter<double>("initial_diagonal_distance_m", 0.70), 0.0, 20.0);
+        stuck_progress_threshold_mps_ = clamp(
+            declare_parameter<double>("stuck_progress_threshold_mps", 0.03), 0.0, 2.0);
+        stuck_yaw_rate_threshold_rps_ = clamp(
+            declare_parameter<double>("stuck_yaw_rate_threshold_rps", 0.05), 0.0, 4.0);
+        collision_hold_s_ = clamp(
+            declare_parameter<double>("collision_hold_s", 3.0), 0.1, 10.0);
+        wall_reverse_command_ = clamp(
+            declare_parameter<double>("wall_reverse_command", 0.25), 0.0, 1.0);
+        wall_reverse_duration_s_ = clamp(
+            declare_parameter<double>("wall_reverse_duration_s", 2.0), 0.1, 10.0);
+        wall_escape_forward_command_ = clamp(
+            declare_parameter<double>("wall_escape_forward_command", 0.25), 0.0, 1.0);
+        wall_escape_duration_s_ = clamp(
+            declare_parameter<double>("wall_escape_duration_s", 1.5), 0.1, 10.0);
+        collision_rearm_timeout_s_ = clamp(
+            declare_parameter<double>("collision_rearm_timeout_s", 1.5), 0.1, 10.0);
+        wall_homing_resume_grace_s_ = clamp(
+            declare_parameter<double>("wall_homing_resume_grace_s", 2.0), 0.1, 10.0);
         initial_diagonal_command_ = clamp(
             declare_parameter<double>("initial_diagonal_command", 0.30), 0.0, 1.0);
-        initial_diagonal_timeout_s_ = clamp(
-            declare_parameter<double>("initial_diagonal_timeout_s", 10.0), 0.1, 120.0);
+        initial_diagonal_duration_s_ = clamp(
+            declare_parameter<double>("initial_diagonal_duration_s", 6.0), 0.1, 120.0);
         odometry_timeout_s_ = clamp(
             declare_parameter<double>("odometry_timeout_s", 0.50), 0.05, 10.0);
         vertical_search_distance_m_ = clamp(
@@ -152,31 +159,21 @@ public:
         invert_rc_lateral_ = declare_parameter<bool>("invert_rc_lateral", false);
 
         direction_sub_ = create_subscription<geometry_msgs::msg::Vector3Stamped>(
-            direction_topic_,
+            direction_topic,
             10,
             std::bind(
                 &SnrGradientHomingControllerNode::direction_callback,
                 this,
                 std::placeholders::_1));
         confidence_sub_ = create_subscription<std_msgs::msg::Float64>(
-            confidence_topic_,
+            confidence_topic,
             10,
             std::bind(
                 &SnrGradientHomingControllerNode::confidence_callback,
                 this,
                 std::placeholders::_1));
-        enable_sub_ = create_subscription<std_msgs::msg::Bool>(
-            enable_topic_,
-            10,
-            std::bind(
-                &SnrGradientHomingControllerNode::enable_callback,
-                this,
-                std::placeholders::_1));
-        estimator_ready_sub_ = create_subscription<std_msgs::msg::Bool>(
-            estimator_ready_topic_, 10,
-            std::bind(&SnrGradientHomingControllerNode::estimator_ready_callback, this, std::placeholders::_1));
         odometry_sub_ = create_subscription<nav_msgs::msg::Odometry>(
-            odometry_topic_, 20,
+            odometry_topic, 20,
             std::bind(&SnrGradientHomingControllerNode::odometry_callback, this, std::placeholders::_1));
         vertical_search_request_sub_ = create_subscription<std_msgs::msg::Bool>(
             "/homing/vertical_search_request",
@@ -193,24 +190,18 @@ public:
                 this,
                 std::placeholders::_1));
 
-        rc_pub_ = create_publisher<mavros_msgs::msg::OverrideRCIn>(rc_override_topic_, 10);
+        rc_pub_ = create_publisher<mavros_msgs::msg::OverrideRCIn>(rc_override_topic, 10);
         rc_preview_pub_ =
-            create_publisher<mavros_msgs::msg::OverrideRCIn>(rc_preview_topic_, 10);
+            create_publisher<mavros_msgs::msg::OverrideRCIn>(rc_preview_topic, 10);
         state_pub_ = create_publisher<std_msgs::msg::String>(
-            state_topic_, rclcpp::QoS(1).reliable().transient_local());
-        reset_pub_ = create_publisher<std_msgs::msg::Empty>(reset_topic_, 10);
+            state_topic, rclcpp::QoS(1).reliable().transient_local());
+        reset_pub_ = create_publisher<std_msgs::msg::Empty>(reset_topic, 10);
         vertical_search_active_pub_ = create_publisher<std_msgs::msg::Bool>(
             "/homing/vertical_search_active",
             rclcpp::QoS(1).reliable().transient_local());
         publish_vertical_search_active(false);
 
-        state_ = State::DISABLED;
-        state_enter_time_ = now();
-        if (control_enabled_) {
-            transition_to(State::INITIAL_DIAGONAL);
-        } else {
-            publish_state();
-        }
+        transition_to(State::INITIAL_DIAGONAL, true);
 
         const auto period = std::chrono::duration<double>(1.0 / rate_hz_);
         timer_ = create_wall_timer(
@@ -219,20 +210,15 @@ public:
 
         RCLCPP_INFO(
             get_logger(),
-            "SNR gradient controller ready. enabled=%s dry_run=%s direction=%s frame=%s rc=%s preview=%s",
-            control_enabled_ ? "true" : "false",
-            dry_run_ ? "true" : "false",
-            direction_topic_.c_str(),
+            "SNR gradient controller ready. direction=%s frame=%s rc=%s preview=%s",
+            direction_topic.c_str(),
             required_direction_frame_.c_str(),
-            rc_override_topic_.c_str(),
-            rc_preview_topic_.c_str());
+            rc_override_topic.c_str(),
+            rc_preview_topic.c_str());
     }
 
 private:
-    static constexpr double PI = 3.14159265358979323846;
     static constexpr std::uint16_t RC_NEUTRAL = 1500;
-    static constexpr std::size_t PITCH_CHANNEL_INDEX = 0;
-    static constexpr std::size_t ROLL_CHANNEL_INDEX = 1;
     static constexpr std::size_t VERTICAL_CHANNEL_INDEX = 2;
     static constexpr std::size_t YAW_CHANNEL_INDEX = 3;
     static constexpr std::size_t FORWARD_CHANNEL_INDEX = 4;
@@ -240,14 +226,18 @@ private:
     static constexpr std::size_t PRIMARY_CHANNEL_COUNT = 8;
     static constexpr double VERTICAL_TARGET_TOLERANCE_M = 0.05;
     static constexpr double VERTICAL_SEARCH_TIMEOUT_S = 40.0;
+    static constexpr double WALL_ESCAPE_AWAY_WEIGHT = 0.40;
+    // MuJoCo arena에서 확인한 벽면 접선 진행 부호를 사용한다.
+    static constexpr double WALL_ESCAPE_TANGENT_WEIGHT = -0.60;
 
     enum class State
     {
-        DISABLED,
         INITIAL_DIAGONAL,
         INITIAL_SEARCH,
+        HOMING,
         VERTICAL_SEARCH,
-        HOMING
+        SHORT_REACQUIRE,
+        WALL_RECOVERY
     };
 
     enum class VerticalSearchPhase
@@ -255,6 +245,13 @@ private:
         MOVE_UP,
         MOVE_DOWN,
         MOVE_BEST
+    };
+
+    enum class WallRecoveryPhase
+    {
+        REVERSE,
+        ESCAPE_TURN,
+        ESCAPE_FORWARD
     };
 
     struct Command
@@ -265,12 +262,23 @@ private:
         double yaw = 0.0;
     };
 
-    // [Odometry 수신] 경기장 기준 모서리, 현재 위치·yaw와 초기 대각선 이동거리를 갱신한다.
+    // [Odometry 수신] 경기장 기준 모서리, 현재 위치·yaw와 초기 대각선 시작 시각을 갱신한다.
     void odometry_callback(const nav_msgs::msg::Odometry::ConstSharedPtr msg)
     {
         current_odometry_xy_ = Eigen::Vector2d(
             msg->pose.pose.position.x, msg->pose.pose.position.y);
         current_odometry_z_m_ = msg->pose.pose.position.z;
+        const double velocity_x = msg->twist.twist.linear.x;
+        const double velocity_y = msg->twist.twist.linear.y;
+        const double yaw_rate = msg->twist.twist.angular.z;
+        have_planar_velocity_ = std::isfinite(velocity_x) && std::isfinite(velocity_y);
+        if (have_planar_velocity_) {
+            current_velocity_body_xy_ = Eigen::Vector2d(velocity_x, velocity_y);
+        }
+        have_yaw_rate_ = std::isfinite(yaw_rate);
+        if (have_yaw_rate_) {
+            current_yaw_rate_rps_ = yaw_rate;
+        }
         current_yaw_rad_ = yaw_from_quaternion(
             msg->pose.pose.orientation.w,
             msg->pose.pose.orientation.x,
@@ -282,12 +290,12 @@ private:
             arena_corner_xy_ = current_odometry_xy_;
             have_arena_corner_ = true;
         }
-        if (state_ == State::INITIAL_DIAGONAL && !have_initial_diagonal_start_) {
-            capture_initial_diagonal_start();
+        if (state_ == State::INITIAL_DIAGONAL && !initial_diagonal_timer_started_) {
+            start_initial_diagonal_timer();
         }
     }
 
-    // [Homing 방향 수신] frame과 수치를 검증해 단위 벡터로 저장하고 방향각 안정성 이력을 갱신한다.
+    // [Homing 방향 수신] frame과 수치를 검증해 최신 단위 벡터로 저장한다.
     void direction_callback(const geometry_msgs::msg::Vector3Stamped::ConstSharedPtr msg)
     {
         // 좌표계가 다르면 body-frame 제어 입력으로 사용할 수 없다.
@@ -318,51 +326,17 @@ private:
 
         direction_x_ = x / norm;
         direction_y_ = y / norm;
-        direction_z_ = z / norm;
-        last_direction_time_ = now();
         have_direction_ = true;
-        bearing_history_.push_back({last_direction_time_, std::atan2(direction_y_, direction_x_)});
-        while (!bearing_history_.empty() &&
-            (last_direction_time_ - bearing_history_.front().first).seconds() > direction_stability_window_s_)
-        {
-            bearing_history_.pop_front();
-        }
     }
 
-    // [방향 신뢰도 수신] 유효한 값을 0~1로 제한하고 freshness 판정용 수신 시각을 저장한다.
+    // [방향 신뢰도 수신] 유효한 값을 0~1로 제한해 저장한다.
     void confidence_callback(const std_msgs::msg::Float64::ConstSharedPtr msg)
     {
         if (!std::isfinite(msg->data)) {
             return;
         }
         direction_confidence_ = clamp(msg->data, 0.0, 1.0);
-        last_confidence_time_ = now();
         have_confidence_ = true;
-    }
-
-    // [제어 enable 수신] 활성화하면 모서리 이탈 대각선 이동, 비활성화하면 RC 해제로 전환한다.
-    void enable_callback(const std_msgs::msg::Bool::ConstSharedPtr msg)
-    {
-        if (msg->data == control_enabled_) {
-            return;
-        }
-
-        control_enabled_ = msg->data;
-        have_acquire_start_ = false;
-        have_last_valid_signal_time_ = false;
-        if (control_enabled_) {
-            // enable 상승 시 항상 모서리 이탈 대각선 이동부터 새 순서를 시작한다.
-            transition_to(State::INITIAL_DIAGONAL);
-        } else {
-            transition_to(State::DISABLED);
-        }
-    }
-
-    // [추정기 준비 상태 수신] V2 robust gradient 방향 사용 가능 여부와 최신 수신 시각을 기록한다.
-    void estimator_ready_callback(const std_msgs::msg::Bool::ConstSharedPtr msg)
-    {
-        estimator_ready_ = msg->data;
-        last_estimator_ready_time_ = now();
     }
 
     // [수직 탐색 요청 수신] V2의 one-shot SNR trigger 상태를 저장한다.
@@ -382,117 +356,211 @@ private:
         have_vertical_best_z_ = true;
     }
 
-    // [폐루프 상태기계 실행] 비활성·초기 탐색·수직 sweep·homing 상태의 RC 명령을 결정한다.
+    // [폐루프 상태기계 실행] 대각선·탐색·수직 sweep·짧은 재획득·homing/recovery 명령을 결정한다.
     void control_loop()
     {
         const rclcpp::Time current_time = now();
 
-        // 비활성 상태에서는 RC override를 해제하여 수동 조종을 방해하지 않는다.
-        if (!control_enabled_ || state_ == State::DISABLED) {
-            publish_rc(make_release_override());
-            return;
-        }
-
-        // 실행 분기 A: 시작 모서리에서 경기장 중심 방향으로 목표 거리만큼 대각선 이동한다.
-        if (state_ == State::INITIAL_DIAGONAL) {
-            double traveled_m = 0.0;
-            if (have_initial_diagonal_start_ && odometry_is_fresh(current_time)) {
-                traveled_m = (current_odometry_xy_ - initial_diagonal_start_xy_).norm();
-            }
-            if (have_initial_diagonal_start_ && odometry_is_fresh(current_time) &&
-                traveled_m >= initial_diagonal_distance_m_)
-            {
-                // 대각선 구간에서 누적한 SNR map을 유지한 채 원형 탐색을 시작한다.
-                publish_rc(make_rc_override(Command{}));
-                transition_to(State::INITIAL_SEARCH);
-                return;
-            }
-            const rclcpp::Time timeout_start =
-                have_initial_diagonal_start_ ? initial_diagonal_start_time_ : state_enter_time_;
-            if ((current_time - timeout_start).seconds() >= initial_diagonal_timeout_s_)
-            {
-                RCLCPP_ERROR(
-                    get_logger(),
-                    "Initial diagonal timed out at %.2f/%.2f m; control disabled.",
-                    traveled_m,
-                    initial_diagonal_distance_m_);
-                control_enabled_ = false;
-                transition_to(State::DISABLED);
-                publish_rc(make_release_override());
-                return;
-            }
-            if (!have_initial_diagonal_start_ || !odometry_is_fresh(current_time)) {
-                publish_rc(make_rc_override(Command{}));
-                return;
-            }
-            publish_rc(make_rc_override(initial_diagonal_command()));
-            return;
-        }
-
-        // 경기장 경계 clamp에 필요한 odometry가 오래되면 모든 이동축을 중립으로 둔다.
-        if (!odometry_is_fresh(current_time)) {
+        // 충돌 판정과 수직 제어에 필요한 odometry가 오래되면 모든 이동축을 중립으로 둔다.
+        if (state_ != State::INITIAL_DIAGONAL && !odometry_is_fresh(current_time)) {
             publish_rc(make_rc_override(Command{}));
             return;
         }
 
-        if (state_ == State::VERTICAL_SEARCH) {
-            update_vertical_search(current_time);
-            return;
+        // Estimator가 준 direction과 confidence가 사용 가능한지 한 번만 판정한다.
+        const bool signal_valid = homing_signal_valid();
+        bool homing_direction_valid = signal_valid;
+        if (signal_valid) {
+            post_wall_homing_grace_active_ = false;
+        } else if (state_ == State::HOMING) {
+            homing_direction_valid = use_preserved_homing_direction(current_time);
         }
-
-        const bool signal_valid = have_valid_signal(current_time);
-
-        // 실행 분기 B: 미션 시작 후 최초 방향을 얻기 위한 원형 탐색.
-        if (state_ == State::INITIAL_SEARCH) {
-            if (vertical_search_requested_ && !vertical_search_completed_) {
-                transition_to(State::VERTICAL_SEARCH);
-                publish_rc(make_rc_override(Command{}));
-                return;
+        switch (state_) {
+            // 미션 시작: 모서리에서 경기장 중심 쪽으로 대각선 이동해 벽에서 떨어진다.
+            case State::INITIAL_DIAGONAL: {
+                const bool odometry_fresh = odometry_is_fresh(current_time);
+                if (initial_diagonal_timer_started_ &&
+                    (current_time - initial_diagonal_start_time_).seconds() >=
+                    initial_diagonal_duration_s_)
+                {
+                    publish_rc(make_rc_override(Command{}));
+                    transition_to(State::INITIAL_SEARCH);
+                } else {
+                    const Command command = initial_diagonal_timer_started_ && odometry_fresh ?
+                        initial_diagonal_command() : Command{};
+                    publish_rc(make_rc_override(command));
+                }
+                break;
             }
-            update_search_acquisition(current_time, signal_valid);
-            if (state_ == State::HOMING) {
-                publish_rc(make_rc_override(homing_command()));
-            } else {
-                publish_rc(make_rc_override(search_command()));
+
+            case State::INITIAL_SEARCH: {
+                if (!signal_valid) {
+                    have_acquire_start_ = false;
+                } else if (!have_acquire_start_) {
+                    acquire_start_time_ = current_time;
+                    have_acquire_start_ = true;
+                }
+
+                const bool search_complete = have_acquire_start_ &&
+                    (current_time - state_enter_time_).seconds() >= search_min_duration_s_ &&
+                    (current_time - acquire_start_time_).seconds() >= acquire_hold_s_;
+                if (search_complete) {
+                    transition_to(State::HOMING);
+                    publish_rc(make_rc_override(homing_command()));
+                } else {
+                    const Command command = search_command();
+                    if (command_progress_indicates_collision(current_time, command)) {
+                        start_wall_recovery(State::INITIAL_SEARCH, false, false);
+                        publish_rc(make_rc_override(wall_reverse_command()));
+                    } else {
+                        publish_rc(make_rc_override(command));
+                    }
+                }
+                break;
             }
-            return;
-        }
 
-        // 실행 분기 C: 유효한 방향을 따라 음원 쪽으로 전진한다.
-        if (state_ == State::HOMING && signal_valid) {
-            last_valid_signal_time_ = current_time;
-            have_last_valid_signal_time_ = true;
-            publish_rc(make_rc_override(homing_command()));
-            return;
-        }
+            case State::HOMING:
+                if (vertical_search_requested_ && !vertical_search_completed_) {
+                    publish_rc(make_rc_override(Command{}));
+                    transition_to(State::VERTICAL_SEARCH);
+                } else if (homing_direction_valid) {
+                    recovery_active_ = false;
+                    const Command command = homing_command();
+                    if (command_progress_indicates_collision(current_time, command)) {
+                        start_wall_recovery(State::HOMING, true, false);
+                        publish_rc(make_rc_override(wall_reverse_command()));
+                    } else {
+                        publish_rc(make_rc_override(command));
+                    }
+                } else {
+                    if (!recovery_active_) {
+                        recovery_active_ = true;
+                        recovery_start_time_ = current_time;
+                        RCLCPP_WARN(
+                            get_logger(),
+                            "HOMING direction unavailable: direction_received=%s, "
+                            "confidence_received=%s, confidence=%.2f; "
+                            "starting curved recovery probe.",
+                            have_direction_ ? "true" : "false",
+                            have_confidence_ ? "true" : "false",
+                            direction_confidence_);
+                    }
+                    if ((current_time - recovery_start_time_).seconds() >=
+                        recovery_to_search_s_)
+                    {
+                        RCLCPP_WARN(
+                            get_logger(),
+                            "HOMING recovery timed out after %.1f s; returning to INITIAL_SEARCH.",
+                            recovery_to_search_s_);
+                        publish_rc(make_rc_override(Command{}));
+                        transition_to(State::INITIAL_SEARCH);
+                    } else {
+                        const Command command = recovery_command();
+                        if (command_progress_indicates_collision(current_time, command)) {
+                            start_wall_recovery(State::HOMING, true, true);
+                            publish_rc(make_rc_override(wall_reverse_command()));
+                        } else {
+                            publish_rc(make_rc_override(command));
+                        }
+                    }
+                }
+                break;
 
-        // 실행 분기 D: 방향 손실 동안 정지하고 hold 이후 자동 재탐색 없이 제어를 해제한다.
-        publish_rc(make_rc_override(Command{}));
-        if (!have_last_valid_signal_time_) {
-            last_valid_signal_time_ = current_time;
-            have_last_valid_signal_time_ = true;
-        }
-        if ((current_time - last_valid_signal_time_).seconds() >= direction_loss_hold_s_) {
-            RCLCPP_ERROR(
-                get_logger(),
-                "Homing direction lost for %.2f s; control disabled.",
-                direction_loss_hold_s_);
-            control_enabled_ = false;
-            transition_to(State::DISABLED);
-            publish_rc(make_release_override());
+            case State::WALL_RECOVERY: {
+                const double phase_elapsed_s =
+                    (current_time - wall_recovery_phase_start_time_).seconds();
+                if (wall_recovery_phase_ == WallRecoveryPhase::REVERSE) {
+                    if (phase_elapsed_s < wall_reverse_duration_s_) {
+                        publish_rc(make_rc_override(wall_reverse_command()));
+                    } else {
+                        wall_recovery_phase_ = WallRecoveryPhase::ESCAPE_TURN;
+                        wall_recovery_phase_start_time_ = current_time;
+                        RCLCPP_INFO(get_logger(), "WALL_RECOVERY phase -> ESCAPE_TURN");
+                        publish_rc(make_rc_override(Command{}));
+                    }
+                    break;
+                }
+
+                if (wall_recovery_phase_ == WallRecoveryPhase::ESCAPE_TURN) {
+                    const double yaw_error = wrap_pi(
+                        wall_recovery_escape_yaw_rad_ - current_yaw_rad_);
+                    if (std::abs(yaw_error) <= center_deadband_rad_) {
+                        wall_recovery_phase_ = WallRecoveryPhase::ESCAPE_FORWARD;
+                        wall_recovery_phase_start_time_ = current_time;
+                        RCLCPP_INFO(get_logger(), "WALL_RECOVERY phase -> ESCAPE_FORWARD");
+                        publish_rc(make_rc_override(wall_escape_forward_command()));
+                    } else {
+                        Command command;
+                        command.yaw = clamp(yaw_gain_ * yaw_error, -yaw_limit_, yaw_limit_);
+                        publish_rc(make_rc_override(command));
+                    }
+                    break;
+                }
+
+                if (phase_elapsed_s >= wall_escape_duration_s_) {
+                    const bool preserve_homing_after_recovery =
+                        wall_recovery_return_state_ == State::HOMING &&
+                        have_preserved_homing_direction_ &&
+                        !wall_recovery_resume_curved_recovery_;
+                    if (preserve_homing_after_recovery) {
+                        post_wall_homing_grace_active_ = true;
+                        post_wall_homing_grace_start_time_ = current_time;
+                        use_preserved_homing_direction(current_time);
+                    }
+                    transition_to(wall_recovery_return_state_);
+                    recovery_active_ = wall_recovery_resume_curved_recovery_;
+                    collision_detection_armed_ = false;
+                    collision_rearm_start_time_ = current_time;
+                    if (signal_valid || preserve_homing_after_recovery) {
+                        publish_rc(make_rc_override(homing_command()));
+                    } else if (wall_recovery_resume_curved_recovery_) {
+                        publish_rc(make_rc_override(recovery_command()));
+                    } else {
+                        publish_rc(make_rc_override(Command{}));
+                    }
+                } else {
+                    publish_rc(make_rc_override(wall_escape_forward_command()));
+                }
+                break;
+            }
+
+            case State::VERTICAL_SEARCH:
+                update_vertical_search(current_time);
+                break;
+
+            case State::SHORT_REACQUIRE: {
+                const double elapsed_s = (current_time - state_enter_time_).seconds();
+                if (signal_valid && elapsed_s >= short_reacquire_min_duration_s_) {
+                    RCLCPP_INFO(get_logger(), "SHORT_REACQUIRE succeeded; returning to HOMING.");
+                    transition_to(State::HOMING);
+                    publish_rc(make_rc_override(homing_command()));
+                } else if (elapsed_s >= short_reacquire_timeout_s_) {
+                    RCLCPP_WARN(
+                        get_logger(),
+                        "SHORT_REACQUIRE timed out after %.1f s; returning to INITIAL_SEARCH.",
+                        short_reacquire_timeout_s_);
+                    publish_rc(make_rc_override(Command{}));
+                    transition_to(State::INITIAL_SEARCH);
+                } else {
+                    publish_rc(make_rc_override(recovery_command()));
+                }
+                break;
+            }
         }
     }
 
-    // [수직 Sweep 실행] 위→아래→최고 SNR z 세 목표를 순서대로 추종한다.
+    // [수직 Sweep 실행] heave만 사용해 위→아래→최고 SNR z를 추종한다 (forward/sway/yaw=0).
     void update_vertical_search(const rclcpp::Time & current_time)
     {
         if ((current_time - state_enter_time_).seconds() >= VERTICAL_SEARCH_TIMEOUT_S) {
-            RCLCPP_ERROR(
-                get_logger(), "Vertical search timed out after %.1f s; control disabled.",
+            RCLCPP_WARN(
+                get_logger(),
+                "VERTICAL_SEARCH timed out after %.1f s; returning to INITIAL_SEARCH.",
                 VERTICAL_SEARCH_TIMEOUT_S);
-            control_enabled_ = false;
-            transition_to(State::DISABLED);
-            publish_rc(make_release_override());
+            // 동일한 latched 요청으로 즉시 수직 탐색에 재진입하지 않도록 이번 시도를 종료 처리한다.
+            vertical_search_completed_ = true;
+            publish_rc(make_rc_override(Command{}));
+            transition_to(State::INITIAL_SEARCH);
             return;
         }
 
@@ -516,13 +584,16 @@ private:
                 vertical_search_phase_ = VerticalSearchPhase::MOVE_BEST;
             } else {
                 vertical_search_completed_ = true;
-                transition_to(State::INITIAL_SEARCH);
+                RCLCPP_INFO(
+                    get_logger(),
+                    "VERTICAL_SEARCH completed; entering SHORT_REACQUIRE.");
+                transition_to(State::SHORT_REACQUIRE);
             }
             return;
         }
 
         Command command;
-        // odometry z는 위로 갈수록 증가한다. 기존 heave 축 부호에 맞춰 오차에 음수를 곱한다.
+        // odometry z(depth 융합값)는 위로 갈수록 증가한다. heave 부호에 맞춰 오차에 음수를 곱한다.
         command.heave = clamp(
             -heave_gain_ * (target_z_m - current_odometry_z_m_),
             -heave_limit_,
@@ -530,69 +601,194 @@ private:
         publish_rc(make_rc_override(command));
     }
 
-    // [탐색 중 신호 획득] 준비되고 안정적인 방향이 일정 시간 유지되면 HOMING으로 전환한다.
-    void update_search_acquisition(const rclcpp::Time & current_time, const bool signal_valid)
+    // [Homing 방향 유효성] 수신된 direction과 confidence 값만 검사한다.
+    bool homing_signal_valid() const
     {
-        // 방향이 불안정하면 연속 획득 시간을 처음부터 다시 센다.
-        if (!signal_valid || !estimator_ready_is_fresh(current_time) || !direction_is_stable()) {
-            have_acquire_start_ = false;
-            return;
-        }
-        if (!have_acquire_start_) {
-            acquire_start_time_ = current_time;
-            have_acquire_start_ = true;
-        }
-
-        const double search_elapsed_s = (current_time - state_enter_time_).seconds();
-        const double acquire_elapsed_s = (current_time - acquire_start_time_).seconds();
-        if (search_elapsed_s < search_min_duration_s_ || acquire_elapsed_s < acquire_hold_s_) {
-            return;
-        }
-
-        last_valid_signal_time_ = current_time;
-        have_last_valid_signal_time_ = true;
-        transition_to(State::HOMING);
+        return have_direction_ &&
+            have_confidence_ &&
+            direction_confidence_ >= min_direction_confidence_;
     }
 
-    // [신호 유효성 판정] 방향·신뢰도의 timeout과 최소 신뢰도 조건을 함께 검사한다.
-    bool have_valid_signal(const rclcpp::Time & current_time) const
+    // [충돌 판정] 명령 방향의 수평 진행속도와 yaw 진행속도가 모두 부족한지 본다.
+    bool command_progress_indicates_collision(
+        const rclcpp::Time & current_time,
+        const Command & command)
     {
-        if (!have_direction_ || !have_confidence_) {
+        const Eigen::Vector2d horizontal_command(command.forward, command.sway);
+        const double command_magnitude = horizontal_command.norm();
+        const bool linear_commanded = command_magnitude > 0.0;
+        const bool yaw_commanded = std::abs(command.yaw) > 0.0;
+        if (!linear_commanded && !yaw_commanded) {
+            collision_candidate_active_ = false;
             return false;
         }
-        if ((current_time - last_direction_time_).seconds() > direction_timeout_s_ ||
-            (current_time - last_confidence_time_).seconds() > confidence_timeout_s_)
+
+        const bool have_linear_measurement = linear_commanded && have_planar_velocity_;
+        const bool have_yaw_measurement = yaw_commanded && have_yaw_rate_;
+        if (!have_linear_measurement && !have_yaw_measurement) {
+            collision_candidate_active_ = false;
+            return false;
+        }
+
+        const double progress_velocity_mps = have_linear_measurement ?
+            projected_velocity(command) : 0.0;
+        const double progress_yaw_rate_rps = have_yaw_measurement ?
+            current_yaw_rate_rps_ * (command.yaw > 0.0 ? 1.0 : -1.0) : 0.0;
+        const bool linear_progressed = have_linear_measurement &&
+            progress_velocity_mps >= stuck_progress_threshold_mps_;
+        const bool yaw_progressed = have_yaw_measurement &&
+            progress_yaw_rate_rps >= stuck_yaw_rate_threshold_rps_;
+        // 선형 또는 회전 중 명령한 성분 하나라도 진행하면 정상 제어로 본다.
+        const bool motion_progressed = linear_progressed || yaw_progressed;
+        if (!collision_detection_armed_) {
+            const bool rearm_timed_out =
+                (current_time - collision_rearm_start_time_).seconds() >=
+                collision_rearm_timeout_s_;
+            if (motion_progressed || rearm_timed_out) {
+                collision_detection_armed_ = true;
+                RCLCPP_INFO(
+                    get_logger(),
+                    "Collision detection rearmed: linear=%.3f m/s, yaw=%.3f rad/s.",
+                    progress_velocity_mps,
+                    progress_yaw_rate_rps);
+            }
+            collision_candidate_active_ = false;
+            return false;
+        }
+
+        if (motion_progressed) {
+            collision_candidate_active_ = false;
+            return false;
+        }
+
+        if (!collision_candidate_active_) {
+            collision_candidate_start_time_ = current_time;
+            collision_candidate_active_ = true;
+            return false;
+        }
+        if ((current_time - collision_candidate_start_time_).seconds() < collision_hold_s_) {
+            return false;
+        }
+
+        RCLCPP_WARN(
+            get_logger(),
+            "%s collision detected: linear_command=%.2f yaw_command=%.2f, "
+            "linear_progress=%.3f m/s yaw_progress=%.3f rad/s.",
+            state_name(state_),
+            command_magnitude,
+            command.yaw,
+            progress_velocity_mps,
+            progress_yaw_rate_rps);
+        collision_candidate_active_ = false;
+        return true;
+    }
+
+    // [명령 방향 투영속도] 현재 body-frame 선속도의 명령 방향 성분을 반환한다.
+    double projected_velocity(const Command & command) const
+    {
+        const double command_heading = std::atan2(command.sway, command.forward);
+        const Eigen::Vector2d command_direction(
+            std::cos(command_heading), std::sin(command_heading));
+        return current_velocity_body_xy_.dot(command_direction);
+    }
+
+    // [벽 접선 계산] 현재 arena 위치에서 가장 가까운 벽과 나란한 world-frame 단위벡터를 만든다.
+    Eigen::Vector2d nearest_wall_tangent_world(const Eigen::Vector2d & heading) const
+    {
+        if (!have_odometry_ || !have_arena_corner_) {
+            return Eigen::Vector2d(-heading.y(), heading.x());
+        }
+
+        const double arena_c = std::cos(arena_yaw_rad_);
+        const double arena_s = std::sin(arena_yaw_rad_);
+        const Eigen::Vector2d offset = current_odometry_xy_ - arena_corner_xy_;
+        const double arena_x = arena_c * offset.x() + arena_s * offset.y() +
+            (arena_start_corner_ == "bottom_right" ?
+            arena_width_m_ - arena_start_inset_m_ : arena_start_inset_m_);
+        const double arena_y =
+            -arena_s * offset.x() + arena_c * offset.y() + arena_start_inset_m_;
+        const double x_wall_distance = std::min(
+            std::abs(arena_x), std::abs(arena_width_m_ - arena_x));
+        const double y_wall_distance = std::min(
+            std::abs(arena_y), std::abs(arena_height_m_ - arena_y));
+        const Eigen::Vector2d tangent_arena = x_wall_distance <= y_wall_distance ?
+            Eigen::Vector2d(0.0, 1.0) : Eigen::Vector2d(1.0, 0.0);
+        return Eigen::Vector2d(
+            arena_c * tangent_arena.x() - arena_s * tangent_arena.y(),
+            arena_s * tangent_arena.x() + arena_c * tangent_arena.y());
+    }
+
+    // [벽 회복 시작] 충돌 헤딩 반대 성분과 homing 쪽 벽 접선을 합성해 회피 yaw를 고정한다.
+    void start_wall_recovery(
+        const State return_state,
+        const bool preserve_homing_direction,
+        const bool resume_curved_recovery)
+    {
+        wall_recovery_return_state_ = return_state;
+        wall_recovery_resume_curved_recovery_ = resume_curved_recovery;
+        const Eigen::Vector2d collision_heading(
+            std::cos(current_yaw_rad_), std::sin(current_yaw_rad_));
+        Eigen::Vector2d tangent = nearest_wall_tangent_world(collision_heading);
+        have_preserved_homing_direction_ = false;
+        if (preserve_homing_direction && have_direction_) {
+            preserved_homing_yaw_world_rad_ = wrap_pi(current_yaw_rad_ +
+                std::atan2(direction_y_, direction_x_));
+            have_preserved_homing_direction_ = true;
+            const Eigen::Vector2d homing_direction(
+                std::cos(preserved_homing_yaw_world_rad_),
+                std::sin(preserved_homing_yaw_world_rad_));
+            if (tangent.dot(homing_direction) < 0.0) {
+                tangent = -tangent;
+            }
+        } else if (search_turn_sign_ < 0.0) {
+            tangent = -tangent;
+        }
+        const Eigen::Vector2d escape_direction =
+            WALL_ESCAPE_AWAY_WEIGHT * -collision_heading +
+            WALL_ESCAPE_TANGENT_WEIGHT * tangent;
+        wall_recovery_escape_yaw_rad_ = std::atan2(
+            escape_direction.y(), escape_direction.x());
+        wall_recovery_phase_ = WallRecoveryPhase::REVERSE;
+        wall_recovery_phase_start_time_ = now();
+        collision_detection_armed_ = false;
+        transition_to(State::WALL_RECOVERY);
+    }
+
+    // [벽 회복 후 방향 유지] 충돌 당시 world 방향을 현재 자세 기준 body 방향으로 갱신한다.
+    bool use_preserved_homing_direction(const rclcpp::Time & current_time)
+    {
+        if (!post_wall_homing_grace_active_ ||
+            !have_preserved_homing_direction_)
         {
             return false;
         }
-        return direction_confidence_ >= min_direction_confidence_;
-    }
-
-    // [방향 안정성 판정] 최근 body-frame bearing의 원형 분산이 허용치 이하인지 확인한다.
-    bool direction_is_stable() const
-    {
-        if (bearing_history_.size() < 3) {
+        if ((current_time - post_wall_homing_grace_start_time_).seconds() >
+            wall_homing_resume_grace_s_)
+        {
+            post_wall_homing_grace_active_ = false;
             return false;
         }
-        Eigen::Vector2d mean = Eigen::Vector2d::Zero();
-        for (const auto & sample : bearing_history_) {
-            mean += Eigen::Vector2d(std::cos(sample.second), std::sin(sample.second));
-        }
-        const double mean_angle = std::atan2(mean.y(), mean.x());
-        double squared_error = 0.0;
-        for (const auto & sample : bearing_history_) {
-            const double error = wrap_pi(sample.second - mean_angle);
-            squared_error += error * error;
-        }
-        return std::sqrt(squared_error / static_cast<double>(bearing_history_.size())) <=
-            max_direction_std_rad_;
+        const double body_bearing = wrap_pi(
+            preserved_homing_yaw_world_rad_ - current_yaw_rad_);
+        direction_x_ = std::cos(body_bearing);
+        direction_y_ = std::sin(body_bearing);
+        return true;
     }
 
-    // [준비 상태 freshness] estimator-ready가 true이며 지정 timeout 안에 갱신됐는지 확인한다.
-    bool estimator_ready_is_fresh(const rclcpp::Time & current_time) const
+    // [벽 회복 후진 명령] 진입 직후와 후진 유지 구간에서 동일한 명령을 사용한다.
+    Command wall_reverse_command() const
     {
-        return estimator_ready_ &&
-            (current_time - last_estimator_ready_time_).seconds() <= estimator_ready_timeout_s_;
+        Command command;
+        command.forward = -wall_reverse_command_;
+        return command;
+    }
+
+    // [벽 회피 전진 명령] 측면 회피 방향으로 회전한 뒤 벽에서 떨어지는 명령을 만든다.
+    Command wall_escape_forward_command() const
+    {
+        Command command;
+        command.forward = wall_escape_forward_command_;
+        return command;
     }
 
     // [Odometry freshness] 경계 제어가 오래된 위치값으로 계속 진행되지 않도록 수신 시각을 검사한다.
@@ -602,22 +798,21 @@ private:
             (current_time - last_odometry_receive_time_).seconds() <= odometry_timeout_s_;
     }
 
-    // [초기 대각선 기준점 저장] 첫 유효 odometry 위치와 시각을 거리·timeout 계산 원점으로 잡는다.
-    void capture_initial_diagonal_start()
+    // [초기 대각선 타이머 시작] 첫 odometry 수신 시 open-loop 이동 시간을 재기 시작한다.
+    void start_initial_diagonal_timer()
     {
         if (!have_odometry_) {
             return;
         }
-        initial_diagonal_start_xy_ = current_odometry_xy_;
         initial_diagonal_start_time_ = now();
-        have_initial_diagonal_start_ = true;
+        initial_diagonal_timer_started_ = true;
     }
 
     // [초기 대각선 명령 생성] 시작 모서리에서 경기장 중심 쪽 world 방향을 body forward+sway로 변환한다.
     Command initial_diagonal_command() const
     {
         const double horizontal_sign =
-            arena_start_corner_ == "bottom_right" ? -1.0 : 1.0;
+            arena_start_corner_ == "bottom_right" ? -1.0 : 1.0; // 왼쪽 모서리: -1, 오른쪽 모서리: 1
         Eigen::Vector2d arena_direction(
             horizontal_sign * arena_width_m_, arena_height_m_);
         arena_direction.normalize();
@@ -648,17 +843,24 @@ private:
         return command;
     }
 
-    // [Homing 명령 생성] 방향 오차·z 방향·신뢰도에 따라 전진, yaw, heave 명령을 계산한다.
+    // [Recovery / SHORT_REACQUIRE 명령] 탐색보다 느린 forward + 작은 yaw로 곡선 이동을 만든다.
+    Command recovery_command() const
+    {
+        Command command = search_command();
+        command.forward *= 0.5;
+        command.yaw *= 2.0 / 3.0;
+        return command;
+    }
+
+    // [Homing 명령 생성] 수평 방향 오차와 신뢰도에 따라 전진과 yaw 명령을 계산한다.
     Command homing_command() const
     {
         Command command;
 
-        const double bearing = wrap_pi(std::atan2(direction_y_, direction_x_));
+        const double bearing = std::atan2(direction_y_, direction_x_);
         const double absolute_bearing = std::abs(bearing);
         command.yaw = absolute_bearing <= center_deadband_rad_ ?
             0.0 : clamp(yaw_gain_ * bearing, -yaw_limit_, yaw_limit_);
-        command.heave = clamp(-heave_gain_ * direction_z_, -heave_limit_, heave_limit_);
-
         // 방향 오차가 크면 회전을 우선하고 전진 속도를 줄인다.
         double forward = forward_fast_;
         if (absolute_bearing > 1.10) {
@@ -668,10 +870,6 @@ private:
         } else if (absolute_bearing > 0.42) {
             forward = std::min(forward, std::max(forward_mid_, 0.55));
         }
-        if (direction_x_ < 0.05) {
-            forward = std::min(forward, 0.15);
-        }
-
         // 신뢰도가 낮을수록 전진량을 줄이되 획득 임계값 이상에서는 정지하지 않는다.
         const double confidence_scale = confidence_speed_floor_ +
             (1.0 - confidence_speed_floor_) * direction_confidence_;
@@ -679,62 +877,9 @@ private:
         return command;
     }
 
-    // [경기장 경계 clamp] body 이동 명령을 경기장 축으로 바꾸고 벽 쪽 성분만 제거한다.
-    Command clamp_command_to_arena(const Command & command) const
-    {
-        Command bounded = command;
-        if (!have_odometry_ || !have_arena_corner_) {
-            bounded.forward = 0.0;
-            bounded.sway = 0.0;
-            return bounded;
-        }
-
-        const double arena_c = std::cos(arena_yaw_rad_);
-        const double arena_s = std::sin(arena_yaw_rad_);
-        const Eigen::Vector2d offset = current_odometry_xy_ - arena_corner_xy_;
-        const double raw_x = arena_c * offset.x() + arena_s * offset.y();
-        const double arena_x =
-            raw_x + (arena_start_corner_ == "bottom_right" ?
-            arena_width_m_ - arena_start_inset_m_ : arena_start_inset_m_);
-        const double arena_y =
-            -arena_s * offset.x() + arena_c * offset.y() + arena_start_inset_m_;
-
-        const double yaw_c = std::cos(current_yaw_rad_);
-        const double yaw_s = std::sin(current_yaw_rad_);
-        const Eigen::Vector2d world_velocity(
-            yaw_c * command.forward - yaw_s * command.sway,
-            yaw_s * command.forward + yaw_c * command.sway);
-        Eigen::Vector2d arena_velocity(
-            arena_c * world_velocity.x() + arena_s * world_velocity.y(),
-            -arena_s * world_velocity.x() + arena_c * world_velocity.y());
-
-        if (arena_x <= geofence_margin_m_ && arena_velocity.x() < 0.0) {
-            arena_velocity.x() = 0.0;
-        }
-        if (arena_x >= arena_width_m_ - geofence_margin_m_ && arena_velocity.x() > 0.0) {
-            arena_velocity.x() = 0.0;
-        }
-        if (arena_y <= geofence_margin_m_ && arena_velocity.y() < 0.0) {
-            arena_velocity.y() = 0.0;
-        }
-        if (arena_y >= arena_height_m_ - geofence_margin_m_ && arena_velocity.y() > 0.0) {
-            arena_velocity.y() = 0.0;
-        }
-
-        const Eigen::Vector2d bounded_world_velocity(
-            arena_c * arena_velocity.x() - arena_s * arena_velocity.y(),
-            arena_s * arena_velocity.x() + arena_c * arena_velocity.y());
-        bounded.forward =
-            yaw_c * bounded_world_velocity.x() + yaw_s * bounded_world_velocity.y();
-        bounded.sway =
-            -yaw_s * bounded_world_velocity.x() + yaw_c * bounded_world_velocity.y();
-        return bounded;
-    }
-
     // [RC override 변환] 정규화된 4축 명령을 MAVROS 채널별 PWM으로 매핑한다.
     mavros_msgs::msg::OverrideRCIn make_rc_override(const Command & command) const
     {
-        const Command bounded = clamp_command_to_arena(command);
         mavros_msgs::msg::OverrideRCIn msg;
         msg.channels.fill(mavros_msgs::msg::OverrideRCIn::CHAN_NOCHANGE);
         for (std::size_t index = 0;
@@ -744,38 +889,25 @@ private:
             msg.channels[index] = RC_NEUTRAL;
         }
 
-        msg.channels[PITCH_CHANNEL_INDEX] = RC_NEUTRAL;
-        msg.channels[ROLL_CHANNEL_INDEX] = RC_NEUTRAL;
-        msg.channels[VERTICAL_CHANNEL_INDEX] = axis_pwm(bounded.heave, invert_rc_heave_);
-        msg.channels[YAW_CHANNEL_INDEX] = axis_pwm(bounded.yaw, invert_rc_yaw_);
-        msg.channels[FORWARD_CHANNEL_INDEX] = axis_pwm(bounded.forward, false);
+        msg.channels[VERTICAL_CHANNEL_INDEX] = axis_pwm(command.heave, invert_rc_heave_);
+        msg.channels[YAW_CHANNEL_INDEX] = axis_pwm(command.yaw, invert_rc_yaw_);
+        msg.channels[FORWARD_CHANNEL_INDEX] = axis_pwm(command.forward, false);
         msg.channels[LATERAL_CHANNEL_INDEX] =
-            axis_pwm(bounded.sway, invert_rc_lateral_);
+            axis_pwm(command.sway, invert_rc_lateral_);
         return msg;
     }
 
-    // [RC override 해제 생성] 모든 채널을 CHAN_RELEASE로 채워 autopilot/수동 제어권을 돌려준다.
-    mavros_msgs::msg::OverrideRCIn make_release_override() const
-    {
-        mavros_msgs::msg::OverrideRCIn msg;
-        msg.channels.fill(mavros_msgs::msg::OverrideRCIn::CHAN_RELEASE);
-        return msg;
-    }
-
-    // [RC 명령 발행] preview는 항상 발행하고 dry-run이 아닐 때만 실제 MAVROS로 전송한다.
+    // [RC 명령 발행] 진단 preview와 실제 MAVROS override를 항상 함께 전송한다.
     void publish_rc(const mavros_msgs::msg::OverrideRCIn & msg)
     {
-        // preview는 항상 발행해 dry-run과 실기에서 동일한 명령을 비교할 수 있다.
         rc_preview_pub_->publish(msg);
-        if (!dry_run_) {
-            rc_pub_->publish(msg);
-        }
+        rc_pub_->publish(msg);
     }
 
-    // [제어 상태 전환] 미션 시작에서만 추정기를 완전 초기화하고 탐색 전환에는 map을 유지한다.
-    void transition_to(const State next_state)
+    // [제어 상태 전환] estimator reset은 INITIAL_DIAGONAL(미션 시작)에서만 발행한다.
+    void transition_to(const State next_state, const bool force = false)
     {
-        if (state_ == next_state) {
+        if (!force && state_ == next_state) {
             return;
         }
         if (state_ == State::VERTICAL_SEARCH &&
@@ -783,16 +915,24 @@ private:
         {
             publish_vertical_search_active(false);
         }
+        if (next_state != State::HOMING) {
+            recovery_active_ = false;
+        }
+        if (next_state != State::HOMING && next_state != State::WALL_RECOVERY) {
+            post_wall_homing_grace_active_ = false;
+            have_preserved_homing_direction_ = false;
+        }
         state_ = next_state;
         state_enter_time_ = now();
         have_acquire_start_ = false;
+        collision_candidate_active_ = false;
         if (next_state == State::INITIAL_DIAGONAL) {
             vertical_search_requested_ = false;
             vertical_search_completed_ = false;
             have_vertical_best_z_ = false;
-            have_initial_diagonal_start_ = false;
+            initial_diagonal_timer_started_ = false;
             if (have_odometry_) {
-                capture_initial_diagonal_start();
+                start_initial_diagonal_timer();
             }
         }
         if (next_state == State::VERTICAL_SEARCH) {
@@ -808,16 +948,33 @@ private:
             vertical_search_phase_ = VerticalSearchPhase::MOVE_UP;
             have_vertical_best_z_ = false;
             publish_vertical_search_active(true);
+            RCLCPP_INFO(get_logger(), "VERTICAL_SEARCH started.");
         }
+        if (next_state == State::SHORT_REACQUIRE) {
+            RCLCPP_INFO(
+                get_logger(),
+                "SHORT_REACQUIRE started (min=%.1f s, timeout=%.1f s).",
+                short_reacquire_min_duration_s_,
+                short_reacquire_timeout_s_);
+        }
+        if (next_state == State::WALL_RECOVERY) {
+            RCLCPP_INFO(
+                get_logger(),
+                "WALL_RECOVERY started: reverse %.2f for %.2f s, escape yaw %.2f rad, return to %s.",
+                wall_reverse_command_,
+                wall_reverse_duration_s_,
+                wall_recovery_escape_yaw_rad_,
+                state_name(wall_recovery_return_state_));
+        }
+        // 로컬 수신 플래그만 비운다. Rolling Grid Map reset은 하지 않는다.
         if (next_state == State::INITIAL_DIAGONAL ||
-            next_state == State::INITIAL_SEARCH)
+            next_state == State::INITIAL_SEARCH ||
+            next_state == State::SHORT_REACQUIRE)
         {
-            estimator_ready_ = false;
             have_direction_ = false;
             have_confidence_ = false;
-            bearing_history_.clear();
         }
-        // enable 상승으로 새 미션을 시작할 때만 장기 SNR map까지 초기화한다.
+        // 새 미션 시작에서만 장기 SNR map까지 초기화한다.
         if (next_state == State::INITIAL_DIAGONAL) {
             reset_pub_->publish(std_msgs::msg::Empty{});
         }
@@ -845,16 +1002,18 @@ private:
     static const char * state_name(const State state)
     {
         switch (state) {
-            case State::DISABLED:
-                return "DISABLED";
             case State::INITIAL_DIAGONAL:
                 return "INITIAL_DIAGONAL";
             case State::INITIAL_SEARCH:
                 return "INITIAL_SEARCH";
             case State::VERTICAL_SEARCH:
                 return "VERTICAL_SEARCH";
+            case State::SHORT_REACQUIRE:
+                return "SHORT_REACQUIRE";
             case State::HOMING:
                 return "HOMING";
+            case State::WALL_RECOVERY:
+                return "WALL_RECOVERY";
         }
         return "UNKNOWN";
     }
@@ -877,6 +1036,7 @@ private:
     // [각도 정규화] 임의의 radian 각도를 -pi~pi 구간으로 접는다.
     static double wrap_pi(double angle)
     {
+        constexpr double PI = 3.14159265358979323846;
         while (angle > PI) {
             angle -= 2.0 * PI;
         }
@@ -895,44 +1055,37 @@ private:
         return std::atan2(sin_yaw, cos_yaw);
     }
 
-    std::string direction_topic_;
-    std::string confidence_topic_;
-    std::string enable_topic_;
-    std::string state_topic_;
-    std::string rc_override_topic_;
-    std::string rc_preview_topic_;
-    std::string estimator_ready_topic_;
-    std::string reset_topic_;
-    std::string odometry_topic_;
     std::string required_direction_frame_;
 
-    bool control_enabled_ = false;
-    bool dry_run_ = true;
     double rate_hz_ = 30.0;
-    double direction_timeout_s_ = 0.8;
-    double confidence_timeout_s_ = 0.8;
-    double min_direction_confidence_ = 0.15;
+    double min_direction_confidence_ = 0.05;
     double acquire_hold_s_ = 1.0;
     double search_min_duration_s_ = 6.0;
-    double direction_loss_hold_s_ = 1.0;
-    double direction_stability_window_s_ = 1.0;
-    double max_direction_std_rad_ = 0.30;
-    double estimator_ready_timeout_s_ = 1.0;
+    double short_reacquire_min_duration_s_ = 1.0;
+    double short_reacquire_timeout_s_ = 3.0;
+    double recovery_to_search_s_ = 3.0;
     double arena_width_m_ = 15.0;
     double arena_height_m_ = 16.0;
     std::string arena_start_corner_ = "bottom_left";
     double arena_yaw_rad_ = 0.0;
     double arena_start_inset_m_ = 0.12;
-    double geofence_margin_m_ = 0.20;
-    double initial_diagonal_distance_m_ = 0.70;
-    double initial_diagonal_command_ = 0.30;
-    double initial_diagonal_timeout_s_ = 10.0;
+    double stuck_progress_threshold_mps_ = 0.03;
+    double stuck_yaw_rate_threshold_rps_ = 0.05;
+    double collision_hold_s_ = 3.0;
+    double wall_reverse_command_ = 0.25;
+    double wall_reverse_duration_s_ = 2.0;
+    double wall_escape_forward_command_ = 0.25;
+    double wall_escape_duration_s_ = 1.5;
+    double collision_rearm_timeout_s_ = 1.5;
+    double wall_homing_resume_grace_s_ = 2.0;
+    double initial_diagonal_command_ = 0.50;
+    double initial_diagonal_duration_s_ = 6.0;
     double odometry_timeout_s_ = 0.50;
     double vertical_search_distance_m_ = 0.50;
     double vertical_search_min_z_m_ = -1.30;
     double vertical_search_max_z_m_ = -0.20;
 
-    double search_forward_ = 0.30;
+    double search_forward_ = 0.50;
     double search_yaw_ = 0.30;
     double search_turn_sign_ = 1.0;
 
@@ -950,34 +1103,44 @@ private:
     bool invert_rc_yaw_ = true;
     bool invert_rc_lateral_ = false;
 
-    State state_ = State::DISABLED;
+    State state_ = State::INITIAL_DIAGONAL;
     rclcpp::Time state_enter_time_;
     rclcpp::Time acquire_start_time_;
     bool have_acquire_start_ = false;
-    rclcpp::Time last_valid_signal_time_;
-    bool have_last_valid_signal_time_ = false;
+    rclcpp::Time recovery_start_time_;
+    bool recovery_active_ = false;
     Eigen::Vector2d current_odometry_xy_{0.0, 0.0};
+    Eigen::Vector2d current_velocity_body_xy_{0.0, 0.0};
     Eigen::Vector2d arena_corner_xy_{0.0, 0.0};
-    Eigen::Vector2d initial_diagonal_start_xy_{0.0, 0.0};
     double current_yaw_rad_ = 0.0;
+    double current_yaw_rate_rps_ = 0.0;
     double current_odometry_z_m_ = 0.0;
     rclcpp::Time initial_diagonal_start_time_;
     rclcpp::Time last_odometry_receive_time_;
     bool have_odometry_ = false;
+    bool have_planar_velocity_ = false;
+    bool have_yaw_rate_ = false;
     bool have_arena_corner_ = false;
-    bool have_initial_diagonal_start_ = false;
+    bool initial_diagonal_timer_started_ = false;
+    rclcpp::Time collision_candidate_start_time_;
+    bool collision_candidate_active_ = false;
+    bool collision_detection_armed_ = true;
+    rclcpp::Time collision_rearm_start_time_;
+    State wall_recovery_return_state_ = State::HOMING;
+    WallRecoveryPhase wall_recovery_phase_ = WallRecoveryPhase::REVERSE;
+    rclcpp::Time wall_recovery_phase_start_time_;
+    bool wall_recovery_resume_curved_recovery_ = false;
+    double wall_recovery_escape_yaw_rad_ = 0.0;
+    double preserved_homing_yaw_world_rad_ = 0.0;
+    bool have_preserved_homing_direction_ = false;
+    rclcpp::Time post_wall_homing_grace_start_time_;
+    bool post_wall_homing_grace_active_ = false;
 
     double direction_x_ = 1.0;
     double direction_y_ = 0.0;
-    double direction_z_ = 0.0;
     double direction_confidence_ = 0.0;
-    rclcpp::Time last_direction_time_;
-    rclcpp::Time last_confidence_time_;
     bool have_direction_ = false;
     bool have_confidence_ = false;
-    bool estimator_ready_ = false;
-    rclcpp::Time last_estimator_ready_time_;
-    std::deque<std::pair<rclcpp::Time, double>> bearing_history_;
     VerticalSearchPhase vertical_search_phase_ = VerticalSearchPhase::MOVE_UP;
     bool vertical_search_requested_ = false;
     bool vertical_search_completed_ = false;
@@ -989,8 +1152,6 @@ private:
 
     rclcpp::Subscription<geometry_msgs::msg::Vector3Stamped>::SharedPtr direction_sub_;
     rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr confidence_sub_;
-    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr enable_sub_;
-    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr estimator_ready_sub_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odometry_sub_;
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr vertical_search_request_sub_;
     rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr vertical_best_z_sub_;

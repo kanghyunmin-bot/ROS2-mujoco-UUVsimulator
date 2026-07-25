@@ -1,0 +1,138 @@
+{
+  "method": "21-tap FIR DC-gain identification at 10 Hz with ridge regularization; correction solves H_sim C ~= H_real",
+  "axis_order": [
+    "yaw",
+    "forward",
+    "lateral",
+    "heave"
+  ],
+  "input_standard_deviation": [
+    0.2504398956265906,
+    0.18898578039583272,
+    0.028867073167556174,
+    0.03238898496302482
+  ],
+  "input_singular_values": [
+    6.839501708139336,
+    4.922953835571307,
+    0.7993527519044277,
+    0.7588307137418688
+  ],
+  "input_condition_number": 9.013211490100447,
+  "weakly_excited_axes": [
+    "lateral",
+    "heave"
+  ],
+  "real_dc_gain": [
+    [
+      -2.102131209186475,
+      0.013186453662483305,
+      0.5371939369642994,
+      0.29246457517298086
+    ],
+    [
+      -0.09369848320738595,
+      0.48240915045077915,
+      -0.28264418595946045,
+      0.6633430437372507
+    ],
+    [
+      0.027246469468601958,
+      0.04119314033535876,
+      -0.7959111758073463,
+      0.38481587574210113
+    ],
+    [
+      -0.0027674305353841064,
+      -0.010755531526645405,
+      0.09139347704937034,
+      -0.07450987523563059
+    ]
+  ],
+  "sim_dc_gain": [
+    [
+      -2.0496189703584777,
+      0.03578314138782008,
+      1.4733693298464774,
+      0.14788696755055947
+    ],
+    [
+      -0.0065674306949428714,
+      0.6190716148104576,
+      -0.7545015482428015,
+      0.3769893565768362
+    ],
+    [
+      -0.00037986986796977853,
+      -0.0037056508213791388,
+      -0.2713209820746601,
+      -0.0576026602879617
+    ],
+    [
+      0.0023771986686433166,
+      -0.0007998086999208992,
+      -0.00639984373238027,
+      0.2550731001633133
+    ]
+  ],
+  "unconstrained_correction_matrix": [
+    [
+      0.9524662493035932,
+      -0.10726490704181588,
+      1.8318010447933137,
+      -1.1385846976495546
+    ],
+    [
+      -0.241433950882408,
+      0.6202497575268381,
+      2.725026996919051,
+      -0.38619536635996377
+    ],
+    [
+      -0.09361026838633457,
+      -0.15101404757556816,
+      2.8044866969418103,
+      -1.3442547354334335
+    ],
+    [
+      -0.022831980695801873,
+      -0.04301091208399956,
+      0.42014112380127755,
+      -0.31643923178779565
+    ]
+  ],
+  "unconstrained_correction_singular_values": [
+    4.652307645808392,
+    1.2385202421661607,
+    0.6246040213772688,
+    0.05671105034695311
+  ],
+  "unconstrained_correction_condition_number": 82.03529325142088,
+  "axis_preserving_diagonal_correction": [
+    1.0257509931987914,
+    0.7774747618786522,
+    0.4336223421271532,
+    1.0851273400718409
+  ],
+  "split_window_diagonal_correction": {
+    "first_half": [
+      1.0650100706845624,
+      0.770653306237703,
+      0.3472004763000221,
+      0.5341993350806417
+    ],
+    "second_half": [
+      1.0033478192818874,
+      0.8834487065801653,
+      null,
+      0.8776341712988712
+    ]
+  },
+  "interpretation": {
+    "yaw": "Identifiable and already close after ACRO_YAW_P=5.05.",
+    "forward": "Moderately identifiable; the FIR DC-gain estimate indicates sim authority is high, but the trajectory itself is already close.",
+    "lateral": "Not identifiable from this bag because RC6 excitation is too small; correction is confounded with forward-to-sway hydrodynamics/current.",
+    "heave": "Not identifiable from this bag because RC3 excitation is too small and ALT_HOLD closes the depth loop."
+  },
+  "recommendation": "Do not apply the full 4x4 or per-thruster correction from this bag. Record independent RC5, RC6, RC3, and RC4 excitation segments plus real RCOU before solving individual thruster gains."
+}

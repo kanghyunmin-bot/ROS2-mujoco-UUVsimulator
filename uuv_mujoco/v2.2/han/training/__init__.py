@@ -1,1 +1,0 @@
-"""HAN training boundary."""

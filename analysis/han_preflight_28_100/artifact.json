@@ -1,0 +1,410 @@
+{
+  "surface": "report",
+  "manifest": {
+    "version": 1,
+    "surface": "report",
+    "title": "HAN Plant Identification Readiness",
+    "description": "Technical gate for hydrodynamic coefficient identification from the real 28–100 s ALT_HOLD bag window.",
+    "blocks": [
+      {
+        "id": "title",
+        "type": "markdown",
+        "layout": "full",
+        "body": "# HAN Plant Identification Readiness"
+      },
+      {
+        "id": "technical_summary",
+        "type": "markdown",
+        "layout": "full",
+        "sourceId": "preflight_result",
+        "body": "## Technical summary\n\n**Do not fit or apply HAN hydrodynamic coefficients from this bag.** The 28–100 s window has usable IMU and DVL observations, but final real actuator telemetry (RCOU) is absent. In ALT_HOLD, RC override is a controller request rather than plant input, so actuator/controller effects cannot be separated from hydrodynamic effects. Lateral and heave excitation are also weak, and the horizontal nonlinear feature matrix is moderately ill-conditioned."
+      },
+      {
+        "id": "headline_metrics",
+        "type": "metric-strip",
+        "layout": "full",
+        "cardIds": [
+          "rcou_count",
+          "lateral_excitation",
+          "feature_condition"
+        ]
+      },
+      {
+        "id": "excitation_finding",
+        "type": "markdown",
+        "layout": "full",
+        "sourceId": "preflight_result",
+        "body": "## The available run excites yaw and forward, not the full coupled plant\n\nYaw and forward normalized command standard deviations are 0.250 and 0.190. Lateral and heave are only 0.029 and 0.032, below the 0.05 excitation gate. A yaw–sway fit would therefore lean on incidental coupling rather than independently observed sway authority."
+      },
+      {
+        "id": "command_chart",
+        "type": "chart",
+        "layout": "full",
+        "chartId": "command_excitation"
+      },
+      {
+        "id": "conditioning_finding",
+        "type": "markdown",
+        "layout": "full",
+        "sourceId": "preflight_result",
+        "body": "## Nonlinear yaw features are too correlated for an unconstrained fit\n\nThe standardized horizontal feature matrix has condition number 17.46. Gyro yaw rate correlates 0.93 with quadratic yaw rate and 0.96 with the surge–yaw interaction term. Those terms cannot be assigned stable physical coefficients from this trajectory without bounded priors, independent excitation, and final actuator output."
+      },
+      {
+        "id": "singular_chart",
+        "type": "chart",
+        "layout": "full",
+        "chartId": "feature_singular_values"
+      },
+      {
+        "id": "data_scope",
+        "type": "markdown",
+        "layout": "full",
+        "sourceId": "preflight_result",
+        "body": "## Scope and measured signals\n\nThe cohort is one real ALT_HOLD run, bag seconds 28–100, sampled onto a 10 Hz diagnostic grid. RC override describes requested yaw, forward, lateral, and heave commands. IMU angular velocity supplies yaw rate, DVL twist supplies horizontal velocity, and filtered odometry is retained as a secondary consistency surface. Path position is not used as a primary HAN target."
+      },
+      {
+        "id": "stream_table",
+        "type": "table",
+        "layout": "full",
+        "tableId": "stream_quality"
+      },
+      {
+        "id": "methodology",
+        "type": "markdown",
+        "layout": "full",
+        "sourceId": "analysis_code",
+        "body": "## Identification gate and methodology\n\nThe preflight carries forward non-release RC values, normalizes PWM around 1500 µs with a 400 µs scale, and measures axis excitation. It builds a horizontal candidate basis from requested commands, DVL surge/sway, gyro yaw rate, quadratic damping terms, and yaw-coupling terms. Standardized SVD and correlation checks test rank before any least-squares operation. The fit is intentionally refused when real RCOU is absent."
+      },
+      {
+        "id": "limitations",
+        "type": "markdown",
+        "layout": "full",
+        "sourceId": "preflight_result",
+        "body": "## What this result does and does not establish\n\nThis gate establishes that the present bag is unsafe for physical coefficient estimation. It does not prove which hydrodynamic coefficient is wrong, and it does not reject HAN as a method. DVL runs at about 8.2 Hz with a maximum observed gap of 0.49 s, so future fits should also use gap-aware weighting. A UAN-style actuator residual cannot repair the missing observability because it would absorb controller and fluid effects together."
+      },
+      {
+        "id": "next_steps",
+        "type": "markdown",
+        "layout": "full",
+        "body": "## Recommended next steps\n\n1. Record final `/mavros/rc/out` together with IMU, DVL, depth, RC input, and RC override on one clock.\n2. Capture independent yaw, sway, and surge excitation segments; keep commands bounded and operationally safe.\n3. Replay final RCOU directly through the T200 plant-input contract.\n4. Fit bounded yaw–sway physical coefficients in diagonalized SVD coordinates.\n5. Accept a profile only if held-out sensor replay and the 28–100 s path comparison both improve."
+      },
+      {
+        "id": "further_questions",
+        "type": "markdown",
+        "layout": "full",
+        "body": "## Further questions\n\n- Can the flight-controller BIN log containing RCOU be recovered for this exact run?\n- What is the verified frame and sign convention of the real DVL twist?\n- Can a short tethered or constrained sway excitation be collected without repeating the full competition course?"
+      }
+    ],
+    "cards": [
+      {
+        "id": "rcou_count",
+        "dataset": "headline",
+        "description": "Final real actuator-output topics found in the source bag.",
+        "sourceId": "preflight_result",
+        "metrics": [
+          {
+            "label": "RCOU topics present",
+            "field": "rcou_topics",
+            "format": "number"
+          }
+        ]
+      },
+      {
+        "id": "lateral_excitation",
+        "dataset": "headline",
+        "description": "Normalized lateral-command standard deviation; minimum gate is 0.05.",
+        "sourceId": "preflight_result",
+        "metrics": [
+          {
+            "label": "Lateral excitation σ",
+            "field": "lateral_std",
+            "format": "number"
+          }
+        ]
+      },
+      {
+        "id": "feature_condition",
+        "dataset": "headline",
+        "description": "Condition number of the standardized horizontal candidate basis.",
+        "sourceId": "preflight_result",
+        "metrics": [
+          {
+            "label": "Feature condition number",
+            "field": "feature_condition",
+            "format": "number"
+          }
+        ]
+      }
+    ],
+    "charts": [
+      {
+        "id": "command_excitation",
+        "title": "Normalized command excitation by axis",
+        "description": "Standard deviation over bag seconds 28–100; the horizontal reference marks the 0.05 identification gate.",
+        "type": "bar",
+        "intent": "comparison",
+        "question": "Which commanded axes have enough variation to support identification?",
+        "rationale": "A category bar chart directly compares axis-level excitation against one common threshold.",
+        "dataset": "command_excitation",
+        "encodings": {
+          "x": {
+            "field": "axis"
+          },
+          "y": {
+            "field": "standard_deviation"
+          }
+        },
+        "referenceLines": [
+          {
+            "axis": "y",
+            "value": 0.05,
+            "label": "minimum excitation gate",
+            "color": "neutral",
+            "lineStyle": "dashed"
+          }
+        ],
+        "palette": {
+          "kind": "single",
+          "name": "blue"
+        },
+        "sourceId": "preflight_result"
+      },
+      {
+        "id": "feature_singular_values",
+        "title": "Horizontal feature singular values",
+        "description": "Eleven standardized modes from the 10 Hz candidate basis.",
+        "type": "line",
+        "intent": "trend",
+        "question": "How quickly does information content decay across candidate feature modes?",
+        "rationale": "The ordered singular-value spectrum reveals weak modes and conditioning across all eleven components.",
+        "dataset": "singular_values",
+        "encodings": {
+          "x": {
+            "field": "mode"
+          },
+          "y": {
+            "field": "singular_value"
+          }
+        },
+        "palette": {
+          "kind": "single",
+          "name": "blue"
+        },
+        "sourceId": "preflight_result"
+      }
+    ],
+    "tables": [
+      {
+        "id": "stream_quality",
+        "title": "Observation-stream quality",
+        "description": "Samples inside the 72 s identification window.",
+        "dataset": "stream_quality",
+        "columns": [
+          {
+            "field": "stream",
+            "label": "Stream"
+          },
+          {
+            "field": "samples",
+            "label": "Samples",
+            "format": "number"
+          },
+          {
+            "field": "rate_hz",
+            "label": "Rate [Hz]",
+            "format": "number"
+          },
+          {
+            "field": "max_gap_s",
+            "label": "Max gap [s]",
+            "format": "number"
+          },
+          {
+            "field": "nonfinite_values",
+            "label": "Nonfinite",
+            "format": "number"
+          }
+        ],
+        "defaultSort": {
+          "field": "rate_hz",
+          "direction": "desc"
+        },
+        "sourceId": "preflight_result"
+      }
+    ],
+    "sources": [
+      {
+        "id": "real_bag",
+        "label": "localization.db3 ROS 2 bag",
+        "type": "file",
+        "path": "localization.db3",
+        "description": "Real vehicle observations and requested RC commands."
+      },
+      {
+        "id": "analysis_code",
+        "label": "HAN preflight analysis code",
+        "type": "file",
+        "path": "han_preflight_identifiability.py",
+        "description": "Reproducible source-quality and identifiability checks."
+      },
+      {
+        "id": "preflight_result",
+        "label": "HAN preflight result",
+        "type": "file",
+        "path": "han_preflight.json",
+        "description": "Reviewed 28–100 s signal-quality, excitation, SVD, and correlation metrics."
+      }
+    ]
+  },
+  "snapshot": {
+    "version": 1,
+    "status": "blocked",
+    "generated_at": "2026-07-23T00:00:00+09:00",
+    "datasets": {
+      "headline": [
+        {
+          "rcou_topics": 0,
+          "lateral_std": 0.029053590379629592,
+          "feature_condition": 17.459530606682417
+        }
+      ],
+      "command_excitation": [
+        {
+          "axis": "yaw",
+          "standard_deviation": 0.25028311436477474,
+          "gate": 0.05,
+          "status": "sufficient"
+        },
+        {
+          "axis": "forward",
+          "standard_deviation": 0.19017956740670805,
+          "gate": 0.05,
+          "status": "sufficient"
+        },
+        {
+          "axis": "lateral",
+          "standard_deviation": 0.029053590379629592,
+          "gate": 0.05,
+          "status": "weak"
+        },
+        {
+          "axis": "heave",
+          "standard_deviation": 0.03161437125669732,
+          "gate": 0.05,
+          "status": "weak"
+        }
+      ],
+      "singular_values": [
+        {
+          "mode": 1,
+          "singular_value": 54.6472916979975
+        },
+        {
+          "mode": 2,
+          "singular_value": 44.33753141873915
+        },
+        {
+          "mode": 3,
+          "singular_value": 32.01706229747443
+        },
+        {
+          "mode": 4,
+          "singular_value": 26.148570308865185
+        },
+        {
+          "mode": 5,
+          "singular_value": 25.0098372822396
+        },
+        {
+          "mode": 6,
+          "singular_value": 16.445993685755358
+        },
+        {
+          "mode": 7,
+          "singular_value": 12.457741775380754
+        },
+        {
+          "mode": 8,
+          "singular_value": 10.667104155386037
+        },
+        {
+          "mode": 9,
+          "singular_value": 7.4010405920748745
+        },
+        {
+          "mode": 10,
+          "singular_value": 5.431369138817739
+        },
+        {
+          "mode": 11,
+          "singular_value": 3.129940485174437
+        }
+      ],
+      "stream_quality": [
+        {
+          "stream": "RC override",
+          "samples": 4785,
+          "rate_hz": 66.48595145495264,
+          "max_gap_s": 0.051633289999998055,
+          "nonfinite_values": 0
+        },
+        {
+          "stream": "IMU",
+          "samples": 3601,
+          "rate_hz": 50.000619188917796,
+          "max_gap_s": 0.02936956199999985,
+          "nonfinite_values": 0
+        },
+        {
+          "stream": "DVL twist",
+          "samples": 590,
+          "rate_hz": 8.200209627677975,
+          "max_gap_s": 0.49438716299999896,
+          "nonfinite_values": 0
+        },
+        {
+          "stream": "Filtered odometry",
+          "samples": 2160,
+          "rate_hz": 30.000291288377134,
+          "max_gap_s": 0.037396620999999186,
+          "nonfinite_values": 0
+        }
+      ]
+    },
+    "accessIssues": [
+      {
+        "id": "missing_real_rcou",
+        "sourceId": "real_bag",
+        "message": "Final real actuator telemetry (/mavros/rc/out or equivalent RCOU) is absent, so physical coefficient fitting is blocked."
+      }
+    ]
+  },
+  "sources": [
+    {
+      "id": "real_bag",
+      "label": "localization.db3 ROS 2 bag",
+      "type": "file",
+      "path": "localization.db3",
+      "description": "Real vehicle observations and requested RC commands."
+    },
+    {
+      "id": "analysis_code",
+      "label": "HAN preflight analysis code",
+      "type": "file",
+      "path": "han_preflight_identifiability.py",
+      "description": "Reproducible source-quality and identifiability checks."
+    },
+    {
+      "id": "preflight_result",
+      "label": "HAN preflight result",
+      "type": "file",
+      "path": "han_preflight.json",
+      "description": "Reviewed 28–100 s signal-quality, excitation, SVD, and correlation metrics."
+    }
+  ],
+  "package_info": {
+    "root": ".",
+    "manifestPath": "artifact.json",
+    "snapshotPath": "artifact.json"
+  }
+}

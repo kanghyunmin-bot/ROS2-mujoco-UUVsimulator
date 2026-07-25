@@ -12,6 +12,13 @@ from typing import Iterable
 
 def subprocess_env() -> dict[str, str]:
     env = os.environ.copy()
+    python_bin_dir = str(Path(sys.executable).resolve().parent)
+    path_entries = [
+        entry
+        for entry in env.get("PATH", "").split(os.pathsep)
+        if entry and Path(entry).resolve() != Path(python_bin_dir)
+    ]
+    env["PATH"] = os.pathsep.join([python_bin_dir, *path_entries])
     env.setdefault("PYTHONUNBUFFERED", "1")
     env.setdefault("RCUTILS_LOGGING_BUFFERED_STREAM", "0")
     return env
@@ -37,22 +44,13 @@ def _default_bag_output_root() -> Path:
 
 
 class ManagedProcess:
-    def __init__(
-        self,
-        name: str,
-        cmd: list[str],
-        log_buffer: deque[str],
-        *,
-        stop_on_output_markers: tuple[str, ...] = (),
-    ):
+    def __init__(self, name: str, cmd: list[str], log_buffer: deque[str]):
         self.name = name
         self.cmd = cmd
         self.log_buffer = log_buffer
         self.process: subprocess.Popen[str] | None = None
         self.pgid: int | None = None
         self._reader_thread: threading.Thread | None = None
-        self._stop_on_output_markers = tuple(stop_on_output_markers)
-        self._terminal_stop_requested = False
 
     def start(self) -> None:
         if self.is_running:
@@ -113,38 +111,6 @@ class ManagedProcess:
             _wait_for_process_group_exit(pgid, timeout=2.0)
         self.pgid = None
 
-    def require_running_after_startup(self, timeout_s: float = 0.75) -> None:
-        """Reject launch commands that exit immediately instead of reporting success."""
-        deadline = time.monotonic() + max(0.0, timeout_s)
-        while time.monotonic() < deadline:
-            process = self.process
-            if process is None:
-                raise RuntimeError(f"{self.name} process was not created")
-            return_code = process.poll()
-            if return_code is not None:
-                related = [
-                    line for line in self.log_buffer if f"[{self.name}]" in line
-                ][-6:]
-                detail = " | ".join(related)
-                raise RuntimeError(
-                    f"{self.name} exited during startup with code {return_code}"
-                    + (f": {detail}" if detail else "")
-                )
-            time.sleep(0.05)
-        process = self.process
-        if process is None:
-            raise RuntimeError(f"{self.name} process was not created")
-        return_code = process.poll()
-        if return_code is not None:
-            related = [
-                line for line in self.log_buffer if f"[{self.name}]" in line
-            ][-6:]
-            detail = " | ".join(related)
-            raise RuntimeError(
-                f"{self.name} exited during startup with code {return_code}"
-                + (f": {detail}" if detail else "")
-            )
-
     @property
     def is_running(self) -> bool:
         return self.process is not None and self.process.poll() is None
@@ -154,20 +120,7 @@ class ManagedProcess:
         if self.process.stdout is None:
             return
         for line in self.process.stdout:
-            text = line.rstrip()
-            self._log(f"[{self.name}] {text}")
-            if (
-                not self._terminal_stop_requested
-                and any(marker in text for marker in self._stop_on_output_markers)
-            ):
-                # Terminal C++ states publish release but intentionally keep
-                # the node alive for status observation. The web process owns
-                # this launch, so close the whole group (controller + RC mux)
-                # once that terminal status has reached the log.
-                self._terminal_stop_requested = True
-                self._log(f"[{self.name}] terminal state observed; closing launch group")
-                if self.pgid is not None:
-                    _kill_process_group(self.pgid, signal.SIGINT)
+            self._log(f"[{self.name}] {line.rstrip()}")
         return_code = self.process.wait()
         self._log(f"[{self.name}] exited with code {return_code}")
 
@@ -188,8 +141,12 @@ class ProcessManager:
         dronecan_allocator_node_id: int = 126,
         dronecan_allocator_db: str = "",
         dronecan_python: str = "",
-        pinger_package: str = "kmu26_pinger_homing",
+        pinger_package: str = "auv_pinger_homing",
         pinger_launch: str = "pinger_homing_real.launch.py",
+        realsense_package: str = "realsense2_camera",
+        realsense_launch: str = "rs_launch.py",
+        audio_capture_package: str = "audio_capture",
+        audio_capture_launch: str = "capture.launch.py",
     ):
         self.robot_package = robot_package
         self.robot_launch = robot_launch
@@ -200,12 +157,17 @@ class ProcessManager:
         self.dronecan_python = dronecan_python or _default_dronecan_python()
         self.pinger_package = pinger_package
         self.pinger_launch = pinger_launch
+        self.realsense_package = realsense_package
+        self.realsense_launch = realsense_launch
+        self.audio_capture_package = audio_capture_package
+        self.audio_capture_launch = audio_capture_launch
         self.logs: deque[str] = deque(maxlen=500)
         self._dronecan_allocator: ManagedProcess | None = None
         self._stack: ManagedProcess | None = None
+        self._realsense_camera: ManagedProcess | None = None
+        self._audio_capture: ManagedProcess | None = None
         self._vision_yolo: ManagedProcess | None = None
         self._vision_mission: ManagedProcess | None = None
-        self._phase_peak_scanner: ManagedProcess | None = None
         self._pinger: ManagedProcess | None = None
         self._bag: ManagedProcess | None = None
         self._bag_output: str = ""
@@ -244,7 +206,38 @@ class ProcessManager:
                 cmd.append(f"{key}:={value}")
 
         self._stack = ManagedProcess("localization_test", cmd, self.logs)
-        self._stack.start()
+        self._realsense_camera = ManagedProcess(
+            "realsense_camera",
+            _ros2_launch_command(
+                self.realsense_package,
+                self.realsense_launch,
+                None,
+            ),
+            self.logs,
+        )
+        self._audio_capture = ManagedProcess(
+            "audio_capture",
+            _ros2_launch_command(
+                self.audio_capture_package,
+                self.audio_capture_launch,
+                None,
+            ),
+            self.logs,
+        )
+
+        started = []
+        try:
+            for process in (
+                self._stack,
+                self._realsense_camera,
+                self._audio_capture,
+            ):
+                process.start()
+                started.append(process)
+        except Exception as exc:
+            for process in reversed(started):
+                process.stop()
+            raise RuntimeError(f"failed to start robot stack: {exc}") from exc
 
     def start_pinger(self, launch_args: dict[str, str] | None = None) -> None:
         if self._pinger and self._pinger.is_running:
@@ -260,45 +253,18 @@ class ProcessManager:
         for key, value in args.items():
             if value != "":
                 cmd.append(f"{key}:={value}")
-        self._pinger = ManagedProcess(
-            "pinger_homing",
-            cmd,
-            self.logs,
-            stop_on_output_markers=(
-                "-> COMPLETE",
-                "-> FAILED_TIMEOUT",
-                "-> FAILED_ESTIMATE",
-            ),
-        )
+        self._pinger = ManagedProcess("pinger_homing", cmd, self.logs)
         self._pinger.start()
-        self._pinger.require_running_after_startup()
-
-    def start_phase_peak_scan(self, launch_args: dict[str, str] | None = None) -> None:
-        if self._pinger and self._pinger.is_running:
-            raise RuntimeError("stop pinger homing before scanning phase peaks")
-        if self._phase_peak_scanner and self._phase_peak_scanner.is_running:
-            raise RuntimeError("phase peak scanner is already running")
-        self._phase_peak_scanner = ManagedProcess(
-            "phase_peak_scanner",
-            _ros2_launch_command(
-                self.pinger_package,
-                "phase_peak_selection.launch.py",
-                launch_args,
-            ),
-            self.logs,
-        )
-        self._phase_peak_scanner.start()
-        self._phase_peak_scanner.require_running_after_startup()
-
-    def stop_phase_peak_scan(self) -> None:
-        if self._phase_peak_scanner:
-            self._phase_peak_scanner.stop()
 
     def stop_pinger(self) -> None:
         if self._pinger:
             self._pinger.stop()
 
     def stop_stack(self) -> None:
+        if self._audio_capture:
+            self._audio_capture.stop()
+        if self._realsense_camera:
+            self._realsense_camera.stop()
         if self._stack:
             self._stack.stop()
         self._stop_orphaned_stack_groups()
@@ -438,13 +404,30 @@ class ProcessManager:
             self._bag.stop()
 
     def status(self) -> dict:
+        (
+            robot_launch_running,
+            realsense_camera_running,
+            audio_capture_running,
+        ) = self._stack_component_states()
+        stack_running = (
+            robot_launch_running
+            or realsense_camera_running
+            or audio_capture_running
+        )
         return {
             "dronecan_allocator_enabled": self.start_dronecan_allocator_on_startup,
             "dronecan_allocator_running": self.dronecan_allocator_running,
-            "stack_running": self.stack_running,
+            "stack_running": stack_running,
+            "stack_ready": (
+                robot_launch_running
+                and realsense_camera_running
+                and audio_capture_running
+            ),
+            "robot_launch_running": robot_launch_running,
+            "realsense_camera_running": realsense_camera_running,
+            "audio_capture_running": audio_capture_running,
             "vision_yolo_running": self.vision_yolo_running,
             "vision_mission_running": self.vision_mission_running,
-            "phase_peak_scanner_running": self.phase_peak_scanner_running,
             "pinger_running": bool(self._pinger and self._pinger.is_running),
             "bag_running": bool(self._bag and self._bag.is_running),
             "bag_output": self._bag_output,
@@ -454,14 +437,45 @@ class ProcessManager:
     def stop_all(self) -> None:
         self.stop_bag()
         self.stop_vision()
-        self.stop_phase_peak_scan()
         self.stop_pinger()
         self.stop_stack()
         self.stop_dronecan_allocator()
 
     @property
     def stack_running(self) -> bool:
-        return bool(self._stack and self._stack.is_running) or bool(self._stack_process_groups())
+        return bool(self._stack_process_groups())
+
+    @property
+    def stack_ready(self) -> bool:
+        return (
+            self.robot_launch_running
+            and self.realsense_camera_running
+            and self.audio_capture_running
+        )
+
+    @property
+    def robot_launch_running(self) -> bool:
+        return self._launch_running(
+            self._stack,
+            self.robot_package,
+            self.robot_launch,
+        )
+
+    @property
+    def realsense_camera_running(self) -> bool:
+        return self._launch_running(
+            self._realsense_camera,
+            self.realsense_package,
+            self.realsense_launch,
+        )
+
+    @property
+    def audio_capture_running(self) -> bool:
+        return self._launch_running(
+            self._audio_capture,
+            self.audio_capture_package,
+            self.audio_capture_launch,
+        )
 
     @property
     def dronecan_allocator_running(self) -> bool:
@@ -475,10 +489,6 @@ class ProcessManager:
     def vision_mission_running(self) -> bool:
         return bool(self._vision_mission and self._vision_mission.is_running)
 
-    @property
-    def phase_peak_scanner_running(self) -> bool:
-        return bool(self._phase_peak_scanner and self._phase_peak_scanner.is_running)
-
     def stop_dronecan_allocator(self) -> None:
         if self._dronecan_allocator:
             self._dronecan_allocator.stop()
@@ -491,20 +501,67 @@ class ProcessManager:
         return self.robot_launch in {"localization_test.launch.py", "rov_start.launch.py"}
 
     def _stack_process_groups(self) -> set[int]:
-        groups = _matching_launch_process_groups(self.robot_package, self.robot_launch)
-        if self._stack and self._stack.pgid is not None and self._stack.is_running:
-            groups.add(self._stack.pgid)
+        groups: set[int] = set()
+        launches = self._stack_launches()
+        discovered = _matching_launch_process_groups_many(
+            (package, launch_file)
+            for _, package, launch_file in launches
+        )
+        for process, package, launch_file in launches:
+            groups.update(discovered[(package, launch_file)])
+            if process and process.pgid is not None and process.is_running:
+                groups.add(process.pgid)
         return groups
+
+    def _stack_component_states(self) -> tuple[bool, bool, bool]:
+        launches = self._stack_launches()
+        discovered = _matching_launch_process_groups_many(
+            (package, launch_file)
+            for _, package, launch_file in launches
+        )
+        states = tuple(
+            bool(process and process.is_running)
+            or bool(discovered[(package, launch_file)])
+            for process, package, launch_file in launches
+        )
+        return states
+
+    def _stack_launches(
+        self,
+    ) -> tuple[tuple[ManagedProcess | None, str, str], ...]:
+        return (
+            (self._stack, self.robot_package, self.robot_launch),
+            (
+                self._realsense_camera,
+                self.realsense_package,
+                self.realsense_launch,
+            ),
+            (
+                self._audio_capture,
+                self.audio_capture_package,
+                self.audio_capture_launch,
+            ),
+        )
+
+    @staticmethod
+    def _launch_running(
+        process: ManagedProcess | None,
+        package: str,
+        launch_file: str,
+    ) -> bool:
+        return bool(process and process.is_running) or bool(
+            _matching_launch_process_groups(package, launch_file)
+        )
 
     def _stop_orphaned_stack_groups(self) -> None:
         groups = self._stack_process_groups()
         for pgid in sorted(groups):
-            self._log(f"[localization_test] stopping orphaned process group {pgid}")
+            self._log(f"[robot_stack] stopping orphaned process group {pgid}")
             _kill_process_group(pgid, signal.SIGTERM)
         for pgid in sorted(groups):
             if _wait_for_process_group_exit(pgid, timeout=5.0):
                 continue
-            self._log(f"[localization_test] force killing orphaned process group {pgid}")
+            self._log(f"[robot_stack] force killing orphaned process group {pgid}")
             _kill_process_group(pgid, signal.SIGKILL)
             _wait_for_process_group_exit(pgid, timeout=2.0)
 
@@ -516,15 +573,26 @@ class ProcessManager:
 
 
 def _matching_launch_process_groups(robot_package: str, robot_launch: str) -> set[int]:
-    groups: set[int] = set()
+    key = (robot_package, robot_launch)
+    return _matching_launch_process_groups_many((key,))[key]
+
+
+def _matching_launch_process_groups_many(
+    launches: Iterable[tuple[str, str]],
+) -> dict[tuple[str, str], set[int]]:
+    launch_keys = tuple(dict.fromkeys(launches))
+    groups = {key: set() for key in launch_keys}
     current_pid = os.getpid()
     for pid, cmdline in _iter_process_cmdlines():
-        if pid == current_pid or not _is_matching_ros2_launch(cmdline, robot_package, robot_launch):
+        if pid == current_pid:
             continue
-        try:
-            groups.add(os.getpgid(pid))
-        except ProcessLookupError:
-            continue
+        for package, launch_file in launch_keys:
+            if not _is_matching_ros2_launch(cmdline, package, launch_file):
+                continue
+            try:
+                groups[(package, launch_file)].add(os.getpgid(pid))
+            except ProcessLookupError:
+                pass
     return groups
 
 

@@ -1,5 +1,5 @@
 #include <algorithm>
-// Canonical deployed controller for the standalone kmu26_pinger_homing package.
+// Canonical deployed controller for the standalone auv_pinger_homing package.
 #include <array>
 #include <chrono>
 #include <cmath>
@@ -941,6 +941,11 @@ class PingerHomingController : public rclcpp::Node {
   void control_tick() {
     const auto now = SteadyClock::now();
     maybe_request_arm_mode(now);
+    if (state_ == "FAILED_DEPTH") {
+      publish_release();
+      maybe_shutdown_after_terminal(now);
+      return;
+    }
     if (state_ == "TERMINAL_BRAKE") {
       terminal_brake_tick(now);
       return;
@@ -954,6 +959,22 @@ class PingerHomingController : public rclcpp::Node {
       publish_command(Command{});
       maybe_shutdown_after_terminal(now);
       return;
+    }
+    if (max_vehicle_depth_m_ > 0.0) {
+      const auto position_z = current_position_z(now);
+      if (position_z && std::isfinite(*position_z)) {
+        const double vehicle_depth_m = std::max(0.0, -*position_z);
+        if (vehicle_depth_m >= max_vehicle_depth_m_) {
+          RCLCPP_ERROR(
+              get_logger(),
+              "maximum vehicle depth exceeded: depth=%.3fm limit=%.3fm; "
+              "releasing all RC override channels",
+              vehicle_depth_m, max_vehicle_depth_m_);
+          transition("FAILED_DEPTH");
+          publish_release();
+          return;
+        }
+      }
     }
     if (max_runtime_s_ > 0.0 && active_started_ &&
         seconds_since(*active_started_, now) > max_runtime_s_) {

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>kmu26_pinger_homing</name>
+  <name>auv_pinger_homing</name>
   <version>0.2.0</version>
   <description>Fork-backed hydrophone estimator integration, active pinger RC control, and RC mux.</description>
   <maintainer email="robot@example.com">KMU Underwater Robot Team</maintainer>
@@ -18,7 +18,7 @@
   <depend>nav_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
-  <depend>dvl_msgs</depend>
+  <depend>auv_dvl_a50_msg</depend>
 
   <exec_depend>ament_index_python</exec_depend>
   <exec_depend>audio_capture</exec_depend>

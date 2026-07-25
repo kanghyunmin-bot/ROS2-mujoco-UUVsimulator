@@ -28,7 +28,7 @@ def generate_launch_description() -> LaunchDescription:
     return LaunchDescription(
         [
             DeclareLaunchArgument("host", default_value="0.0.0.0"),
-            DeclareLaunchArgument("port", default_value="8080"),
+            DeclareLaunchArgument("port", default_value="8081"),
             DeclareLaunchArgument("robot_package", default_value="hit25_auv_ros2"),
             DeclareLaunchArgument("robot_launch", default_value="localization_test.launch.py"),
             DeclareLaunchArgument("start_dronecan_allocator", default_value="true"),
@@ -36,7 +36,7 @@ def generate_launch_description() -> LaunchDescription:
             DeclareLaunchArgument("dronecan_allocator_node_id", default_value="126"),
             DeclareLaunchArgument("dronecan_allocator_db", default_value=""),
             DeclareLaunchArgument("dronecan_python", default_value=dronecan_python_default),
-            DeclareLaunchArgument("pinger_package", default_value="kmu26_pinger_homing"),
+            DeclareLaunchArgument("pinger_package", default_value="auv_pinger_homing"),
             DeclareLaunchArgument("pinger_launch", default_value="pinger_homing_real.launch.py"),
             Node(
                 package="kmu26_auv_web_gui",

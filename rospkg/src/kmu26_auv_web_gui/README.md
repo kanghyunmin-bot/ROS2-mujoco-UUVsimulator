@@ -28,13 +28,13 @@ After that, open **KMU26 AUV Web GUI** from the app menu or desktop icon.
 ## ROS Run
 
 ```bash
-ros2 run kmu26_auv_web_gui server --host 0.0.0.0 --port 8080
+ros2 run kmu26_auv_web_gui server --host 0.0.0.0 --port 8081
 ```
 
 Then open:
 
 ```text
-http://<ubuntu-robot-ip>:8080
+http://<ubuntu-robot-ip>:8081
 ```
 
 ## Pinger Homing tab

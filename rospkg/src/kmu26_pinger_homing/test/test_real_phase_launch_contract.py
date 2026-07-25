@@ -34,6 +34,7 @@ def test_real_launch_uses_canonical_cpp_odometry_controller() -> None:
     assert '"probe_duration_scale": ParameterValue(' in launch
     assert '"rc_output_topic": rc_topic' in launch
     assert 'executable="rc_override_mux"' not in launch
+    assert "controller_rc_topic" not in launch
 
 
 def test_real_launch_preserves_external_hydrophone_estimator_boundary() -> None:
@@ -84,6 +85,7 @@ def test_interactive_launch_scans_then_injects_selected_startup_frequency() -> N
     assert "gate_executor.spin_once" in launch
     assert "selection_deadline = time.monotonic()" in launch
     assert '"use_rc_mux"' not in launch
+    assert '"pinger_rc_topic"' not in launch
     assert 'gui_rc_handoff_service' in launch
     assert 'gui_rc_restore_service' in launch
     assert 'default_value="/uuv_web_control_gui/suspend_rc_override"' in launch

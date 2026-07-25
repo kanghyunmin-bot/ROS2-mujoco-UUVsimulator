@@ -13,7 +13,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/float64.hpp>
 
-namespace kmu26_pinger_homing {
+namespace auv_pinger_homing {
 
 class FingerAudioEstimator final : public rclcpp::Node {
  public:
@@ -164,11 +164,11 @@ class FingerAudioEstimator final : public rclcpp::Node {
   rclcpp::Publisher<audio_common_msgs::msg::Float64Stamped>::SharedPtr snr_stamped_pub_;
 };
 
-}  // namespace kmu26_pinger_homing
+}  // namespace auv_pinger_homing
 
 int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<kmu26_pinger_homing::FingerAudioEstimator>());
+  rclcpp::spin(std::make_shared<auv_pinger_homing::FingerAudioEstimator>());
   rclcpp::shutdown();
   return 0;
 }

@@ -1,7 +1,7 @@
 # KMU26 UUV MuJoCo + ArduSub Simulator
 
 Ubuntu 22.04, ROS 2 Humble, MuJoCo and ArduSub SITL을 결합한 수중 로봇
-시뮬레이션 작업공간이다. 활성 시뮬레이터는 `uuv_mujoco/current`이며, 웹/Tk
+시뮬레이션 작업공간이다. 활성 시뮬레이터는 `sim/current`이며, 웹/Tk
 GUI, MAVROS 호환 제어면, 카메라·DVL·압력·하이드로폰·Ping360 센서, 부표 수집
 물리를 한 스택에서 제공한다.
 
@@ -10,7 +10,7 @@ GUI, MAVROS 호환 제어면, 카메라·DVL·압력·하이드로폰·Ping360 �
 > 결과와 로그는 포함하지 않는다.
 
 <p align="center">
-  <img src="docs/assets/simulator-overview.png" width="100%" alt="MuJoCo top view and YOLO buoy tracking view">
+  <img src="documentary/assets/simulator-overview.png" width="100%" alt="MuJoCo top view and YOLO buoy tracking view">
 </p>
 
 왼쪽은 MuJoCo 수조 전체 시점, 오른쪽은 AUV 전방 카메라와 CPU 기반 YOLO 부표
@@ -19,7 +19,7 @@ GUI, MAVROS 호환 제어면, 카메라·DVL·압력·하이드로폰·Ping360 �
 ## 동작 화면
 
 <p align="center">
-  <img src="docs/assets/simulator-demo.gif" width="800" alt="UUV simulator and YOLO buoy tracking demo">
+  <img src="documentary/assets/simulator-demo.gif" width="800" alt="UUV simulator and YOLO buoy tracking demo">
 </p>
 
 실제 시뮬레이션에서 AUV가 이동하는 동안 카메라 영상, 부표 검출 결과와 top-view
@@ -31,7 +31,7 @@ GUI, MAVROS 호환 제어면, 카메라·DVL·압력·하이드로폰·Ping360 �
 
 ```bash
 source /opt/ros/humble/setup.bash
-source ./.uuv_mujoco_env.sh
+source ./sim/environment.sh
 ./run_control_gui.sh --web --host 127.0.0.1 --port 8878
 ```
 
@@ -41,7 +41,7 @@ source ./.uuv_mujoco_env.sh
 GUI 없이 SITL과 MuJoCo를 직접 실행하려면:
 
 ```bash
-cd uuv_mujoco/current
+cd sim/current
 ./start_sitl_mujoco_mj311.sh -- --headless
 ```
 
@@ -75,20 +75,22 @@ Controller or operator
 720p 프로필은 GUI에서 선택할 수 있다.
 
 상세한 프로세스, 포트, 토픽 소유권과 부표 수집 상태 머신은
-[시뮬레이터 아키텍처](docs/SIM_ARCHITECTURE.md)에 정리되어 있다.
+[시뮬레이터 아키텍처](documentary/SIM_ARCHITECTURE.md)에 정리되어 있다.
 
 ## 주요 디렉터리
 
 | 경로 | 역할 |
 | --- | --- |
-| `uuv_mujoco/current/` | 활성 MuJoCo 런타임, 브리지, GUI, 장면과 검증 도구 |
-| `uuv_mujoco/current/sim/` | 물리, 런타임, 전송 계층과 계약 모듈 |
-| `uuv_mujoco/current/bridge/` | ROS 2, MAVLink, 센서 및 영상 브리지 |
-| `uuv_mujoco/current/scenes/` | 수조와 경기장 MuJoCo XML |
-| `uuv_mujoco/current/tools/` | 정적·동적 계약 검사와 재현 도구 |
+| `sim/current/` | 활성 MuJoCo 런타임, 브리지, GUI, 장면과 검증 도구 |
+| `sim/current/sim/` | 물리, 런타임, 전송 계층과 계약 모듈 |
+| `sim/current/bridge/` | ROS 2, MAVLink, 센서 및 영상 브리지 |
+| `sim/current/scenes/` | 수조와 경기장 MuJoCo XML |
+| `sim/current/tools/` | 정적·동적 계약 검사와 재현 도구 |
 | `rospkg/src/` | 실제 차량과 공유하는 ROS 2 패키지 소스 |
-| `docs/contracts/` | 실제 스택과 시뮬레이터의 인터페이스 계약 |
-| `dist2/ubuntu22.04/` | Ubuntu 배포 패키징 스크립트 |
+| `analysis/` | 실험 데이터, 노트북, 비교 결과와 분석 도구 |
+| `documentary/` | 아키텍처, 인터페이스 계약과 배포 문서 |
+| `sim/ardupilot/` | 현재 런타임이 사용하는 ArduPilot 체크아웃 |
+| `documentary/contracts/` | 실제 스택과 시뮬레이터의 인터페이스 계약 |
 
 ## 핵심 ROS 인터페이스
 
@@ -116,17 +118,17 @@ source install/setup.bash
 ## 빠른 검증
 
 ```bash
-python3 uuv_mujoco/current/tools/check_gui_start_contract.py
-python3 uuv_mujoco/current/tools/check_sim_runtime_smooth_contract.py
-python3 uuv_mujoco/current/tools/check_competition_course_scene.py
-python3 uuv_mujoco/current/tools/check_buoy_collector_capture.py
-python3 uuv_mujoco/current/tools/check_dist_rc_override_path.py
+python3 sim/current/tools/check_gui_start_contract.py
+python3 sim/current/tools/check_sim_runtime_smooth_contract.py
+python3 sim/current/tools/check_competition_course_scene.py
+python3 sim/current/tools/check_buoy_collector_capture.py
+python3 sim/current/tools/check_dist_rc_override_path.py
 ```
 
 실행 중인 외부 MAVROS 경로까지 검사하려면:
 
 ```bash
-python3 uuv_mujoco/current/tools/check_external_fsm_mavros_contract.py
+python3 sim/current/tools/check_external_fsm_mavros_contract.py
 ```
 
 ## Git에 게시하기 전에
@@ -134,7 +136,7 @@ python3 uuv_mujoco/current/tools/check_external_fsm_mavros_contract.py
 대용량 YOLO 모델은 Git LFS 대상으로 지정되어 있다. 또한 `rospkg/src` 아래에는
 여러 upstream 저장소의 `.git` 메타데이터와 로컬 수정이 남아 있으므로, 최초
 저장소 생성 전에 monorepo 또는 submodule 방식을 결정해야 한다. 안전한 게시
-순서와 현재 주의사항은 [Git 게시 가이드](docs/GIT_PUBLISHING.md)를 따른다.
+순서와 현재 주의사항은 [Git 게시 가이드](documentary/GIT_PUBLISHING.md)를 따른다.
 
-배포 ZIP/DEB 사용자를 위한 설치 안내는 [README_FIRST.md](README_FIRST.md),
+배포 ZIP/DEB 사용자를 위한 설치 안내는 [README_FIRST.md](documentary/release/README_FIRST.md),
 실제 차량 ROS 패키지 설명은 [rospkg/README.md](rospkg/README.md)를 참고한다.

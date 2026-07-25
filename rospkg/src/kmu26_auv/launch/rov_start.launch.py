@@ -54,7 +54,9 @@ def generate_launch_description() -> LaunchDescription:
     dvl_default = _default_launch_file(
         "dvl_a50", os.path.join("launch", "dvl_a50.launch.py")
     )
-    mavros_default = _default_launch_file("mavros", os.path.join("launch", "apm.launch"))
+    mavros_default = _default_launch_file(
+        "hit25_auv_ros2", os.path.join("launch", "mavros_auv.launch")
+    )
     mavros_sim_default = os.path.join(
         package_share, "launch", "mavros_apm_sim.launch.py")
     localization_default = os.path.join(
@@ -77,6 +79,7 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("configure_mavros_imu_rate", default_value="true"),
         DeclareLaunchArgument("mavros_imu_rate_hz", default_value="50.0"),
         DeclareLaunchArgument("mavros_raw_imu_rate_hz", default_value="50.0"),
+        DeclareLaunchArgument("mavros_baro_rate_hz", default_value="10.0"),
         DeclareLaunchArgument("dronecan_python", default_value=dronecan_python_default),
         DeclareLaunchArgument("use_external_baro_bridge", default_value="false"),
         DeclareLaunchArgument(
@@ -86,7 +89,7 @@ def generate_launch_description() -> LaunchDescription:
         # Frames
         DeclareLaunchArgument("base_frame", default_value="base_link"),
         DeclareLaunchArgument("fcu_frame", default_value="fcu_link"),
-        DeclareLaunchArgument("dvl_frame", default_value="dvl"),
+        DeclareLaunchArgument("dvl_frame", default_value="dvl_link"),
         DeclareLaunchArgument("depth_frame", default_value="depth_link"),
         DeclareLaunchArgument("imu_frame", default_value="imu_link"),
         # base_link -> fcu_link (FCU/IMU) static TF
@@ -100,7 +103,7 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("dvl_x", default_value="-0.03196"),
         DeclareLaunchArgument("dvl_y", default_value="0.0"),
         DeclareLaunchArgument("dvl_z", default_value="-0.097"),
-        DeclareLaunchArgument("dvl_roll", default_value="0.0"),
+        DeclareLaunchArgument("dvl_roll", default_value="3.141592653589793"),
         DeclareLaunchArgument("dvl_pitch", default_value="0.0"),
         DeclareLaunchArgument("dvl_yaw", default_value="0.0"),
         # base_link -> depth static TF
@@ -130,13 +133,13 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("use_localization", default_value="true"),
         DeclareLaunchArgument("use_ekf", default_value="true"),
         DeclareLaunchArgument("localization_params_file", default_value=localization_default),
-        DeclareLaunchArgument("dvl_twist_min_linear_variance", default_value="0.005"),
+        DeclareLaunchArgument("dvl_twist_min_linear_variance", default_value="0.0"),
         DeclareLaunchArgument("dvl_twist_max_linear_variance", default_value="1.0"),
         DeclareLaunchArgument("dvl_twist_covariance_scale", default_value="1.0"),
         DeclareLaunchArgument("dvl_twist_max_fom", default_value="0.05"),
         DeclareLaunchArgument("dvl_twist_min_altitude", default_value="0.05"),
-        DeclareLaunchArgument("dvl_twist_min_valid_beams", default_value="4"),
-        DeclareLaunchArgument("dvl_twist_reacquire_good_samples", default_value="3"),
+        DeclareLaunchArgument("dvl_twist_min_valid_beams", default_value="3"),
+        DeclareLaunchArgument("dvl_twist_reacquire_good_samples", default_value="1"),
         DeclareLaunchArgument("dvl_twist_reacquire_duration", default_value="0.0"),
         DeclareLaunchArgument(
             "dvl_input_velocity_is_frd",
@@ -149,7 +152,7 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("use_dvl_position_odom", default_value="true"),
         DeclareLaunchArgument("dvl_position_odom_topic", default_value="/dvl/odometry"),
         DeclareLaunchArgument("dvl_position_frame", default_value="dvl_odom"),
-        DeclareLaunchArgument("dvl_position_child_frame", default_value="dvl"),
+        DeclareLaunchArgument("dvl_position_child_frame", default_value="dvl_link"),
         DeclareLaunchArgument("dvl_position_zero_on_start", default_value="false"),
         DeclareLaunchArgument("dvl_position_zero_orientation_on_start", default_value="false"),
         DeclareLaunchArgument("dvl_position_orientation_in_degrees", default_value="true"),
@@ -169,15 +172,6 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("joy_axis_deadzone", default_value="0.08"),
         DeclareLaunchArgument("joy_vertical_axis_deadzone", default_value="0.10"),
         DeclareLaunchArgument("joy_pwm_range", default_value="300.0"),
-        DeclareLaunchArgument(
-            "joy_rc_output_topic",
-            default_value="/mavros/rc/override",
-            description=(
-                "joy2mavros output. Use /control/joystick/rc_override when an "
-                "RC mux owns /mavros/rc/override."
-            ),
-        ),
-        DeclareLaunchArgument("joy_release_when_idle", default_value="false"),
         DeclareLaunchArgument("alt_hold_entry_neutral_sec", default_value="1.0"),
         DeclareLaunchArgument("alt_hold_post_entry_neutral_sec", default_value="0.3"),
         DeclareLaunchArgument("use_buoy_control", default_value="false"),
@@ -246,8 +240,6 @@ def generate_launch_description() -> LaunchDescription:
     joy_axis_deadzone = LaunchConfiguration("joy_axis_deadzone")
     joy_vertical_axis_deadzone = LaunchConfiguration("joy_vertical_axis_deadzone")
     joy_pwm_range = LaunchConfiguration("joy_pwm_range")
-    joy_rc_output_topic = LaunchConfiguration("joy_rc_output_topic")
-    joy_release_when_idle = LaunchConfiguration("joy_release_when_idle")
     alt_hold_entry_neutral_sec = LaunchConfiguration("alt_hold_entry_neutral_sec")
     alt_hold_post_entry_neutral_sec = LaunchConfiguration("alt_hold_post_entry_neutral_sec")
     mavros_launch_file = LaunchConfiguration("mavros_launch_file")
@@ -255,6 +247,7 @@ def generate_launch_description() -> LaunchDescription:
     configure_mavros_imu_rate = LaunchConfiguration("configure_mavros_imu_rate")
     mavros_imu_rate_hz = LaunchConfiguration("mavros_imu_rate_hz")
     mavros_raw_imu_rate_hz = LaunchConfiguration("mavros_raw_imu_rate_hz")
+    mavros_baro_rate_hz = LaunchConfiguration("mavros_baro_rate_hz")
     dronecan_python = LaunchConfiguration("dronecan_python")
     use_external_baro_bridge = LaunchConfiguration("use_external_baro_bridge")
     external_baro_connection_url = LaunchConfiguration("external_baro_connection_url")
@@ -402,6 +395,8 @@ def generate_launch_description() -> LaunchDescription:
                     "raw_imu_rate_hz": ParameterValue(
                         mavros_raw_imu_rate_hz, value_type=float),
                     "use_sim_time": ParameterValue(use_sim_time, value_type=bool),
+                    "baro_rate_hz": ParameterValue(
+                        mavros_baro_rate_hz, value_type=float),
                 }
             ],
             condition=mavros_imu_rate_config_enabled,
@@ -472,9 +467,6 @@ def generate_launch_description() -> LaunchDescription:
                     "vertical_axis_deadzone": ParameterValue(
                         joy_vertical_axis_deadzone, value_type=float),
                     "pwm_range": ParameterValue(joy_pwm_range, value_type=float),
-                    "rc_output_topic": joy_rc_output_topic,
-                    "release_when_idle": ParameterValue(
-                        joy_release_when_idle, value_type=bool),
                     "alt_hold_entry_neutral_sec": ParameterValue(
                         alt_hold_entry_neutral_sec, value_type=float),
                     "alt_hold_post_entry_neutral_sec": ParameterValue(

@@ -1,1 +1,0 @@
-depth start-condition closed-loop sweep; current profile already has buoyancy_scale=1.04, surface_heave_damping=15.8, heave_damping_scale=5.2

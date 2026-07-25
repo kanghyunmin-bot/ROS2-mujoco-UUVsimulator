@@ -1,0 +1,1238 @@
+From 1d94994ebdf61eb622f4b09161350d60dcf54a5f Mon Sep 17 00:00:00 2001
+From: kanghyunmin-bot <kanghyunmin123@gmail.com>
+Date: Thu, 9 Jul 2026 13:12:22 +0900
+Subject: [PATCH] Add real vehicle mission integration
+
+---
+ LICENSE                              |  21 +++
+ README.md                            |  33 ++++-
+ kmu26_auv_web_gui/process_manager.py |  47 +++++++
+ kmu26_auv_web_gui/ros_interface.py   | 200 ++++++++++++++++++++++++---
+ kmu26_auv_web_gui/server.py          | 144 ++++++++++++++++++-
+ launch/gui_server.launch.py          |  28 ++++
+ package.xml                          |   8 +-
+ scripts/start_kmu26_auv_web_gui.sh   |  28 +++-
+ setup.py                             |   7 +-
+ web/app.js                           | 112 +++++++++++++++
+ web/index.html                       |  73 +++++++++-
+ web/styles.css                       |  38 ++++-
+ 12 files changed, 694 insertions(+), 45 deletions(-)
+ create mode 100644 LICENSE
+
+diff --git a/LICENSE b/LICENSE
+new file mode 100644
+index 0000000..cab767c
+--- /dev/null
++++ b/LICENSE
+@@ -0,0 +1,21 @@
++MIT License
++
++Copyright (c) 2026 KMU Underwater Robot Team
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in all
++copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++SOFTWARE.
+diff --git a/README.md b/README.md
+index d837cdd..ede94e2 100644
+--- a/README.md
++++ b/README.md
+@@ -1,12 +1,14 @@
+-# Localization Test GUI
++# KMU26 AUV Web GUI
+ 
+-Web control panel for running AUV localization tests from a browser.
++Web control panel for running real-vehicle AUV localization, DVL checks, rosbag
++recording, and mission FSM preflight/bringup from a browser.
+ 
+ The intended deployment is:
+ 
+ - Ubuntu robot PC runs ROS 2, MAVROS, DVL, EKF, this GUI server, and bag recording.
+ - MacBook opens the web page over Ethernet.
+ - MacBook ROS `joy_node` can publish `/joy` over DDS, while this GUI monitors `/joy` health from the robot PC.
++- Mission FSM status is read from `/tmp/kmu26_mission_fsm_status.json` by default.
+ 
+ ## One-click Run
+ 
+@@ -16,6 +18,17 @@ On the Ubuntu robot PC:
+ ./kmu26_auv_web_gui/scripts/start_kmu26_auv_web_gui.sh
+ ```
+ 
++Useful environment overrides:
++
++```bash
++KMU26_WEB_GUI_PORT=8080 \
++KMU26_ODOM_TOPIC=/odometry/filtered \
++KMU26_MAVROS_STATE_TOPIC=/mavros/state \
++KMU26_MISSION_PACKAGE=kmu26_mission_fsm \
++KMU26_MISSION_LAUNCH=mission_fsm_real.launch.py \
++./kmu26_auv_web_gui/scripts/start_kmu26_auv_web_gui.sh
++```
++
+ To add a desktop/app launcher on Ubuntu:
+ 
+ ```bash
+@@ -36,10 +49,24 @@ Then open:
+ http://<ubuntu-robot-ip>:8080
+ ```
+ 
++## Mission Checks
++
++The Mission tab can:
++
++- run `kmu26_mission_fsm` real-vehicle preflight,
++- start the mission FSM in dry-run mode,
++- start live mission control after confirmation,
++- start pinger-homing mode,
++- show MAVROS arm/mode, mission FSM JSON, YOLO status, pinger status, and hydrophone bearing.
++
++If the GUI reports `/odometry/filtered` or `/mavros/state` as stale, the robot
++localization/MAVROS bringup is not visible in the current ROS graph or the topic
++names differ from the GUI launch arguments.
++
+ ## Python Dependencies
+ 
+ This package uses FastAPI and Uvicorn for the web server.
+ 
+ ```bash
+-python3 -m pip install fastapi uvicorn
++sudo apt install python3-fastapi python3-uvicorn python3-websockets
+ ```
+diff --git a/kmu26_auv_web_gui/process_manager.py b/kmu26_auv_web_gui/process_manager.py
+index 662a180..65a4a57 100644
+--- a/kmu26_auv_web_gui/process_manager.py
++++ b/kmu26_auv_web_gui/process_manager.py
+@@ -78,15 +78,23 @@ class ProcessManager:
+         self,
+         robot_package: str = "hit25_auv_ros2",
+         robot_launch: str = "localization_test.launch.py",
++        mission_package: str = "kmu26_mission_fsm",
++        mission_launch: str = "mission_fsm_real.launch.py",
+     ):
+         self.robot_package = robot_package
+         self.robot_launch = robot_launch
++        self.mission_package = mission_package
++        self.mission_launch = mission_launch
+         self.logs: deque[str] = deque(maxlen=500)
+         self._stack: ManagedProcess | None = None
++        self._mission: ManagedProcess | None = None
++        self._preflight: ManagedProcess | None = None
+         self._bag: ManagedProcess | None = None
+         self._bag_output: str = ""
+ 
+     def start_stack(self, launch_args: dict[str, str] | None = None) -> None:
++        if self._stack and self._stack.is_running:
++            raise RuntimeError("robot stack is already running")
+         args = launch_args or {}
+         cmd = ["ros2", "launch", self.robot_package, self.robot_launch]
+         for key, value in args.items():
+@@ -100,6 +108,41 @@ class ProcessManager:
+         if self._stack:
+             self._stack.stop()
+ 
++    def start_mission(self, launch_args: dict[str, str] | None = None) -> None:
++        if self._mission and self._mission.is_running:
++            raise RuntimeError("mission FSM is already running")
++        args = {
++            "use_rviz": "false",
++            "use_mission_rviz_visualizer": "true",
++            "use_mission_fsm": "true",
++            "dry_run": "true",
++            "require_live_status": "false",
++        }
++        args.update(launch_args or {})
++        cmd = ["ros2", "launch", self.mission_package, self.mission_launch]
++        for key, value in args.items():
++            if value != "":
++                cmd.append(f"{key}:={value}")
++
++        self._mission = ManagedProcess("mission_fsm", cmd, self.logs)
++        self._mission.start()
++
++    def stop_mission(self) -> None:
++        if self._mission:
++            self._mission.stop()
++
++    def start_preflight(self, args: Iterable[str] | None = None) -> None:
++        if self._preflight and self._preflight.is_running:
++            raise RuntimeError("preflight is already running")
++        cmd = ["ros2", "run", self.mission_package, "real_vehicle_preflight.sh"]
++        cmd.extend(args or [])
++        self._preflight = ManagedProcess("preflight", cmd, self.logs)
++        self._preflight.start()
++
++    def stop_preflight(self) -> None:
++        if self._preflight:
++            self._preflight.stop()
++
+     def start_bag(
+         self,
+         topics: Iterable[str] | None = None,
+@@ -144,6 +187,8 @@ class ProcessManager:
+     def status(self) -> dict:
+         return {
+             "stack_running": bool(self._stack and self._stack.is_running),
++            "mission_running": bool(self._mission and self._mission.is_running),
++            "preflight_running": bool(self._preflight and self._preflight.is_running),
+             "bag_running": bool(self._bag and self._bag.is_running),
+             "bag_output": self._bag_output,
+             "logs": list(self.logs)[-80:],
+@@ -151,4 +196,6 @@ class ProcessManager:
+ 
+     def stop_all(self) -> None:
+         self.stop_bag()
++        self.stop_preflight()
++        self.stop_mission()
+         self.stop_stack()
+diff --git a/kmu26_auv_web_gui/ros_interface.py b/kmu26_auv_web_gui/ros_interface.py
+index 78d5cbb..d3cbca8 100644
+--- a/kmu26_auv_web_gui/ros_interface.py
++++ b/kmu26_auv_web_gui/ros_interface.py
+@@ -1,8 +1,10 @@
+ import math
++import json
+ import threading
+ import time
+ from collections import deque
+ from dataclasses import dataclass, field
++from pathlib import Path
+ 
+ import rclpy
+ from dvl_msgs.msg import CommandResponse
+@@ -10,6 +12,8 @@ from dvl_msgs.msg import ConfigCommand
+ from dvl_msgs.msg import ConfigStatus
+ from geometry_msgs.msg import PoseWithCovarianceStamped
+ from geometry_msgs.msg import TwistWithCovarianceStamped
++from geometry_msgs.msg import Vector3Stamped
++from mavros_msgs.msg import State
+ from rclpy.executors import ExternalShutdownException
+ from rclpy.executors import SingleThreadedExecutor
+ from nav_msgs.msg import Odometry
+@@ -17,6 +21,7 @@ from rclpy.node import Node
+ from sensor_msgs.msg import BatteryState
+ from sensor_msgs.msg import Imu
+ from sensor_msgs.msg import Joy
++from std_msgs.msg import String
+ 
+ 
+ def _yaw_from_quaternion(x: float, y: float, z: float, w: float) -> float:
+@@ -58,21 +63,52 @@ class TopicHealth:
+         return (len(recent) - 1) / (recent[-1] - recent[0])
+ 
+ 
++@dataclass(frozen=True)
++class TopicConfig:
++    odom: str = "/odometry/filtered"
++    dvl_twist: str = "/dvl/twist"
++    dvl_command_response: str = "/dvl/command/response"
++    dvl_config_status: str = "/dvl/config/status"
++    dvl_config_command: str = "/dvl/config/command"
++    depth: str = "/depth/pose"
++    battery: str = "/battery"
++    imu: str = "/mavros/imu/data"
++    joy: str = "/joy"
++    mavros_state: str = "/mavros/state"
++    yolo: str = "/uuv_mujoco/yolo_buoy_detections"
++    pinger_homing_status: str = "/uuv_mujoco/pinger_homing/status"
++    hydrophone_direction: str = "/mujoco/hydrophone/direction"
++    mission_status_json: str = "/tmp/kmu26_mission_fsm_status.json"
++
++
+ class LocalizationRosNode(Node):
+-    def __init__(self):
++    def __init__(self, topic_config: TopicConfig | None = None):
+         super().__init__("kmu26_auv_web_gui_bridge")
++        self._topic_config = topic_config or TopicConfig()
+         self._lock = threading.Lock()
+         self._health = {
+-            "odom": TopicHealth("/odometry/filtered"),
+-            "dvl": TopicHealth("/dvl/twist"),
+-            "depth": TopicHealth("/depth/pose"),
+-            "imu": TopicHealth("/mavros/imu/data"),
+-            "joy": TopicHealth("/joy", stale_after=0.5),
+-            "battery": TopicHealth("/battery", stale_after=3.0),
++            "odom": TopicHealth(self._topic_config.odom),
++            "dvl": TopicHealth(self._topic_config.dvl_twist),
++            "depth": TopicHealth(self._topic_config.depth),
++            "imu": TopicHealth(self._topic_config.imu),
++            "joy": TopicHealth(self._topic_config.joy, stale_after=0.5),
++            "battery": TopicHealth(self._topic_config.battery, stale_after=3.0),
++            "mavros_state": TopicHealth(self._topic_config.mavros_state, stale_after=1.5),
++            "yolo": TopicHealth(self._topic_config.yolo, stale_after=1.5),
++            "pinger_homing": TopicHealth(self._topic_config.pinger_homing_status, stale_after=1.5),
++            "hydrophone_direction": TopicHealth(self._topic_config.hydrophone_direction, stale_after=1.5),
+         }
+         self._pose = {"x": 0.0, "y": 0.0, "z": 0.0, "yaw": 0.0}
+         self._velocity = {"x": 0.0, "y": 0.0, "z": 0.0}
+         self._depth = {"z": 0.0}
++        self._mavros_state = {
++            "connected": False,
++            "armed": False,
++            "guided": False,
++            "manual_input": False,
++            "mode": "",
++            "system_status": 0,
++        }
+         self._battery = {
+             "voltage": None,
+             "current": None,
+@@ -81,23 +117,46 @@ class LocalizationRosNode(Node):
+             "present": False,
+         }
+         self._joy = {"axes": [], "buttons": []}
++        self._yolo_status = {
++            "raw": "",
++            "active": False,
++            "count": 0,
++            "target": "",
++            "range_m": None,
++        }
++        self._pinger_homing_status = {"raw": "", "phase": "", "range_m": None, "bearing_rad": None}
++        self._hydrophone_direction = {"x": None, "y": None, "z": None, "bearing_rad": None}
+         self._dvl_config: dict = {}
+         self._dvl_events: deque[dict] = deque(maxlen=40)
+         self._path: deque[dict[str, float]] = deque(maxlen=1200)
+ 
+         self._dvl_config_pub = self.create_publisher(
+             ConfigCommand,
+-            "/dvl/config/command",
++            self._topic_config.dvl_config_command,
+             10,
+         )
+-        self.create_subscription(Odometry, "/odometry/filtered", self._on_odom, 20)
+-        self.create_subscription(TwistWithCovarianceStamped, "/dvl/twist", self._on_dvl, 20)
+-        self.create_subscription(CommandResponse, "/dvl/command/response", self._on_dvl_response, 20)
+-        self.create_subscription(ConfigStatus, "/dvl/config/status", self._on_dvl_config, 20)
+-        self.create_subscription(PoseWithCovarianceStamped, "/depth/pose", self._on_depth, 20)
+-        self.create_subscription(BatteryState, "/battery", self._on_battery, 20)
+-        self.create_subscription(Imu, "/mavros/imu/data", self._on_imu, 20)
+-        self.create_subscription(Joy, "/joy", self._on_joy, 20)
++        self.create_subscription(Odometry, self._topic_config.odom, self._on_odom, 20)
++        self.create_subscription(TwistWithCovarianceStamped, self._topic_config.dvl_twist, self._on_dvl, 20)
++        self.create_subscription(
++            CommandResponse,
++            self._topic_config.dvl_command_response,
++            self._on_dvl_response,
++            20,
++        )
++        self.create_subscription(ConfigStatus, self._topic_config.dvl_config_status, self._on_dvl_config, 20)
++        self.create_subscription(PoseWithCovarianceStamped, self._topic_config.depth, self._on_depth, 20)
++        self.create_subscription(BatteryState, self._topic_config.battery, self._on_battery, 20)
++        self.create_subscription(Imu, self._topic_config.imu, self._on_imu, 20)
++        self.create_subscription(Joy, self._topic_config.joy, self._on_joy, 20)
++        self.create_subscription(State, self._topic_config.mavros_state, self._on_mavros_state, 20)
++        self.create_subscription(String, self._topic_config.yolo, self._on_yolo, 20)
++        self.create_subscription(String, self._topic_config.pinger_homing_status, self._on_pinger_homing, 20)
++        self.create_subscription(
++            Vector3Stamped,
++            self._topic_config.hydrophone_direction,
++            self._on_hydrophone_direction,
++            20,
++        )
+ 
+     def publish_dvl_command(
+         self,
+@@ -120,17 +179,33 @@ class LocalizationRosNode(Node):
+         )
+ 
+     def snapshot(self) -> dict:
++        mission_status = self._read_mission_status()
+         with self._lock:
+             return {
++                "config": {
++                    "topics": {
++                        "odom": self._topic_config.odom,
++                        "mavros_state": self._topic_config.mavros_state,
++                        "yolo": self._topic_config.yolo,
++                        "pinger_homing_status": self._topic_config.pinger_homing_status,
++                        "hydrophone_direction": self._topic_config.hydrophone_direction,
++                    },
++                    "mission_status_json": self._topic_config.mission_status_json,
++                },
+                 "topics": {name: item.snapshot() for name, item in self._health.items()},
+                 "pose": dict(self._pose),
+                 "velocity": dict(self._velocity),
+                 "depth": dict(self._depth),
++                "mavros_state": dict(self._mavros_state),
+                 "battery": dict(self._battery),
+                 "joy": {
+                     "axes": list(self._joy["axes"]),
+                     "buttons": list(self._joy["buttons"]),
+                 },
++                "mission_status": mission_status,
++                "yolo_status": dict(self._yolo_status),
++                "pinger_homing_status": dict(self._pinger_homing_status),
++                "hydrophone_direction": dict(self._hydrophone_direction),
+                 "dvl_config": dict(self._dvl_config),
+                 "dvl_events": list(self._dvl_events),
+                 "path": list(self._path),
+@@ -215,6 +290,18 @@ class LocalizationRosNode(Node):
+         with self._lock:
+             self._health["imu"].tick()
+ 
++    def _on_mavros_state(self, msg: State) -> None:
++        with self._lock:
++            self._health["mavros_state"].tick()
++            self._mavros_state = {
++                "connected": bool(msg.connected),
++                "armed": bool(msg.armed),
++                "guided": bool(msg.guided),
++                "manual_input": bool(msg.manual_input),
++                "mode": msg.mode,
++                "system_status": int(msg.system_status),
++            }
++
+     def _on_joy(self, msg: Joy) -> None:
+         with self._lock:
+             self._health["joy"].tick()
+@@ -223,6 +310,66 @@ class LocalizationRosNode(Node):
+                 "buttons": list(msg.buttons),
+             }
+ 
++    def _on_yolo(self, msg: String) -> None:
++        parsed = _json_object(msg.data)
++        with self._lock:
++            self._health["yolo"].tick()
++            self._yolo_status = {
++                "raw": msg.data[-600:],
++                "active": bool(parsed.get("active", False)) if parsed else False,
++                "count": int(parsed.get("count", 0)) if isinstance(parsed.get("count", 0), (int, float)) else 0,
++                "target": str(parsed.get("target", parsed.get("target_id", ""))) if parsed else "",
++                "range_m": _number_or_none(parsed.get("range_m")) if parsed else None,
++            }
++
++    def _on_pinger_homing(self, msg: String) -> None:
++        parsed = _json_object(msg.data)
++        with self._lock:
++            self._health["pinger_homing"].tick()
++            self._pinger_homing_status = {
++                "raw": msg.data[-600:],
++                "phase": str(parsed.get("phase", "")) if parsed else "",
++                "range_m": _number_or_none(parsed.get("range_m")) if parsed else None,
++                "bearing_rad": _number_or_none(parsed.get("bearing_rad")) if parsed else None,
++            }
++
++    def _on_hydrophone_direction(self, msg: Vector3Stamped) -> None:
++        x = msg.vector.x
++        y = msg.vector.y
++        z = msg.vector.z
++        bearing = math.atan2(y, x) if math.isfinite(x) and math.isfinite(y) else None
++        with self._lock:
++            self._health["hydrophone_direction"].tick()
++            self._hydrophone_direction = {
++                "x": _finite_or_none(x),
++                "y": _finite_or_none(y),
++                "z": _finite_or_none(z),
++                "bearing_rad": bearing,
++            }
++
++    def _read_mission_status(self) -> dict:
++        path = Path(self._topic_config.mission_status_json)
++        if not path.exists():
++            return {"available": False, "path": str(path), "age": None}
++        try:
++            stat = path.stat()
++            text = path.read_text(encoding="utf-8")
++            data = json.loads(text)
++        except Exception as exc:
++            return {
++                "available": False,
++                "path": str(path),
++                "age": None,
++                "error": str(exc),
++            }
++        if not isinstance(data, dict):
++            return {"available": False, "path": str(path), "age": None, "error": "status JSON is not an object"}
++        data = dict(data)
++        data["available"] = True
++        data["path"] = str(path)
++        data["age"] = max(0.0, time.time() - stat.st_mtime)
++        return data
++
+     def _append_dvl_event(
+         self,
+         event_type: str,
+@@ -247,7 +394,8 @@ class LocalizationRosNode(Node):
+ 
+ 
+ class RosInterface:
+-    def __init__(self):
++    def __init__(self, topic_config: TopicConfig | None = None):
++        self.topic_config = topic_config or TopicConfig()
+         self.node: LocalizationRosNode | None = None
+         self._executor: SingleThreadedExecutor | None = None
+         self._spin_thread: threading.Thread | None = None
+@@ -255,7 +403,7 @@ class RosInterface:
+     def start(self) -> None:
+         if not rclpy.ok():
+             rclpy.init(args=None)
+-        self.node = LocalizationRosNode()
++        self.node = LocalizationRosNode(self.topic_config)
+         self._executor = SingleThreadedExecutor()
+         self._executor.add_node(self.node)
+         self._spin_thread = threading.Thread(target=self._spin, daemon=True)
+@@ -299,3 +447,19 @@ class RosInterface:
+ 
+     def reset_dvl_dead_reckoning(self) -> None:
+         self.publish_dvl_command("reset_dead_reckoning")
++
++
++def _json_object(text: str) -> dict:
++    try:
++        data = json.loads(text)
++    except Exception:
++        return {}
++    return data if isinstance(data, dict) else {}
++
++
++def _number_or_none(value) -> float | None:
++    try:
++        number = float(value)
++    except (TypeError, ValueError):
++        return None
++    return _finite_or_none(number)
+diff --git a/kmu26_auv_web_gui/server.py b/kmu26_auv_web_gui/server.py
+index 7692cb3..d7d2a29 100644
+--- a/kmu26_auv_web_gui/server.py
++++ b/kmu26_auv_web_gui/server.py
+@@ -18,6 +18,7 @@ from kmu26_auv_web_gui.ekf_config import read_process_noise_covariance
+ from kmu26_auv_web_gui.ekf_config import write_process_noise_covariance
+ from kmu26_auv_web_gui.process_manager import ProcessManager
+ from kmu26_auv_web_gui.ros_interface import RosInterface
++from kmu26_auv_web_gui.ros_interface import TopicConfig
+ 
+ 
+ DEFAULT_BAG_TOPICS = [
+@@ -27,7 +28,12 @@ DEFAULT_BAG_TOPICS = [
+     "/dvl/twist",
+     "/depth/pose",
+     "/mavros/imu/data",
++    "/mavros/state",
+     "/odometry/filtered",
++    "/uuv_mujoco/yolo_buoy_detections",
++    "/uuv_mujoco/pinger_homing/status",
++    "/mujoco/hydrophone/direction",
++    "/mission/rviz_markers",
+     "/localization/path",
+     "/tf",
+     "/tf_static",
+@@ -45,15 +51,27 @@ ALLOWED_DVL_PARAMETERS = {
+     "acoustic_enabled",
+     "dark_mode_enabled",
+     "mountig_rotation_offset",
++    "mounting_rotation_offset",
+     "range_mode",
+     "speed_of_sound",
+ }
+ 
+ 
+-def create_app(robot_package: str, robot_launch: str) -> FastAPI:
+-    app = FastAPI(title="AUV Localization Test GUI")
+-    process_manager = ProcessManager(robot_package=robot_package, robot_launch=robot_launch)
+-    ros_interface = RosInterface()
++def create_app(
++    robot_package: str,
++    robot_launch: str,
++    mission_package: str = "kmu26_mission_fsm",
++    mission_launch: str = "mission_fsm_real.launch.py",
++    topic_config: TopicConfig | None = None,
++) -> FastAPI:
++    app = FastAPI(title="KMU26 AUV Web GUI")
++    process_manager = ProcessManager(
++        robot_package=robot_package,
++        robot_launch=robot_launch,
++        mission_package=mission_package,
++        mission_launch=mission_launch,
++    )
++    ros_interface = RosInterface(topic_config=topic_config)
+     web_dir_override = os.environ.get("KMU26_WEB_GUI_WEB_DIR")
+     if web_dir_override:
+         web_dir = Path(web_dir_override)
+@@ -87,7 +105,10 @@ def create_app(robot_package: str, robot_launch: str) -> FastAPI:
+     @app.post("/api/stack/start")
+     async def start_stack(request: Request) -> dict:
+         body = await _json_or_empty(request)
+-        process_manager.start_stack(body.get("launch_args", {}))
++        try:
++            process_manager.start_stack(body.get("launch_args", {}))
++        except RuntimeError as exc:
++            raise HTTPException(status_code=400, detail=str(exc)) from exc
+         return _status(process_manager, ros_interface)
+ 
+     @app.post("/api/stack/stop")
+@@ -95,6 +116,68 @@ def create_app(robot_package: str, robot_launch: str) -> FastAPI:
+         process_manager.stop_stack()
+         return _status(process_manager, ros_interface)
+ 
++    @app.post("/api/mission/start")
++    async def start_mission(request: Request) -> dict:
++        body = await _json_or_empty(request)
++        dry_run = bool(body.get("dry_run", True))
++        pinger_homing = bool(body.get("pinger_homing", False))
++        launch_args = {
++            "use_rviz": "false",
++            "use_mission_rviz_visualizer": "true",
++            "use_mission_fsm": "true" if not pinger_homing else "false",
++            "use_pinger_homing": "true" if pinger_homing else "false",
++            "dry_run": "true" if dry_run else "false",
++            "require_live_status": "false",
++        }
++        for key in (
++            "pose_topic",
++            "pose_type",
++            "state_topic",
++            "yolo_detection_topic",
++            "hydrophone_direction_topic",
++            "hydrophone_status_topic",
++            "mission_status_json",
++            "transport",
++            "rate_hz",
++            "own_course",
++            "course",
++        ):
++            if key in body and body[key] not in (None, ""):
++                launch_args[key] = str(body[key])
++        try:
++            process_manager.start_mission(launch_args)
++        except RuntimeError as exc:
++            raise HTTPException(status_code=400, detail=str(exc)) from exc
++        return _status(process_manager, ros_interface)
++
++    @app.post("/api/mission/stop")
++    def stop_mission() -> dict:
++        process_manager.stop_mission()
++        return _status(process_manager, ros_interface)
++
++    @app.post("/api/mission/preflight")
++    async def mission_preflight(request: Request) -> dict:
++        body = await _json_or_empty(request)
++        args = []
++        if not bool(body.get("smoke", True)):
++            args.append("--no-smoke")
++        if not bool(body.get("echo", False)):
++            args.append("--no-echo")
++        overrides = {
++            "--pose-topic": body.get("pose_topic"),
++            "--state-topic": body.get("state_topic"),
++            "--yolo-topic": body.get("yolo_detection_topic"),
++            "--hydrophone-direction-topic": body.get("hydrophone_direction_topic"),
++        }
++        for flag, value in overrides.items():
++            if value not in (None, ""):
++                args.extend([flag, str(value)])
++        try:
++            process_manager.start_preflight(args)
++        except RuntimeError as exc:
++            raise HTTPException(status_code=400, detail=str(exc)) from exc
++        return _status(process_manager, ros_interface)
++
+     @app.post("/api/dvl/command")
+     async def run_dvl_command(request: Request) -> dict:
+         body = await _json_or_empty(request)
+@@ -135,7 +218,10 @@ def create_app(robot_package: str, robot_launch: str) -> FastAPI:
+         body = await _json_or_empty(request)
+         record_all = bool(body.get("record_all", False))
+         topics = body.get("topics") or DEFAULT_BAG_TOPICS
+-        output_dir = process_manager.start_bag(topics, record_all=record_all)
++        try:
++            output_dir = process_manager.start_bag(topics, record_all=record_all)
++        except RuntimeError as exc:
++            raise HTTPException(status_code=400, detail=str(exc)) from exc
+         payload = _status(process_manager, ros_interface)
+         payload["bag_output"] = output_dir
+         return payload
+@@ -191,9 +277,53 @@ def main() -> None:
+     parser.add_argument("--port", default=8080, type=int)
+     parser.add_argument("--robot-package", default="hit25_auv_ros2")
+     parser.add_argument("--robot-launch", default="localization_test.launch.py")
++    parser.add_argument("--mission-package", default="kmu26_mission_fsm")
++    parser.add_argument("--mission-launch", default="mission_fsm_real.launch.py")
++    parser.add_argument("--odom-topic", default=os.environ.get("KMU26_ODOM_TOPIC", "/odometry/filtered"))
++    parser.add_argument("--dvl-twist-topic", default=os.environ.get("KMU26_DVL_TWIST_TOPIC", "/dvl/twist"))
++    parser.add_argument("--depth-topic", default=os.environ.get("KMU26_DEPTH_TOPIC", "/depth/pose"))
++    parser.add_argument("--battery-topic", default=os.environ.get("KMU26_BATTERY_TOPIC", "/battery"))
++    parser.add_argument("--imu-topic", default=os.environ.get("KMU26_IMU_TOPIC", "/mavros/imu/data"))
++    parser.add_argument("--joy-topic", default=os.environ.get("KMU26_JOY_TOPIC", "/joy"))
++    parser.add_argument("--mavros-state-topic", default=os.environ.get("KMU26_MAVROS_STATE_TOPIC", "/mavros/state"))
++    parser.add_argument(
++        "--yolo-topic",
++        default=os.environ.get("KMU26_YOLO_TOPIC", "/uuv_mujoco/yolo_buoy_detections"),
++    )
++    parser.add_argument(
++        "--pinger-homing-status-topic",
++        default=os.environ.get("KMU26_PINGER_HOMING_STATUS_TOPIC", "/uuv_mujoco/pinger_homing/status"),
++    )
++    parser.add_argument(
++        "--hydrophone-direction-topic",
++        default=os.environ.get("KMU26_HYDROPHONE_DIRECTION_TOPIC", "/mujoco/hydrophone/direction"),
++    )
++    parser.add_argument(
++        "--mission-status-json",
++        default=os.environ.get("KMU26_MISSION_STATUS_JSON", "/tmp/kmu26_mission_fsm_status.json"),
++    )
+     args = parser.parse_args()
+ 
+-    app = create_app(robot_package=args.robot_package, robot_launch=args.robot_launch)
++    topic_config = TopicConfig(
++        odom=args.odom_topic,
++        dvl_twist=args.dvl_twist_topic,
++        depth=args.depth_topic,
++        battery=args.battery_topic,
++        imu=args.imu_topic,
++        joy=args.joy_topic,
++        mavros_state=args.mavros_state_topic,
++        yolo=args.yolo_topic,
++        pinger_homing_status=args.pinger_homing_status_topic,
++        hydrophone_direction=args.hydrophone_direction_topic,
++        mission_status_json=args.mission_status_json,
++    )
++    app = create_app(
++        robot_package=args.robot_package,
++        robot_launch=args.robot_launch,
++        mission_package=args.mission_package,
++        mission_launch=args.mission_launch,
++        topic_config=topic_config,
++    )
+     uvicorn.run(app, host=args.host, port=args.port)
+ 
+ 
+diff --git a/launch/gui_server.launch.py b/launch/gui_server.launch.py
+index 2b422a4..a557027 100644
+--- a/launch/gui_server.launch.py
++++ b/launch/gui_server.launch.py
+@@ -11,6 +11,13 @@ def generate_launch_description() -> LaunchDescription:
+     port = LaunchConfiguration("port")
+     robot_package = LaunchConfiguration("robot_package")
+     robot_launch = LaunchConfiguration("robot_launch")
++    mission_package = LaunchConfiguration("mission_package")
++    mission_launch = LaunchConfiguration("mission_launch")
++    odom_topic = LaunchConfiguration("odom_topic")
++    mavros_state_topic = LaunchConfiguration("mavros_state_topic")
++    yolo_topic = LaunchConfiguration("yolo_topic")
++    hydrophone_direction_topic = LaunchConfiguration("hydrophone_direction_topic")
++    mission_status_json = LaunchConfiguration("mission_status_json")
+ 
+     return LaunchDescription(
+         [
+@@ -18,6 +25,13 @@ def generate_launch_description() -> LaunchDescription:
+             DeclareLaunchArgument("port", default_value="8080"),
+             DeclareLaunchArgument("robot_package", default_value="hit25_auv_ros2"),
+             DeclareLaunchArgument("robot_launch", default_value="localization_test.launch.py"),
++            DeclareLaunchArgument("mission_package", default_value="kmu26_mission_fsm"),
++            DeclareLaunchArgument("mission_launch", default_value="mission_fsm_real.launch.py"),
++            DeclareLaunchArgument("odom_topic", default_value="/odometry/filtered"),
++            DeclareLaunchArgument("mavros_state_topic", default_value="/mavros/state"),
++            DeclareLaunchArgument("yolo_topic", default_value="/uuv_mujoco/yolo_buoy_detections"),
++            DeclareLaunchArgument("hydrophone_direction_topic", default_value="/mujoco/hydrophone/direction"),
++            DeclareLaunchArgument("mission_status_json", default_value="/tmp/kmu26_mission_fsm_status.json"),
+             Node(
+                 package="kmu26_auv_web_gui",
+                 executable="server",
+@@ -32,6 +46,20 @@ def generate_launch_description() -> LaunchDescription:
+                     robot_package,
+                     "--robot-launch",
+                     robot_launch,
++                    "--mission-package",
++                    mission_package,
++                    "--mission-launch",
++                    mission_launch,
++                    "--odom-topic",
++                    odom_topic,
++                    "--mavros-state-topic",
++                    mavros_state_topic,
++                    "--yolo-topic",
++                    yolo_topic,
++                    "--hydrophone-direction-topic",
++                    hydrophone_direction_topic,
++                    "--mission-status-json",
++                    mission_status_json,
+                 ],
+             ),
+         ]
+diff --git a/package.xml b/package.xml
+index 0533c9f..ac37787 100644
+--- a/package.xml
++++ b/package.xml
+@@ -3,18 +3,22 @@
+ <package format="3">
+   <name>kmu26_auv_web_gui</name>
+   <version>0.0.0</version>
+-  <description>Web control panel for AUV localization tests.</description>
++  <description>Web control panel for KMU26 AUV real-vehicle telemetry, mission checks, and bag recording.</description>
+   <maintainer email="kuuve@todo.todo">kuuve</maintainer>
+-  <license>TODO: License declaration</license>
++  <license>MIT</license>
+ 
+   <buildtool_depend>ament_python</buildtool_depend>
+ 
+   <exec_depend>ament_index_python</exec_depend>
+   <exec_depend>geometry_msgs</exec_depend>
++  <exec_depend>mavros_msgs</exec_depend>
+   <exec_depend>nav_msgs</exec_depend>
+   <exec_depend>rclpy</exec_depend>
+   <exec_depend>sensor_msgs</exec_depend>
++  <exec_depend>std_msgs</exec_depend>
+   <exec_depend>dvl_msgs</exec_depend>
++  <exec_depend>python3-fastapi</exec_depend>
++  <exec_depend>python3-uvicorn</exec_depend>
+   <exec_depend>python3-yaml</exec_depend>
+   <exec_depend>python3-websockets</exec_depend>
+ 
+diff --git a/scripts/start_kmu26_auv_web_gui.sh b/scripts/start_kmu26_auv_web_gui.sh
+index 1cb4305..ad931ec 100755
+--- a/scripts/start_kmu26_auv_web_gui.sh
++++ b/scripts/start_kmu26_auv_web_gui.sh
+@@ -13,6 +13,14 @@ if [[ -n "${KMU26_WEB_GUI_PORT+x}" ]]; then
+ fi
+ ROBOT_PACKAGE="${KMU26_ROBOT_PACKAGE:-hit25_auv_ros2}"
+ ROBOT_LAUNCH="${KMU26_ROBOT_LAUNCH:-localization_test.launch.py}"
++MISSION_PACKAGE="${KMU26_MISSION_PACKAGE:-kmu26_mission_fsm}"
++MISSION_LAUNCH="${KMU26_MISSION_LAUNCH:-mission_fsm_real.launch.py}"
++ODOM_TOPIC="${KMU26_ODOM_TOPIC:-/odometry/filtered}"
++MAVROS_STATE_TOPIC="${KMU26_MAVROS_STATE_TOPIC:-/mavros/state}"
++YOLO_TOPIC="${KMU26_YOLO_TOPIC:-/uuv_mujoco/yolo_buoy_detections}"
++PINGER_HOMING_STATUS_TOPIC="${KMU26_PINGER_HOMING_STATUS_TOPIC:-/uuv_mujoco/pinger_homing/status}"
++HYDROPHONE_DIRECTION_TOPIC="${KMU26_HYDROPHONE_DIRECTION_TOPIC:-/mujoco/hydrophone/direction}"
++MISSION_STATUS_JSON="${KMU26_MISSION_STATUS_JSON:-/tmp/kmu26_mission_fsm_status.json}"
+ 
+ source_if_exists() {
+   local setup_file="$1"
+@@ -132,7 +140,15 @@ if ros2 pkg prefix kmu26_auv_web_gui >/dev/null 2>&1; then
+     --host "${HOST}" \
+     --port "${PORT}" \
+     --robot-package "${ROBOT_PACKAGE}" \
+-    --robot-launch "${ROBOT_LAUNCH}"
++    --robot-launch "${ROBOT_LAUNCH}" \
++    --mission-package "${MISSION_PACKAGE}" \
++    --mission-launch "${MISSION_LAUNCH}" \
++    --odom-topic "${ODOM_TOPIC}" \
++    --mavros-state-topic "${MAVROS_STATE_TOPIC}" \
++    --yolo-topic "${YOLO_TOPIC}" \
++    --pinger-homing-status-topic "${PINGER_HOMING_STATUS_TOPIC}" \
++    --hydrophone-direction-topic "${HYDROPHONE_DIRECTION_TOPIC}" \
++    --mission-status-json "${MISSION_STATUS_JSON}"
+ fi
+ 
+ export PYTHONPATH="${PACKAGE_DIR}:${PYTHONPATH:-}"
+@@ -141,4 +157,12 @@ exec python3 -m kmu26_auv_web_gui.server \
+   --host "${HOST}" \
+   --port "${PORT}" \
+   --robot-package "${ROBOT_PACKAGE}" \
+-  --robot-launch "${ROBOT_LAUNCH}"
++  --robot-launch "${ROBOT_LAUNCH}" \
++  --mission-package "${MISSION_PACKAGE}" \
++  --mission-launch "${MISSION_LAUNCH}" \
++  --odom-topic "${ODOM_TOPIC}" \
++  --mavros-state-topic "${MAVROS_STATE_TOPIC}" \
++  --yolo-topic "${YOLO_TOPIC}" \
++  --pinger-homing-status-topic "${PINGER_HOMING_STATUS_TOPIC}" \
++  --hydrophone-direction-topic "${HYDROPHONE_DIRECTION_TOPIC}" \
++  --mission-status-json "${MISSION_STATUS_JSON}"
+diff --git a/setup.py b/setup.py
+index 9da833e..e33138f 100644
+--- a/setup.py
++++ b/setup.py
+@@ -23,7 +23,7 @@ setup(
+     packages=[package_name],
+     data_files=[
+         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),
+-        (f"share/{package_name}", ["package.xml"]),
++        (f"share/{package_name}", ["package.xml", "LICENSE"]),
+         (f"share/{package_name}/launch", glob("launch/*.launch.py")),
+         (f"share/{package_name}/scripts", glob("scripts/*.sh")),
+         *data_files_for("web"),
+@@ -32,9 +32,8 @@ setup(
+     zip_safe=True,
+     maintainer="kuuve",
+     maintainer_email="kuuve@todo.todo",
+-    description="Web control panel for AUV localization tests.",
+-    license="TODO: License declaration",
+-    tests_require=["pytest"],
++    description="Web control panel for KMU26 AUV real-vehicle telemetry, mission checks, and bag recording.",
++    license="MIT",
+     entry_points={
+         "console_scripts": [
+             "server = kmu26_auv_web_gui.server:main",
+diff --git a/web/app.js b/web/app.js
+index 22a1cb3..ad8ab33 100644
+--- a/web/app.js
++++ b/web/app.js
+@@ -1,6 +1,7 @@
+ const state = {
+   websocket: null,
+   reconnectTimer: null,
++  lastStatus: null,
+   ekf: {
+     values: [],
+     stateNames: [],
+@@ -25,6 +26,10 @@ function fmtUnit(value, unit, digits = 2) {
+   return text === "--" ? "--" : `${text} ${unit}`;
+ }
+ 
++function fmtDeg(rad, digits = 1) {
++  return typeof rad === "number" && Number.isFinite(rad) ? `${fmt((rad * 180) / Math.PI, digits)} deg` : "--";
++}
++
+ function setPill(id, active, label) {
+   const el = $(id);
+   el.textContent = label;
+@@ -32,6 +37,20 @@ function setPill(id, active, label) {
+   el.classList.toggle("warn", !active);
+ }
+ 
++function missionTopicArgs() {
++  const ros = state.lastStatus?.ros || {};
++  const config = ros.config || {};
++  const topics = config.topics || {};
++  return {
++    pose_topic: topics.odom || "/odometry/filtered",
++    pose_type: "odometry",
++    state_topic: topics.mavros_state || "/mavros/state",
++    yolo_detection_topic: topics.yolo || "/uuv_mujoco/yolo_buoy_detections",
++    hydrophone_direction_topic: topics.hydrophone_direction || "/mujoco/hydrophone/direction",
++    mission_status_json: config.mission_status_json || "/tmp/kmu26_mission_fsm_status.json",
++  };
++}
++
+ async function postJson(path, payload = {}) {
+   const response = await fetch(path, {
+     method: "POST",
+@@ -66,6 +85,39 @@ function bindControls() {
+   $("stop-stack").addEventListener("click", () => {
+     postJson("/api/stack/stop").catch(showError);
+   });
++  $("run-preflight").addEventListener("click", () => {
++    postJson("/api/mission/preflight", {
++      ...missionTopicArgs(),
++      smoke: true,
++      echo: false,
++    }).catch(showError);
++  });
++  $("start-mission-dry").addEventListener("click", () => {
++    postJson("/api/mission/start", {
++      ...missionTopicArgs(),
++      dry_run: true,
++      pinger_homing: false,
++    }).catch(showError);
++  });
++  $("start-pinger-homing").addEventListener("click", () => {
++    if (!window.confirm("Start live pinger homing control?")) return;
++    postJson("/api/mission/start", {
++      ...missionTopicArgs(),
++      dry_run: false,
++      pinger_homing: true,
++    }).catch(showError);
++  });
++  $("start-mission-live").addEventListener("click", () => {
++    if (!window.confirm("Start live mission control with command output enabled?")) return;
++    postJson("/api/mission/start", {
++      ...missionTopicArgs(),
++      dry_run: false,
++      pinger_homing: false,
++    }).catch(showError);
++  });
++  $("stop-mission").addEventListener("click", () => {
++    postJson("/api/mission/stop").catch(showError);
++  });
+   $("start-bag").addEventListener("click", () => {
+     startBag().catch(showError);
+   });
+@@ -140,6 +192,7 @@ function connectStatusSocket() {
+ }
+ 
+ function renderStatus(payload) {
++  state.lastStatus = payload;
+   const process = payload.process || {};
+   const ros = payload.ros || {};
+   const topics = ros.topics || {};
+@@ -153,6 +206,12 @@ function renderStatus(payload) {
+ 
+   setPill("stack-pill", process.stack_running, process.stack_running ? "STACK ON" : "STACK OFF");
+   setPill("bag-pill", process.bag_running, process.bag_running ? "BAG ON" : "BAG OFF");
++  setPill(
++    "mavros-pill",
++    topics.mavros_state?.alive && ros.mavros_state?.connected,
++    topics.mavros_state?.alive && ros.mavros_state?.connected ? "MAVROS ON" : "MAVROS OFF",
++  );
++  setPill("fsm-pill", ros.mission_status?.available, ros.mission_status?.available ? "FSM ON" : "FSM OFF");
+   setPill("joy-pill", topics.joy?.alive, topics.joy?.alive ? "JOY ON" : "JOY OFF");
+   setPill("battery-pill", topics.battery?.alive, topics.battery?.alive ? "BAT ON" : "BAT OFF");
+ 
+@@ -172,6 +231,7 @@ function renderStatus(payload) {
+   renderDvl(dvlConfig, dvlEvents);
+   renderBag(process);
+   renderTopics(topics);
++  renderMission(process, ros);
+   renderPath(ros.path || []);
+   $("log-output").textContent = (process.logs || []).join("\n");
+ }
+@@ -256,6 +316,58 @@ function renderDvl(config, events) {
+     .join("\n");
+ }
+ 
++function renderMission(process, ros) {
++  const mavros = ros.mavros_state || {};
++  const mission = ros.mission_status || {};
++  const pinger = ros.pinger_homing_status || {};
++  const yolo = ros.yolo_status || {};
++  const hydro = ros.hydrophone_direction || {};
++  const logs = process.logs || [];
++
++  $("mavros-state").textContent = `${mavros.connected ? "connected" : "disconnected"} | ${
++    mavros.armed ? "armed" : "disarmed"
++  } | ${mavros.mode || "--"}`;
++  $("mission-process").textContent = [
++    process.mission_running ? "mission running" : "mission stopped",
++    process.preflight_running ? "preflight running" : "preflight stopped",
++  ].join(" | ");
++  $("mission-fsm-state").textContent = mission.available ? mission.state || "--" : "no status";
++  $("mission-robot-state").textContent =
++    mission.robot_state_label || mission.robot_state || mission.mode || "--";
++  $("mission-target").textContent = [mission.target_id, mission.target_class].filter(Boolean).join(" | ") || "--";
++  $("mission-counts").textContent = mission.available
++    ? `rem ${mission.remaining_attached ?? "--"} | ok ${mission.processed_count ?? "--"} | col ${
++        mission.collected_count ?? "--"
++      } | score ${mission.scored_count ?? "--"} | fail ${mission.failed_count ?? "--"}`
++    : "--";
++  $("pinger-state").textContent =
++    pinger.phase || pinger.range_m != null || pinger.bearing_rad != null
++      ? `${pinger.phase || "--"} | range ${fmtUnit(pinger.range_m, "m")} | bearing ${fmtDeg(pinger.bearing_rad)}`
++      : "--";
++  $("yolo-state").textContent =
++    yolo.active || yolo.count
++      ? `${yolo.active ? "active" : "idle"} | count ${yolo.count || 0} | ${yolo.target || "--"}`
++      : "--";
++  $("hydrophone-state").textContent =
++    hydro.bearing_rad != null
++      ? `bearing ${fmtDeg(hydro.bearing_rad)} | vec ${fmt(hydro.x)}, ${fmt(hydro.y)}, ${fmt(hydro.z)}`
++      : "--";
++  $("mission-status-file").textContent = mission.available
++    ? `${mission.path || "--"} | age ${fmtUnit(mission.age, "s", 1)}`
++    : mission.path || "--";
++
++  $("mission-log-output").textContent = logs
++    .filter(
++      (line) =>
++        line.includes("[mission_fsm]") ||
++        line.includes("[preflight]") ||
++        line.includes("ground_truth_buoy") ||
++        line.includes("pinger_homing") ||
++        line.includes("real_vehicle_preflight"),
++    )
++    .join("\n");
++}
++
+ async function loadEkfConfig() {
+   $("ekf-save-state").textContent = "Loading";
+   const payload = await getJson("/api/ekf/process_noise");
+diff --git a/web/index.html b/web/index.html
+index 2cf4b93..fe363a3 100644
+--- a/web/index.html
++++ b/web/index.html
+@@ -3,19 +3,21 @@
+   <head>
+     <meta charset="utf-8" />
+     <meta name="viewport" content="width=device-width, initial-scale=1" />
+-    <title>AUV Localization Test</title>
++    <title>KMU26 AUV Web GUI</title>
+     <link rel="stylesheet" href="/static/styles.css" />
+   </head>
+   <body>
+     <main class="app">
+       <header class="topbar">
+         <div>
+-          <h1>AUV Localization Test</h1>
++          <h1>KMU26 AUV Web GUI</h1>
+           <p id="connection-state">Connecting...</p>
+         </div>
+         <div class="status-pills">
+           <span id="stack-pill" class="pill">STACK</span>
+           <span id="bag-pill" class="pill">BAG</span>
++          <span id="mavros-pill" class="pill">MAVROS</span>
++          <span id="fsm-pill" class="pill">FSM</span>
+           <span id="joy-pill" class="pill">JOY</span>
+           <span id="battery-pill" class="pill">BAT</span>
+         </div>
+@@ -28,6 +30,7 @@
+ 
+       <section class="tabs" role="tablist">
+         <button id="dashboard-tab-button" class="tab-button active" data-tab="dashboard" role="tab">Dashboard</button>
++        <button id="mission-tab-button" class="tab-button" data-tab="mission" role="tab">Mission</button>
+         <button id="bag-tab-button" class="tab-button" data-tab="bag" role="tab">Rosbag</button>
+         <button id="ekf-tab-button" class="tab-button" data-tab="ekf" role="tab">EKF Params</button>
+       </section>
+@@ -86,7 +89,7 @@
+             <button data-dvl-command="set_config" data-dvl-param="dark_mode_enabled" data-dvl-value="true">Dark On</button>
+             <button data-dvl-command="set_config" data-dvl-param="dark_mode_enabled" data-dvl-value="false">Dark Off</button>
+             <button data-dvl-command="set_config" data-dvl-param="range_mode" data-dvl-value="auto">Range Auto</button>
+-            <button data-dvl-command="set_config" data-dvl-param="range_mode" data-dvl-value="=1">Range 1</button>
++            <button data-dvl-command="set_config" data-dvl-param="range_mode" data-dvl-value="1">Range 1</button>
+             <button data-dvl-command="calibrate_gyro">Calibrate Gyro</button>
+             <button data-dvl-command="reset_dead_reckoning" class="danger">Reset DR</button>
+           </div>
+@@ -154,6 +157,70 @@
+       </section>
+       </section>
+ 
++      <section id="mission-tab" class="tab-view">
++        <section class="grid mission-grid">
++          <article class="panel mission-control-panel">
++            <div class="panel-header">
++              <h2>Mission Control</h2>
++              <div class="panel-actions">
++                <button id="run-preflight">Run Preflight</button>
++                <button id="start-mission-dry" class="primary">Start Dry Run</button>
++                <button id="start-pinger-homing">Pinger Homing</button>
++                <button id="start-mission-live" class="danger">Start Live</button>
++                <button id="stop-mission">Stop Mission</button>
++              </div>
++            </div>
++            <dl class="mission-status">
++              <div>
++                <dt>MAVROS</dt>
++                <dd id="mavros-state">--</dd>
++              </div>
++              <div>
++                <dt>Mission Process</dt>
++                <dd id="mission-process">--</dd>
++              </div>
++              <div>
++                <dt>FSM State</dt>
++                <dd id="mission-fsm-state">--</dd>
++              </div>
++              <div>
++                <dt>Robot State</dt>
++                <dd id="mission-robot-state">--</dd>
++              </div>
++              <div>
++                <dt>Target</dt>
++                <dd id="mission-target">--</dd>
++              </div>
++              <div>
++                <dt>Counts</dt>
++                <dd id="mission-counts">--</dd>
++              </div>
++              <div>
++                <dt>Pinger</dt>
++                <dd id="pinger-state">--</dd>
++              </div>
++              <div>
++                <dt>YOLO</dt>
++                <dd id="yolo-state">--</dd>
++              </div>
++              <div>
++                <dt>Hydrophone</dt>
++                <dd id="hydrophone-state">--</dd>
++              </div>
++              <div>
++                <dt>Status File</dt>
++                <dd id="mission-status-file">--</dd>
++              </div>
++            </dl>
++          </article>
++
++          <article class="panel mission-log-panel">
++            <h2>Mission / Preflight Logs</h2>
++            <pre id="mission-log-output"></pre>
++          </article>
++        </section>
++      </section>
++
+       <section id="bag-tab" class="tab-view">
+         <article class="panel bag-panel">
+           <div class="panel-header">
+diff --git a/web/styles.css b/web/styles.css
+index 7f2de26..c8861a7 100644
+--- a/web/styles.css
++++ b/web/styles.css
+@@ -240,7 +240,8 @@ h2 {
+   margin: 14px 0 0;
+ }
+ 
+-.dvl-config div {
++.dvl-config div,
++.mission-status div {
+   min-height: 58px;
+   border: 1px solid var(--border);
+   border-radius: 6px;
+@@ -248,17 +249,38 @@ h2 {
+   background: #141b18;
+ }
+ 
+-.dvl-config dt {
++.dvl-config dt,
++.mission-status dt {
+   color: var(--muted);
+   font-size: 12px;
+ }
+ 
+-.dvl-config dd {
++.dvl-config dd,
++.mission-status dd {
+   margin: 6px 0 0;
+   font-weight: 750;
+   overflow-wrap: anywhere;
+ }
+ 
++.mission-grid {
++  grid-template-columns: 1.25fr 0.75fr;
++}
++
++.mission-status {
++  display: grid;
++  grid-template-columns: repeat(2, minmax(0, 1fr));
++  gap: 10px;
++  margin: 14px 0 0;
++}
++
++.mission-log-panel {
++  min-height: 420px;
++}
++
++#mission-log-output {
++  max-height: 560px;
++}
++
+ .bag-status {
+   display: grid;
+   grid-template-columns: 220px 1fr;
+@@ -471,6 +493,8 @@ pre {
+ 
+   .dvl-command-grid,
+   .dvl-config,
++  .mission-grid,
++  .mission-status,
+   .bag-status,
+   .bag-topic-list,
+   .ekf-diagonal {
+@@ -491,9 +515,11 @@ pre {
+ 
+   .status-pills,
+   .controls,
+-  .dvl-command-grid,
+-  .dvl-config,
+-  .bag-status,
++    .dvl-command-grid,
++    .dvl-config,
++    .mission-grid,
++    .mission-status,
++    .bag-status,
+   .bag-topic-list,
+   .ekf-diagonal,
+   .telemetry dl,
+-- 
+2.34.1
+

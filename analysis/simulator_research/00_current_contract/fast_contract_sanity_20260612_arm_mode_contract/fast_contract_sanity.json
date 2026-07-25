@@ -1,0 +1,309 @@
+{
+  "counts": {
+    "fail": 0,
+    "pass": 24
+  },
+  "generated_at_unix": 1781221351.247094,
+  "results": [
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "-m",
+        "compileall",
+        "-q",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/bridge",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/sim",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/physics",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/gui"
+      ],
+      "duration_s": 0.191,
+      "name": "compileall_core",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_rc_frame_contract.py"
+      ],
+      "duration_s": 0.025,
+      "name": "rc_frame_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "rc_frame_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_ros2_command_payload.py"
+      ],
+      "duration_s": 0.024,
+      "name": "ros2_command_payload",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "ros2_command_payload=PASS\n"
+    },
+    {
+      "command": [
+        "/Users/kanghyunmin/.venvs/mujoco311/bin/python",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_bridge_live_imports.py"
+      ],
+      "duration_s": 0.222,
+      "name": "bridge_live_imports",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "bridge_live_imports=PASS\n"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_sitl_command_link_readiness.py"
+      ],
+      "duration_s": 0.03,
+      "name": "sitl_command_link_readiness",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "sitl_command_link_readiness=PASS\n"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_runtime_readiness_policy.py"
+      ],
+      "duration_s": 0.023,
+      "name": "runtime_readiness_policy",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "runtime_readiness_policy=PASS\n"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_gui_backend_selection.py"
+      ],
+      "duration_s": 0.025,
+      "name": "gui_backend_selection",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_backend_selection=PASS\n"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_gui_readiness_contract.py"
+      ],
+      "duration_s": 0.036,
+      "name": "gui_readiness_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_readiness_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_gui_ros_python_contract.py"
+      ],
+      "duration_s": 0.585,
+      "name": "gui_ros_python_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_ros_python_contract=PASS\npython=/Users/kanghyunmin/miniconda3/envs/ros2_h311/bin/python\nversion=3.11\nrclpy=/Users/kanghyunmin/miniconda3/envs/ros2_h311/lib/python3.11/site-packages/rclpy/__init__.py\n"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_gui_arm_mode_command_contract.py"
+      ],
+      "duration_s": 0.022,
+      "name": "gui_arm_mode_command_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_arm_mode_command_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_gui_initial_depth_contract.py"
+      ],
+      "duration_s": 0.026,
+      "name": "gui_initial_depth_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_initial_depth_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_gui_pilot_toggle_contract.py"
+      ],
+      "duration_s": 0.03,
+      "name": "gui_pilot_toggle_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_pilot_toggle_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_axis_rc_health_contract.py"
+      ],
+      "duration_s": 0.023,
+      "name": "axis_rc_health_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "axis_rc_health_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_initial_hold_pose.py"
+      ],
+      "duration_s": 0.073,
+      "name": "initial_hold_pose",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "initial_hold_pose=PASS\n"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_real_start_measurements.py"
+      ],
+      "duration_s": 0.052,
+      "name": "real_start_measurements",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "real_start_measurements=PASS\n"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_physics_contract_geometry.py"
+      ],
+      "duration_s": 0.048,
+      "name": "physics_contract_geometry",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "physics_contract_geometry=PASS\n"
+    },
+    {
+      "command": [
+        "/Users/kanghyunmin/.venvs/mujoco311/bin/python",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_model_runtime_setup.py"
+      ],
+      "duration_s": 0.501,
+      "name": "model_runtime_setup",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "[physics] MuJoCo fluid geom size scale applied: pattern='fluid_center_enclosure', count=1, scale_xyz=[1. 1. 1.]\n[physics] MuJoCo fluid geom size scale applied: pattern='fluid_*_lower_body', count=2, scale_xyz=[1. 1. 1.]\n[physics] MuJoCo fluidcoef scale applied: count=3, coeff=(blunt, slender, angular, Kutta, Magnus)=[1. 1. 1. 1. 1.]\n[physics] MuJoCo fluidcoef per-geom scale applied: pattern='fluid_center_enclosure', count=1, geoms=fluid_center_enclosure, coeff=(blunt, slender, angular, Kutta, Magnus)=[4.   6.8  3.   0.16 0.04]\n[physics] MuJoCo fluidcoef per-geom scale applied: pattern='fluid_*_lower_body', count=2, geoms=fluid_port_lower_body, fluid_starboard_lower_body, coeff=(blunt, slender, angular, Kutta, Magnus)=[6.   6.3  1.25 0.35 0.07]\nmodel_runtime_setup=PASS\n"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_physics_runtime_hydrostatic.py"
+      ],
+      "duration_s": 0.055,
+      "name": "physics_runtime_hydrostatic",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "physics_runtime_hydrostatic=PASS\n"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_thruster_param_loader.py"
+      ],
+      "duration_s": 0.051,
+      "name": "thruster_param_loader",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "thruster_param_loader=PASS\n"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_odometry_publish_builders.py"
+      ],
+      "duration_s": 0.049,
+      "name": "odometry_publish_builders",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "odometry_publish_builders=PASS\n"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_ros2_sitl_command_override.py"
+      ],
+      "duration_s": 0.018,
+      "name": "ros2_sitl_command_override",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "[bridge] /uuv_mujoco/sitl/command_override sensor_replay_start accepted\n[bridge] /uuv_mujoco/sitl/command_override arm=True forwarded=True\n[bridge] /uuv_mujoco/sitl/command_override mode='ALT_HOLD' forwarded=True\nros2_sitl_command_override=PASS\n"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_filter_ping360_stl_io.py"
+      ],
+      "duration_s": 0.022,
+      "name": "ping360_stl_io",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "filter_ping360_stl_io=PASS\n"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/audit_code_contract_sources.py",
+        "--out-dir",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/research_workspace/00_current_contract/fast_contract_sanity_20260612_arm_mode_contract/source_contract_audit"
+      ],
+      "duration_s": 0.428,
+      "name": "source_contract_audit",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "wrote /Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/research_workspace/00_current_contract/fast_contract_sanity_20260612_arm_mode_contract/source_contract_audit/contract_source_audit.json\nwrote /Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/research_workspace/00_current_contract/fast_contract_sanity_20260612_arm_mode_contract/source_contract_audit/contract_source_audit.md\n{\"fail\": 0, \"pass\": 18, \"warn\": 6}\n"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/tools/check_dev_os_compat.py",
+        "--headless",
+        "--json"
+      ],
+      "duration_s": 0.296,
+      "name": "dev_os_compat_headless",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "{\n  \"results\": [\n    {\n      \"detail\": \"Darwin 25.5.0 (arm64)\",\n      \"name\": \"host_os\",\n      \"status\": \"pass\"\n    },\n    {\n      \"detail\": \"Darwin\",\n      \"name\": \"target_os\",\n      \"status\": \"pass\"\n    },\n    {\n      \"detail\": \"/Users/kanghyunmin/miniconda3/envs/ros2_h311/bin/python3.11\",\n      \"name\": \"runtime_python\",\n      \"status\": \"pass\"\n    },\n    {\n      \"detail\": \"/Users/kanghyunmin/miniconda3/envs/ros2_h311/bin/python3.11 3.11.15\",\n      \"name\": \"python\",\n      \"status\": \"pass\"\n    },\n    {\n      \"detail\": \"mujoco 3.6.0\",\n      \"name\": \"mujoco_import\",\n      \"status\": \"pass\"\n    },\n    {\n      \"detail\": \"headless mode uses the selected Python launcher\",\n      \"name\": \"mjpython_launcher\",\n      \"status\": \"pass\"\n    },\n    {\n      \"detail\": \"headless mode requested\",\n      \"name\": \"viewer_display\",\n      \"status\": \"pass\"\n    },\n    {\n      \"detail\": \"Docker version 29.2.0, build 0b9d198\",\n      \"name\": \"docker_cli\",\n      \"status\": \"pass\"\n    },\n    {\n      \"detail\": \"Docker Compose version v5.0.2\",\n      \"name\": \"docker_compose\",\n      \"status\": \"pass\"\n    },\n    {\n      \"detail\": \"daemon reachable\",\n      \"name\": \"docker_daemon\",\n      \"status\": \"pass\"\n    },\n    {\n      \"detail\": \"compose maps host.docker.internal to host-gateway for Linux Docker\",\n      \"name\": \"docker_host_gateway\",\n      \"status\": \"pass\"\n    },\n    {\n      \"detail\": \"not targeting Linux/Ubuntu\",\n      \"name\": \"ubuntu_migration_contract\",\n      \"status\": \"pass\"\n    },\n    {\n      \"detail\": \"sim/current is the active runtime; v2.2 is only the compatibility backing directory\",\n      \"name\": \"active_runtime_alias\",\n      \"status\": \"pass\"\n    },\n    {\n      \"detail\": \"launcher scripts present and executable\",\n      \"name\": \"runtime_scripts\",\n      \"status\": \"pass\"\n    },\n    {\n      \"detail\": \"run_uuv_mujoco.py plus run_urdf_full.py compatibility wrapper present\",\n      \"name\": \"runtime_runner_entrypoints\",\n      \"status\": \"pass\"\n    },\n    {\n      \"detail\": \"real/SITL param source found\",\n      \"name\": \"real_param_contract\",\n      \"status\": \"pass\"\n    },\n    {\n      \"detail\": \"/Users/kanghyunmin/Desktop/uuv_sim/ardupilot\",\n      \"name\": \"ardupilot_tree\",\n      \"status\": \"pass\"\n    },\n    {\n      \"detail\": \"ROS2 not sourced in current shell; GUI launcher may source its configured environment\",\n      \"name\": \"ros2_env\",\n      \"status\": \"warn\"\n    }\n  ],\n  \"root\": \"/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2\",\n  \"summary\": {\n    \"fail\": 0,\n    \"pass\": 17,\n    \"warn\": 1\n  },\n  \"target_os\": \"Darwin\",\n  \"workspace\": \"/Users/kanghyunmin/Desktop/uuv_sim\"\n}\n"
+    }
+  ],
+  "root": "/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2"
+}

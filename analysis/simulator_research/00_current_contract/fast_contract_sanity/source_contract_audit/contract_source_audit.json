@@ -1,0 +1,870 @@
+{
+  "checks": [
+    {
+      "check_id": "active_runtime_alias_current",
+      "conclusion": "Live launch, GUI, setup, and validation paths must resolve the active runtime through sim/current. The v2.2 directory name is only the compatibility backing directory until a physical rename is done.",
+      "evidence": [
+        {
+          "line": null,
+          "path": "sim/current",
+          "snippet": "sim/current -> /home/robot/uuv_sim_current/sim/current"
+        },
+        {
+          "line": null,
+          "path": "sim/current/run_uuv_mujoco.py",
+          "snippet": "primary runner exists: True"
+        },
+        {
+          "line": null,
+          "path": "sim/run_mujoco.sh",
+          "snippet": "root launcher exists/executable: True"
+        },
+        {
+          "line": null,
+          "path": "sim/start_sitl_mujoco.sh",
+          "snippet": "root launcher exists/executable: True"
+        },
+        {
+          "line": null,
+          "path": "sim/reset_sim.sh",
+          "snippet": "root launcher exists/executable: True"
+        },
+        {
+          "line": null,
+          "path": "sim/current/RUNTIME_VERSION.json",
+          "snippet": "runtime version: {\"active_runtime\": \"sim/current\", \"active_runtime_label\": \"current-2026-07-24-unknown\", \"backing_directory\": \"sim/current\", \"compatibility_runner\": \"\", \"dirty_state\": {\"active_runtime_dirty_count\": 0, \"active_runtime_dirty_sample\": [], \"ardupilot_submodule_status\": \"\", \"working_tree_dirty_count\": 0, \"working_tree_dirty_sample\": []}, \"freshness_policy\": \"Packaged from the validated local current workspace for dist3 release 2026.07.13-dist3.\", \"freshness_status\": \"warn\", \"note\": \"The active simulator runtime is the concrete sim/current directory.\", \"origin_uuv_sim_head\": \"\", \"primary_runner\": \"sim/current/run_uuv_mujoco.py\", \"root_launchers\": {\"mujoco\": \"sim/run_mujoco.sh\", \"reset\": \"sim/reset_sim.sh\", \"sitl_mujoco\": \"sim/start_sitl_mujoco.sh\"}, \"schema\": 1, \"source_audit_check\": \"active_runtime_alias_current\", \"source_branch\": \"unknown\", \"source_head\": \"\", \"source_remote\": \"https://github.com/kanghyunmin-bot/ROS2-mujoco-UUVsimulator.git\", \"status\": \"current\", \"updated_at\": \"2026-07-24\"}"
+        },
+        {
+          "line": null,
+          "path": "sim/current/tools/check_runtime_freshness.py",
+          "snippet": "freshness checker exists: True"
+        },
+        {
+          "line": null,
+          "path": "uuv_mujoco/*.sh",
+          "snippet": "root launchers call freshness checker: True"
+        },
+        {
+          "line": null,
+          "path": ".",
+          "snippet": "active git branch: <unknown>"
+        },
+        {
+          "line": null,
+          "path": ".",
+          "snippet": "active git HEAD: <unknown>"
+        },
+        {
+          "line": null,
+          "path": ".",
+          "snippet": "origin/uuv_sim HEAD: <unknown>"
+        },
+        {
+          "line": null,
+          "path": ".",
+          "snippet": "active runtime dirty paths: <clean>"
+        }
+      ],
+      "official_refs": [],
+      "status": "WARN",
+      "title": "Active runtime resolves through sim/current"
+    },
+    {
+      "check_id": "ardupilot_source_tag",
+      "conclusion": "Local ArduPilot reports 'ArduSub-4.1.2-dirty'; inner worktree status is dirty. Use a fresh clone only if this changes.",
+      "evidence": [
+        {
+          "line": null,
+          "path": "ardupilot",
+          "snippet": "git describe: ArduSub-4.1.2-dirty"
+        },
+        {
+          "line": null,
+          "path": "ardupilot",
+          "snippet": "git status --short: M ArduSub/control_althold.cpp\n M ArduSub/control_stabilize.cpp"
+        }
+      ],
+      "official_refs": [],
+      "status": "WARN",
+      "title": "Local ArduPilot source identity"
+    },
+    {
+      "check_id": "top_level_ardupilot_gitlink",
+      "conclusion": "The ArduPilot source checkout used for this audit is 2dd0bb7d4c85ac48437f139d66df648fc0e1d4ae. The top-level repository records <unknown>. If these differ, do not commit the gitlink change unless the project intentionally updates the submodule pointer.",
+      "evidence": [
+        {
+          "line": null,
+          "path": "ardupilot",
+          "snippet": "working checkout commit: 2dd0bb7d4c85ac48437f139d66df648fc0e1d4ae"
+        },
+        {
+          "line": null,
+          "path": ".",
+          "snippet": "top-level gitlink: <unknown>"
+        }
+      ],
+      "official_refs": [],
+      "status": "WARN",
+      "title": "Top-level ArduPilot gitlink matches the working checkout"
+    },
+    {
+      "check_id": "json_servo_packet_16_raw_pwm",
+      "conclusion": "Closed-loop plant input must consume the raw JSON servo packet as PWM[0..15].",
+      "evidence": [
+        {
+          "line": 43,
+          "path": "sim/ardupilot/libraries/SITL/SIM_JSON.h",
+          "snippet": "uint16_t pwm[16]"
+        },
+        {
+          "line": 105,
+          "path": "sim/ardupilot/libraries/SITL/SIM_JSON.cpp",
+          "snippet": "pkt.pwm[i] = input.servos[i]"
+        }
+      ],
+      "official_refs": [
+        "https://ardupilot.org/dev/docs/sitl-with-JSON.html"
+      ],
+      "status": "PASS",
+      "title": "SITL JSON servo backend is raw 16-channel PWM"
+    },
+    {
+      "check_id": "json_sensor_no_direct_pressure_or_altitude",
+      "conclusion": "This ArduPilot revision has no pressure/altitude key, so Bar30 is injected through position.z.",
+      "evidence": [
+        {
+          "line": 94,
+          "path": "sim/ardupilot/libraries/SITL/SIM_JSON.h",
+          "snippet": "SIM_JSON keytable"
+        },
+        {
+          "line": 104,
+          "path": "sim/ardupilot/libraries/SITL/SIM_JSON.h",
+          "snippet": "position key present"
+        },
+        {
+          "line": null,
+          "path": "sim/ardupilot/libraries/SITL/SIM_JSON.h",
+          "snippet": "altitude key absent; position.z is authoritative"
+        }
+      ],
+      "official_refs": [
+        "https://ardupilot.org/dev/docs/sitl-with-JSON.html"
+      ],
+      "status": "PASS",
+      "title": "ArduPilot JSON sensor vertical input contract is recognized"
+    },
+    {
+      "check_id": "baro_sitl_pressure_from_json_position_z",
+      "conclusion": "For ArduSub, AP_Baro_SITL registers a water barometer and converts SITL altitude to underwater pressure. SIM_Aircraft builds that altitude from JSON position.z.",
+      "evidence": [
+        {
+          "line": 21,
+          "path": "sim/ardupilot/libraries/AP_Baro/AP_Baro_SITL.cpp",
+          "snippet": "BARO_TYPE_WATER"
+        },
+        {
+          "line": 56,
+          "path": "sim/ardupilot/libraries/AP_Baro/AP_Baro_SITL.cpp",
+          "snippet": "float sim_alt = _sitl->state.altitude"
+        },
+        {
+          "line": 120,
+          "path": "sim/ardupilot/libraries/AP_Baro/AP_Baro_SITL.cpp",
+          "snippet": "SimpleUnderWaterAtmosphere(-sim_alt * 0.001f"
+        },
+        {
+          "line": 146,
+          "path": "sim/ardupilot/libraries/SITL/SIM_Aircraft.cpp",
+          "snippet": "location.alt  = static_cast<int32_t>(home.alt - position.z * 100.0f)"
+        }
+      ],
+      "official_refs": [
+        "https://bluerobotics.com/store/sensors-cameras/sensors/bar30-sensor-r1-rp/"
+      ],
+      "status": "PASS",
+      "title": "ArduSub SITL Bar30 pressure is derived from altitude built from position.z"
+    },
+    {
+      "check_id": "servo_output_raw_halrcout_telemetry",
+      "conclusion": "Controller parity comparison layer is real /mavros/rc/out versus SITL MAVLink SERVO_OUTPUT_RAW, not the high-rate JSON servo backend.",
+      "evidence": [
+        {
+          "line": 2664,
+          "path": "sim/ardupilot/libraries/GCS_MAVLink/GCS_Common.cpp",
+          "snippet": "void GCS_MAVLINK::send_servo_output_raw()"
+        },
+        {
+          "line": 2667,
+          "path": "sim/ardupilot/libraries/GCS_MAVLink/GCS_Common.cpp",
+          "snippet": "HAL RC output read"
+        }
+      ],
+      "official_refs": [
+        "https://mavlink.io/en/messages/common.html#SERVO_OUTPUT_RAW"
+      ],
+      "status": "PASS",
+      "title": "SERVO_OUTPUT_RAW is hal.rcout telemetry"
+    },
+    {
+      "check_id": "rc_override_local_16_channel_limit",
+      "conclusion": "The official MAVLink message has extension channels beyond 16, but this local ArduSub 4.1.2 handler builds override_data only through chan16_raw. This is acceptable for the current vehicle if active controls stay within C1..C8, but the old 'preserve 1..18' checklist is not true for this firmware.",
+      "evidence": [
+        {
+          "line": 3239,
+          "path": "sim/ardupilot/libraries/GCS_MAVLink/GCS_Common.cpp",
+          "snippet": "packet.chan16_raw"
+        },
+        {
+          "line": 3248,
+          "path": "sim/ardupilot/libraries/GCS_MAVLink/GCS_Common.cpp",
+          "snippet": "for (uint8_t i=8; i<ARRAY_SIZE(override_data); i++)"
+        }
+      ],
+      "official_refs": [
+        "https://mavlink.io/en/messages/common.html#RC_CHANNELS_OVERRIDE"
+      ],
+      "status": "WARN",
+      "title": "Local ArduSub 4.1.2 RC override handler consumes 1..16, not 1..18"
+    },
+    {
+      "check_id": "rc_override_timeout_policy",
+      "conclusion": "RC override must be streamed faster than RC_OVERRIDE_TIME, whose local default is 3s. A one-shot override is not a valid closed-loop input contract.",
+      "evidence": [
+        {
+          "line": 351,
+          "path": "sim/ardupilot/libraries/RC_Channel/RC_Channel.cpp",
+          "snippet": "override_value = v"
+        },
+        {
+          "line": 368,
+          "path": "sim/ardupilot/libraries/RC_Channel/RC_Channel.cpp",
+          "snippet": "get_override_timeout_ms"
+        },
+        {
+          "line": 86,
+          "path": "sim/ardupilot/libraries/RC_Channel/RC_Channels_VarInfo.h",
+          "snippet": "AP_GROUPINFO(\"_OVERRIDE_TIME\""
+        }
+      ],
+      "official_refs": [
+        "https://mavlink.io/en/messages/common.html#RC_CHANNELS_OVERRIDE"
+      ],
+      "status": "PASS",
+      "title": "RC override has firmware timeout policy"
+    },
+    {
+      "check_id": "ardusub_joystick_axis_mapping",
+      "conclusion": "The real joy/RC override axis mapping checklist is confirmed in ArduSub code.",
+      "evidence": [
+        {
+          "line": null,
+          "path": "sim/ardupilot/ArduSub/joystick.cpp",
+          "snippet": "RC3 throttle/heave"
+        },
+        {
+          "line": null,
+          "path": "sim/ardupilot/ArduSub/joystick.cpp",
+          "snippet": "RC4 yaw"
+        },
+        {
+          "line": null,
+          "path": "sim/ardupilot/ArduSub/joystick.cpp",
+          "snippet": "RC5 forward"
+        },
+        {
+          "line": null,
+          "path": "sim/ardupilot/ArduSub/joystick.cpp",
+          "snippet": "RC6 lateral"
+        }
+      ],
+      "official_refs": [],
+      "status": "PASS",
+      "title": "ArduSub joystick maps RC3 heave, RC4 yaw, RC5 forward, RC6 lateral"
+    },
+    {
+      "check_id": "active_runtime_baro_contract_frontend_match",
+      "conclusion": "The active runtime converts physical Bar30 pressure/depth into the JSON position.z value that makes AP_Baro_SITL produce the matching water-barometer frontend altitude.",
+      "evidence": [
+        {
+          "line": 66,
+          "path": "sim/current/sim/contracts/baro.py",
+          "snippet": "sitl_depth_m_for_frontend_match"
+        },
+        {
+          "line": 10,
+          "path": "sim/current/bridge/sitl_contract.py",
+          "snippet": "from sim.contracts.baro"
+        },
+        {
+          "line": 38,
+          "path": "sim/current/bridge/ros2_bridge_config_baro.py",
+          "snippet": "ROS2_UUV_SITL_BARO_DEPTH_CONTRACT\", \"frontend_match\""
+        },
+        {
+          "line": 12,
+          "path": "sim/current/bridge/ros2_state_estimation.py",
+          "snippet": "from .ros2_state_vertical import"
+        },
+        {
+          "line": 37,
+          "path": "sim/current/bridge/ros2_state_sitl_vertical.py",
+          "snippet": "sitl_contract_depth_m("
+        },
+        {
+          "line": 38,
+          "path": "sim/current/bridge/ros2_state_sitl_baro.py",
+          "snippet": "sitl_depth_m_for_frontend_match(pressure_pa)"
+        },
+        {
+          "line": 27,
+          "path": "sim/current/bridge/sitl_json_payload.py",
+          "snippet": "json_position[2] = float(vertical_est.depth_m)"
+        }
+      ],
+      "official_refs": [
+        "https://ardupilot.org/dev/docs/sitl-with-JSON.html",
+        "https://bluerobotics.com/store/sensors-cameras/sensors/bar30-sensor-r1-rp/"
+      ],
+      "status": "PASS",
+      "title": "Active runtime injects Bar30 contract through JSON position.z frontend match"
+    },
+    {
+      "check_id": "active_runtime_json_altitude_field_is_compat_only",
+      "conclusion": "The altitude key in the active runtime JSON payload is compatibility/debug data for this firmware. It must not be treated as a controller input contract.",
+      "evidence": [
+        {
+          "line": 31,
+          "path": "sim/current/bridge/sitl_json_payload.py",
+          "snippet": "\"altitude\": float(vertical_est.alt_m)"
+        },
+        {
+          "line": null,
+          "path": "sim/ardupilot/libraries/SITL/SIM_JSON.h",
+          "snippet": "SIM_JSON keytable has no altitude key"
+        }
+      ],
+      "official_refs": [
+        "https://ardupilot.org/dev/docs/sitl-with-JSON.html"
+      ],
+      "status": "WARN",
+      "title": "Active runtime still sends JSON altitude but ArduSub 4.1.2 ignores it"
+    },
+    {
+      "check_id": "active_runtime_static_pressure_external_bar30",
+      "conclusion": "The ROS output surface uses Bar30 absolute pressure for static_pressure by default. For SITL control, the important path remains JSON position.z -> AP_Baro_SITL.",
+      "evidence": [
+        {
+          "line": 15,
+          "path": "sim/current/bridge/ros2_bridge_config_static_pressure.py",
+          "snippet": "ROS2_UUV_STATIC_PRESSURE_SOURCE\", \"external\""
+        },
+        {
+          "line": 73,
+          "path": "sim/current/bridge/ros2_publish_state.py",
+          "snippet": "static_pressure_pa = bar30_pressure_pa"
+        }
+      ],
+      "official_refs": [
+        "https://bluerobotics.com/store/sensors-cameras/sensors/bar30-sensor-r1-rp/"
+      ],
+      "status": "PASS",
+      "title": "/mavros/imu/static_pressure defaults to external Bar30 pressure"
+    },
+    {
+      "check_id": "active_runtime_atm_pressure_excluded_output_surface",
+      "conclusion": "The April 1 real bag has /mavros/imu/atm_pressure around 0.24, not Pa-scale surface pressure. The sim currently publishes Bar30 absolute pressure there, so this topic is excluded from controller parity and plant replay fitting until its real semantics are proven.",
+      "evidence": [
+        {
+          "line": null,
+          "path": "sim/current/bridge/ros2_publish_runtime.py",
+          "snippet": "mavros_atm_pressure_msg = build_pressure_msg"
+        }
+      ],
+      "official_refs": [],
+      "status": "WARN",
+      "title": "/mavros/imu/atm_pressure is not a safe real-bag pressure target"
+    },
+    {
+      "check_id": "active_runtime_time_contract_sim_publish_wall_transport",
+      "conclusion": "ROS sensor output is gated by monotonic sim time and sensor_dt; sensor-replay can use a monotonic JSON-servo frame clock; MAVLink polling, SERVO_OUTPUT_RAW requests, RC keepalive, and viewer catch-up use wall-clock cadence.",
+      "evidence": [
+        {
+          "line": 9,
+          "path": "sim/current/bridge/ros2_bridge_publish_timing.py",
+          "snippet": "self.last_pub_t + self.sensor_dt"
+        },
+        {
+          "line": 21,
+          "path": "sim/current/bridge/sitl_sensor_replay_servo_clock.py",
+          "snippet": "_sensor_replay_last_clock_t_s"
+        },
+        {
+          "line": 9,
+          "path": "sim/current/bridge/sitl_sensor_replay_payload_time.py",
+          "snippet": "_sensor_replay_start_on_rc"
+        },
+        {
+          "line": 9,
+          "path": "sim/current/bridge/sitl_json_servo_poll_loop.py",
+          "snippet": "now_wall = time.monotonic()"
+        },
+        {
+          "line": 20,
+          "path": "sim/current/bridge/sitl_mavlink_request_servo_link.py",
+          "snippet": "_sitl_mavlink_servo_hz"
+        },
+        {
+          "line": 25,
+          "path": "sim/current/bridge/sitl_mavlink_request_command_link.py",
+          "snippet": "_sitl_rcout_telemetry_hz"
+        },
+        {
+          "line": 11,
+          "path": "sim/current/bridge/sitl_transport_extnav_scheduler.py",
+          "snippet": "transport._sitl_extnav_scheduler = \"sim_time\""
+        },
+        {
+          "line": 23,
+          "path": "sim/current/bridge/sitl_transport_extnav_runtime.py",
+          "snippet": "transport._sitl_extnav_start_wall = time.monotonic()"
+        },
+        {
+          "line": 27,
+          "path": "sim/current/sim/runtime/simulation_step_catchup.py",
+          "snippet": "clocks.next_step_wall += cadence.target_dt"
+        },
+        {
+          "line": 22,
+          "path": "sim/current/sim/runtime/simulation_sensor_catchup.py",
+          "snippet": "clocks.next_sensor_wall += cadence.sensor_dt"
+        }
+      ],
+      "official_refs": [
+        "https://mavlink.io/en/messages/common.html#SERVO_OUTPUT_RAW"
+      ],
+      "status": "PASS",
+      "title": "Runtime separates sim-time sensor publishing from wall-time transport polling"
+    },
+    {
+      "check_id": "active_runtime_sensor_io_snapshot_contract",
+      "conclusion": "The active runtime builds one MuJoCo sensor snapshot, sends FRD IMU plus Bar30 pressure/depth to ArduSub JSON SITL, and publishes ROS/MAVROS/DVL observation topics from the same snapshot.",
+      "evidence": [
+        {
+          "line": 25,
+          "path": "sim/current/bridge/ros2_sitl_sensor_feed.py",
+          "snippet": "Ros2SensorSnapshot("
+        },
+        {
+          "line": 33,
+          "path": "sim/current/bridge/ros2_sitl_sensor_transport.py",
+          "snippet": "pressure_pa=vertical.bar30_pressure_pa"
+        },
+        {
+          "line": 32,
+          "path": "sim/current/bridge/sitl_json_payload.py",
+          "snippet": "\"imu\": {"
+        },
+        {
+          "line": 73,
+          "path": "sim/current/bridge/ros2_publish_state.py",
+          "snippet": "static_pressure_pa = bar30_pressure_pa"
+        },
+        {
+          "line": 49,
+          "path": "sim/current/bridge/ros2_publish_core_factories.py",
+          "snippet": "(\"depth\", build_core_depth_msg)"
+        },
+        {
+          "line": 40,
+          "path": "sim/current/bridge/ros2_publish_mavros_cache_factories.py",
+          "snippet": "(\"mavros_static_pressure\", build_static_pressure_msg)"
+        },
+        {
+          "line": 22,
+          "path": "sim/current/bridge/ros2_publish_dvl_factories.py",
+          "snippet": "state.dvl_vel_dvl_frd"
+        }
+      ],
+      "official_refs": [
+        "https://ardupilot.org/dev/docs/sitl-with-JSON.html",
+        "https://bluerobotics.com/store/sensors-cameras/sensors/bar30-sensor-r1-rp/"
+      ],
+      "status": "PASS",
+      "title": "Sensor input/output surfaces share one MuJoCo snapshot contract"
+    },
+    {
+      "check_id": "active_runtime_rc_override_forward_mirror_contract",
+      "conclusion": "The active runtime forwards RC_CHANNELS_OVERRIDE as the first 18 raw channels, uses normalized axes only for local fallback, and mirrors the same raw frame to /mavros/rc/in.",
+      "evidence": [
+        {
+          "line": 9,
+          "path": "sim/current/bridge/ros2_rc_override_frame.py",
+          "snippet": "MAX_RC_OVERRIDE_CHANNELS = 18"
+        },
+        {
+          "line": 31,
+          "path": "sim/current/bridge/ros2_rc_override_forwarding.py",
+          "snippet": "send_rc_override(rc_override_forward_frame(channels))"
+        },
+        {
+          "line": 20,
+          "path": "sim/current/bridge/ros2_rc_override_callback.py",
+          "snippet": "_handle_normalized_cmd(fwd, sway, yaw, heave)"
+        },
+        {
+          "line": 18,
+          "path": "sim/current/bridge/ros2_rc_override_mirror.py",
+          "snippet": "rc_in.channels = rc_override_forward_frame(channels)"
+        }
+      ],
+      "official_refs": [
+        "https://mavlink.io/en/messages/common.html#RC_CHANNELS_OVERRIDE"
+      ],
+      "status": "PASS",
+      "title": "RC override preserves MAVLink 18-channel frame and mirrors /mavros/rc/in"
+    },
+    {
+      "check_id": "active_runtime_plant_input_raw_pwm_contract",
+      "conclusion": "Plant replay owns actuator input only for replay_rcout sources; otherwise raw SITL JSON SERVO PWM is passed through the plant-input handler before physical thruster force conversion.",
+      "evidence": [
+        {
+          "line": 7,
+          "path": "sim/current/bridge/sitl_pwm_source_policy.py",
+          "snippet": "str(source).startswith(\"replay_rcout\")"
+        },
+        {
+          "line": 25,
+          "path": "sim/current/bridge/sitl_pwm_frame_handler.py",
+          "snippet": "dispatch_pwm_callback(self, pwm_values)"
+        },
+        {
+          "line": 8,
+          "path": "sim/current/sim/runtime/thruster_actuator_runtime.py",
+          "snippet": "update_thruster_forces"
+        }
+      ],
+      "official_refs": [
+        "https://ardupilot.org/dev/docs/sitl-with-JSON.html"
+      ],
+      "status": "PASS",
+      "title": "Plant input is raw JSON SERVO or explicit replay RCOU before thruster conversion"
+    },
+    {
+      "check_id": "active_runtime_dynamic_fluidcoef_contract",
+      "conclusion": "Dynamic MuJoCo fluidcoef is profile/env opt-in, restricted to current-mode fluid geoms, configured from pattern-specific five-coefficient reference rows, and updates the five MuJoCo ellipsoid coefficients from geom-local velocity and angular-rate loads. The accepted clean baseline keeps the dynamic path disabled until a validated HAN/CFD profile enables it.",
+      "evidence": [
+        {
+          "line": 185,
+          "path": "sim/current/config/sim_profiles.json",
+          "snippet": "\"dynamic_fluidcoef\": {"
+        },
+        {
+          "line": 122,
+          "path": "sim/current/config/sim_profiles.json",
+          "snippet": "\"active\": false"
+        },
+        {
+          "line": 80,
+          "path": "sim/current/sim/runtime/model_runtime_setup.py",
+          "snippet": "fluidcoef_dynamic_setup = build_dynamic_fluidcoef_setup("
+        },
+        {
+          "line": 41,
+          "path": "sim/current/sim/physics/dynamic_fluidcoef_setup_config.py",
+          "snippet": "env_flag(\"UUV_DYNAMIC_FLUIDCOEF_ENABLE\""
+        },
+        {
+          "line": 42,
+          "path": "sim/current/sim/physics/dynamic_fluidcoef_setup_config.py",
+          "snippet": "str(fluid_model) == \"current\""
+        },
+        {
+          "line": 12,
+          "path": "sim/current/sim/physics/dynamic_fluidcoef_setup_enable.py",
+          "snippet": "dynamic_fluidcoef_enabled_after_patterns"
+        },
+        {
+          "line": 28,
+          "path": "sim/current/sim/physics/dynamic_fluidcoef_setup_rows.py",
+          "snippet": "active_geom_ids"
+        },
+        {
+          "line": 36,
+          "path": "sim/current/sim/physics/dynamic_fluidcoef_pattern_prepare.py",
+          "snippet": "reference_scale.size != 5"
+        },
+        {
+          "line": 75,
+          "path": "sim/current/sim/physics/dynamic_fluidcoef_pattern_prepare.py",
+          "snippet": "matching_fluid_geom_ids(fluid_geom_names, pattern)"
+        },
+        {
+          "line": 47,
+          "path": "sim/current/sim/physics/dynamic_fluidcoef_loads.py",
+          "snippet": "MuJoCo fluidcoef order: blunt, slender, angular, Kutta, Magnus."
+        },
+        {
+          "line": 33,
+          "path": "sim/current/sim/physics/dynamic_fluidcoef_loads.py",
+          "snippet": "axis_loads = np.clip(np.abs(rel) / ref_speed, 0.0, 1.0)"
+        },
+        {
+          "line": 39,
+          "path": "sim/current/sim/physics/dynamic_fluidcoef_runtime_config.py",
+          "snippet": "configure_dynamic_fluidcoef_update_knobs(runtime, env_float=env_float)"
+        },
+        {
+          "line": 23,
+          "path": "sim/current/sim/physics/dynamic_fluidcoef_runtime_update.py",
+          "snippet": "runtime.next_sim_t += runtime.update_dt"
+        },
+        {
+          "line": 44,
+          "path": "sim/current/sim/physics/dynamic_fluidcoef_runtime_update.py",
+          "snippet": "current_local = geom_rot.T @ runtime.water_current_world"
+        },
+        {
+          "line": 55,
+          "path": "sim/current/sim/physics/dynamic_fluidcoef_runtime_update.py",
+          "snippet": "np.clip(runtime.weights[int(geom_id), :] * coeff_loads, 0.0, 1.0)"
+        },
+        {
+          "line": 74,
+          "path": "sim/current/sim/physics/dynamic_fluidcoef_runtime_update.py",
+          "snippet": "runtime.model.geom_fluid[idx, 1:6]"
+        },
+        {
+          "line": 20,
+          "path": "sim/current/sim/physics/dynamic_fluidcoef_runtime.py",
+          "snippet": "class DynamicFluidcoefRuntime"
+        },
+        {
+          "line": 21,
+          "path": "sim/current/sim/runtime/hydrodynamics_runtime_current.py",
+          "snippet": "model.opt.wind[:] = water_current_world"
+        },
+        {
+          "line": 70,
+          "path": "sim/current/sim/runtime/underwater_wrench_runtime.py",
+          "snippet": "self.update_dynamic_fluidcoef(rel_lin_vel_body, ang_vel_body)"
+        }
+      ],
+      "official_refs": [
+        "https://mujoco.readthedocs.io/en/3.3.3/computation/fluid.html"
+      ],
+      "status": "PASS",
+      "title": "Dynamic ellipsoid fluidcoef changes are explicit velocity-load updates"
+    },
+    {
+      "check_id": "active_runtime_integrated_flow_contract",
+      "conclusion": "Each tick spins ROS/transport first, applies raw PWM or direct command targets, updates thruster force on the thruster cadence, updates dynamic fluidcoef inside the underwater wrench phase, then advances MuJoCo. This prevents sensor publishing, RC input, actuator conversion, and dynamic ellipsoid tuning from silently owning the same state surface.",
+      "evidence": [
+        {
+          "line": 26,
+          "path": "sim/current/sim/runtime/simulation_step_runtime.py",
+          "snippet": "self.spin_ros_once()"
+        },
+        {
+          "line": 42,
+          "path": "sim/current/sim/runtime/simulation_step_raw_pwm.py",
+          "snippet": "runtime.sitl_servo_runtime.apply_to_targets("
+        },
+        {
+          "line": 21,
+          "path": "sim/current/sim/runtime/simulation_step_physics.py",
+          "snippet": "owner.update_thruster_forces(thr_dt)"
+        },
+        {
+          "line": 38,
+          "path": "sim/current/sim/runtime/simulation_step_physics.py",
+          "snippet": "owner.mujoco.mj_step(owner.model, owner.data)"
+        },
+        {
+          "line": 70,
+          "path": "sim/current/sim/runtime/underwater_wrench_runtime.py",
+          "snippet": "self.update_dynamic_fluidcoef(rel_lin_vel_body, ang_vel_body)"
+        }
+      ],
+      "official_refs": [
+        "https://ardupilot.org/dev/docs/sitl-with-JSON.html",
+        "https://mujoco.readthedocs.io/en/3.3.3/computation/fluid.html"
+      ],
+      "status": "PASS",
+      "title": "Runtime order keeps RC/PWM, thrusters, fluidcoef, and MuJoCo step separated"
+    },
+    {
+      "check_id": "thruster_contract_final_pwm_not_mot_direction_again",
+      "conclusion": "ArduSub motor factors and MOT_x_DIRECTION are controller-side. The active runtime maps final PWM into MuJoCo actuator-positive force using only physical mount orientation.",
+      "evidence": [
+        {
+          "line": 156,
+          "path": "sim/ardupilot/libraries/AP_Motors/AP_Motors6DOF.cpp",
+          "snippet": "case SUB_FRAME_VECTORED_6DOF:"
+        },
+        {
+          "line": 29,
+          "path": "sim/current/physics/thruster_mapping.py",
+          "snippet": "REAL_ROBOT_MOT_DIRECTIONS"
+        },
+        {
+          "line": 59,
+          "path": "sim/current/physics/thruster_mapping.py",
+          "snippet": "ARDUSUB_VECTORED_6DOF_SERVO_SIGNS"
+        }
+      ],
+      "official_refs": [],
+      "status": "PASS",
+      "title": "Plant maps final SERVO/JSON PWM once, without reapplying MOT_x_DIRECTION"
+    },
+    {
+      "check_id": "active_runtime_thruster_conversion_contract",
+      "conclusion": "The active runtime schedules thruster updates in sim time, then converts raw normalized targets through one first-order actuator state, one T200/direct or polynomial force model, and one water-immersion scale before writing MuJoCo actuator ctrl.",
+      "evidence": [
+        {
+          "line": 34,
+          "path": "sim/current/sim/runtime/physics_step_thruster_callbacks.py",
+          "snippet": "hydro_runtime.thruster_scheduler.due"
+        },
+        {
+          "line": 111,
+          "path": "sim/current/sim/runtime/hydrodynamics_runtime_setup.py",
+          "snippet": "FixedRateSimScheduler(dt=thruster_loop_dt)"
+        },
+        {
+          "line": 16,
+          "path": "sim/current/sim/runtime/thruster_actuator_command.py",
+          "snippet": "runtime.state[name] = first_order_response("
+        },
+        {
+          "line": 48,
+          "path": "sim/current/sim/runtime/thruster_actuator_forces.py",
+          "snippet": "runtime.data.ctrl[aid] = force"
+        },
+        {
+          "line": 26,
+          "path": "sim/current/sim/runtime/thruster_actuator_wrench.py",
+          "snippet": "runtime.last_reaction_torque_world"
+        },
+        {
+          "line": 16,
+          "path": "sim/current/sim/physics/thruster_force_model.py",
+          "snippet": "def force_from_shaped_command"
+        },
+        {
+          "line": 11,
+          "path": "sim/current/sim/physics/thruster_force_performance.py",
+          "snippet": "def pwm_to_force_from_performance"
+        },
+        {
+          "line": 10,
+          "path": "sim/current/sim/physics/thruster_force_polynomial.py",
+          "snippet": "scaled_polynomial_force"
+        },
+        {
+          "line": 20,
+          "path": "sim/current/sim/runtime/thruster_actuator_immersion.py",
+          "snippet": "site_depth_m = float(runtime.water_surface_z - site_z)"
+        }
+      ],
+      "official_refs": [
+        "https://mujoco.readthedocs.io/en/3.3.3/computation/fluid.html"
+      ],
+      "status": "PASS",
+      "title": "Thruster conversion applies timing, motor lag, force curve, and immersion once"
+    },
+    {
+      "check_id": "plant_replay_gate_safe_targets",
+      "conclusion": "Use exact RCOU input, Bar30, IMU, DVL x/y, and gyro targets before HAN/CFD tuning. DVL z and local_position-style estimator surfaces are not safe primary targets yet.",
+      "evidence": [
+        {
+          "line": null,
+          "path": "UUV-HAN/outputs/<missing contract gate>",
+          "snippet": "gate summary: {}"
+        }
+      ],
+      "official_refs": [
+        "https://mujoco.readthedocs.io/en/3.3.3/computation/fluid.html"
+      ],
+      "status": "WARN",
+      "title": "Plant replay gate defines safe fitting targets"
+    },
+    {
+      "check_id": "source_contract_matrix_gate",
+      "conclusion": "The source audit includes every required contract axis before controller parity or plant replay tuning. WARN means a known firmware or replay-gate limitation is documented; FAIL means a contract axis is missing or broken.",
+      "evidence": [
+        {
+          "line": null,
+          "path": "sim/current/tools/audit_code_contract_matrix.py",
+          "snippet": "source_identity: WARN (warn:ardupilot_source_tag; warn:top_level_ardupilot_gitlink; warn:active_runtime_alias_current)"
+        },
+        {
+          "line": null,
+          "path": "sim/current/tools/audit_code_contract_matrix.py",
+          "snippet": "time_phase: PASS (ok)"
+        },
+        {
+          "line": null,
+          "path": "sim/current/tools/audit_code_contract_matrix.py",
+          "snippet": "sensor_input_output: PASS (ok)"
+        },
+        {
+          "line": null,
+          "path": "sim/current/tools/audit_code_contract_matrix.py",
+          "snippet": "rc_input_output: WARN (warn:rc_override_local_16_channel_limit)"
+        },
+        {
+          "line": null,
+          "path": "sim/current/tools/audit_code_contract_matrix.py",
+          "snippet": "controller_output_and_plant_input: PASS (ok)"
+        },
+        {
+          "line": null,
+          "path": "sim/current/tools/audit_code_contract_matrix.py",
+          "snippet": "thruster_contract: WARN (warn:plant_replay_gate_safe_targets)"
+        },
+        {
+          "line": null,
+          "path": "sim/current/tools/audit_code_contract_matrix.py",
+          "snippet": "dynamic_ellipsoid_fluid: PASS (ok)"
+        }
+      ],
+      "official_refs": [
+        "https://ardupilot.org/dev/docs/sitl-with-JSON.html",
+        "https://mavlink.io/en/messages/common.html#RC_CHANNELS_OVERRIDE",
+        "https://mavlink.io/en/messages/common.html#SERVO_OUTPUT_RAW",
+        "https://mujoco.readthedocs.io/en/3.3.3/computation/fluid.html",
+        "https://bluerobotics.com/store/sensors-cameras/sensors/bar30-sensor-r1-rp/"
+      ],
+      "status": "WARN",
+      "title": "Contract matrix covers time, sensor I/O, RC I/O, thruster, plant input, and dynamic fluidcoef"
+    }
+  ],
+  "counts": {
+    "fail": 0,
+    "pass": 16,
+    "warn": 8
+  },
+  "metadata": {
+    "active_git_branch": "",
+    "active_git_head": "",
+    "active_runtime_alias": "sim/current -> /home/robot/uuv_sim_current/sim/current",
+    "active_runtime_root": "/home/robot/uuv_sim_current/sim/current",
+    "ardupilot_describe": "ArduSub-4.1.2-dirty",
+    "ardupilot_inner_commit": "2dd0bb7d4c85ac48437f139d66df648fc0e1d4ae",
+    "ardupilot_status_short": "M ArduSub/control_althold.cpp\n M ArduSub/control_stabilize.cpp",
+    "ardupilot_top_level_gitlink": "",
+    "compat_v22_root": "/home/robot/uuv_sim_current/sim/current",
+    "contract_gate_summary": {},
+    "official_refs": {
+      "ardupilot_json_sitl": "https://ardupilot.org/dev/docs/sitl-with-JSON.html",
+      "bar30_pressure_sensor": "https://bluerobotics.com/store/sensors-cameras/sensors/bar30-sensor-r1-rp/",
+      "mavlink_rc_channels_override": "https://mavlink.io/en/messages/common.html#RC_CHANNELS_OVERRIDE",
+      "mavlink_servo_output_raw": "https://mavlink.io/en/messages/common.html#SERVO_OUTPUT_RAW",
+      "mujoco_fluid": "https://mujoco.readthedocs.io/en/3.3.3/computation/fluid.html"
+    },
+    "origin_uuv_sim_head": "",
+    "repo_root": "/home/robot/uuv_sim_current",
+    "runtime_version_file": "/home/robot/uuv_sim_current/sim/current/RUNTIME_VERSION.json"
+  }
+}

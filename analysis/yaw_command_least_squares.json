@@ -1,0 +1,25 @@
+{
+  "model": "yaw(p) ~= yaw_v4 + (p - 3.375) * (yaw_v6 - yaw_v4) / (5.4 - 3.375)",
+  "samples": 1438,
+  "sample_dt_s": 0.05,
+  "v4_acro_yaw_p": 3.375,
+  "v6_acro_yaw_p": 5.4,
+  "least_squares_acro_yaw_p": 5.046929514227143,
+  "predicted_yaw_rmse_deg": 19.837657043273328,
+  "v4_yaw_rmse_deg": 78.4089495441095,
+  "v6_yaw_rmse_deg": 25.498076568517302,
+  "v7_validated_acro_yaw_p": 5.05,
+  "v7_validated_yaw_rmse_deg": 18.769722776932767,
+  "v7_validated_final_yaw_deg": 218.6295003140189,
+  "predicted_final_yaw_deg": 209.0551918523164,
+  "real_final_yaw_deg": 225.9684050291017,
+  "svd_singular_values": [
+    29.886849277032017,
+    19.40573845149286
+  ],
+  "svd_condition_number": 1.5401036838530027,
+  "gain_time_component_correlation": -0.07954402630752067,
+  "joint_fit_acro_yaw_p": 5.0507209186007405,
+  "joint_fit_time_shift_s": -0.38233816211254706,
+  "recommendation": "Use ACRO_YAW_P=5.05 for this calibrated replay profile. The fresh nonlinear v7 replay validated the least-squares result; do not apply the fitted time shift because the replay time axis is already fixed."
+}

@@ -96,7 +96,7 @@ five candidates, accepts a candidate number or a Hz value in the terminal,
 and starts the untouched `audio_phase_estimator` at that selected frequency.
 
 ```bash
-ros2 launch kmu26_pinger_homing pinger_homing_real_interactive.launch.py \
+ros2 launch auv_pinger_homing pinger_homing_real_interactive.launch.py \
   dry_run:=true use_audio_capture:=false tank_max_depth_m:=11.0
 ```
 

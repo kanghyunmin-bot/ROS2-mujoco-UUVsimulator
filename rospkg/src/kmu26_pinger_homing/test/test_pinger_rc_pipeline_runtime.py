@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""End-to-end controller -> RC mux fail-closed runtime contract."""
+"""End-to-end controller -> direct RC output runtime contract."""
 
 from __future__ import annotations
 
@@ -106,7 +106,6 @@ def stop_process(process: subprocess.Popen[str]) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--controller", required=True)
-    parser.add_argument("--mux", required=True)
     args = parser.parse_args()
 
     controller = subprocess.Popen(
@@ -120,7 +119,7 @@ def main() -> int:
             "-p", "delta_range_topic:=/test/pipeline/delta",
             "-p", "iq_magnitude_topic:=/test/pipeline/iq",
             "-p", "direction_input_topic:=/test/pipeline/direction",
-            "-p", "rc_output_topic:=/test/pipeline/pinger",
+            "-p", "rc_output_topic:=/test/pipeline/output",
             "-p", "status_topic:=/test/pipeline/status",
             "-p", "rate_hz:=40.0",
             "-p", "tank_max_depth_m:=1.5",
@@ -134,26 +133,6 @@ def main() -> int:
         text=True,
         env=os.environ.copy(),
     )
-    mux = subprocess.Popen(
-        [
-            args.mux,
-            "--ros-args",
-            "-p", "output_topic:=/test/pipeline/output",
-            "-p", "pinger_topic:=/test/pipeline/pinger",
-            "-p", "joystick_topic:=/test/pipeline/joystick",
-            "-p", "mission_topic:=/test/pipeline/disabled_mission",
-            "-p", "vision_topic:=/test/pipeline/disabled_vision",
-            "-p", "stale_timeout_s:=0.25",
-            "-p", "rate_hz:=100.0",
-            "-p", "require_exclusive_output:=true",
-            "-p", "output_discovery_grace_s:=0.25",
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        env=os.environ.copy(),
-    )
-
     rclpy.init()
     probe = PipelineProbe()
     try:
@@ -181,13 +160,10 @@ def main() -> int:
         probe.destroy_node()
         rclpy.shutdown()
         controller_output = stop_process(controller)
-        mux_output = stop_process(mux)
-        for name, process, output in (
-            ("controller", controller, controller_output),
-            ("mux", mux, mux_output),
-        ):
-            if process.returncode not in (0, -2, -15):
-                raise RuntimeError(f"{name} exited {process.returncode}:\n{output}")
+        if controller.returncode not in (0, -2, -15):
+            raise RuntimeError(
+                f"controller exited {controller.returncode}:\n{controller_output}"
+            )
 
 
 if __name__ == "__main__":

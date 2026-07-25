@@ -1,6 +1,0 @@
-candidate,status,score,fluid_linear_scale,fluid_rot_scale,fluid_blunt_scale,fluid_slender_scale,fluid_angular_scale,fluid_kutta,fluid_magnus,profile_updates,tune_mode,command_source,out_dir
-heave_damping_p10,ok,1.0250938080270224,1.0,1.0,1.0,1.0,1.0,,,"{""surface_heave_damping"": 13.2, ""heave_damping_scale"": 4.4}",closed-loop,,document/docsource/physics_only_closedloop_micro_0_120_20260504/heave_damping_p10
-restore_softer_m10,ok,1.026512771335244,1.0,1.0,1.0,1.0,1.0,,,"{""cob_torque_scale"": 1.62, ""cob_z_offset"": 0.036}",closed-loop,,document/docsource/physics_only_closedloop_micro_0_120_20260504/restore_softer_m10
-fluid_linear_p10,ok,1.0343872837317944,1.1,1.0,1.0,1.0,1.0,,,{},closed-loop,,document/docsource/physics_only_closedloop_micro_0_120_20260504/fluid_linear_p10
-baseline,ok,1.0373836795184541,1.0,1.0,1.0,1.0,1.0,,,{},closed-loop,,document/docsource/physics_only_closedloop_micro_0_120_20260504/baseline
-fluid_rot_p10,ok,1.044949517144794,1.0,1.1,1.0,1.0,1.0,,,{},closed-loop,,document/docsource/physics_only_closedloop_micro_0_120_20260504/fluid_rot_p10

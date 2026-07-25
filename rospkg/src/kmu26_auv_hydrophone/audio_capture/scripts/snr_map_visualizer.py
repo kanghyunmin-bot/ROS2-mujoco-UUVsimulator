@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AUV 중심 rolling median SNR map과 gradient 방향을 실시간 표시한다."""
+"""V2 Estimator의 rolling SNR map과 최종 homing 방향을 실시간 표시한다."""
 
 import math
 from collections import deque
@@ -8,10 +8,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import rclpy
 from audio_common_msgs.msg import Float64Stamped
-from geometry_msgs.msg import PointStamped, Vector3Stamped
+from geometry_msgs.msg import Vector3Stamped
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
-from std_msgs.msg import Empty
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
+from std_msgs.msg import Bool, Empty, Float64, String
 
 
 class SnrMapVisualizer(Node):
@@ -49,6 +50,33 @@ class SnrMapVisualizer(Node):
         self.plot_rate_hz = max(
             0.5, float(self.declare_parameter("plot_rate_hz", 5.0).value)
         )
+        snr_topic = str(
+            self.declare_parameter(
+                "snr_topic", "/audio_frequency_detector/snr_db_stamped"
+            ).value
+        )
+        odometry_topic = str(
+            self.declare_parameter("odometry_topic", "/odometry/filtered").value
+        )
+        reset_topic = str(
+            self.declare_parameter("reset_topic", "/homing/reset_estimator").value
+        )
+        direction_topic = str(
+            self.declare_parameter("direction_topic", "/homing/direction").value
+        )
+        confidence_topic = str(
+            self.declare_parameter(
+                "confidence_topic", "/homing/snr_confidence"
+            ).value
+        )
+        estimator_ready_topic = str(
+            self.declare_parameter(
+                "estimator_ready_topic", "/homing/estimator_ready"
+            ).value
+        )
+        state_topic = str(
+            self.declare_parameter("state_topic", "/homing/control_state").value
+        )
 
         self.odom_history = deque()
         self.pending_snr = deque()
@@ -56,54 +84,58 @@ class SnrMapVisualizer(Node):
         self.current_world_xy = None
         self.current_yaw_rad = 0.0
         self.last_sample_world_xy = None
-        self.high_snr_region_world_xy = None
-        self.final_direction = None
-        self.local_direction = None
-        self.map_direction = None
-        self.final_direction_time_s = 0.0
-        self.local_direction_time_s = 0.0
-        self.map_direction_time_s = 0.0
+        self.direction = None
+        self.direction_time_s = 0.0
+        self.direction_confidence = 0.0
+        self.estimator_ready = False
+        self.control_state = "UNKNOWN"
 
         self.received_snr_count = 0
         self.received_odom_count = 0
+        self.received_direction_count = 0
         self.accepted_sample_count = 0
         self.spacing_rejected_count = 0
 
         self.snr_sub = self.create_subscription(
             Float64Stamped,
-            "/audio_phase_estimator/iq_snr_ratio_stamped",
+            snr_topic,
             self.snr_callback,
             20,
         )
         self.odom_sub = self.create_subscription(
-            Odometry, "/odometry/filtered", self.odometry_callback, 30
+            Odometry, odometry_topic, self.odometry_callback, 30
         )
         self.reset_sub = self.create_subscription(
-            Empty, "/homing/reset_estimator", self.reset_callback, 10
+            Empty, reset_topic, self.reset_callback, 10
         )
-        self.region_sub = self.create_subscription(
-            PointStamped,
-            "/homing/high_snr_region",
-            self.high_snr_region_callback,
-            10,
-        )
-        self.final_direction_sub = self.create_subscription(
+        self.direction_sub = self.create_subscription(
             Vector3Stamped,
-            "/homing/direction",
-            self.final_direction_callback,
+            direction_topic,
+            self.direction_callback,
             10,
         )
-        self.local_direction_sub = self.create_subscription(
-            Vector3Stamped,
-            "/homing/local_gradient_direction",
-            self.local_direction_callback,
+        self.confidence_sub = self.create_subscription(
+            Float64,
+            confidence_topic,
+            self.confidence_callback,
             10,
         )
-        self.map_direction_sub = self.create_subscription(
-            Vector3Stamped,
-            "/homing/map_gradient_direction",
-            self.map_direction_callback,
+        self.ready_sub = self.create_subscription(
+            Bool,
+            estimator_ready_topic,
+            self.ready_callback,
             10,
+        )
+        state_qos = QoSProfile(
+            depth=1,
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+        )
+        self.state_sub = self.create_subscription(
+            String,
+            state_topic,
+            self.state_callback,
+            state_qos,
         )
 
         self.view_radius_m = self.grid_keep_radius_m
@@ -128,7 +160,7 @@ class SnrMapVisualizer(Node):
             cmap="turbo",
         )
         self.colorbar = self.figure.colorbar(self.image, ax=self.axes)
-        self.colorbar.set_label("IQ SNR magnitude ratio (dB)")
+        self.colorbar.set_label("SNR (dB)")
         (self.vehicle_marker,) = self.axes.plot(
             [0.0],
             [0.0],
@@ -137,25 +169,9 @@ class SnrMapVisualizer(Node):
             markeredgecolor="black",
             label="AUV",
         )
-        (self.region_marker,) = self.axes.plot(
-            [],
-            [],
-            marker="x",
-            color="magenta",
-            markersize=10,
-            label="Local high SNR region",
-        )
-        self.final_arrow = self.axes.quiver(
-            [0.0], [0.0], [0.0], [0.0], color="white", scale_units="xy",
-            angles="xy", scale=1.0, width=0.010, label="Fused gradient"
-        )
-        self.local_arrow = self.axes.quiver(
-            [0.0], [0.0], [0.0], [0.0], color="lime", scale_units="xy",
-            angles="xy", scale=1.0, width=0.007, label="Local gradient"
-        )
-        self.map_arrow = self.axes.quiver(
-            [0.0], [0.0], [0.0], [0.0], color="magenta", scale_units="xy",
-            angles="xy", scale=1.0, width=0.007, label="Map gradient"
+        self.direction_arrow = self.axes.quiver(
+            [0.0], [0.0], [0.0], [0.0], color="#00ff00", scale_units="xy",
+            angles="xy", scale=1.0, width=0.010, label="V2 homing direction"
         )
         self.axes.set_xlabel("Relative odometry x (m)")
         self.axes.set_ylabel("Relative odometry y (m)")
@@ -215,18 +231,14 @@ class SnrMapVisualizer(Node):
         self.process_pending_snr()
 
     def snr_callback(self, msg: Float64Stamped) -> None:
-        """양수 magnitude SNR ratio를 dB로 바꿔 timestamp 대기열에 넣는다."""
+        """Detector가 발행한 SNR dB를 timestamp 대기열에 넣는다."""
         self.received_snr_count += 1
-        ratio = float(msg.data)
+        snr_db = float(msg.data)
         stamp_s = self.stamp_seconds(msg.header.stamp)
-        if not math.isfinite(ratio) or ratio <= 0.0 or stamp_s <= 0.0:
+        if not math.isfinite(snr_db) or stamp_s <= 0.0:
             return
         snr_db = float(
-            np.clip(
-                20.0 * math.log10(ratio),
-                self.MIN_DISPLAY_SNR_DB,
-                self.MAX_DISPLAY_SNR_DB,
-            )
+            np.clip(snr_db, self.MIN_DISPLAY_SNR_DB, self.MAX_DISPLAY_SNR_DB)
         )
         self.pending_snr.append((stamp_s, snr_db))
         self.pending_snr = deque(sorted(self.pending_snr, key=lambda item: item[0]))
@@ -238,36 +250,29 @@ class SnrMapVisualizer(Node):
         """미션 reset에 맞춰 rolling map과 방향 표시를 비운다."""
         self.clear_measurements()
 
-    def high_snr_region_callback(self, msg: PointStamped) -> None:
-        """V2 rolling grid가 계산한 local hotspot world 위치를 저장한다."""
-        self.high_snr_region_world_xy = np.array(
-            [msg.point.x, msg.point.y], dtype=float
-        )
+    def direction_callback(self, msg: Vector3Stamped) -> None:
+        """V2 Estimator가 발행한 최종 body-frame 방향을 저장한다."""
+        self.direction = np.array([msg.vector.x, msg.vector.y], dtype=float)
+        self.direction_time_s = self.now_seconds()
+        self.received_direction_count += 1
 
-    def final_direction_callback(self, msg: Vector3Stamped) -> None:
-        """융합된 body-frame gradient 방향을 저장한다."""
-        self.final_direction = np.array([msg.vector.x, msg.vector.y], dtype=float)
-        self.final_direction_time_s = self.now_seconds()
+    def confidence_callback(self, msg: Float64) -> None:
+        self.direction_confidence = float(msg.data)
 
-    def local_direction_callback(self, msg: Vector3Stamped) -> None:
-        """Local robust gradient의 body-frame 방향을 저장한다."""
-        self.local_direction = np.array([msg.vector.x, msg.vector.y], dtype=float)
-        self.local_direction_time_s = self.now_seconds()
+    def ready_callback(self, msg: Bool) -> None:
+        self.estimator_ready = bool(msg.data)
 
-    def map_direction_callback(self, msg: Vector3Stamped) -> None:
-        """Rolling map gradient의 body-frame 방향을 저장한다."""
-        self.map_direction = np.array([msg.vector.x, msg.vector.y], dtype=float)
-        self.map_direction_time_s = self.now_seconds()
+    def state_callback(self, msg: String) -> None:
+        self.control_state = msg.data
 
     def clear_measurements(self) -> None:
         """Rolling map, 대기열과 stale 방향 표시를 모두 초기화한다."""
         self.pending_snr.clear()
         self.grid.clear()
         self.last_sample_world_xy = None
-        self.high_snr_region_world_xy = None
-        self.final_direction = None
-        self.local_direction = None
-        self.map_direction = None
+        self.direction = None
+        self.direction_confidence = 0.0
+        self.estimator_ready = False
 
     def process_pending_snr(self) -> None:
         """SNR timestamp 위치를 보간해 rolling grid에 공간 표본으로 추가한다."""
@@ -398,7 +403,7 @@ class SnrMapVisualizer(Node):
         arrow.set_UVC([display_direction[0]], [display_direction[1]])
 
     def update_plot(self) -> None:
-        """AUV 중심 상대 셀 median, hotspot과 세 gradient 화살표를 갱신한다."""
+        """AUV 중심 상대 셀 median과 V2 최종 방향을 갱신한다."""
         self.display_rotation_rad = float(
             self.get_parameter("display_rotation_rad").value
         )
@@ -433,30 +438,13 @@ class SnrMapVisualizer(Node):
                 high = low + 1.0
             self.image.set_clim(float(low), float(high))
 
-        if (
-            self.current_world_xy is not None
-            and self.high_snr_region_world_xy is not None
-        ):
-            relative_region = self.rotate_for_display(
-                self.high_snr_region_world_xy - self.current_world_xy
-            )
-            self.region_marker.set_data(
-                [relative_region[0]], [relative_region[1]]
-            )
-        else:
-            self.region_marker.set_data([], [])
-
         self.update_arrow(
-            self.final_arrow, self.final_direction, self.final_direction_time_s
-        )
-        self.update_arrow(
-            self.local_arrow, self.local_direction, self.local_direction_time_s
-        )
-        self.update_arrow(
-            self.map_arrow, self.map_direction, self.map_direction_time_s
+            self.direction_arrow, self.direction, self.direction_time_s
         )
         self.axes.set_title(
-            f"AUV-centered rolling median SNR map ({len(self.grid)} cells)"
+            f"V2 rolling SNR map ({len(self.grid)} cells) | "
+            f"{self.control_state} | ready={self.estimator_ready} "
+            f"confidence={self.direction_confidence:.2f}"
         )
         self.figure.canvas.draw_idle()
         self.figure.canvas.flush_events()
@@ -468,7 +456,10 @@ class SnrMapVisualizer(Node):
             "rolling map status: "
             f"snr={self.received_snr_count} odom={self.received_odom_count} "
             f"accepted={self.accepted_sample_count} cells={len(self.grid)} "
-            f"pending={len(self.pending_snr)} spacing={self.spacing_rejected_count}"
+            f"pending={len(self.pending_snr)} spacing={self.spacing_rejected_count} "
+            f"direction={self.received_direction_count} "
+            f"ready={self.estimator_ready} confidence={self.direction_confidence:.2f} "
+            f"state={self.control_state}"
         )
 
 

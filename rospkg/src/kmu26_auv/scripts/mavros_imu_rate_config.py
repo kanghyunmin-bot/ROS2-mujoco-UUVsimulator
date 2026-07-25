@@ -11,13 +11,14 @@ from rclpy.node import Node
 
 
 class MavrosImuRateConfig(Node):
-    """Request MAVLink IMU-related message rates through MAVROS."""
+    """Request MAVLink sensor message rates through MAVROS."""
 
     MESSAGE_IDS = {
         "ATTITUDE": 30,
         "ATTITUDE_QUATERNION": 31,
         "RAW_IMU": 27,
         "HIGHRES_IMU": 105,
+        "SCALED_PRESSURE2": 137,
     }
 
     def __init__(self):
@@ -53,6 +54,7 @@ class MavrosImuRateConfig(Node):
             ("RAW_IMU", "raw_imu_rate_hz", 50.0),
             ("ATTITUDE_QUATERNION", "attitude_quaternion_rate_hz", -1.0),
             ("HIGHRES_IMU", "highres_imu_rate_hz", -1.0),
+            ("SCALED_PRESSURE2", "baro_rate_hz", 10.0),
         ]
 
         for label, param_name, default_rate in rate_params:
@@ -132,7 +134,7 @@ class MavrosImuRateConfig(Node):
                 all_ok = self._call_interval(label, message_id, rate_hz) and all_ok
 
             if all_ok:
-                self.get_logger().info("MAVROS IMU message rates configured")
+                self.get_logger().info("MAVROS sensor message rates configured")
                 return True
 
             if attempt < self.retry_count:

@@ -1,1 +1,0 @@
-"""MuJoCo plant physics boundary."""

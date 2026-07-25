@@ -1,0 +1,27 @@
+{
+  "selection_date": "2026-07-23",
+  "real_bag_window_s": [
+    28.0,
+    100.0
+  ],
+  "profile_file": "/home/robot/uuv_sim_current/analysis/sim_profiles_path_calibration_v9.json",
+  "environment": {
+    "SITL_ACRO_YAW_P": "5.225"
+  },
+  "axis_correction_matrix": null,
+  "selection_objective": "balanced yaw trend and endpoint agreement",
+  "reason": "v9 is the tested midpoint between v6 and v7. It preserves substantially better aggregate error than v6 while reducing v7's final-yaw discrepancy. v7 remains the aggregate-RMSE optimum.",
+  "validated_metrics": {
+    "xy_rmse_m": 0.6394181751261571,
+    "xy_final_error_m": 0.927557034389053,
+    "yaw_rmse_deg": 21.726646550703204,
+    "sim_final_yaw_deg": 222.4979081851057,
+    "real_final_yaw_deg": 227.02839773679418
+  },
+  "alternative_rmse_optimum": {
+    "profile_file": "/home/robot/uuv_sim_current/analysis/sim_profiles_path_calibration_v7.json",
+    "SITL_ACRO_YAW_P": "5.05",
+    "xy_rmse_m": 0.5421219595337112,
+    "yaw_rmse_deg": 18.774181652018264
+  }
+}

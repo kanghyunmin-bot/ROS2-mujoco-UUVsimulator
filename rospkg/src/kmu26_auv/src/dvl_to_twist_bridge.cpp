@@ -15,17 +15,17 @@ public:
   {
     input_topic_ = declare_parameter<std::string>("input_topic", "/dvl/data");
     output_topic_ = declare_parameter<std::string>("output_topic", "/dvl/twist");
-    output_frame_id_ = declare_parameter<std::string>("output_frame_id", "dvl");
+    output_frame_id_ = declare_parameter<std::string>("output_frame_id", "dvl_link");
     default_linear_variance_ = declare_parameter<double>("default_linear_variance", 0.02);
-    min_linear_variance_ = declare_parameter<double>("min_linear_variance", 0.005);
+    min_linear_variance_ = declare_parameter<double>("min_linear_variance", 0.0);
     max_linear_variance_ = declare_parameter<double>("max_linear_variance", 1.0);
     covariance_scale_ = declare_parameter<double>("covariance_scale", 1.0);
     max_fom_ = declare_parameter<double>("max_fom", 0.05);
     min_altitude_ = declare_parameter<double>("min_altitude", 0.05);
-    min_valid_beams_ = declare_parameter<int>("min_valid_beams", 4);
+    min_valid_beams_ = declare_parameter<int>("min_valid_beams", 3);
     use_dvl_covariance_ = declare_parameter<bool>("use_dvl_covariance", true);
     require_valid_velocity_ = declare_parameter<bool>("require_valid_velocity", true);
-    reacquire_good_samples_ = declare_parameter<int>("reacquire_good_samples", 3);
+    reacquire_good_samples_ = declare_parameter<int>("reacquire_good_samples", 1);
     reacquire_duration_s_ = declare_parameter<double>("reacquire_duration_s", 0.0);
     input_velocity_is_frd_ = declare_parameter<bool>("input_velocity_is_frd", true);
 
@@ -186,6 +186,9 @@ private:
 
   double sanitize_variance(double value) const
   {
+    if (min_linear_variance_ <= 0.0) {
+      return value;
+    }
     if (!std::isfinite(value) || value <= 0.0) {
       return min_linear_variance_;
     }

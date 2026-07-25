@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(kmu26_pinger_homing)
+project(auv_pinger_homing)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -37,10 +37,6 @@ ament_target_dependencies(
   mavros_msgs nav_msgs sensor_msgs std_msgs)
 target_link_libraries(pinger_homing_controller Eigen3::Eigen)
 
-add_executable(rc_override_mux src/rc_override_mux.cpp)
-target_compile_features(rc_override_mux PUBLIC cxx_std_17)
-ament_target_dependencies(rc_override_mux rclcpp mavros_msgs std_msgs)
-
 if(BUILD_TESTING)
   enable_testing()
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
@@ -56,14 +52,9 @@ if(BUILD_TESTING)
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/test_pinger_homing_live_runtime.py
       --controller ${CMAKE_CURRENT_SOURCE_DIR}/src/pinger_homing/single_hydrophone_homing_controller.py)
   add_test(
-    NAME rc_override_mux_runtime
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rc_override_mux_runtime.py
-      --mux $<TARGET_FILE:rc_override_mux>)
-  add_test(
     NAME pinger_rc_pipeline_runtime
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/test_pinger_rc_pipeline_runtime.py
-      --controller ${CMAKE_CURRENT_SOURCE_DIR}/src/pinger_homing/single_hydrophone_homing_controller.py
-      --mux $<TARGET_FILE:rc_override_mux>)
+      --controller ${CMAKE_CURRENT_SOURCE_DIR}/src/pinger_homing/single_hydrophone_homing_controller.py)
   add_test(
     NAME pinger_hydrophone_repository_boundary
     COMMAND ${Python3_EXECUTABLE}
@@ -80,6 +71,11 @@ if(BUILD_TESTING)
     NAME no_odom_xy_depthless_runtime
     COMMAND ${Python3_EXECUTABLE}
       ${CMAKE_CURRENT_SOURCE_DIR}/test/test_no_odom_xy_depthless_runtime.py
+      --controller $<TARGET_FILE:pinger_homing_controller>)
+  add_test(
+    NAME depth_limit_failsafe_runtime
+    COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_depth_limit_failsafe_runtime.py
       --controller $<TARGET_FILE:pinger_homing_controller>)
   add_test(
     NAME motion_response_runtime
@@ -110,11 +106,11 @@ if(BUILD_TESTING)
   set_tests_properties(single_hydrophone_homing_math PROPERTIES TIMEOUT 30)
   set_tests_properties(pinger_homing_dry_run PROPERTIES TIMEOUT 15)
   set_tests_properties(pinger_homing_live_runtime PROPERTIES TIMEOUT 15)
-  set_tests_properties(rc_override_mux_runtime PROPERTIES TIMEOUT 15)
   set_tests_properties(pinger_rc_pipeline_runtime PROPERTIES TIMEOUT 15)
   set_tests_properties(pinger_hydrophone_repository_boundary PROPERTIES TIMEOUT 10)
   set_tests_properties(pinger_real_phase_launch_contract PROPERTIES TIMEOUT 10)
   set_tests_properties(no_odom_xy_depthless_runtime PROPERTIES TIMEOUT 10)
+  set_tests_properties(depth_limit_failsafe_runtime PROPERTIES TIMEOUT 10)
   set_tests_properties(motion_response_runtime PROPERTIES TIMEOUT 10)
   set_tests_properties(adaptive_phase_innovation_runtime PROPERTIES TIMEOUT 15)
   set_tests_properties(frequency_selector_runtime PROPERTIES TIMEOUT 10)
@@ -127,7 +123,6 @@ install(TARGETS
   pinger_frequency_selector
   pinger_homing_2d_controller
   pinger_homing_controller
-  rc_override_mux
   DESTINATION lib/${PROJECT_NAME})
 
 install(PROGRAMS

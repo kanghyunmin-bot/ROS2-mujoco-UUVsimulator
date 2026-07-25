@@ -1,0 +1,907 @@
+{
+  "counts": {
+    "fail": 3,
+    "pass": 71
+  },
+  "generated_at_unix": 1784893822.7106524,
+  "results": [
+    {
+      "command": [
+        "/usr/bin/python3",
+        "-m",
+        "compileall",
+        "-q",
+        "/home/robot/uuv_sim_current/sim/current/tools",
+        "/home/robot/uuv_sim_current/sim/current/bridge",
+        "/home/robot/uuv_sim_current/sim/current/sim",
+        "/home/robot/uuv_sim_current/sim/current/physics",
+        "/home/robot/uuv_sim_current/sim/current/gui"
+      ],
+      "duration_s": 0.102,
+      "name": "compileall_core",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_rc_frame_contract.py"
+      ],
+      "duration_s": 0.2,
+      "name": "rc_frame_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "rc_frame_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_sitl_frame_contract.py"
+      ],
+      "duration_s": 0.167,
+      "name": "sitl_frame_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "sitl_frame_contract=PASS yaw_ned_for_east_deg=90.000\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_ros2_command_payload.py"
+      ],
+      "duration_s": 0.032,
+      "name": "ros2_command_payload",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "ros2_command_payload=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_bridge_live_imports.py"
+      ],
+      "duration_s": 0.475,
+      "name": "bridge_live_imports",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "bridge_live_imports=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_json_servo_receiver.py"
+      ],
+      "duration_s": 0.087,
+      "name": "json_servo_receiver",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "json_servo_receiver=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_sitl_servo_runtime.py"
+      ],
+      "duration_s": 0.176,
+      "name": "sitl_servo_runtime",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "sitl_servo_runtime=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_immediate_sensor_replay_reply.py"
+      ],
+      "duration_s": 0.175,
+      "name": "immediate_sensor_replay_reply",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "immediate_sensor_replay_reply=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_mujoco_velocity_contract.py"
+      ],
+      "duration_s": 0.334,
+      "name": "mujoco_velocity_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "PASS mujoco_velocity_contract\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_sim_clock_contract.py"
+      ],
+      "duration_s": 0.033,
+      "name": "sim_clock_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "[ros2_bridge] timestamp acquisition failed: invalid MuJoCo simulation time: -0.1\n[ros2_bridge] timestamp acquisition failed: invalid MuJoCo simulation time: inf\n[ros2_bridge] timestamp acquisition failed: invalid MuJoCo simulation time: nan\nsim_clock_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_sim_runtime_smooth_contract.py"
+      ],
+      "duration_s": 0.216,
+      "name": "sim_runtime_smooth_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "sim_runtime_smooth_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_sitl_command_link_readiness.py"
+      ],
+      "duration_s": 0.091,
+      "name": "sitl_command_link_readiness",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "sitl_command_link_readiness=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_command_latency_contract.py"
+      ],
+      "duration_s": 0.175,
+      "name": "command_latency_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "[sitl_transport] arm/disarm command queued: armed=True\ncommand_latency_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_sitl_external_nav_contract.py"
+      ],
+      "duration_s": 0.052,
+      "name": "sitl_external_nav_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "sitl_external_nav_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_mavlink_message_interval.py"
+      ],
+      "duration_s": 0.089,
+      "name": "mavlink_message_interval",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "mavlink_message_interval=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_runtime_readiness_policy.py"
+      ],
+      "duration_s": 0.057,
+      "name": "runtime_readiness_policy",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "runtime_readiness_policy=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_gui_backend_selection.py"
+      ],
+      "duration_s": 0.067,
+      "name": "gui_backend_selection",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_backend_selection=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_gui_entry_contract.py"
+      ],
+      "duration_s": 1.749,
+      "name": "gui_entry_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "pilot_mode=rc_override\ngui_entry_import=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_gui_start_contract.py"
+      ],
+      "duration_s": 0.321,
+      "name": "gui_start_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_start_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_gui_readiness_contract.py"
+      ],
+      "duration_s": 0.076,
+      "name": "gui_readiness_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_readiness_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_gui_file_persistence.py"
+      ],
+      "duration_s": 0.13,
+      "name": "gui_file_persistence",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_file_persistence=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_process_log_lifecycle.py"
+      ],
+      "duration_s": 0.042,
+      "name": "process_log_lifecycle",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "process_log_lifecycle=PASS keep=5 incremental=true\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_async_camera_snapshot_reuse.py"
+      ],
+      "duration_s": 0.364,
+      "name": "async_camera_snapshot_reuse",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "async_camera_snapshot_reuse=PASS allocations=1 pool_max=2\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_web_gui_contract.py"
+      ],
+      "duration_s": 0.148,
+      "name": "web_gui_contract",
+      "returncode": 1,
+      "status": "FAIL",
+      "stderr_tail": "Traceback (most recent call last):\n  File \"/home/robot/uuv_sim_current/sim/current/tools/check_web_gui_contract.py\", line 775, in <module>\n    raise SystemExit(main())\n  File \"/home/robot/uuv_sim_current/sim/current/tools/check_web_gui_contract.py\", line 111, in main\n    require_file(path)\n  File \"/home/robot/uuv_sim_current/sim/current/tools/check_web_gui_contract.py\", line 32, in require_file\n    raise AssertionError(f\"missing required file: {path}\")\nAssertionError: missing required file: /home/robot/uuv_sim_current/rospkg/src/kmu26_mission_fsm/CMakeLists.txt\n",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_gui_rc_fast_loop_contract.py"
+      ],
+      "duration_s": 0.086,
+      "name": "gui_rc_fast_loop_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_rc_fast_loop_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_gui_rc_replay_decode.py"
+      ],
+      "duration_s": 0.085,
+      "name": "gui_rc_replay_decode",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_rc_replay_decode=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_gui_buoy_layout_editor.py"
+      ],
+      "duration_s": 0.122,
+      "name": "gui_buoy_layout_editor",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_course_layout_editor=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_competition_course_scene.py"
+      ],
+      "duration_s": 0.073,
+      "name": "competition_course_scene",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "competition course scene OK\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/test_sim_exit_process_cleanup.py"
+      ],
+      "duration_s": 0.69,
+      "name": "sim_exit_process_cleanup",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "....\n----------------------------------------------------------------------\nRan 4 tests in 0.509s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/test_gui_depth_freshness.py"
+      ],
+      "duration_s": 0.102,
+      "name": "gui_depth_freshness",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "......\n----------------------------------------------------------------------\nRan 6 tests in 0.001s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/test_web_gui_runtime_contracts.py"
+      ],
+      "duration_s": 1.149,
+      "name": "web_gui_runtime_contracts",
+      "returncode": 1,
+      "status": "FAIL",
+      "stderr_tail": ".....E........\n======================================================================\nERROR: test_mission_selects_real_and_sim_pose_contracts (__main__.WebGuiRuntimeContractsTest)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/home/robot/uuv_sim_current/sim/current/tools/test_web_gui_runtime_contracts.py\", line 476, in test_mission_selects_real_and_sim_pose_contracts\n    real_command = \"\\n\".join(captured[-1])\nIndexError: list index out of range\n\n----------------------------------------------------------------------\nRan 14 tests in 0.573s\n\nFAILED (errors=1)\n",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/test_rc3_neutral_contract.py"
+      ],
+      "duration_s": 0.08,
+      "name": "rc3_neutral_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "test_althold_neutral_is_zero_climb_rate (__main__.Rc3NeutralContractTest) ... ok\ntest_gui_neutral_summary_matches_firmware_contract (__main__.Rc3NeutralContractTest) ... ok\ntest_stabilize_neutral_is_zero_bidirectional_thrust (__main__.Rc3NeutralContractTest) ... ok\ntest_startup_default_matches_real_vehicle_range_trim (__main__.Rc3NeutralContractTest) ... ok\n\n----------------------------------------------------------------------\nRan 4 tests in 0.001s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/test_althold_throttle_normalization.py"
+      ],
+      "duration_s": 0.071,
+      "name": "althold_throttle_normalization",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "test_althold_handoff_seeds_from_current_motor_throttle (__main__.AltHoldThrottleNormalizationTest) ... ok\ntest_level_correction_does_not_reverse_sign (__main__.AltHoldThrottleNormalizationTest) ... ok\ntest_level_vehicle_preserves_position_controller_output (__main__.AltHoldThrottleNormalizationTest) ... ok\ntest_sitl_roll_d_is_stable_without_mutating_hardware_contract (__main__.AltHoldThrottleNormalizationTest) ... ok\ntest_stable_firmware_contains_explicit_range_conversion (__main__.AltHoldThrottleNormalizationTest) ... ok\ntest_stable_firmware_does_not_mix_climb_rate_and_rc_units (__main__.AltHoldThrottleNormalizationTest) ... ok\ntest_standard_stabilize_forwards_live_roll_pitch_targets (__main__.AltHoldThrottleNormalizationTest) ... ok\ntest_vectored_climb_rate_uses_normalized_deadzone_and_speed_units (__main__.AltHoldThrottleNormalizationTest) ... ok\ntest_vectored_depth_input_preserves_pilot_failsafe (__main__.AltHoldThrottleNormalizationTest) ... ok\ntest_vertical_body_axis_pilot_input_keeps_neutral_and_endpoints (__main__.AltHoldThrottleNormalizationTest) ... ok\n\n----------------------------------------------------------------------\nRan 10 tests in 0.002s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_gui_ros_python_contract.py"
+      ],
+      "duration_s": 1.137,
+      "name": "gui_ros_python_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_ros_python_contract=PASS\npython=/usr/bin/python\nversion=3.10\nrclpy=/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_gui_arm_mode_command_contract.py"
+      ],
+      "duration_s": 0.244,
+      "name": "gui_arm_mode_command_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_arm_mode_command_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_gui_initial_depth_contract.py"
+      ],
+      "duration_s": 0.05,
+      "name": "gui_initial_depth_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_initial_depth_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_initial_depth_auto_release_contract.py"
+      ],
+      "duration_s": 0.038,
+      "name": "initial_depth_auto_release_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "initial_depth_auto_release_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_gui_pilot_toggle_contract.py"
+      ],
+      "duration_s": 0.064,
+      "name": "gui_pilot_toggle_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_pilot_toggle_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_gui_pilot_auto_enable_contract.py"
+      ],
+      "duration_s": 0.068,
+      "name": "gui_pilot_auto_enable_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "gui_pilot_auto_enable_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_dist_rc_override_path.py"
+      ],
+      "duration_s": 0.07,
+      "name": "dist_rc_override_path",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "dist_rc_override_path=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_manual_control_input_scaling.py"
+      ],
+      "duration_s": 0.176,
+      "name": "manual_control_input_scaling",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "manual_control_input_scaling=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_axis_rc_health_contract.py"
+      ],
+      "duration_s": 0.042,
+      "name": "axis_rc_health_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "axis_rc_health_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_axis_rc_latency_metrics.py"
+      ],
+      "duration_s": 0.047,
+      "name": "axis_rc_latency_metrics",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "axis_rc_latency_metrics=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_mavros_rcout_publish_policy.py"
+      ],
+      "duration_s": 0.048,
+      "name": "mavros_rcout_publish_policy",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "mavros_rcout_publish_policy=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_ros2_replay_rcout.py"
+      ],
+      "duration_s": 0.052,
+      "name": "ros2_replay_rcout",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "[ros2] replay RCOUT accepted via unit: count=1 pwm[1..8]=(1500, 1501, 1502, 1503, 1504, 1505, 1506, 1507)\n[ros2] replay RCOUT accepted via replay_rcout: count=1 pwm[1..8]=(1600, 1601, 1602, 1603, 1604, 1605, 1606, 1607)\nros2_replay_rcout=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_initial_hold_pose.py"
+      ],
+      "duration_s": 0.2,
+      "name": "initial_hold_pose",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "initial_hold_pose=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_real_start_measurements.py"
+      ],
+      "duration_s": 0.184,
+      "name": "real_start_measurements",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "real_start_measurements=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_ros2_dvl_messages.py"
+      ],
+      "duration_s": 0.172,
+      "name": "ros2_dvl_messages",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "ros2_dvl_installed_schema=NOT_RUN reason=dvl_msgs unavailable\nros2_dvl_messages=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_strict_real_pkg_surface.py"
+      ],
+      "duration_s": 0.364,
+      "name": "strict_real_pkg_surface",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "strict_real_pkg_surface=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_static_context_publisher.py"
+      ],
+      "duration_s": 0.035,
+      "name": "static_context_publisher",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "static_context_publisher=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_physics_contract_geometry.py"
+      ],
+      "duration_s": 0.234,
+      "name": "physics_contract_geometry",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "physics_contract_geometry=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_physics_contract_neutral_metrics.py"
+      ],
+      "duration_s": 0.185,
+      "name": "physics_contract_neutral_metrics",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "physics_contract_neutral_metrics=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_hydrostatic_buoyancy_points.py"
+      ],
+      "duration_s": 0.247,
+      "name": "hydrostatic_buoyancy_points",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "hydrostatic_buoyancy_points=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_model_binary_cache.py"
+      ],
+      "duration_s": 0.456,
+      "name": "model_binary_cache",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "model_binary_cache=PASS xml_loads=2 binary_loads=1 parity=exact invalidation=include\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_model_runtime_setup.py"
+      ],
+      "duration_s": 0.932,
+      "name": "model_runtime_setup",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "[runtime] MuJoCo binary cache hit: /home/robot/uuv_sim_current/sim/current/generated/model_cache/tank_current_scene.mjb fingerprint=a3e2f844929e\n[runtime] course buoy contact timestep guard: requested=0.0250s capped=0.0050s\n[runtime] MuJoCo timestep override: 0.0020s -> 0.0050s\n[physics] MuJoCo fluid geom size scale applied: pattern='fluid_*_lower_body', count=2, scale_xyz=[1. 1. 1.]\n[physics] MuJoCo fluid geom size scale applied: pattern='fluid_center_enclosure', count=1, scale_xyz=[1. 1. 1.]\n[physics] MuJoCo fluidcoef scale applied: count=3, coeff=(blunt, slender, angular, Kutta, Magnus)=[0.5 0.5 1.  0.5 0.5]\n[physics] MuJoCo fluidcoef per-geom scale applied: pattern='fluid_*_lower_body', count=2, geoms=fluid_port_lower_body, fluid_starboard_lower_body, coeff=(blunt, slender, angular, Kutta, Magnus)=[9.3   7.56  1.625 0.35  0.07 ]\n[physics] MuJoCo fluidcoef per-geom scale applied: pattern='fluid_center_enclosure', count=1, geoms=fluid_center_enclosure, coeff=(blunt, slender, angular, Kutta, Magnus)=[5.853 8.024 3.9   0.16  0.04 ]\nmodel_runtime_setup=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_course_buoy_contact_snapshot.py"
+      ],
+      "duration_s": 0.171,
+      "name": "course_buoy_contact_snapshot",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "course_buoy_contact_snapshot=PASS ncon=4 scans=1 force_calls=2 peak=10.0N\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_viewer_pause_publish_contract.py"
+      ],
+      "duration_s": 0.053,
+      "name": "viewer_pause_publish_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "viewer_pause_publish_contract=PASS paused_calls=4 publishes=3\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_physics_runtime_hydrostatic.py"
+      ],
+      "duration_s": 0.186,
+      "name": "physics_runtime_hydrostatic",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "physics_runtime_hydrostatic=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_sim_profile_safety_contract.py"
+      ],
+      "duration_s": 0.265,
+      "name": "sim_profile_safety_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "sim_profile_safety_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_underwater_flow_contract.py"
+      ],
+      "duration_s": 1.592,
+      "name": "underwater_flow_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "underwater_flow_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_vehicle_fluid_free_decay.py"
+      ],
+      "duration_s": 4.744,
+      "name": "vehicle_fluid_free_decay",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "[runtime] MuJoCo binary cache hit: /home/robot/uuv_sim_current/sim/current/generated/model_cache/tank_current_scene.mjb fingerprint=a3e2f844929e\n[runtime] MuJoCo timestep override: 0.0020s -> 0.0050s\n[physics] MuJoCo fluid geom size scale applied: pattern='fluid_*_lower_body', count=2, scale_xyz=[1. 1. 1.]\n[physics] MuJoCo fluid geom size scale applied: pattern='fluid_center_enclosure', count=1, scale_xyz=[1. 1. 1.]\n[physics] MuJoCo fluidcoef scale applied: count=3, coeff=(blunt, slender, angular, Kutta, Magnus)=[0.5 0.5 1.  0.5 0.5]\n[physics] MuJoCo fluidcoef per-geom scale applied: pattern='fluid_*_lower_body', count=2, geoms=fluid_port_lower_body, fluid_starboard_lower_body, coeff=(blunt, slender, angular, Kutta, Magnus)=[9.3   7.56  1.625 0.35  0.07 ]\n[physics] MuJoCo fluidcoef per-geom scale applied: pattern='fluid_center_enclosure', count=1, geoms=fluid_center_enclosure, coeff=(blunt, slender, angular, Kutta, Magnus)=[5.853 8.024 3.9   0.16  0.04 ]\n[model] distributed body components: 3 parts, mass 15.000 -> 15.000 kg, CoM [-0.0015  0.      0.03  ] -> [-0.0044  0.     -0.0452], inertia [0.55 0.55 0.85] -> [0.412  1.1815 0.8948] (scale=[0.65 2.5  0.9 ])\n[model]   component center_enclosure: mass=6.000kg, mass_pos=[-0.005  0.     0.01 ], buoyancy_pos=[-0.005  0.     0.06 ], share=0.200\n[model]   component port_lower_body: mass=4.500kg, mass_pos=[-0.004  0.248 -0.082], buoyancy_pos=[-0.004  0.248  0.04 ], share=0.400\n[model]   component starboard_lower_body: mass=4.500kg, mass_pos=[-0.004 -0.248 -0.082], buoyancy_pos=[-0.004 -0.248  0.04 ], share=0.400\n[runtime] MuJoCo binary cache hit: /home/robot/uuv_sim_current/sim/current/generated/model_cache/tank_current_scene.mjb fingerprint=a3e2f844929e\n[runtime] MuJoCo timestep override: 0.0020s -> 0.0050s\n[physics] MuJoCo fluid geom size scale applied: pattern='fluid_*_lower_body', count=2, scale_xyz=[1. 1. 1.]\n[physics] MuJoCo fluid geom size scale applied: pattern='fluid_center_enclosure', count=1, scale_xyz=[1. 1. 1.]\n[physics] MuJoCo fluidcoef scale applied: count=3, coeff=(blunt, slender, angular, Kutta, Magnus)=[0.5 0.5 1.  0.5 0.5]\n[physics] MuJoCo fluidcoef per-geom scale applied: pattern='fluid_*_lower_body', count=2, geoms=fluid_port_lower_body, fluid_starboard_lower_body, coeff=(blunt, slender, angular, Kutta, Magnus)=[9.3   7.56  1.625 0.35  0.07 ]\n[physics] MuJoCo fluidcoef per-geom scale applied: pattern='fluid_center_enclosure', count=1, geoms=fluid_center_enclosure, coeff=(blunt, slender, angular, Kutta, Magnus)=[5.853 8.024 3.9   0.16  0.04 ]\n[model] distributed body components: 3 parts, mass 15.000 -> 15.000 kg, CoM [-0.0015  0.      0.03  ] -> [-0.0044  0.     -0.0452], inertia [0.55 0.55 0.85] -> [0.412  1.1815 0.8948] (scale=[0.65 2.5  0.9 ])\n[model]   component center_enclosure: mass=6.000kg, mass_pos=[-0.005  0.     0.01 ], buoyancy_pos=[-0.005  0.     0.06 ], share=0.200\n[model]   component port_lower_body: mass=4.500kg, mass_pos=[-0.004  0.248 -0.082], buoyancy_pos=[-0.004  0.248  0.04 ], share=0.400\n[model]   component starboard_lower_body: mass=4.500kg, mass_pos=[-0.004 -0.248 -0.082], buoyancy_pos=[-0.004 -0.248  0.04 ], share=0.400\n[runtime] MuJoCo binary cache hit: /home/robot/uuv_sim_current/sim/current/generated/model_cache/tank_current_scene.mjb fingerprint=a3e2f844929e\n[runtime] MuJoCo timestep override: 0.0020s -> 0.0050s\n[physics] MuJoCo fluid geom size scale applied: pattern='fluid_*_lower_body', count=2, scale_xyz=[1. 1. 1.]\n[physics] MuJoCo fluid geom size scale applied: pattern='fluid_center_enclosure', count=1, scale_xyz=[1. 1. 1.]\n[physics] MuJoCo fluidcoef scale applied: count=3, coeff=(blunt, slender, angular, Kutta, Magnus)=[0.5 0.5 1.  0.5 0.5]\n[physics] MuJoCo fluidcoef per-geom scale applied: pattern='fluid_*_lower_body', count=2, geoms=fluid_port_lower_body, fluid_starboard_lower_body, coeff=(blunt, slender, angular, Kutta, Magnus)=[9.3   7.56  1.625 0.35  0.07 ]\n[physics] MuJoCo fluidcoef per-geom scale applied: pattern='fluid_center_enclosure', count=1, geoms=fluid_center_enclosure, coeff=(blunt, slender, angular, Kutta, Magnus)=[5.853 8.024 3.9   0.16  0.04 ]\n[model] distributed body components: 3 parts, mass 15.000 -> 15.000 kg, CoM [-0.0015  0.      0.03  ] -> [-0.0044  0.     -0.0452], inertia [0.55 0.55 0.85] -> [0.412  1.1815 0.8948] (scale=[0.65 2.5  0.9 ])\n[model]   component center_enclosure: mass=6.000kg, mass_pos=[-0.005  0.     0.01 ], buoyancy_pos=[-0.005  0.     0.06 ], share=0.200\n[model]   component port_lower_body: mass=4.500kg, mass_pos=[-0.004  0.248 -0.082], buoyancy_pos=[-0.004  0.248  0.04 ], share=0.400\n[model]   component starboard_lower_body: mass=4.500kg, mass_pos=[-0.004 -0.248 -0.082], buoyancy_pos=[-0.004 -0.248  0.04 ], share=0.400\nvehicle_fluid_free_decay=PASS linear_rms_early_mps=0.153191 linear_rms_late_mps=0.0180247 angular_rms_early_radps=0.169607 angular_rms_late_radps=0.0292132 energy_initial_j=1.74963 energy_peak_j=1.74963 energy_final_j=0.00320906 current_x_mps=0.2 current_y_mps=-0.1 stationary_ax_mps2=0.867408 stationary_ay_mps2=-0.61903 comoving_accel_norm_mps2=0.00126978\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_thruster_param_loader.py"
+      ],
+      "duration_s": 0.187,
+      "name": "thruster_param_loader",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "thruster_param_loader=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_thruster_performance_curves.py"
+      ],
+      "duration_s": 0.156,
+      "name": "thruster_performance_curves",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "thruster_performance_curves=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_odometry_publish_builders.py"
+      ],
+      "duration_s": 0.222,
+      "name": "odometry_publish_builders",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "odometry_publish_builders=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_ros2_ping360_messages.py"
+      ],
+      "duration_s": 0.229,
+      "name": "ros2_ping360_messages",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "ros2_ping360_messages=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_hydrophone_audio_timing.py"
+      ],
+      "duration_s": 0.496,
+      "name": "hydrophone_audio_timing",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "hydrophone_audio_timing=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_single_hydrophone_homing_math.py"
+      ],
+      "duration_s": 0.198,
+      "name": "single_hydrophone_homing_math",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "single_hydrophone_homing_math=PASS position_error=0.614m rms=0.0385m bias=+0.0012m/s\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_homing_direction_viewer.py"
+      ],
+      "duration_s": 0.463,
+      "name": "homing_direction_viewer",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "homing_direction_viewer=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_vision_buoy_pipeline.py"
+      ],
+      "duration_s": 0.439,
+      "name": "vision_buoy_pipeline",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "vision_buoy_pipeline=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_yolo_buoy_overlay_contract.py"
+      ],
+      "duration_s": 0.213,
+      "name": "yolo_buoy_overlay_contract",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "yolo_buoy_overlay_contract=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_rviz_mission_visualizer_contract.py"
+      ],
+      "duration_s": 0.122,
+      "name": "rviz_mission_visualizer_contract",
+      "returncode": 1,
+      "status": "FAIL",
+      "stderr_tail": "Traceback (most recent call last):\n  File \"/home/robot/uuv_sim_current/sim/current/tools/check_rviz_mission_visualizer_contract.py\", line 75, in <module>\n    main()\n  File \"/home/robot/uuv_sim_current/sim/current/tools/check_rviz_mission_visualizer_contract.py\", line 38, in main\n    node = read(PKG / \"src\" / \"mission_rviz_visualizer.cpp\")\n  File \"/home/robot/uuv_sim_current/sim/current/tools/check_rviz_mission_visualizer_contract.py\", line 22, in read\n    return path.read_text(encoding=\"utf-8\", errors=\"replace\")\n  File \"/usr/lib/python3.10/pathlib.py\", line 1134, in read_text\n    with self.open(mode='r', encoding=encoding, errors=errors) as f:\n  File \"/usr/lib/python3.10/pathlib.py\", line 1119, in open\n    return self._accessor.open(self, mode, buffering, encoding, errors,\nFileNotFoundError: [Errno 2] No such file or directory: '/home/robot/uuv_sim_current/rospkg/src/kmu26_auv/src/mission_rviz_visualizer.cpp'\n",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_ros2_sitl_command_override.py"
+      ],
+      "duration_s": 0.049,
+      "name": "ros2_sitl_command_override",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "[bridge] /uuv_mujoco/sitl/command_override sensor_replay_start accepted\n[bridge] /uuv_mujoco/sitl/command_override arm=True forwarded=True\n[bridge] /uuv_mujoco/sitl/command_override mode='ALT_HOLD' forwarded=True\nros2_sitl_command_override=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/check_filter_ping360_stl_io.py"
+      ],
+      "duration_s": 0.059,
+      "name": "ping360_stl_io",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "filter_ping360_stl_io=PASS\n"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/home/robot/uuv_sim_current/sim/current/tools/audit_code_contract_sources.py",
+        "--out-dir",
+        "/home/robot/uuv_sim_current/analysis/simulator_research/00_current_contract/fast_contract_sanity/source_contract_audit"
+      ],
+      "duration_s": 0.273,
+      "name": "source_contract_audit",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr_tail": "",
+      "stdout_tail": "wrote /home/robot/uuv_sim_current/analysis/simulator_research/00_current_contract/fast_contract_sanity/source_contract_audit/contract_source_audit.json\nwrote /home/robot/uuv_sim_current/analysis/simulator_research/00_current_contract/fast_contract_sanity/source_contract_audit/contract_source_audit.md\n{\"fail\": 0, \"pass\": 16, \"warn\": 8}\n"
+    }
+  ],
+  "root": "/home/robot/uuv_sim_current/sim/current"
+}

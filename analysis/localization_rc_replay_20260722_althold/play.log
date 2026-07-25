@@ -1,0 +1,16 @@
+[INFO] [1784701134.286129341] [rosbag2_storage]: Opened database '/home/robot/uuv_sim_current/localization.db3' for READ_ONLY.
+[INFO] [1784701134.412404762] [rosbag2_player]: Set rate to 1
+[INFO] [1784701134.418444479] [rosbag2_player]: Adding keyboard callbacks.
+[INFO] [1784701134.418508088] [rosbag2_player]: Press SPACE for Pause/Resume
+[INFO] [1784701134.418516946] [rosbag2_player]: Press CURSOR_RIGHT for Play Next Message
+[INFO] [1784701134.418524292] [rosbag2_player]: Press CURSOR_UP for Increase Rate 10%
+[INFO] [1784701134.418529993] [rosbag2_player]: Press CURSOR_DOWN for Decrease Rate 10%
+[INFO] [1784701134.418993795] [rosbag2_storage]: Opened database '/home/robot/uuv_sim_current/localization.db3' for READ_ONLY.
+
+closing.
+
+closing.
+
+closing.
+
+closing.

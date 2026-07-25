@@ -25,18 +25,14 @@ python3 -m pip install --user "numpy>=1.23,<2" ultralytics
 
 if python3 - <<'PY'
 import torch
-print(f"PyTorch already available: {torch.__version__}; CUDA={torch.cuda.is_available()}")
+raise SystemExit(0 if torch.cuda.is_available() else 1)
 PY
 then
-  :
-elif command -v nvidia-smi >/dev/null 2>&1; then
-  echo
-  echo "Installing CUDA PyTorch (cu124 wheel). Change the index URL if the driver needs another CUDA build."
-  python3 -m pip install --user torch torchvision --index-url https://download.pytorch.org/whl/cu124
+  echo "CUDA torch already available."
 else
   echo
-  echo "No NVIDIA GPU detected; installing CPU PyTorch."
-  python3 -m pip install --user torch torchvision --index-url https://download.pytorch.org/whl/cpu
+  echo "Installing CUDA PyTorch (cu124 wheel). Change the index URL if your driver needs another CUDA build."
+  python3 -m pip install --user torch torchvision --index-url https://download.pytorch.org/whl/cu124
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

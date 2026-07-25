@@ -331,7 +331,7 @@ def _start_real_homing_after_selection(context, *args, **kwargs):
     # in the included real launch would create a second physical device owner.
     launch_arguments["use_audio_capture"] = "false"
     launch_arguments["reference_frequency_hz"] = f"{selected_hz:.6f}"
-    package_share = Path(get_package_share_directory("kmu26_pinger_homing"))
+    package_share = Path(get_package_share_directory("auv_pinger_homing"))
     return [
         LogInfo(msg=f"[pinger] selected {selected_hz:.3f} Hz; starting C++ Phase homing."),
         IncludeLaunchDescription(
@@ -342,7 +342,7 @@ def _start_real_homing_after_selection(context, *args, **kwargs):
 
 
 def generate_launch_description() -> LaunchDescription:
-    package_share = Path(get_package_share_directory("kmu26_pinger_homing"))
+    package_share = Path(get_package_share_directory("auv_pinger_homing"))
     use_audio_capture = LaunchConfiguration("use_audio_capture")
 
     # Keep defaults exactly aligned with pinger_homing_real.launch.py so GUI
@@ -512,7 +512,7 @@ def generate_launch_description() -> LaunchDescription:
         condition=IfCondition(use_audio_capture),
     )
     selector = Node(
-        package="kmu26_pinger_homing",
+        package="auv_pinger_homing",
         executable="pinger_frequency_selector",
         name="pinger_frequency_selector",
         output="screen",

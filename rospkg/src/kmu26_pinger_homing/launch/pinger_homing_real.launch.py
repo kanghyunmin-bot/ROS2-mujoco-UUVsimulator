@@ -246,7 +246,7 @@ def generate_launch_description() -> LaunchDescription:
     )
 
     controller = Node(
-        package="kmu26_pinger_homing",
+        package="auv_pinger_homing",
         executable="pinger_homing_controller",
         name="pinger_homing_controller",
         output="screen",
@@ -308,9 +308,8 @@ def generate_launch_description() -> LaunchDescription:
             "direction_input_topic": direction_topic,
             "direction_output_topic": direction_output_topic,
             "status_topic": status_topic,
-            # The standard physical launch has exactly one RC owner: this
-            # controller publishes directly to MAVROS. The optional GUI
-            # publisher is suspended by the interactive launch beforehand.
+            # The physical controller is the direct RC publisher. Keep any
+            # other active RC command publisher stopped while homing runs.
             "rc_output_topic": rc_topic,
             "rate_hz": ParameterValue(LaunchConfiguration("rate_hz"), value_type=float),
             "rc_pwm_span": ParameterValue(LaunchConfiguration("rc_pwm_span"), value_type=float),

@@ -6,14 +6,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACKAGE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 HOST="${KMU26_WEB_GUI_HOST:-0.0.0.0}"
-PORT="${KMU26_WEB_GUI_PORT:-8080}"
+PORT="${KMU26_WEB_GUI_PORT:-8081}"
 PORT_EXPLICIT=0
 if [[ -n "${KMU26_WEB_GUI_PORT+x}" ]]; then
   PORT_EXPLICIT=1
 fi
 ROBOT_PACKAGE="${KMU26_ROBOT_PACKAGE:-hit25_auv_ros2}"
 ROBOT_LAUNCH="${KMU26_ROBOT_LAUNCH:-localization_test.launch.py}"
-PINGER_PACKAGE="${KMU26_PINGER_PACKAGE:-kmu26_pinger_homing}"
+PINGER_PACKAGE="${KMU26_PINGER_PACKAGE:-auv_pinger_homing}"
 PINGER_LAUNCH="${KMU26_PINGER_LAUNCH:-pinger_homing_real.launch.py}"
 
 source_if_exists() {

@@ -1,6 +1,6 @@
 # KMU26 AUV Control
 
-이 저장소 자체가 핑거 호밍 ROS 2 패키지 `kmu26_pinger_homing`이다. 2-D Phase/SNR 주파수
+이 저장소 자체가 핑거 호밍 ROS 2 패키지 `auv_pinger_homing`이다. 2-D Phase/SNR 주파수
 선택기, 오디오 추정기, RC 제어기는 모두 이 루트 패키지에 통합되어 있다.
 비전 미션 FSM은 작업공간의 `archive/kmu26_vision_mission_fsm`으로 분리되어
 기본 빌드와 실행에 포함되지 않는다.
@@ -16,7 +16,7 @@ NUC의 최종 소스 경계는 다음과 같다.
 
 ```text
 ~/auv_ws/src/
-├── kmu26_pinger_homing/            # 이 Git 저장소 = ROS package root
+├── auv_pinger_homing/            # 이 Git 저장소 = ROS package root
 │   ├── package.xml
 │   ├── launch/
 │   └── src/
@@ -34,25 +34,25 @@ NUC의 최종 소스 경계는 다음과 같다.
 ```bash
 mkdir -p ~/auv_ws/src
 cd ~/auv_ws/src
-git clone --branch main https://github.com/2026-kmu-underwater-robot/kmu26_auv_pinger_homing.git kmu26_pinger_homing
+git clone --branch main https://github.com/2026-kmu-underwater-robot/kmu26_auv_pinger_homing.git auv_pinger_homing
 cd ~/auv_ws
-vcs import src < src/kmu26_pinger_homing/hydrophone.repos
+vcs import src < src/auv_pinger_homing/hydrophone.repos
 cd ~/auv_ws/src
 git clone https://github.com/2026-kmu-underwater-robot/kmu26_auv.git
 cd ~/auv_ws
 rosdep install --from-paths src --ignore-src -r -y
 colcon build --symlink-install \
-  --packages-up-to kmu26_pinger_homing
+  --packages-up-to auv_pinger_homing
 source install/setup.bash
 ```
 
 이제 clone 직후 실제 패키지 경로는
-`~/auv_ws/src/kmu26_pinger_homing` 하나뿐이다. 예전의
-`~/auv_ws/src/kmu26_pinger_homing/kmu26_pinger_homing` 경로는 사용하지 않는다.
+`~/auv_ws/src/auv_pinger_homing` 하나뿐이다. 예전의
+`~/auv_ws/src/auv_pinger_homing/auv_pinger_homing` 경로는 사용하지 않는다.
 
 세부 Phase/FFT 판정 기준은 [PINGER_HOMING.md](PINGER_HOMING.md)를 참고한다.
 
-`hit25_auv_ros2`가 사용하는 팀 `dvl_msgs` 패키지도 실물 ROS 작업공간에 있어야 한다.
+`auv`가 사용하는 팀 `auv_dvl_a50_msg` 패키지도 실물 ROS 작업공간에 있어야 한다.
 
 ## 실물 핑거 호밍 실행
 
@@ -61,8 +61,10 @@ source install/setup.bash
 후보 번호 또는 정확한 주파수를 선택하면 **C++ Phase 제어기**를
 시작한다. 하이드로폰 신호처리 알고리즘 자체는 이 저장소에서 수정하지 않는다.
 실물 기본값은 신뢰 가능한 `/odometry/filtered` 좌표와 검증된 레거시 probe 궤적으로
-핑거 위치를 robust fitting한다. 제어기가 `/mavros/rc/override`를 직접 단독 발행하므로
-이 launch와 동시에 다른 RC publisher를 실행하지 않는다.
+핑거 위치를 robust fitting한다. localization이 없으면 `no_odom_phase`의 X/Y ABBA로
+방위를 추정한다. pinger controller가 `/mavros/rc/override`에 직접 발행하며 별도의
+RC mux를 사용하지 않는다. 호밍 중에는 다른 노드가 같은 토픽에 활성 명령을
+발행하지 않게 한다.
 
 ### 시작 전 확인
 
@@ -71,7 +73,14 @@ source install/setup.bash
    모드를 바꾸지 않는다.
 2. 하이드로폰 스택이 `/audio`를 단독 publish하는지 확인한다. 이미 별도
    `audio_capture`를 실행 중이면 `use_audio_capture:=false`를 유지한다.
-3. 처음에는 반드시 `dry_run:=true`로 FFT 후보, `/pinger_homing/status`, IMU,
+3. 호밍 중 pinger가 유일한 활성 RC command publisher가 되도록 `joy2mavros`를 끈다.
+
+```bash
+ros2 launch auv rov_start.launch.py \
+  use_joy2mavros:=false
+```
+
+4. 처음에는 반드시 `dry_run:=true`로 FFT 후보, `/pinger_homing/status`, IMU,
    audio 입력부터 확인한다. 추진이 가능한 수조·테더·비상정지 조건이 확보된 뒤에만
    `dry_run:=false`로 바꾼다.
 
@@ -91,8 +100,9 @@ ros2 topic echo /mavros/imu/data --once
 수조이며, 실물 시간 기준이므로 `use_sim_time`은 지정하지 않는다(`false` 기본값).
 
 ```bash
-ros2 launch kmu26_pinger_homing pinger_homing_real_interactive.launch.py \
+ros2 launch auv_pinger_homing pinger_homing_real_interactive.launch.py \
   dry_run:=true \
+  navigation_mode:=no_odom_phase \
   use_audio_capture:=false \
   tank_max_depth_m:=2.0
 ```
@@ -105,11 +115,12 @@ RC 출력은 neutral이다.
 
 MAVROS가 `connected=true`, `armed=true`, `mode=ALT_HOLD`임을 확인한 뒤 같은
 명령에서 `dry_run:=false`만 바꾼다. 시작 직후 C++ 제어기가
-`/mavros/rc/override`를 직접 발행한다.
+`/mavros/rc/override`에 직접 ABBA 명령을 발행한다.
 
 ```bash
-ros2 launch kmu26_pinger_homing pinger_homing_real_interactive.launch.py \
+ros2 launch auv_pinger_homing pinger_homing_real_interactive.launch.py \
   dry_run:=false \
+  navigation_mode:=no_odom_phase \
   use_audio_capture:=false \
   tank_max_depth_m:=2.0 \
   probe_pwm_delta:=20 \
@@ -198,7 +209,7 @@ unstamped PCM과 odometry를 모두 수신 시각으로 결합하므로, 시뮬�
 ## test-tank Phase/SNR 핑거 호밍
 
 ```bash
-ros2 run kmu26_pinger_homing start_pinger_homing_test_tank.sh \
+ros2 run auv_pinger_homing start_pinger_homing_test_tank.sh \
   mode:=ALT_HOLD estimator_mode:=phase \
   rc_output_topic:=/mavros/rc/override \
   auto_select_top:=false dry_run:=false

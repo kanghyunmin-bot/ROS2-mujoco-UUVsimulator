@@ -1,0 +1,83 @@
+{
+  "ownership": {
+    "publisher_count_during_replay": 1,
+    "override_messages": 3345,
+    "override_classes": {
+      "ch3_only_neutral": 21,
+      "joy_full_frame": 3324
+    }
+  },
+  "transport": {
+    "rc_in_samples_in_window": 20555,
+    "rc_out_samples_in_window": 144,
+    "rc_in_vs_latest_override": {
+      "channel_3": {
+        "samples": 20555,
+        "exact_fraction": 0.9978107516419362,
+        "mae_pwm": 0.03483337387496959,
+        "correlation": 0.9966511124586215
+      },
+      "channel_4": {
+        "samples": 20375,
+        "exact_fraction": 0.97079754601227,
+        "mae_pwm": 0.48579141104294477,
+        "correlation": 0.9990872755395834
+      },
+      "channel_5": {
+        "samples": 20375,
+        "exact_fraction": 0.9742822085889571,
+        "mae_pwm": 0.13869938650306748,
+        "correlation": 0.9997620966383598
+      }
+    }
+  },
+  "path": {
+    "source_window_s": [
+      28.0,
+      100.0
+    ],
+    "real_source": "localization.db3:/localization/path latest pose per message",
+    "sim_source": "sim_result:/odometry/filtered during RC playback",
+    "alignment": "initial xyz translation and initial yaw rotation only; no scale or fitted registration",
+    "rc_override_messages": 3345,
+    "rc_wall_arrival_span_s": 180.10318477200002,
+    "sim_odom_header_span_s": 71.918,
+    "real_samples": 2160,
+    "sim_samples": 3917,
+    "sim_all_states_armed": true,
+    "sim_state_modes": [
+      "ALT_HOLD"
+    ],
+    "real_end_forward_lateral_z_m": [
+      0.7653871653688175,
+      0.9204324890724017,
+      -0.21041261329571354
+    ],
+    "sim_end_forward_lateral_z_m": [
+      -1.205827929967411,
+      9.677121819992585,
+      -0.11173089927425689
+    ],
+    "real_xy_path_length_m": 19.12169281012793,
+    "sim_xy_path_length_m": 37.074054127632515,
+    "xy_rmse_m": 6.092026364610056,
+    "xy_final_error_m": 8.957660537475343,
+    "z_rmse_m": 0.1569790506580107,
+    "yaw_rmse_deg": 84.12989518256408,
+    "real_final_relative_yaw_deg": 227.02839773679418,
+    "sim_final_relative_yaw_deg": 133.03363330572358
+  },
+  "repeatability_vs_previous_single_owner": {
+    "xy_rmse_change_m": -0.2470672075328606,
+    "final_xy_error_change_m": -0.5101058044225262,
+    "sim_path_length_change_m": -0.4359957783980377,
+    "yaw_rmse_change_deg": -0.42035523312493694
+  },
+  "diagnostic_fits_not_used_for_reported_alignment": {
+    "best_xy_spatial_scale_without_rotation": 0.2243657749956826,
+    "scaled_xy_rmse_m": 1.9154356256061202,
+    "best_similarity_scale": 0.2313590923380921,
+    "best_similarity_rotation_deg": -14.123295027799431,
+    "similarity_xy_rmse_m": 1.8686155794620036
+  }
+}

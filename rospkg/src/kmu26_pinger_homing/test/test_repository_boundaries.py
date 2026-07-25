@@ -17,7 +17,7 @@ EXPECTED_HYDROPHONE_URL = (
 def main() -> int:
     package_root = Path(__file__).resolve().parents[1]
     # The Git root is intentionally the ROS package root.  Keeping this
-    # identical avoids a clone/src/kmu26_pinger_homing/kmu26_pinger_homing
+    # identical avoids a clone/src/auv_pinger_homing/auv_pinger_homing
     # double directory while retaining the external hydrophone boundary.
     manifest_path = package_root / "hydrophone.repos"
 

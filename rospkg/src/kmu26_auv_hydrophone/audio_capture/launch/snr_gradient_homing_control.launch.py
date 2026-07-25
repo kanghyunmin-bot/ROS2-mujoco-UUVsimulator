@@ -21,21 +21,29 @@ def generate_launch_description():
     arena_start_corner = LaunchConfiguration("arena_start_corner")
     arena_yaw_rad = LaunchConfiguration("arena_yaw_rad")
     arena_start_inset_m = LaunchConfiguration("arena_start_inset_m")
-    map_cell_size_m = LaunchConfiguration("map_cell_size_m")
-    local_radius_m = LaunchConfiguration("local_radius_m")
-    map_radius_m = LaunchConfiguration("map_radius_m")
-    control_enabled = LaunchConfiguration("control_enabled")
-    controller_dry_run = LaunchConfiguration("controller_dry_run")
-    geofence_margin_m = LaunchConfiguration("geofence_margin_m")
-    initial_diagonal_distance_m = LaunchConfiguration("initial_diagonal_distance_m")
+    stuck_progress_threshold_mps = LaunchConfiguration("stuck_progress_threshold_mps")
+    stuck_yaw_rate_threshold_rps = LaunchConfiguration(
+        "stuck_yaw_rate_threshold_rps"
+    )
+    collision_hold_s = LaunchConfiguration("collision_hold_s")
+    wall_reverse_command = LaunchConfiguration("wall_reverse_command")
+    wall_reverse_duration_s = LaunchConfiguration("wall_reverse_duration_s")
+    wall_escape_forward_command = LaunchConfiguration("wall_escape_forward_command")
+    wall_escape_duration_s = LaunchConfiguration("wall_escape_duration_s")
+    collision_rearm_timeout_s = LaunchConfiguration("collision_rearm_timeout_s")
+    wall_homing_resume_grace_s = LaunchConfiguration("wall_homing_resume_grace_s")
     initial_diagonal_command = LaunchConfiguration("initial_diagonal_command")
-    initial_diagonal_timeout_s = LaunchConfiguration("initial_diagonal_timeout_s")
+    initial_diagonal_duration_s = LaunchConfiguration("initial_diagonal_duration_s")
     vertical_search_distance_m = LaunchConfiguration("vertical_search_distance_m")
     vertical_search_min_z_m = LaunchConfiguration("vertical_search_min_z_m")
     vertical_search_max_z_m = LaunchConfiguration("vertical_search_max_z_m")
     search_forward = LaunchConfiguration("search_forward")
     search_yaw = LaunchConfiguration("search_yaw")
     search_turn_sign = LaunchConfiguration("search_turn_sign")
+    forward_fast = LaunchConfiguration("forward_fast")
+    forward_mid = LaunchConfiguration("forward_mid")
+    forward_slow = LaunchConfiguration("forward_slow")
+    confidence_speed_floor = LaunchConfiguration("confidence_speed_floor")
     invert_rc_yaw = LaunchConfiguration("invert_rc_yaw")
     invert_rc_lateral = LaunchConfiguration("invert_rc_lateral")
     rc_override_topic = LaunchConfiguration("rc_override_topic")
@@ -54,7 +62,7 @@ def generate_launch_description():
         DeclareLaunchArgument("depth_topic", default_value="/depth/pose"),
         DeclareLaunchArgument(
             "reference_frequency_hz",
-            default_value="21164.0",
+            default_value="21134.0",
             description="예상 pinger 주파수(Hz).",
         ),
         DeclareLaunchArgument(
@@ -74,13 +82,16 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             "arena_start_corner",
-            default_value="bottom_left",
+            default_value="bottom_right",
             description="AUV 시작 모서리: bottom_left 또는 bottom_right.",
         ),
         DeclareLaunchArgument(
             "arena_yaw_rad",
             default_value="0.0",
-            description="odom 좌표계에서 경기장 왼쪽→오른쪽 축의 yaw(rad).",
+            description=(
+                "수조 가로축이 위치 지도(odom) 기준으로 얼마나 돌아가 있는지(rad). "
+                "초기 대각선·벽 회복 접선 방향을 맞출 때 쓴다."
+            ),
         ),
         DeclareLaunchArgument(
             "arena_start_inset_m",
@@ -88,49 +99,59 @@ def generate_launch_description():
             description="첫 odometry 위치를 경기장 모서리에서 안쪽으로 둘 거리(m).",
         ),
         DeclareLaunchArgument(
-            "map_cell_size_m",
-            default_value="0.12",
-            description="정재파의 수 cm 공간 페이딩을 median 처리할 격자 셀 크기(m).",
+            "stuck_progress_threshold_mps",
+            default_value="0.03",
+            description="충돌로 판단할 명령 방향 투영 선속도 상한(m/s).",
         ),
         DeclareLaunchArgument(
-            "local_radius_m",
-            default_value="0.75",
-            description="원시 SNR robust local gradient의 공간 반경(m).",
+            "stuck_yaw_rate_threshold_rps",
+            default_value="0.05",
+            description="회전 명령에 정상 반응했다고 볼 yaw rate 하한(rad/s).",
         ),
         DeclareLaunchArgument(
-            "map_radius_m",
+            "collision_hold_s",
+            default_value="3.0",
+            description="충돌 상태가 연속으로 유지되어야 하는 시간(초).",
+        ),
+        DeclareLaunchArgument(
+            "wall_reverse_command",
+            default_value="0.25",
+            description="WALL_RECOVERY 후진 명령 크기(0~1).",
+        ),
+        DeclareLaunchArgument(
+            "wall_reverse_duration_s",
             default_value="2.0",
-            description="격자 median SNR map gradient의 공간 반경(m).",
+            description="WALL_RECOVERY 후진 유지 시간(초).",
         ),
         DeclareLaunchArgument(
-            "control_enabled",
-            default_value="false",
-            description="true이면 모서리 이탈 대각선 이동 후 초기 원형 탐색을 시작한다.",
+            "wall_escape_forward_command",
+            default_value="0.25",
+            description="회피 방향으로 벽에서 이탈할 전진 명령 크기(0~1).",
         ),
         DeclareLaunchArgument(
-            "controller_dry_run",
-            default_value="true",
-            description="true이면 preview만 발행하고 실제 MAVROS RC override는 발행하지 않는다.",
+            "wall_escape_duration_s",
+            default_value="1.5",
+            description="회피 방향 전진 유지 시간(초).",
         ),
         DeclareLaunchArgument(
-            "geofence_margin_m",
-            default_value="0.20",
-            description="수조/경기장 벽 안쪽에서 수평 이동을 clamp할 안전 여유 거리(m).",
+            "collision_rearm_timeout_s",
+            default_value="1.5",
+            description="복귀 후 충돌 판정을 다시 활성화할 최대 대기 시간(초).",
         ),
         DeclareLaunchArgument(
-            "initial_diagonal_distance_m",
-            default_value="0.7",
-            description="모서리에서 원형 탐색 시작점까지 대각선으로 이동할 odometry 거리(m).",
+            "wall_homing_resume_grace_s",
+            default_value="2.0",
+            description="벽 회피 후 충돌 당시 homing 방향을 유지할 시간(초).",
         ),
         DeclareLaunchArgument(
             "initial_diagonal_command",
-            default_value="0.30",
+            default_value="0.40",
             description="초기 대각선 구간의 정규화된 수평 이동 명령(0~1).",
         ),
         DeclareLaunchArgument(
-            "initial_diagonal_timeout_s",
+            "initial_diagonal_duration_s",
             default_value="10.0",
-            description="목표 거리에 도달하지 못하면 제어를 해제하는 안전 timeout(초).",
+            description="첫 odometry 수신 후 초기 대각선 open-loop 명령을 유지할 시간(초).",
         ),
         DeclareLaunchArgument(
             "vertical_search_distance_m",
@@ -150,6 +171,10 @@ def generate_launch_description():
         DeclareLaunchArgument("search_forward", default_value="0.30"),
         DeclareLaunchArgument("search_yaw", default_value="0.30"),
         DeclareLaunchArgument("search_turn_sign", default_value="1.0"),
+        DeclareLaunchArgument("forward_fast", default_value="0.70"),
+        DeclareLaunchArgument("forward_mid", default_value="0.45"),
+        DeclareLaunchArgument("forward_slow", default_value="0.20"),
+        DeclareLaunchArgument("confidence_speed_floor", default_value="0.40"),
         DeclareLaunchArgument("invert_rc_yaw", default_value="true"),
         DeclareLaunchArgument("invert_rc_lateral", default_value="false"),
         DeclareLaunchArgument("rc_override_topic", default_value="/mavros/rc/override"),
@@ -164,28 +189,11 @@ def generate_launch_description():
         composable_node_descriptions=[
             ComposableNode(
                 package="audio_capture",
-                plugin="audio_capture::AudioPhaseEstimatorNode",
-                name="audio_phase_estimator",
+                plugin="audio_capture::AudioFrequencyDetectorNode",
+                name="audio_frequency_detector",
                 parameters=[
                     {
                         "use_sim_time": ParameterValue(use_sim_time, value_type=bool),
-                        "audio_topic": audio_topic,
-                        "audio_stamped_topic": audio_stamped_topic,
-                        "use_stamped_audio": ParameterValue(
-                            use_stamped_audio, value_type=bool
-                        ),
-                        "odometry_topic": odometry_topic,
-                        "depth_topic": depth_topic,
-                        "reference_frequency_hz": ParameterValue(
-                            reference_frequency_hz, value_type=float
-                        ),
-                        "initial_demodulation_frequency_hz": ParameterValue(
-                            reference_frequency_hz, value_type=float
-                        ),
-                        "audio_input_latency_s": ParameterValue(
-                            audio_input_latency_s, value_type=float
-                        ),
-                        "publish_homing_direction": False,
                     }
                 ],
             ),
@@ -196,15 +204,6 @@ def generate_launch_description():
                 parameters=[
                     {
                         "use_sim_time": ParameterValue(use_sim_time, value_type=bool),
-                        "map_cell_size_m": ParameterValue(
-                            map_cell_size_m, value_type=float
-                        ),
-                        "local_radius_m": ParameterValue(
-                            local_radius_m, value_type=float
-                        ),
-                        "map_radius_m": ParameterValue(
-                            map_radius_m, value_type=float
-                        ),
                     }
                 ],
             ),
@@ -215,8 +214,6 @@ def generate_launch_description():
                 parameters=[
                     {
                         "use_sim_time": ParameterValue(use_sim_time, value_type=bool),
-                        "control_enabled": ParameterValue(control_enabled, value_type=bool),
-                        "dry_run": ParameterValue(controller_dry_run, value_type=bool),
                         "odometry_topic": odometry_topic,
                         "arena_width_m": ParameterValue(
                             arena_width_m, value_type=float
@@ -231,17 +228,38 @@ def generate_launch_description():
                         "arena_start_inset_m": ParameterValue(
                             arena_start_inset_m, value_type=float
                         ),
-                        "geofence_margin_m": ParameterValue(
-                            geofence_margin_m, value_type=float
+                        "stuck_progress_threshold_mps": ParameterValue(
+                            stuck_progress_threshold_mps, value_type=float
                         ),
-                        "initial_diagonal_distance_m": ParameterValue(
-                            initial_diagonal_distance_m, value_type=float
+                        "stuck_yaw_rate_threshold_rps": ParameterValue(
+                            stuck_yaw_rate_threshold_rps, value_type=float
+                        ),
+                        "collision_hold_s": ParameterValue(
+                            collision_hold_s, value_type=float
+                        ),
+                        "wall_reverse_command": ParameterValue(
+                            wall_reverse_command, value_type=float
+                        ),
+                        "wall_reverse_duration_s": ParameterValue(
+                            wall_reverse_duration_s, value_type=float
+                        ),
+                        "wall_escape_forward_command": ParameterValue(
+                            wall_escape_forward_command, value_type=float
+                        ),
+                        "wall_escape_duration_s": ParameterValue(
+                            wall_escape_duration_s, value_type=float
+                        ),
+                        "collision_rearm_timeout_s": ParameterValue(
+                            collision_rearm_timeout_s, value_type=float
+                        ),
+                        "wall_homing_resume_grace_s": ParameterValue(
+                            wall_homing_resume_grace_s, value_type=float
                         ),
                         "initial_diagonal_command": ParameterValue(
                             initial_diagonal_command, value_type=float
                         ),
-                        "initial_diagonal_timeout_s": ParameterValue(
-                            initial_diagonal_timeout_s, value_type=float
+                        "initial_diagonal_duration_s": ParameterValue(
+                            initial_diagonal_duration_s, value_type=float
                         ),
                         "vertical_search_distance_m": ParameterValue(
                             vertical_search_distance_m, value_type=float
@@ -256,6 +274,12 @@ def generate_launch_description():
                         "search_forward": ParameterValue(search_forward, value_type=float),
                         "search_yaw": ParameterValue(search_yaw, value_type=float),
                         "search_turn_sign": ParameterValue(search_turn_sign, value_type=float),
+                        "forward_fast": ParameterValue(forward_fast, value_type=float),
+                        "forward_mid": ParameterValue(forward_mid, value_type=float),
+                        "forward_slow": ParameterValue(forward_slow, value_type=float),
+                        "confidence_speed_floor": ParameterValue(
+                            confidence_speed_floor, value_type=float
+                        ),
                         "invert_rc_yaw": ParameterValue(invert_rc_yaw, value_type=bool),
                         "invert_rc_lateral": ParameterValue(
                             invert_rc_lateral, value_type=bool

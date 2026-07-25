@@ -15,6 +15,8 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <audio_common_msgs/msg/audio_data.hpp>
+#include <audio_common_msgs/msg/audio_data_stamped.hpp>
+#include <audio_common_msgs/msg/float64_stamped.hpp>
 #include <rclcpp_components/register_node_macro.hpp>
 #include <std_msgs/msg/float64.hpp>
 #include <unsupported/Eigen/FFT>
@@ -27,13 +29,17 @@ class AudioFrequencyDetectorNode : public rclcpp::Node
     public:
     explicit AudioFrequencyDetectorNode(const rclcpp::NodeOptions & options = rclcpp::NodeOptions()) 
     : Node("audio_frequency_detector", options) {
-        // /audio/audio 토픽에서 audio_common_msgs/msg/AudioData 메시지를 받는다.
-        audio_sub_ = this->create_subscription<audio_common_msgs::msg::AudioData>(
-        "/audio_boosted",
+        // V2의 SNR-odometry 동기화를 위해 캡처 시작 시각이 포함된 오디오를 받는다.
+        audio_stamped_sub_ =
+            this->create_subscription<audio_common_msgs::msg::AudioDataStamped>(
+        "/audio_stamped",
         rclcpp::QoS(10),
-        std::bind(&AudioFrequencyDetectorNode::audio_callback, this, std::placeholders::_1));
+        std::bind(&AudioFrequencyDetectorNode::audio_stamped_callback, this, std::placeholders::_1));
         //std::placeholders::_1: 콜백에 들어갈 첫 번째 인자를 의미 
         locked_frequency_pub_ = this->create_publisher<std_msgs::msg::Float64>("/audio/locked_frequency_hz", 10);
+        snr_db_pub_ =
+            this->create_publisher<audio_common_msgs::msg::Float64Stamped>(
+            "/audio_frequency_detector/snr_db_stamped", 20);
 
         // 분석 thread는 생성자 마지막에서 한 번만 시작한다.
         worker_thread_ = std::thread(&AudioFrequencyDetectorNode::analysis_loop, this);
@@ -53,10 +59,32 @@ class AudioFrequencyDetectorNode : public rclcpp::Node
     }
 
     private:
-    void audio_callback(const audio_common_msgs::msg::AudioData::ConstSharedPtr msg){
+    void audio_stamped_callback(
+        const audio_common_msgs::msg::AudioDataStamped::ConstSharedPtr msg)
+    {
+        rclcpp::Time buffer_start_stamp(msg->header.stamp);
+        if (buffer_start_stamp.nanoseconds() <= 0) {
+            buffer_start_stamp = now() - rclcpp::Duration::from_seconds(
+                static_cast<double>(msg->audio.data.size() / frame_size_) /
+                static_cast<double>(sampling_rate_));
+        }
         {
             std::lock_guard<std::mutex> lock(buffer_mutex_);    //뮤텍스락을 잡고
-            append_samples_from_pcm(msg->data);    //오디오 데이터를 버퍼에 추가
+            if (!sample_buffer_.empty()) {
+                const rclcpp::Time expected_stamp =
+                    sample_buffer_start_stamp_ + rclcpp::Duration::from_seconds(
+                    static_cast<double>(sample_buffer_.size()) /
+                    static_cast<double>(sampling_rate_));
+                if (std::abs((buffer_start_stamp - expected_stamp).seconds()) > 0.02) {
+                    sample_buffer_.clear();
+                    candidate_frequencies_hz_.clear();
+                    locked_on_ = false;
+                }
+            }
+            if (sample_buffer_.empty()) {
+                sample_buffer_start_stamp_ = buffer_start_stamp;
+            }
+            append_samples_from_pcm(msg->audio.data);    //오디오 데이터를 버퍼에 추가
         }
 
         // 분석 thread가 기다리고 있을 수 있으니 새 샘플이 들어왔다고 알려준다.
@@ -67,6 +95,7 @@ class AudioFrequencyDetectorNode : public rclcpp::Node
     {
         while (rclcpp::ok()) {
             std::vector<double> window;
+            rclcpp::Time window_center_stamp(0, 0, RCL_ROS_TIME);
 
             {
                 // Entry section
@@ -85,16 +114,27 @@ class AudioFrequencyDetectorNode : public rclcpp::Node
                 // Critical section
                 // mutex를 오래 잡지 않기 위해, 분석할 구간만 복사하고 바로 버퍼를 정리.
                 window.assign(sample_buffer_.begin(), sample_buffer_.begin() + window_size_);
+                window_center_stamp =
+                    sample_buffer_start_stamp_ + rclcpp::Duration::from_seconds(
+                    0.5 * static_cast<double>(window_size_) /
+                    static_cast<double>(sampling_rate_));
                 sample_buffer_.erase(sample_buffer_.begin(), sample_buffer_.begin() + hop_size_);
+                sample_buffer_start_stamp_ =
+                    sample_buffer_start_stamp_ + rclcpp::Duration::from_seconds(
+                    static_cast<double>(hop_size_) /
+                    static_cast<double>(sampling_rate_));
             }  // Exit section: 이 블록을 벗어나면 unique_lock 소멸자가 mutex를 자동으로 unlock함.
 
             // Remainder section: FFT/RMS 같은 실제 분석은 공유 버퍼를 안 쓰므로 lock 밖에서 수행함.
-            analyze_window(window);
+            analyze_window(window, window_center_stamp);
         }
     }
 
     //FFT 분석 함수
-    void analyze_window(const std::vector<double> & window) {
+    void analyze_window(
+        const std::vector<double> & window,
+        const rclcpp::Time & window_center_stamp)
+    {
         std::vector<double> fft_input(fft_size_, 0.0); // window 뒤를 0으로 채워 FFT bin 간격을 촘촘하게 만든다.
         const double hann_denominator = static_cast<double>(window.size() - 1); // N-1
 
@@ -164,6 +204,11 @@ class AudioFrequencyDetectorNode : public rclcpp::Node
             frequency_resolution_hz);
         const double snr_db = 20.0 * std::log10((peak_magnitude + epsilon_) / (noise_floor + epsilon_));   //SNR 계산
         const bool snr_detected = snr_db >= min_snr_db_; //SNR이 최소 SNR 이상이면 true, 아니면 false
+
+        audio_common_msgs::msg::Float64Stamped snr_msg;
+        snr_msg.header.stamp = window_center_stamp;
+        snr_msg.data = snr_db;
+        snr_db_pub_->publish(snr_msg);
 
         update_lock_state(snr_detected, peak_frequency_hz); 
         if (locked_on_) {
@@ -308,12 +353,14 @@ class AudioFrequencyDetectorNode : public rclcpp::Node
         return static_cast<int32_t>(raw);
     }
 
-    // 오디오 데이터 구독자
-    rclcpp::Subscription<audio_common_msgs::msg::AudioData>::SharedPtr audio_sub_;
+    // 타임스탬프가 포함된 오디오 구독자와 FFT SNR 발행자
+    rclcpp::Subscription<audio_common_msgs::msg::AudioDataStamped>::SharedPtr audio_stamped_sub_;
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr locked_frequency_pub_;
+    rclcpp::Publisher<audio_common_msgs::msg::Float64Stamped>::SharedPtr snr_db_pub_;
 
     // 변환된 단일 채널 오디오 샘플을 계속 누적하는 버퍼
     std::vector<double> sample_buffer_;
+    rclcpp::Time sample_buffer_start_stamp_{0, 0, RCL_ROS_TIME};
 
     // S32LE, 2채널, 샘플당 4바이트.
     std::size_t channels_ = 2;

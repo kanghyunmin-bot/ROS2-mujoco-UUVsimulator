@@ -31,14 +31,6 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# Keep the conventional ROS 2 executable spelling as well as the source-file
-# spelling above.  This makes `ros2 run ... check_yolo_env` work directly.
-install(PROGRAMS
-  scripts/check_yolo_env.py
-  DESTINATION lib/${PROJECT_NAME}
-  RENAME check_yolo_env
-)
-
 install(TARGETS
   bbox_controller_node
   mission_state_machine_node

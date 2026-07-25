@@ -1,0 +1,27 @@
+{
+  "interpretation": {
+    "rmse_optimum": "v7",
+    "balanced_midpoint": "v9",
+    "note": "v9 improves final-yaw agreement over v7 but does not beat v7's aggregate XY/yaw RMSE."
+  },
+  "runs": {
+    "v6": {
+      "xy_rmse_m": 0.8858801388716684,
+      "xy_final_error_m": 0.97666864792914,
+      "yaw_rmse_deg": 25.503088518768426,
+      "final_yaw_error_deg": -4.037899404062443
+    },
+    "v9": {
+      "xy_rmse_m": 0.6394181751261571,
+      "xy_final_error_m": 0.927557034389053,
+      "yaw_rmse_deg": 21.726646550703204,
+      "final_yaw_error_deg": -4.530489551688476
+    },
+    "v7": {
+      "xy_rmse_m": 0.5421219595337112,
+      "xy_final_error_m": 0.6421040195733452,
+      "yaw_rmse_deg": 18.774181652018264,
+      "final_yaw_error_deg": -8.784610457977635
+    }
+  }
+}

@@ -1,0 +1,26 @@
+rosbag2_bagfile_information:
+  version: 5
+  storage_identifier: sqlite3
+  duration:
+    nanoseconds: 71955050583
+  starting_time:
+    nanoseconds_since_epoch: 1784455187135844036
+  message_count: 4785
+  topics_with_message_count:
+    - topic_metadata:
+        name: /mavros/rc/override
+        type: mavros_msgs/msg/OverrideRCIn
+        serialization_format: cdr
+        offered_qos_profiles: ""
+      message_count: 4785
+  compression_format: ""
+  compression_mode: ""
+  relative_file_paths:
+    - localization_rc_override_28_100_0.db3
+  files:
+    - path: localization_rc_override_28_100_0.db3
+      starting_time:
+        nanoseconds_since_epoch: 1784455187135844036
+      duration:
+        nanoseconds: 71955050583
+      message_count: 4785

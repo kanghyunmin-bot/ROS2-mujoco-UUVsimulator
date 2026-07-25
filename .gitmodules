@@ -1,4 +1,0 @@
-[submodule "ardupilot"]
-	path = ardupilot
-	url = https://github.com/ArduPilot/ardupilot.git
-	branch = master

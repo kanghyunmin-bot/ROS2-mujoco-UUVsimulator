@@ -33,10 +33,9 @@ class YoloBuoyDetector(Node):
         self.declare_parameter("model_path", "/home/auv/models/buoy.pt")
         self.declare_parameter("target_class_id", -1)
         self.declare_parameter("target_class_name", "")
-        self.declare_parameter("confidence_threshold", 0.35)
+        self.declare_parameter("confidence_threshold", 0.18)
         self.declare_parameter("device", "auto")
-        self.declare_parameter("imgsz", 640)
-        self.declare_parameter("cpu_threads", 1)
+        self.declare_parameter("imgsz", 1280)
         self.declare_parameter("show_preview", True)
         self.declare_parameter("preview_window_name", "YOLO Buoy Detection")
         self.declare_parameter("publish_per_class", True)
@@ -68,7 +67,6 @@ class YoloBuoyDetector(Node):
         self.confidence_threshold = float(self.get_parameter("confidence_threshold").value)
         self.device = self._resolve_device(str(self.get_parameter("device").value))
         self.imgsz = int(self.get_parameter("imgsz").value)
-        self.cpu_threads = max(1, int(self.get_parameter("cpu_threads").value))
         self.show_preview = bool(self.get_parameter("show_preview").value)
         self.preview_window_name = str(self.get_parameter("preview_window_name").value)
         self.publish_per_class = bool(self.get_parameter("publish_per_class").value)
@@ -79,7 +77,6 @@ class YoloBuoyDetector(Node):
         self._preview_prev_time: Optional[float] = None
         self._preview_fps = 0.0
 
-        self._configure_inference_threads()
         self.model = self._load_model(self.model_path)
         self.class_names = getattr(self.model, "names", {}) or {}
         self._warn_if_target_class_mismatch()
@@ -111,7 +108,6 @@ class YoloBuoyDetector(Node):
         self.get_logger().info(f"Model classes: {self._format_class_names()}")
         self.get_logger().info(
             f"YOLO PT model={self.model_path}, device={self.device}, imgsz={self.imgsz}, "
-            f"cpu_threads={self.cpu_threads}, "
             f"target_class_id={self.target_class_id}, target_class_name='{self.target_class_name}', "
             f"show_preview={self.show_preview}, publish_per_class={self.publish_per_class}"
         )
@@ -123,25 +119,6 @@ class YoloBuoyDetector(Node):
     def _load_model(self, model_path: str):
         ultralytics = importlib.import_module("ultralytics")
         return ultralytics.YOLO(model_path)
-
-    def _configure_inference_threads(self) -> None:
-        """Bound CPU inference so it cannot starve the 100 Hz SITL path."""
-        if self.device != "cpu":
-            return
-        try:
-            torch = importlib.import_module("torch")
-            torch.set_num_threads(self.cpu_threads)
-            # This call can only be made once in a Python process.
-            try:
-                torch.set_num_interop_threads(1)
-            except RuntimeError:
-                pass
-        except Exception as exc:
-            self.get_logger().warning(f"Could not set PyTorch CPU thread limit: {exc}")
-        try:
-            cv2.setNumThreads(self.cpu_threads)
-        except Exception:
-            pass
 
     def _resolve_device(self, device: str) -> str:
         requested = device.strip()

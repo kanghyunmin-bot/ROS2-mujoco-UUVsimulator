@@ -44,13 +44,6 @@ ament_target_dependencies(joy2mavros rclcpp sensor_msgs mavros_msgs)
 if(BUILD_TESTING)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
   add_test(
-    NAME joy2mavros_mux_input
-    COMMAND ${Python3_EXECUTABLE}
-      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_joy2mavros_mux_input.py
-      --executable $<TARGET_FILE:joy2mavros>
-  )
-  set_tests_properties(joy2mavros_mux_input PROPERTIES TIMEOUT 15)
-  add_test(
     NAME sim_mavros_time_contract
     COMMAND ${Python3_EXECUTABLE}
       ${CMAKE_CURRENT_SOURCE_DIR}/test/test_sim_mavros_time_contract.py

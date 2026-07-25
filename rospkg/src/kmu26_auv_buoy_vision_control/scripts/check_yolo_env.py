@@ -24,16 +24,7 @@ def main() -> int:
         default=os.environ.get("YOLO_MODEL_PATH", ""),
         help="Optional .pt model path to validate (YOLO26/Segment26 compatibility).",
     )
-    # `ros2 launch` uses `name:=value`, and it is easy to carry that spelling
-    # over to this standalone preflight command.  Accept it here while keeping
-    # argparse's normal `--model-path value` and `--model-path=value` forms.
-    argv = [
-        ("--model-path=" + token.split(":=", 1)[1])
-        if token.startswith("--model-path:=")
-        else token
-        for token in sys.argv[1:]
-    ]
-    args = parser.parse_args(argv)
+    args = parser.parse_args()
 
     ok = True
     ok &= check("Python executable", True, sys.executable)
@@ -83,10 +74,7 @@ def main() -> int:
         cuda_ok = torch.cuda.is_available()
         device_name = torch.cuda.get_device_name(0) if cuda_ok else "n/a"
         ok &= check("torch import", True, torch.__version__)
-        # CUDA accelerates inference, but is not a requirement for the ROS
-        # detector.  A CPU-only NUC/laptop must pass this preflight as well.
-        cuda_detail = device_name if cuda_ok else "not detected; CPU inference supported"
-        ok &= check("CUDA available (optional)", True, cuda_detail)
+        ok &= check("CUDA available", cuda_ok, device_name)
     except Exception as exc:
         ok &= check("torch import", False, str(exc))
         print("\nGPU laptop example:")

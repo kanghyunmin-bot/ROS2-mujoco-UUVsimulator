@@ -38,9 +38,6 @@ public:
         odometry_topic_ =
             this->declare_parameter<std::string>("odometry_topic", "/odometry/filtered");
         depth_topic_ = this->declare_parameter<std::string>("depth_topic", "/depth/pose");
-        use_odometry_ = this->declare_parameter<bool>("use_odometry", true);
-        publish_homing_direction_ =
-            this->declare_parameter<bool>("publish_homing_direction", true);
         audio_input_latency_s_ = std::max(
             0.0, this->declare_parameter<double>("audio_input_latency_s", 0.0));
         if (use_stamped_audio_) {
@@ -58,36 +55,16 @@ public:
                 10,
                 std::bind(&AudioPhaseEstimatorNode::audio_callback, this, std::placeholders::_1));
         }
-        if (use_odometry_) {
-            dvl_odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
-                odometry_topic_,
-                10,
-                std::bind(
-                    &AudioPhaseEstimatorNode::dvl_odometry_callback,
-                    this,
-                    std::placeholders::_1));
-        }
+        dvl_odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+            odometry_topic_,
+            10,
+            std::bind(&AudioPhaseEstimatorNode::dvl_odometry_callback, this, std::placeholders::_1));
         depth_pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
             depth_topic_,
             10,
             std::bind(&AudioPhaseEstimatorNode::depth_pose_callback, this, std::placeholders::_1));
-        if (publish_homing_direction_) {
-            homing_direction_pub_ =
-                this->create_publisher<geometry_msgs::msg::Vector3Stamped>(
-                "/homing/direction", 10);
-        }
-        delta_phase_pub_ =
-            this->create_publisher<std_msgs::msg::Float64>(
-            "/audio_phase_estimator/delta_phase_rad", 10);
-        delta_range_pub_ =
-            this->create_publisher<std_msgs::msg::Float64>(
-            "/audio_phase_estimator/delta_range_m", 10);
-        iq_magnitude_pub_ =
-            this->create_publisher<std_msgs::msg::Float64>(
-            "/audio_phase_estimator/iq_magnitude", 10);
-        observed_frequency_offset_pub_ =
-            this->create_publisher<std_msgs::msg::Float64>(
-            "/audio_phase_estimator/observed_frequency_offset_hz", 10);
+        homing_direction_pub_ =
+            this->create_publisher<geometry_msgs::msg::Vector3Stamped>("/homing/direction", 10);
         demodulation_frequency_pub_ =
             this->create_publisher<std_msgs::msg::Float64>("/audio_phase_estimator/demodulation_frequency_hz", 10);
         iq_snr_ratio_pub_ =
@@ -97,6 +74,10 @@ public:
                 "/audio_phase_estimator/iq_snr_ratio_stamped", 10);
         iq_coherence_pub_ =
             this->create_publisher<std_msgs::msg::Float64>("/audio_phase_estimator/iq_coherence", 10);
+        iq_magnitude_pub_ =
+            this->create_publisher<std_msgs::msg::Float64>("/audio_phase_estimator/iq_magnitude", 10);
+        delta_range_pub_ =
+            this->create_publisher<std_msgs::msg::Float64>("/audio_phase_estimator/delta_range_m", 10);
         reference_frequency_hz_ =
             this->declare_parameter<double>("reference_frequency_hz", reference_frequency_hz_);
         demodulation_frequency_hz_ = this->declare_parameter<double>(
@@ -120,6 +101,8 @@ public:
         direction_filter_alpha_ = this->declare_parameter<double>("direction_filter_alpha", 0.12);
         homing_accumulation_time_s_ =
             this->declare_parameter<double>("homing_accumulation_time_s", homing_accumulation_time_s_);
+        publish_homing_direction_ =
+            this->declare_parameter<bool>("publish_homing_direction", publish_homing_direction_);
         enable_frequency_acquisition_ =
             this->declare_parameter<bool>("enable_frequency_acquisition", enable_frequency_acquisition_);
         frequency_search_half_width_hz_ = this->declare_parameter<double>(
@@ -458,6 +441,10 @@ private:
             return;
         }
 
+        std_msgs::msg::Float64 iq_magnitude_msg;
+        iq_magnitude_msg.data = iq_quality.magnitude;
+        iq_magnitude_pub_->publish(iq_magnitude_msg);
+
         double delta_phase_rad = 0.0;  //delta_theta_k = theta_k - theta_k-1
         double delta_range_m = 0.0; // Delta r = -lambda * Delta theta / (2*pi)
         if (have_previous_iq_) {  //theta_k-1가 있으면
@@ -469,21 +456,15 @@ private:
             // 두 window의 켤레곱을 쓰면 -pi~pi 범위의 안정적인 위상차를 바로 얻을 수 있다.
             const std::complex<double> phase_step = iq * std::conj(previous_iq_);//Z_k * Z_k-1^*
             delta_phase_rad = std::atan2(std::imag(phase_step), std::real(phase_step));
-            const double observed_frequency_offset_hz =
-                delta_phase_rad / (2.0 * M_PI * std::max(delta_time_s, 1.0e-6));
             delta_range_m = -current_wavelength_m() * delta_phase_rad / (2.0 * M_PI);
-            publish_phase_debug(
-                delta_phase_rad,
+            std_msgs::msg::Float64 delta_range_msg;
+            delta_range_msg.data = delta_range_m;
+            delta_range_pub_->publish(delta_range_msg);
+            accumulate_homing_observation(
                 delta_range_m,
-                observed_frequency_offset_hz,
-                iq_quality.magnitude);
-            if (use_odometry_) {
-                accumulate_homing_observation(
-                    delta_range_m,
-                    delta_time_s,
-                    previous_iq_stamp_,
-                    window_center_stamp);
-            }
+                delta_time_s,
+                previous_iq_stamp_,
+                window_center_stamp);
         }
         previous_iq_ = iq;
         previous_iq_stamp_ = window_center_stamp;
@@ -755,31 +736,6 @@ private:
         return static_cast<int32_t>(raw);
     }
 
-    // Publish the already-computed phase observations consumed by the
-    // external RC controller. This does not change estimator state or math.
-    void publish_phase_debug(
-        const double delta_phase_rad,
-        const double delta_range_m,
-        const double observed_frequency_offset_hz,
-        const double iq_magnitude)
-    {
-        std_msgs::msg::Float64 delta_phase_msg;
-        delta_phase_msg.data = delta_phase_rad;
-        delta_phase_pub_->publish(delta_phase_msg);
-
-        std_msgs::msg::Float64 delta_range_msg;
-        delta_range_msg.data = delta_range_m;
-        delta_range_pub_->publish(delta_range_msg);
-
-        std_msgs::msg::Float64 iq_magnitude_msg;
-        iq_magnitude_msg.data = iq_magnitude;
-        iq_magnitude_pub_->publish(iq_magnitude_msg);
-
-        std_msgs::msg::Float64 observed_offset_msg;
-        observed_offset_msg.data = observed_frequency_offset_hz;
-        observed_frequency_offset_pub_->publish(observed_offset_msg);
-    }
-
     // [IQ 진단 발행] SNR, stamped SNR, coherence 토픽을 동일 분석 결과로 발행한다.
     void publish_iq_quality_debug(
         const IqQuality & iq_quality, const rclcpp::Time & measurement_stamp)
@@ -927,7 +883,6 @@ private:
     std::string odometry_topic_ = "/odometry/filtered";
     std::string depth_topic_ = "/depth/pose";
     bool use_stamped_audio_ = false;
-    bool use_odometry_ = true;
     double audio_input_latency_s_ = 0.0;
 
     rclcpp::Subscription<audio_common_msgs::msg::AudioData>::SharedPtr audio_sub_;
@@ -935,14 +890,12 @@ private:
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr dvl_odom_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr depth_pose_sub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr homing_direction_pub_;
-    rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr delta_phase_pub_;
-    rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr delta_range_pub_;
-    rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr iq_magnitude_pub_;
-    rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr observed_frequency_offset_pub_;
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr demodulation_frequency_pub_;
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr iq_snr_ratio_pub_;
     rclcpp::Publisher<audio_common_msgs::msg::Float64Stamped>::SharedPtr iq_snr_ratio_stamped_pub_;
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr iq_coherence_pub_;
+    rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr iq_magnitude_pub_;
+    rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr delta_range_pub_;
 
     std::vector<TimedSample> sample_buffer_;
     std::mutex buffer_mutex_;

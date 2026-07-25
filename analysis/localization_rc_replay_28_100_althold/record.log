@@ -1,0 +1,14 @@
+stdin is not a terminal device. Keyboard handling disabled.[INFO] [1784702600.539844644] [rosbag2_recorder]: Press SPACE for pausing/resuming
+[INFO] [1784702600.541787585] [rosbag2_storage]: Opened database '/home/robot/uuv_sim_current/analysis/localization_rc_replay_28_100_althold/sim_result/sim_result_0.db3' for READ_WRITE.
+[INFO] [1784702600.542785061] [rosbag2_recorder]: Listening for topics...
+[INFO] [1784702600.542800345] [rosbag2_recorder]: Event publisher thread: Starting
+[INFO] [1784702600.545832519] [rosbag2_recorder]: Subscribed to topic '/mujoco/ground_truth/pose'
+[INFO] [1784702600.547893838] [rosbag2_recorder]: Subscribed to topic '/mavros/state'
+[INFO] [1784702600.549305574] [rosbag2_recorder]: Subscribed to topic '/odometry/filtered'
+[INFO] [1784702600.550069844] [rosbag2_recorder]: Subscribed to topic '/mavros/rc/override'
+[INFO] [1784702600.550784684] [rosbag2_recorder]: Subscribed to topic '/mavros/rc/out'
+[INFO] [1784702600.550882138] [rosbag2_recorder]: Recording...
+[INFO] [1784702600.552226539] [rosbag2_recorder]: All requested topics are subscribed. Stopping discovery...
+[INFO] [1784702676.669382068] [rosbag2_cpp]: Writing remaining messages from cache to the bag. It may take a while
+[INFO] [1784702676.670506704] [rosbag2_recorder]: Event publisher thread: Exiting
+[INFO] [1784702676.670595991] [rosbag2_recorder]: Recording stopped

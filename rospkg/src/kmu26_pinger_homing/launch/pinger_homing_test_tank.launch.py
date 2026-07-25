@@ -70,7 +70,7 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("approach_duration_s", default_value="10.0"),
         DeclareLaunchArgument("initial_confirmation_probes", default_value="2"),
         Node(
-            package="kmu26_pinger_homing",
+            package="auv_pinger_homing",
             executable="pinger_frequency_selector",
             name="pinger_frequency_selector",
             output="screen",
@@ -83,7 +83,7 @@ def generate_launch_description() -> LaunchDescription:
             }],
         ),
         Node(
-            package="kmu26_pinger_homing",
+            package="auv_pinger_homing",
             executable="pinger_audio_estimator",
             name="pinger_audio_estimator",
             output="screen",
@@ -95,7 +95,7 @@ def generate_launch_description() -> LaunchDescription:
             }],
         ),
         Node(
-            package="kmu26_pinger_homing",
+            package="auv_pinger_homing",
             executable="pinger_homing_controller",
             name="pinger_homing_controller",
             output="screen",

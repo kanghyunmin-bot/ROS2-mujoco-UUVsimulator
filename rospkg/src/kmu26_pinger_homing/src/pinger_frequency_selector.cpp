@@ -21,7 +21,7 @@
 #include <std_msgs/msg/string.hpp>
 #include <unsupported/Eigen/FFT>
 
-namespace kmu26_pinger_homing {
+namespace auv_pinger_homing {
 
 // This is a selector, not the Phase estimator.  It deliberately shares the
 // proven FFT detection contract from kmu26_auv_hydrophone: DC removal, Hann
@@ -527,11 +527,11 @@ class FingerFrequencySelector final : public rclcpp::Node {
   rclcpp::TimerBase::SharedPtr timer_;
 };
 
-}  // namespace kmu26_pinger_homing
+}  // namespace auv_pinger_homing
 
 int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<kmu26_pinger_homing::FingerFrequencySelector>());
+  rclcpp::spin(std::make_shared<auv_pinger_homing::FingerFrequencySelector>());
   rclcpp::shutdown();
   return 0;
 }

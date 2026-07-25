@@ -6,14 +6,11 @@
 #include <functional>
 #include <limits>
 #include <map>
-#include <numeric>
-#include <string>
 #include <utility>
 #include <vector>
 
 #include <audio_common_msgs/msg/float64_stamped.hpp>
 #include <Eigen/Dense>
-#include <geometry_msgs/msg/point_stamped.hpp>
 #include <geometry_msgs/msg/vector3_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -21,13 +18,6 @@
 #include <std_msgs/msg/bool.hpp>
 #include <std_msgs/msg/empty.hpp>
 #include <std_msgs/msg/float64.hpp>
-
-
-// ros2 launch audio_capture snr_gradient_homing_control.launch.py \
-//   controller_dry_run:=false \
-//   arena_start_corner:=bottom_right \
-//   arena_yaw_rad:=3.141592653589793
-
 
 namespace audio_capture
 {
@@ -47,21 +37,10 @@ namespace audio_capture
 class SnrGradientHomingNodeV2 : public rclcpp::Node
 {
 public:
-    // [노드 초기화] 환경 파라미터와 기존 제어기 호환 토픽을 구성한다.
     explicit SnrGradientHomingNodeV2(
         const rclcpp::NodeOptions & options = rclcpp::NodeOptions())
     : Node("snr_gradient_homing_v2", options)
     {
-        // 실제 시험 환경이 바뀔 때 조정할 값만 ROS 파라미터로 노출한다.
-        map_cell_size_m_ = std::clamp(
-            declare_parameter<double>("map_cell_size_m", 0.12), 0.05, 1.0);
-        local_radius_m_ = std::max(
-            2.0 * map_cell_size_m_,
-            declare_parameter<double>("local_radius_m", 0.75));
-        map_radius_m_ = std::max(
-            local_radius_m_,
-            declare_parameter<double>("map_radius_m", 2.0));
-
         snr_sub_ = create_subscription<audio_common_msgs::msg::Float64Stamped>(
             SNR_TOPIC, 20,
             std::bind(&SnrGradientHomingNodeV2::snr_callback, this, std::placeholders::_1));
@@ -84,12 +63,6 @@ public:
             create_publisher<geometry_msgs::msg::Vector3Stamped>(DIRECTION_TOPIC, 10);
         confidence_pub_ =
             create_publisher<std_msgs::msg::Float64>(CONFIDENCE_TOPIC, 10);
-        high_snr_region_pub_ =
-            create_publisher<geometry_msgs::msg::PointStamped>(HIGH_SNR_REGION_TOPIC, 10);
-        local_direction_pub_ = create_publisher<geometry_msgs::msg::Vector3Stamped>(
-            LOCAL_DIRECTION_TOPIC, 10);
-        map_direction_pub_ = create_publisher<geometry_msgs::msg::Vector3Stamped>(
-            MAP_DIRECTION_TOPIC, 10);
         estimator_ready_pub_ =
             create_publisher<std_msgs::msg::Bool>(READY_TOPIC, 10);
         vertical_search_request_pub_ = create_publisher<std_msgs::msg::Bool>(
@@ -100,24 +73,16 @@ public:
             rclcpp::QoS(1).reliable().transient_local());
         publish_vertical_search_request(false);
 
-        RCLCPP_INFO(
-            get_logger(),
-            "SNR homing V2 ready: rolling grid cell=%.2f m local=%.2f m "
-            "map=%.2f m keep=%.2f m.",
-            map_cell_size_m_, local_radius_m_, map_radius_m_,
-            map_radius_m_ + GRID_KEEP_MARGIN_M);
+        RCLCPP_INFO(get_logger(), "SNR homing V2 ready.");
     }
 
 private:
     static constexpr double PI = 3.14159265358979323846;
     static constexpr char SNR_TOPIC[] =
-        "/audio_phase_estimator/iq_snr_ratio_stamped";
+        "/audio_frequency_detector/snr_db_stamped";
     static constexpr char ODOMETRY_TOPIC[] = "/odometry/filtered";
     static constexpr char DIRECTION_TOPIC[] = "/homing/direction";
     static constexpr char CONFIDENCE_TOPIC[] = "/homing/snr_confidence";
-    static constexpr char HIGH_SNR_REGION_TOPIC[] = "/homing/high_snr_region";
-    static constexpr char LOCAL_DIRECTION_TOPIC[] = "/homing/local_gradient_direction";
-    static constexpr char MAP_DIRECTION_TOPIC[] = "/homing/map_gradient_direction";
     static constexpr char READY_TOPIC[] = "/homing/estimator_ready";
     static constexpr char RESET_TOPIC[] = "/homing/reset_estimator";
     static constexpr char VERTICAL_SEARCH_REQUEST_TOPIC[] =
@@ -126,14 +91,15 @@ private:
         "/homing/vertical_search_active";
     static constexpr char VERTICAL_BEST_Z_TOPIC[] = "/homing/vertical_best_z";
 
-    // 알고리즘 구조를 정의하는 값은 실행 중 변경하지 않는다.
+    static constexpr double MAP_CELL_SIZE_M = 0.12;
+    static constexpr double LOCAL_RADIUS_M = 0.75;
+    static constexpr double MAP_RADIUS_M = 2.0;
     static constexpr std::size_t MAX_RAW_SAMPLES = 600;
     static constexpr std::size_t MAX_ODOMETRY_SAMPLES = 500;
     static constexpr std::size_t MAX_PENDING_SNR = 500;
     static constexpr std::size_t MAX_CELL_VALUES = 31;
     static constexpr std::size_t MIN_LOCAL_OBSERVATIONS = 12;
     static constexpr std::size_t MIN_MAP_CELLS = 8;
-    static constexpr std::size_t MIN_HIGH_SNR_REGION_CELLS = 10;
     static constexpr std::size_t MAX_DIRECTION_HISTORY = 30;
     static constexpr std::size_t MIN_DIRECTION_STABILITY_SAMPLES = 5;
     static constexpr std::size_t MAX_VERTICAL_BIN_VALUES = 31;
@@ -152,8 +118,8 @@ private:
     static constexpr double MIN_RESIDUAL_SCALE_DB = 0.10;
     static constexpr double MIN_GRADIENT_DB_PER_M = 0.05;
     static constexpr double MIN_COVERAGE_RATIO = 0.035;
-    static constexpr double MIN_OUTPUT_CONFIDENCE = 0.12;
-    static constexpr double READY_CONFIDENCE = 0.28;
+    static constexpr double MIN_OUTPUT_CONFIDENCE = 0.03;
+    static constexpr double READY_CONFIDENCE = 0.08;
     static constexpr double MAX_STABLE_STD_RAD = 0.40;
     static constexpr double DIRECTION_HISTORY_MAX_AGE_S = 2.0;
     static constexpr double FUSION_MIN_DOT = 0.50;
@@ -234,8 +200,6 @@ private:
             msg->pose.pose.orientation.x,
             msg->pose.pose.orientation.y,
             msg->pose.pose.orientation.z);
-        odometry_frame_id_ =
-            msg->header.frame_id.empty() ? "odom" : msg->header.frame_id;
         have_odometry_ = true;
 
         const rclcpp::Time stamp(msg->header.stamp);
@@ -279,20 +243,18 @@ private:
         }
     }
 
-    // [SNR 수신] IQ SNR ratio를 dB로 변환해 timestamp 순서의 처리 대기열에 넣는다.
+    // [SNR 수신] FFT detector가 계산한 dB 값을 timestamp 순서의 처리 대기열에 넣는다.
     void snr_callback(
         const audio_common_msgs::msg::Float64Stamped::ConstSharedPtr msg)
     {
-        if (!std::isfinite(msg->data) || msg->data <= 0.0) {
+        if (!std::isfinite(msg->data)) {
             return;
         }
         const rclcpp::Time stamp(msg->header.stamp);
         if (stamp.nanoseconds() <= 0) {
             return;
         }
-        // Upstream 값은 power가 아니라 target/noise IQ magnitude 비율이므로 20log10을 사용한다.
-        const double snr_db =
-            std::clamp(20.0 * std::log10(msg->data), MIN_SNR_DB, MAX_SNR_DB);
+        const double snr_db = std::clamp(msg->data, MIN_SNR_DB, MAX_SNR_DB);
         update_vertical_search_trigger(stamp, snr_db);
         const PendingSnr pending{stamp, snr_db};
         const auto insert_at = std::upper_bound(
@@ -554,8 +516,8 @@ private:
     bool world_to_cell(
         const Eigen::Vector2d & world, int & ix, int & iy) const
     {
-        ix = static_cast<int>(std::floor(world.x() / map_cell_size_m_));
-        iy = static_cast<int>(std::floor(world.y() / map_cell_size_m_));
+        ix = static_cast<int>(std::floor(world.x() / MAP_CELL_SIZE_M));
+        iy = static_cast<int>(std::floor(world.y() / MAP_CELL_SIZE_M));
         return true;
     }
 
@@ -563,14 +525,14 @@ private:
     Eigen::Vector2d cell_center_world(const int ix, const int iy) const
     {
         return Eigen::Vector2d(
-            (static_cast<double>(ix) + 0.5) * map_cell_size_m_,
-            (static_cast<double>(iy) + 0.5) * map_cell_size_m_);
+            (static_cast<double>(ix) + 0.5) * MAP_CELL_SIZE_M,
+            (static_cast<double>(iy) + 0.5) * MAP_CELL_SIZE_M);
     }
 
     // [Rolling grid 정리] 현재 주변 보존 반경 밖이거나 오래된 셀을 지워 stale 전역 지도를 막는다.
     void prune_grid(const Eigen::Vector2d & center, const rclcpp::Time & stamp)
     {
-        const double keep_radius = map_radius_m_ + GRID_KEEP_MARGIN_M;
+        const double keep_radius = MAP_RADIUS_M + GRID_KEEP_MARGIN_M;
         for (auto it = grid_.begin(); it != grid_.end();) {
             const Eigen::Vector2d position =
                 cell_center_world(it->first.first, it->first.second);
@@ -592,19 +554,19 @@ private:
         for (const Sample & sample : raw_samples_) {
             const double age_s = std::max(0.0, (stamp - sample.stamp).seconds());
             const double distance = (sample.position_m.head<2>() - center).norm();
-            if (distance > local_radius_m_ || age_s > RAW_SAMPLE_AGE_S) {
+            if (distance > LOCAL_RADIUS_M || age_s > RAW_SAMPLE_AGE_S) {
                 continue;
             }
             const double spatial_weight =
                 std::exp(-0.5 * distance * distance /
-                std::max(local_radius_m_ * local_radius_m_, 1.0e-9));
+                std::max(LOCAL_RADIUS_M * LOCAL_RADIUS_M, 1.0e-9));
             const double temporal_weight = std::exp(-age_s / 20.0);
             observations.push_back({
                 sample.position_m.head<2>(), sample.snr_db,
                 spatial_weight * temporal_weight});
         }
         return robust_plane_fit(
-            observations, MIN_LOCAL_OBSERVATIONS, local_radius_m_);
+            observations, MIN_LOCAL_OBSERVATIONS, LOCAL_RADIUS_M);
     }
 
     // [Map Gradient] 방문 격자들의 median SNR로 멀티패스가 평활화된 장거리 gradient를 추정한다.
@@ -621,12 +583,12 @@ private:
             const Eigen::Vector2d position =
                 cell_center_world(entry.first.first, entry.first.second);
             const double distance = (position - center).norm();
-            if (distance > map_radius_m_) {
+            if (distance > MAP_RADIUS_M) {
                 continue;
             }
             const double spatial_weight =
                 std::exp(-0.5 * distance * distance /
-                std::max(map_radius_m_ * map_radius_m_, 1.0e-9));
+                std::max(MAP_RADIUS_M * MAP_RADIUS_M, 1.0e-9));
             const double visit_weight =
                 std::sqrt(static_cast<double>(
                     std::min<std::size_t>(cell.total_visits, 16)));
@@ -634,7 +596,7 @@ private:
                 position, median(cell.snr_db_values),
                 spatial_weight * visit_weight});
         }
-        return robust_plane_fit(observations, MIN_MAP_CELLS, map_radius_m_);
+        return robust_plane_fit(observations, MIN_MAP_CELLS, MAP_RADIUS_M);
     }
 
     // [강건 평면 회귀] Huber IRLS로 SNR 평면과 잔차·관측성 기반 신뢰도를 계산한다.
@@ -772,7 +734,7 @@ private:
         return result;
     }
 
-    // [최종 방향 갱신] Local/Map gradient를 검증·융합하고 상태, 방향, 음원 후보를 발행한다.
+    // [최종 방향 갱신] Local/Map gradient를 융합해 direction / confidence / ready를 발행한다.
     void update_direction(const rclcpp::Time & stamp)
     {
         if (raw_samples_.empty()) {
@@ -780,20 +742,14 @@ private:
         }
         const FitResult local = estimate_local_gradient(stamp);
         const FitResult map = estimate_map_gradient();
-        if (local.valid) {
-            publish_model_direction(stamp, local.direction, local_direction_pub_);
-        }
-        if (map.valid) {
-            publish_model_direction(stamp, map.direction, map_direction_pub_);
-        }
 
         Eigen::Vector2d direction;
         double confidence = 0.0;
-        double model_dot = std::numeric_limits<double>::quiet_NaN();
         bool have_direction = false;
 
         if (local.valid && map.valid) {
-            model_dot = std::clamp(local.direction.dot(map.direction), -1.0, 1.0);
+            const double model_dot =
+                std::clamp(local.direction.dot(map.direction), -1.0, 1.0);
             if (model_dot >= FUSION_MIN_DOT) {
                 direction =
                     local.confidence * local.direction + map.confidence * map.direction;
@@ -832,23 +788,9 @@ private:
             have_direction = true;
         }
 
-        Eigen::Vector2d high_snr_region_position;
-        double region_contrast = 0.0;
-        const bool have_high_snr_region =
-            estimate_high_snr_region(high_snr_region_position, region_contrast);
-
         if (!have_direction) {
             prune_direction_history(stamp);
             publish_status(false);
-            RCLCPP_WARN_THROTTLE(
-                get_logger(), *get_clock(), 2000,
-                "V2 direction withheld: local=%.2f map=%.2f dot=%s cells=%zu.",
-                local.confidence, map.confidence,
-                std::isfinite(model_dot) ? std::to_string(model_dot).c_str() : "n/a",
-                grid_.size());
-            if (have_high_snr_region) {
-                publish_high_snr_region(stamp, high_snr_region_position);
-            }
             return;
         }
 
@@ -858,87 +800,6 @@ private:
         const bool ready = stable && confidence >= READY_CONFIDENCE;
         publish_status(ready);
         publish_direction(stamp, filter_direction(direction), confidence);
-        if (have_high_snr_region) {
-            publish_high_snr_region(stamp, high_snr_region_position);
-        }
-
-        RCLCPP_INFO_THROTTLE(
-            get_logger(), *get_clock(), 1000,
-            "V2 local[c=%.2f r2=%.2f cov=%.2f] map[c=%.2f r2=%.2f cov=%.2f] "
-            "dot=%.2f out=%.2f ready=%s region_contrast=%.2f.",
-            local.confidence, local.robust_r2, local.coverage_ratio,
-            map.confidence, map.robust_r2, map.coverage_ratio,
-            std::isfinite(model_dot) ? model_dot : -2.0,
-            confidence, ready ? "true" : "false", region_contrast);
-    }
-
-    // [고-SNR 영역 추정] 방문한 격자 중 최고 SNR 셀 주변의 우세 영역 중심을 진단값으로 구한다.
-    bool estimate_high_snr_region(
-        Eigen::Vector2d & region, double & contrast) const
-    {
-        struct CellEstimate
-        {
-            Eigen::Vector2d position;
-            double value = 0.0;
-            std::size_t visits = 0;
-        };
-        std::vector<CellEstimate> cells;
-        std::vector<double> values;
-        for (const auto & entry : grid_) {
-            if (entry.second.snr_db_values.size() < 2) {
-                continue;
-            }
-            const double value = median(entry.second.snr_db_values);
-            cells.push_back({
-                cell_center_world(entry.first.first, entry.first.second),
-                value, entry.second.total_visits});
-            values.push_back(value);
-        }
-        if (cells.size() < MIN_HIGH_SNR_REGION_CELLS) {
-            return false;
-        }
-
-        std::sort(values.begin(), values.end());
-        const std::size_t threshold_index = static_cast<std::size_t>(
-            std::floor(0.85 * static_cast<double>(values.size() - 1)));
-        const double threshold = values[threshold_index];
-        const double median_value = values[values.size() / 2];
-
-        const auto peak_it = std::max_element(
-            cells.begin(), cells.end(),
-            [](const CellEstimate & left, const CellEstimate & right) {
-                return left.value < right.value;
-            });
-        if (peak_it == cells.end()) {
-            return false;
-        }
-        const double peak_value = peak_it->value;
-        const Eigen::Vector2d peak_position = peak_it->position;
-        // 서로 떨어진 반사파 peak들의 허위 중간점을 만들지 않도록 최고 셀 주변의
-        // 연결된 고-SNR 영역만 hotspot 진단값에 포함한다.
-        const double cluster_radius_m = std::max(3.0 * map_cell_size_m_, 0.35);
-        region.setZero();
-        double weight_sum = 0.0;
-        for (const CellEstimate & cell : cells) {
-            if (cell.value < threshold ||
-                (cell.position - peak_position).norm() > cluster_radius_m)
-            {
-                continue;
-            }
-            const double value_weight =
-                std::exp(std::clamp((cell.value - threshold) / 3.0, 0.0, 3.0));
-            const double visit_weight =
-                std::sqrt(static_cast<double>(std::min<std::size_t>(cell.visits, 16)));
-            const double weight = value_weight * visit_weight;
-            region += weight * cell.position;
-            weight_sum += weight;
-        }
-        if (weight_sum <= 1.0e-9) {
-            return false;
-        }
-        region /= weight_sum;
-        contrast = std::clamp((peak_value - median_value) / 6.0, 0.0, 1.0);
-        return contrast >= 0.20;
     }
 
     // [방향 이력 갱신] 방향에 timestamp를 결합하고 2초보다 오래된 이력을 제거한다.
@@ -1045,36 +906,6 @@ private:
         confidence_pub_->publish(confidence_msg);
     }
 
-    // [고-SNR 영역 발행] 방문 영역에서 관측된 SNR hotspot 중심을 진단용 점으로 발행한다.
-    void publish_high_snr_region(
-        const rclcpp::Time & stamp, const Eigen::Vector2d & region)
-    {
-        geometry_msgs::msg::PointStamped msg;
-        msg.header.stamp = stamp;
-        msg.header.frame_id = odometry_frame_id_;
-        msg.point.x = region.x();
-        msg.point.y = region.y();
-        msg.point.z = current_position_m_.z();
-        high_snr_region_pub_->publish(msg);
-    }
-
-    // [모델 방향 발행] Local/Map world gradient를 body-frame 디버그 화살표로 변환한다.
-    void publish_model_direction(
-        const rclcpp::Time & stamp,
-        const Eigen::Vector2d & world_direction,
-        const rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr & publisher)
-    {
-        const double c = std::cos(current_yaw_rad_);
-        const double s = std::sin(current_yaw_rad_);
-        geometry_msgs::msg::Vector3Stamped msg;
-        msg.header.stamp = stamp;
-        msg.header.frame_id = "base_link";
-        msg.vector.x = c * world_direction.x() + s * world_direction.y();
-        msg.vector.y = -s * world_direction.x() + c * world_direction.y();
-        msg.vector.z = 0.0;
-        publisher->publish(msg);
-    }
-
     // [추정 상태 발행] 방향 homing 제어기가 사용하는 estimator-ready 상태만 발행한다.
     void publish_status(const bool ready)
     {
@@ -1110,13 +941,8 @@ private:
         return std::atan2(sin_yaw, cos_yaw);
     }
 
-    double map_cell_size_m_ = 0.12;
-    double local_radius_m_ = 0.75;
-    double map_radius_m_ = 2.0;
-
     Eigen::Vector3d current_position_m_{0.0, 0.0, 0.0};
     double current_yaw_rad_ = 0.0;
-    std::string odometry_frame_id_ = "odom";
     bool have_odometry_ = false;
 
     std::deque<Sample> raw_samples_;
@@ -1142,9 +968,6 @@ private:
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr vertical_search_active_sub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr direction_pub_;
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr confidence_pub_;
-    rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr high_snr_region_pub_;
-    rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr local_direction_pub_;
-    rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr map_direction_pub_;
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr estimator_ready_pub_;
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr vertical_search_request_pub_;
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr vertical_best_z_pub_;

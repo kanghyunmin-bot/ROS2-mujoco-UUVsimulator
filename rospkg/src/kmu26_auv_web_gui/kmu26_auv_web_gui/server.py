@@ -46,9 +46,6 @@ DEFAULT_BAG_TOPICS = [
     "/audio_phase_estimator/delta_range_m",
     "/audio_phase_estimator/iq_magnitude",
     "/pinger_homing/status",
-    "/pinger_homing/phase_peak_candidates",
-    "/pinger_homing/select_frequency_hz",
-    "/pinger_homing/selected_frequency_hz",
     "/homing/direction",
     "/pinger_homing/direction_body",
     "/control/pinger/rc_override",
@@ -123,14 +120,20 @@ VISION_MISSION_LAUNCH_ARGS = {
     "max_pwm",
     "max_yaw_delta",
     "forward_pwm",
+    "approach_forward_min_pwm",
+    "search_yaw_pwm",
     "yaw_invert",
     "vertical_positive_is_up",
     "work_depth_m",
     "surface_depth_m",
     "max_depth_m",
+    "buoyancy_hold_delta_pwm",
+    "lpf_tau_sec",
     "buoy_class_id",
     "stick_class_id",
+    "min_detection_hits",
     "approach_area_ratio",
+    "approach_vision_throttle_weight",
     "fork_target_x",
     "fork_target_y",
     "stick_deadband_x",
@@ -149,7 +152,6 @@ ALLOWED_PINGER_MODES = {"MANUAL", "STABILIZE", "ALT_HOLD", "POSHOLD", "GUIDED"}
 
 REAL_VEHICLE_TOPIC_TYPES = {
     "odom": "nav_msgs/msg/Odometry",
-    "imu": "sensor_msgs/msg/Imu",
     "depth": "geometry_msgs/msg/PoseWithCovarianceStamped",
     "mavros_state": "mavros_msgs/msg/State",
     "audio": "audio_common_msgs/msg/AudioData",
@@ -164,11 +166,9 @@ def create_app(
     dronecan_allocator_node_id: int = 126,
     dronecan_allocator_db: str = "",
     dronecan_python: str = "",
-    pinger_package: str = "kmu26_pinger_homing",
+    pinger_package: str = "auv_pinger_homing",
     pinger_launch: str = "pinger_homing_real.launch.py",
     topic_config: TopicConfig | None = None,
-    auto_start_phase_peak_scan: bool = False,
-    phase_peak_scan_args: dict[str, str] | None = None,
 ) -> FastAPI:
     app = FastAPI(title="AUV Localization Test GUI")
     process_manager = ProcessManager(
@@ -187,7 +187,6 @@ def create_app(
         "record_all": False,
         "topics": list(DEFAULT_BAG_TOPICS),
     }
-    phase_peak_selection_lock = asyncio.Lock()
     web_dir_override = os.environ.get("KMU26_WEB_GUI_WEB_DIR")
     if web_dir_override:
         web_dir = Path(web_dir_override)
@@ -201,15 +200,6 @@ def create_app(
     def on_startup() -> None:
         process_manager.start_dronecan_allocator()
         ros_interface.start()
-        if auto_start_phase_peak_scan:
-            try:
-                process_manager.start_phase_peak_scan(phase_peak_scan_args)
-            except (OSError, RuntimeError) as exc:
-                # Peak discovery is a pre-start convenience. Keep the GUI alive
-                # so the operator can fix audio settings or confirm Hz manually.
-                process_manager.logs.append(
-                    f"[phase_peak_scanner] auto-start failed: {exc}"
-                )
 
     @app.on_event("shutdown")
     def on_shutdown() -> None:
@@ -241,7 +231,7 @@ def create_app(
         launch_args.update({str(key): str(value) for key, value in requested_launch_args.items()})
         try:
             process_manager.start_stack(launch_args)
-        except (OSError, RuntimeError) as exc:
+        except RuntimeError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return _status(process_manager, ros_interface)
 
@@ -249,153 +239,6 @@ def create_app(
     def stop_stack() -> dict:
         process_manager.stop_stack()
         return _status(process_manager, ros_interface)
-
-    @app.get("/api/pinger/phase-peaks")
-    def phase_peaks() -> dict:
-        status = _status(process_manager, ros_interface)
-        return {
-            "scanner_running": bool(
-                status.get("process", {}).get("phase_peak_scanner_running", False)
-            ),
-            **status.get("ros", {}).get("phase_peak_selection", {}),
-        }
-
-    @app.post("/api/pinger/phase-peaks/scan")
-    async def start_phase_peak_scan(request: Request) -> dict:
-        body = await _json_or_empty(request)
-        if process_manager.status().get("pinger_running", False):
-            raise HTTPException(
-                status_code=400,
-                detail="stop pinger homing before scanning phase peaks",
-            )
-        topics = ros_interface.topic_config
-        min_frequency_hz, max_frequency_hz = _validated_phase_scan_band(body)
-        launch_args = {
-            "use_audio_capture": (
-                "true" if bool(body.get("use_audio_capture", False)) else "false"
-            ),
-            "audio_device": str(body.get("audio_device", "")).strip(),
-            "audio_topic": str(body.get("audio_topic", topics.audio)).strip()
-            or topics.audio,
-            "use_stamped_audio": (
-                "true" if bool(body.get("use_stamped_audio", True)) else "false"
-            ),
-            "audio_stamped_topic": str(
-                body.get("audio_stamped_topic", "/audio_stamped")
-            ).strip(),
-            "audio_info_topic": str(
-                body.get("audio_info_topic", "/audio_info")
-            ).strip(),
-            "audio_sample_rate": str(
-                _bounded_int(body, "audio_sample_rate", 96000, 8000, 192000)
-            ),
-            "min_frequency_hz": str(min_frequency_hz),
-            "max_frequency_hz": str(max_frequency_hz),
-        }
-        try:
-            process_manager.start_phase_peak_scan(launch_args)
-        except (OSError, RuntimeError) as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        ros_interface.clear_phase_frequency_selection()
-        return _status(process_manager, ros_interface)
-
-    @app.post("/api/pinger/phase-peaks/stop")
-    def stop_phase_peak_scan() -> dict:
-        process_manager.stop_phase_peak_scan()
-        return _status(process_manager, ros_interface)
-
-    @app.post("/api/pinger/phase-peaks/select")
-    async def select_phase_peak(request: Request) -> dict:
-        process_status = process_manager.status()
-        if process_status.get("pinger_running", False):
-            raise HTTPException(
-                status_code=400,
-                detail="stop pinger homing before changing the phase frequency",
-            )
-        body = await _json_or_empty(request)
-        frequency_hz = _bounded_float(
-            body, "frequency_hz", 21164.0, 15000.0, 25000.0
-        )
-        source = str(body.get("source", "candidate")).strip().lower()
-        if source not in {"candidate", "manual"}:
-            raise HTTPException(
-                status_code=400,
-                detail="phase frequency source must be candidate or manual",
-            )
-        rank: int | None = None
-        if source == "candidate":
-            selection = ros_interface.status().get("phase_peak_selection", {})
-            candidates = selection.get("candidates", [])
-            matched = next(
-                (
-                    item
-                    for item in candidates
-                    if isinstance(item, dict)
-                    and _frequency_matches(item.get("frequency_hz"), frequency_hz)
-                ),
-                None,
-            )
-            if matched is None:
-                raise HTTPException(
-                    status_code=400,
-                    detail="selected phase peak is not in the current candidate set",
-                )
-            if not bool(matched.get("selectable", False)):
-                raise HTTPException(
-                    status_code=400,
-                    detail="selected phase peak is not stable enough yet; keep scanning",
-                )
-            rank = int(matched.get("rank", 0) or 0) or None
-            async with phase_peak_selection_lock:
-                request_sequence = ros_interface.request_phase_frequency(
-                    frequency_hz, source, rank
-                )
-                accepted = await asyncio.to_thread(
-                    ros_interface.wait_for_phase_frequency_selection,
-                    request_sequence,
-                )
-                if not accepted:
-                    raise HTTPException(
-                        status_code=409,
-                        detail=(
-                            "phase peak scanner did not accept the candidate; "
-                            "keep scanning and select a stable candidate"
-                        ),
-                    )
-                acknowledged_hz = _finite_float(
-                    ros_interface.status()
-                    .get("phase_peak_selection", {})
-                    .get("selected_frequency_hz")
-                )
-                if acknowledged_hz is None:
-                    raise HTTPException(
-                        status_code=409,
-                        detail=(
-                            "phase peak scanner acknowledgement contained no frequency"
-                        ),
-                    )
-                # The scanner may snap a selection within its tolerance to the
-                # stabilized peak. Return and launch that acknowledged exact Hz.
-                frequency_hz = acknowledged_hz
-        else:
-            if process_status.get("phase_peak_scanner_running", False):
-                raise HTTPException(
-                    status_code=409,
-                    detail=(
-                        "stop Phase peak scanning before using the explicit "
-                        "manual-frequency fallback"
-                    ),
-                )
-            async with phase_peak_selection_lock:
-                ros_interface.confirm_manual_phase_frequency(frequency_hz)
-        status = _status(process_manager, ros_interface)
-        return {
-            "accepted": True,
-            "frequency_hz": frequency_hz,
-            "source": source,
-            "rank": rank,
-            **status,
-        }
 
     @app.post("/api/pinger/start")
     async def start_pinger(request: Request) -> dict:
@@ -406,6 +249,17 @@ def create_app(
                 status_code=400,
                 detail="live pinger homing requires confirm_live=true",
             )
+        if not dry_run:
+            preflight = _pinger_live_preflight(ros_interface.status(), body)
+            if not preflight["ok"]:
+                failed = "; ".join(
+                    check["detail"] for check in preflight["checks"] if not check["ok"]
+                )
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"pinger live preflight failed: {failed}",
+                )
+
         amplitude_constant = _bounded_float(
             body, "amplitude_range_constant", 0.0, 0.0, 10.0
         )
@@ -420,91 +274,19 @@ def create_app(
             )
 
         topics = ros_interface.topic_config
-        estimator_mode = str(body.get("estimator_mode", "phase")).strip().lower()
-        if estimator_mode not in {"phase", "snr"}:
-            raise HTTPException(
-                status_code=400,
-                detail="estimator_mode must be phase or snr",
-            )
-        navigation_mode = str(
-            body.get("navigation_mode", "odometry")
-        ).strip().lower()
-        if navigation_mode not in {"odometry", "no_odom_phase"}:
-            raise HTTPException(
-                status_code=400,
-                detail="navigation_mode must be odometry or no_odom_phase",
-            )
-        if navigation_mode == "no_odom_phase" and estimator_mode != "phase":
-            raise HTTPException(
-                status_code=400,
-                detail="NO_ODOM_PHASE requires estimator_mode=phase",
-            )
-        reference_frequency_hz = _bounded_float(
-            body, "reference_frequency_hz", 21164.0, 15000.0, 25000.0
-        )
-        ros_status = ros_interface.status()
-        frequency_confirmation = _phase_frequency_confirmation_check(ros_status, body)
-        if not frequency_confirmation["ok"]:
-            raise HTTPException(status_code=400, detail=frequency_confirmation["detail"])
-        if not dry_run:
-            preflight = _pinger_live_preflight(ros_status, body)
-            if not preflight["ok"]:
-                failed = "; ".join(
-                    check["detail"] for check in preflight["checks"] if not check["ok"]
-                )
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"pinger live preflight failed: {failed}",
-                )
-        forward_max = _bounded_float(body, "forward_max", 0.48, 0.05, 0.8)
-        probe_pwm_delta = _bounded_int(
-            body, "probe_pwm_delta", 20, 15, 25
-        )
-        approach_pwm_delta = _bounded_int(
-            body, "approach_pwm_delta", 120, 20, 200
-        )
-        approach_pwm_cap = forward_max * 400.0
-        if approach_pwm_delta > approach_pwm_cap + 1.0e-6:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"approach_pwm_delta {approach_pwm_delta:.1f} exceeds the "
-                    f"Forward max cap {approach_pwm_cap:.1f} (400 us RC span)"
-                ),
-            )
-        approach_duration_s = _bounded_float(
-            body, "approach_duration_s", 4.0, 0.5, 20.0
-        )
         launch_args = {
             "dry_run": "true" if dry_run else "false",
-            "mode": "STABILIZE",
-            "auto_mode": "false" if dry_run else "true",
             "use_audio_capture": "true" if bool(body.get("use_audio_capture", False)) else "false",
             "use_hydrophone_estimator": (
                 "true" if bool(body.get("use_hydrophone_estimator", True)) else "false"
             ),
             "use_rc_mux": "true",
-            "estimator_mode": estimator_mode,
-            "navigation_mode": navigation_mode,
-            "controller_profile": "real",
             "audio_device": str(body.get("audio_device", "")).strip(),
             "audio_topic": str(body.get("audio_topic", topics.audio)).strip() or topics.audio,
-            "reference_frequency_hz": str(reference_frequency_hz),
-            "no_odom_probe_pwm_delta": str(
-                probe_pwm_delta
+            "reference_frequency_hz": str(
+                _bounded_float(body, "reference_frequency_hz", 21164.0, 1000.0, 100000.0)
             ),
-            "no_odom_approach_pwm_delta": str(
-                approach_pwm_delta
-            ),
-            "no_odom_forward_duration_s": str(
-                approach_duration_s
-            ),
-            "odometry_topic": (
-                "/pinger_homing/disabled/odometry"
-                if navigation_mode == "no_odom_phase"
-                else str(body.get("odometry_topic", topics.odom)).strip()
-            ),
-            "imu_topic": str(body.get("imu_topic", "/mavros/imu/data")).strip(),
+            "odometry_topic": str(body.get("odometry_topic", topics.odom)).strip(),
             "depth_topic": str(body.get("depth_topic", topics.depth)).strip(),
             "state_topic": str(body.get("state_topic", topics.mavros_state)).strip(),
             "direction_topic": str(
@@ -512,7 +294,7 @@ def create_app(
             ).strip(),
             "status_topic": topics.pinger_homing_status,
             "rate_hz": str(_bounded_float(body, "rate_hz", 30.0, 1.0, 120.0)),
-            "forward_max": str(forward_max),
+            "forward_max": str(_bounded_float(body, "forward_max", 0.48, 0.05, 0.8)),
             "yaw_gain": str(_bounded_float(body, "yaw_gain", 0.85, 0.1, 2.0)),
             "yaw_command_limit": str(
                 _bounded_float(body, "yaw_command_limit", 0.42, 0.05, 0.7)
@@ -536,7 +318,6 @@ def create_app(
             "amplitude_range_constant": str(amplitude_constant),
         }
         try:
-            process_manager.stop_phase_peak_scan()
             process_manager.start_pinger(launch_args)
         except RuntimeError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -600,12 +381,35 @@ def create_app(
         if command == "set_config" and not parameter_name:
             raise HTTPException(status_code=400, detail="set_config requires a parameter_name")
 
-        ros_interface.publish_dvl_command(command, parameter_name, parameter_value)
+        if command == "calibrate_gyro":
+            try:
+                ros_interface.start_dvl_gyro_calibration()
+            except RuntimeError as exc:
+                status_code = 409 if "already in progress" in str(exc) else 503
+                raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+        else:
+            if ros_interface.dvl_command_subscriber_count() <= 0:
+                raise HTTPException(
+                    status_code=503,
+                    detail="DVL command subscriber is not available; start the DVL stack first",
+                )
+            try:
+                ros_interface.publish_dvl_command(command, parameter_name, parameter_value)
+            except RuntimeError as exc:
+                raise HTTPException(status_code=409, detail=str(exc)) from exc
         return _status(process_manager, ros_interface)
 
     @app.post("/api/dvl/reset_dr")
     def reset_dvl() -> dict:
-        ros_interface.reset_dvl_dead_reckoning()
+        if ros_interface.dvl_command_subscriber_count() <= 0:
+            raise HTTPException(
+                status_code=503,
+                detail="DVL command subscriber is not available; start the DVL stack first",
+            )
+        try:
+            ros_interface.reset_dvl_dead_reckoning()
+        except RuntimeError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
         return _status(process_manager, ros_interface)
 
     @app.post("/api/path/clear")
@@ -712,7 +516,6 @@ def create_app(
             launch_args = _validated_launch_args(body, VISION_YOLO_LAUNCH_ARGS)
             if not launch_args.get("model_path"):
                 raise RuntimeError("model_path is required to start YOLO")
-            launch_args.setdefault("show_preview", "false")
             process_manager.start_vision_yolo(launch_args)
         except RuntimeError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -766,9 +569,34 @@ def create_app(
         process_manager.stop_vision()
         return _status(process_manager, ros_interface)
 
+    @app.get("/api/vision/image_topics")
+    def vision_image_topics() -> dict:
+        vision = ros_interface.status().get("vision", {})
+        return {
+            "topics": vision.get("image_topics", []),
+            "selected": {
+                "topic": vision.get("frame_topic", ""),
+                "type": vision.get("frame_type", ""),
+            },
+            "frame_sequence": int(vision.get("frame_sequence", 0) or 0),
+        }
+
+    @app.post("/api/vision/image_source")
+    async def select_vision_image_source(request: Request) -> dict:
+        body = await _json_or_empty(request)
+        topic = str(body.get("topic", "")).strip()
+        try:
+            selected = await asyncio.to_thread(
+                ros_interface.select_vision_frame_topic,
+                topic,
+            )
+        except (RuntimeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return {"selected": selected}
+
     @app.get("/api/vision/frame")
     def vision_frame(after: int = 0) -> Response:
-        data, content_type, sequence = ros_interface.latest_vision_frame()
+        data, content_type, sequence, topic = ros_interface.latest_vision_frame()
         if not data or sequence <= after:
             return Response(status_code=204)
         return Response(
@@ -777,6 +605,7 @@ def create_app(
             headers={
                 "Cache-Control": "no-store, max-age=0",
                 "X-Vision-Frame-Sequence": str(sequence),
+                "X-Vision-Frame-Topic": topic,
             },
         )
 
@@ -920,107 +749,6 @@ def _bounded_float(
     return value
 
 
-def _bounded_int(
-    body: dict, key: str, default: int, minimum: int, maximum: int
-) -> int:
-    try:
-        numeric = float(body.get(key, default))
-    except (TypeError, ValueError) as exc:
-        raise HTTPException(status_code=400, detail=f"{key} must be an integer") from exc
-    if not math.isfinite(numeric) or not numeric.is_integer():
-        raise HTTPException(status_code=400, detail=f"{key} must be an integer")
-    value = int(numeric)
-    if not minimum <= value <= maximum:
-        raise HTTPException(
-            status_code=400,
-            detail=f"{key} must be between {minimum} and {maximum}",
-        )
-    return value
-
-
-def _validated_phase_scan_band(body: dict) -> tuple[float, float]:
-    minimum_hz = _bounded_float(
-        body, "min_frequency_hz", 15000.0, 15000.0, 25000.0
-    )
-    maximum_hz = _bounded_float(
-        body, "max_frequency_hz", 25000.0, 15000.0, 25000.0
-    )
-    if maximum_hz <= minimum_hz:
-        raise HTTPException(
-            status_code=400,
-            detail="max_frequency_hz must be greater than min_frequency_hz",
-        )
-    return minimum_hz, maximum_hz
-
-
-def _frequency_matches(left: object, right: object, tolerance_hz: float = 1.0) -> bool:
-    left_hz = _finite_float(left)
-    right_hz = _finite_float(right)
-    return (
-        left_hz is not None
-        and right_hz is not None
-        and abs(left_hz - right_hz) <= tolerance_hz
-    )
-
-
-def _confirmed_frequency_matches(left: object, right: object) -> bool:
-    left_hz = _finite_float(left)
-    right_hz = _finite_float(right)
-    if left_hz is None or right_hz is None:
-        return False
-    tolerance_hz = max(1.0e-6, 1.0e-9 * max(abs(left_hz), abs(right_hz)))
-    return abs(left_hz - right_hz) <= tolerance_hz
-
-
-def _phase_frequency_confirmation_check(ros_status: dict, body: dict) -> dict:
-    estimator_mode = str(body.get("estimator_mode", "phase")).strip().lower()
-    if estimator_mode != "phase":
-        return {
-            "name": "phase_frequency",
-            "ok": True,
-            "detail": "phase frequency confirmation is not required for SNR mode",
-        }
-
-    selection = (
-        ros_status.get("phase_peak_selection", {})
-        if isinstance(ros_status, dict)
-        else {}
-    )
-    requested_hz = _finite_float(body.get("reference_frequency_hz", 21164.0))
-    selected_hz = _finite_float(selection.get("selected_frequency_hz"))
-    client_confirmed = bool(body.get("phase_peak_confirmed", False))
-    bridge_confirmed = bool(selection.get("confirmed", False))
-    source = str(selection.get("confirmation_source", "") or "")
-
-    if not client_confirmed:
-        detail = "select a detected Phase peak or explicitly confirm the manual frequency"
-        ok = False
-    elif not bridge_confirmed or selected_hz is None:
-        detail = "the Phase frequency has not been confirmed through the ROS selector"
-        ok = False
-    elif requested_hz is None or not _confirmed_frequency_matches(
-        selected_hz, requested_hz
-    ):
-        detail = (
-            f"selected Phase frequency {selected_hz:.1f} Hz does not match "
-            f"requested {requested_hz:.1f} Hz"
-            if requested_hz is not None
-            else "reference_frequency_hz must be finite"
-        )
-        ok = False
-    else:
-        detail = f"Phase frequency {selected_hz:.1f} Hz confirmed ({source or 'selector'})"
-        ok = True
-    return {
-        "name": "phase_frequency",
-        "ok": ok,
-        "detail": detail,
-        "selected_frequency_hz": selected_hz,
-        "requested_frequency_hz": requested_hz,
-        "source": source,
-    }
-
-
 def _pinger_live_preflight(ros_status: dict, body: dict) -> dict:
     topics = ros_status.get("topics", {}) if isinstance(ros_status, dict) else {}
     mavros = ros_status.get("mavros_state", {}) if isinstance(ros_status, dict) else {}
@@ -1045,30 +773,22 @@ def _pinger_live_preflight(ros_status: dict, body: dict) -> dict:
     audio_publishers = int(graph.get("audio_publishers", 0) or 0)
     use_capture = bool(body.get("use_audio_capture", False))
     use_estimator = bool(body.get("use_hydrophone_estimator", True))
-    navigation_mode = str(body.get("navigation_mode", "odometry")).strip().lower()
-    no_odom_phase = navigation_mode == "no_odom_phase"
 
+    add("odometry", odom_alive, "odometry is fresh" if odom_alive else "/odometry/filtered is stale")
+    _add_topic_type_check(checks, topic_types, "odom")
     odom_frame = _normalized_frame(frames.get("odom", {}).get("frame_id"))
     odom_child_frame = _normalized_frame(
         frames.get("odom", {}).get("child_frame_id")
     )
-    if no_odom_phase:
-        imu_alive = bool(topics.get("imu", {}).get("alive", False))
-        add("odometry", True, "NO_ODOM_PHASE explicitly bypasses /odometry/filtered")
-        add("imu", imu_alive, "IMU is fresh" if imu_alive else "/mavros/imu/data is stale")
-        _add_topic_type_check(checks, topic_types, "imu")
-    else:
-        add("odometry", odom_alive, "odometry is fresh" if odom_alive else "/odometry/filtered is stale")
-        _add_topic_type_check(checks, topic_types, "odom")
-        add(
-            "odometry_frames",
-            odom_alive and odom_frame == "odom" and odom_child_frame == "base_link",
-            (
-                "odometry frames are odom -> base_link"
-                if odom_alive and odom_frame == "odom" and odom_child_frame == "base_link"
-                else f"expected odom -> base_link, got {odom_frame or '--'} -> {odom_child_frame or '--'}"
-            ),
-        )
+    add(
+        "odometry_frames",
+        odom_alive and odom_frame == "odom" and odom_child_frame == "base_link",
+        (
+            "odometry frames are odom -> base_link"
+            if odom_alive and odom_frame == "odom" and odom_child_frame == "base_link"
+            else f"expected odom -> base_link, got {odom_frame or '--'} -> {odom_child_frame or '--'}"
+        ),
+    )
     add("depth", depth_alive, "depth pose is fresh" if depth_alive else "/depth/pose is stale")
     _add_topic_type_check(checks, topic_types, "depth")
     depth_frame = _normalized_frame(frames.get("depth", {}).get("frame_id"))
@@ -1084,37 +804,25 @@ def _pinger_live_preflight(ros_status: dict, body: dict) -> dict:
     odom_z = _finite_float(pose.get("z"))
     depth_z = _finite_float(depth.get("z"))
     depth_sign_ok = (
-        depth_alive and depth_z is not None and depth_z <= 0.10
-        if no_odom_phase
-        else (
-            odom_alive
-            and depth_alive
-            and odom_z is not None
-            and depth_z is not None
-            and odom_z <= 0.10
-            and depth_z <= 0.10
-            and (
-                abs(odom_z) < 0.10
-                or abs(depth_z) < 0.10
-                or odom_z * depth_z >= 0.0
-            )
+        odom_alive
+        and depth_alive
+        and odom_z is not None
+        and depth_z is not None
+        and odom_z <= 0.10
+        and depth_z <= 0.10
+        and (
+            abs(odom_z) < 0.10
+            or abs(depth_z) < 0.10
+            or odom_z * depth_z >= 0.0
         )
     )
     add(
         "depth_sign",
         depth_sign_ok,
         (
-            (
-                f"NO_ODOM_PHASE depth z-up contract is consistent (depth z={depth_z:.2f})"
-                if no_odom_phase
-                else f"z-up contract is consistent (odom z={odom_z:.2f}, depth z={depth_z:.2f})"
-            )
+            f"z-up contract is consistent (odom z={odom_z:.2f}, depth z={depth_z:.2f})"
             if depth_sign_ok
-            else (
-                "depth must use z-up (underwater z is negative)"
-                if no_odom_phase
-                else "odometry and depth must both use z-up (underwater z is negative)"
-            )
+            else "odometry and depth must both use z-up (underwater z is negative)"
         ),
     )
     add(
@@ -1170,12 +878,6 @@ def _pinger_live_preflight(ros_status: dict, body: dict) -> dict:
         "estimator",
         use_estimator,
         "hydrophone estimator enabled" if use_estimator else "hydrophone estimator is disabled",
-    )
-    frequency_confirmation = _phase_frequency_confirmation_check(ros_status, body)
-    add(
-        frequency_confirmation["name"],
-        frequency_confirmation["ok"],
-        frequency_confirmation["detail"],
     )
     add(
         "audio",
@@ -1265,8 +967,12 @@ def _run_localization_test(
 
     steps: list[dict[str, str]] = []
 
-    if process_manager.stack_running:
+    if process_manager.stack_ready:
         _append_test_step(steps, "stack", "skipped", "already running")
+    elif process_manager.stack_running:
+        raise RuntimeError(
+            "robot stack is only partially running; stop it before starting the test"
+        )
     else:
         process_manager.start_stack(launch_args)
         _append_test_step(steps, "stack", "ok", "started")
@@ -1529,7 +1235,7 @@ def _analyze_and_write_bag(bag_path: str) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--port", default=8080, type=int)
+    parser.add_argument("--port", default=8081, type=int)
     parser.add_argument("--robot-package", default="hit25_auv_ros2")
     parser.add_argument("--robot-launch", default="localization_test.launch.py")
     parser.add_argument("--start-dronecan-allocator", default="true")
@@ -1537,18 +1243,8 @@ def main() -> None:
     parser.add_argument("--dronecan-allocator-node-id", default=126, type=int)
     parser.add_argument("--dronecan-allocator-db", default="")
     parser.add_argument("--dronecan-python", default="")
-    parser.add_argument("--pinger-package", default="kmu26_pinger_homing")
+    parser.add_argument("--pinger-package", default="auv_pinger_homing")
     parser.add_argument("--pinger-launch", default="pinger_homing_real.launch.py")
-    parser.add_argument("--auto-start-phase-peak-scan", default="false")
-    parser.add_argument("--phase-peak-use-audio-capture", default="false")
-    parser.add_argument("--phase-peak-use-stamped-audio", default="true")
-    parser.add_argument("--phase-peak-audio-device", default="")
-    parser.add_argument("--phase-peak-audio-topic", default="/audio")
-    parser.add_argument("--phase-peak-audio-stamped-topic", default="/audio_stamped")
-    parser.add_argument("--phase-peak-audio-info-topic", default="/audio_info")
-    parser.add_argument("--phase-peak-audio-sample-rate", default=96000, type=int)
-    parser.add_argument("--phase-peak-min-frequency-hz", default=15000.0, type=float)
-    parser.add_argument("--phase-peak-max-frequency-hz", default=25000.0, type=float)
     parser.add_argument(
         "--odom-topic",
         default=os.environ.get("KMU26_ODOM_TOPIC", "/odometry/filtered"),
@@ -1570,17 +1266,6 @@ def main() -> None:
     )
     args, _ = parser.parse_known_args()
 
-    if not (
-        15000.0
-        <= args.phase_peak_min_frequency_hz
-        < args.phase_peak_max_frequency_hz
-        <= 25000.0
-    ):
-        parser.error(
-            "Phase peak scan band must satisfy "
-            "15000 <= min_frequency_hz < max_frequency_hz <= 25000"
-        )
-
     topic_config = TopicConfig(
         odom=args.odom_topic,
         depth=args.depth_topic,
@@ -1600,22 +1285,6 @@ def main() -> None:
         pinger_package=args.pinger_package,
         pinger_launch=args.pinger_launch,
         topic_config=topic_config,
-        auto_start_phase_peak_scan=_parse_bool(args.auto_start_phase_peak_scan),
-        phase_peak_scan_args={
-            "use_audio_capture": (
-                "true" if _parse_bool(args.phase_peak_use_audio_capture) else "false"
-            ),
-            "use_stamped_audio": (
-                "true" if _parse_bool(args.phase_peak_use_stamped_audio) else "false"
-            ),
-            "audio_device": args.phase_peak_audio_device,
-            "audio_topic": args.phase_peak_audio_topic,
-            "audio_stamped_topic": args.phase_peak_audio_stamped_topic,
-            "audio_info_topic": args.phase_peak_audio_info_topic,
-            "audio_sample_rate": str(args.phase_peak_audio_sample_rate),
-            "min_frequency_hz": str(args.phase_peak_min_frequency_hz),
-            "max_frequency_hz": str(args.phase_peak_max_frequency_hz),
-        },
     )
     uvicorn.run(app, host=args.host, port=args.port)
 

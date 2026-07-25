@@ -1,0 +1,28 @@
+{
+  "candidate": "thruster_axis_correction_ridge_v1.json",
+  "ridge_lambda": 1.0,
+  "matrix_condition_number": 1.5478391821401687,
+  "baseline": {
+    "name": "v7",
+    "acro_yaw_p": 5.05,
+    "axis_matrix": null,
+    "xy_rmse_m": 0.5421219595337112,
+    "xy_final_error_m": 0.6421040195733452,
+    "yaw_rmse_deg": 18.774181652018264,
+    "final_yaw_deg": 218.24378727881654
+  },
+  "candidate_result": {
+    "name": "v8",
+    "acro_yaw_p": 5.05,
+    "axis_matrix": "thruster_axis_correction_ridge_v1.json",
+    "xy_rmse_m": 0.7182397708257905,
+    "xy_final_error_m": 2.6696699674349165,
+    "yaw_rmse_deg": 35.857382558457616,
+    "final_yaw_deg": 156.59615368749783
+  },
+  "decision": "rejected",
+  "reason": "The regularized four-axis FIR correction degraded nonlinear closed-loop replay. Lateral and heave were weakly excited in the real bag, so their fitted cross-couplings did not generalize.",
+  "selected_profile": "sim_profiles_path_calibration_v7.json",
+  "selected_acro_yaw_p": 5.05,
+  "selected_axis_matrix": null
+}

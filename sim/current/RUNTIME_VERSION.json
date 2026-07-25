@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "updated_at": "2026-07-25",
+  "active_runtime": "sim/current",
+  "backing_directory": "sim/current",
+  "status": "current",
+  "freshness_status": "warn",
+  "active_runtime_label": "current-2026-07-25-unknown",
+  "source_branch": "unknown",
+  "source_remote": "https://github.com/kanghyunmin-bot/ROS2-mujoco-UUVsimulator.git",
+  "source_head": "",
+  "origin_uuv_sim_head": "",
+  "dirty_state": {
+    "working_tree_dirty_count": 0,
+    "active_runtime_dirty_count": 0,
+    "working_tree_dirty_sample": [],
+    "active_runtime_dirty_sample": [],
+    "ardupilot_submodule_status": ""
+  },
+  "freshness_policy": "Packaged from the validated local current workspace for dist3 release 2026.07.13-dist3.",
+  "primary_runner": "sim/current/run_uuv_mujoco.py",
+  "compatibility_runner": "",
+  "root_launchers": {
+    "mujoco": "sim/run_mujoco.sh",
+    "sitl_mujoco": "sim/start_sitl_mujoco.sh",
+    "reset": "sim/reset_sim.sh"
+  },
+  "source_audit_check": "active_runtime_alias_current",
+  "note": "The active simulator runtime is the concrete sim/current directory."
+}

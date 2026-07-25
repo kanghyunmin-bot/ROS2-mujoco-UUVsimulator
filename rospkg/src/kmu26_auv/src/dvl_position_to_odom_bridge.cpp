@@ -16,7 +16,7 @@ public:
     input_topic_ = declare_parameter<std::string>("input_topic", "/dvl/position");
     output_topic_ = declare_parameter<std::string>("output_topic", "/dvl/odometry");
     frame_id_ = declare_parameter<std::string>("frame_id", "dvl_odom");
-    child_frame_id_ = declare_parameter<std::string>("child_frame_id", "dvl");
+    child_frame_id_ = declare_parameter<std::string>("child_frame_id", "dvl_link");
     expected_type_ = declare_parameter<std::string>("expected_type", "position_local");
 
     zero_position_on_start_ = declare_parameter<bool>("zero_position_on_start", false);

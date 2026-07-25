@@ -1,9 +1,0 @@
-std_msgs/Header header
-string target_id
-bool captured
-bool detached
-bool netted
-bool released
-bool collector_eq_active
-string capture_state
-string state

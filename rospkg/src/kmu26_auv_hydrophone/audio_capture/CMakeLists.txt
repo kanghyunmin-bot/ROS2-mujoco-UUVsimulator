@@ -151,6 +151,7 @@ install(DIRECTORY launch
 )
 
 install(PROGRAMS
+  scripts/pinger_buoy_audio_sim.py
   scripts/snr_map_visualizer.py
   DESTINATION lib/${PROJECT_NAME}
 )

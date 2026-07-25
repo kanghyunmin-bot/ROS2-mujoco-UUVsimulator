@@ -20,7 +20,7 @@
 #include <std_msgs/msg/float64.hpp>
 #include <std_msgs/msg/string.hpp>
 
-namespace kmu26_pinger_homing {
+namespace auv_pinger_homing {
 
 class FingerHomingController final : public rclcpp::Node {
  public:
@@ -477,11 +477,11 @@ class FingerHomingController final : public rclcpp::Node {
   rclcpp::TimerBase::SharedPtr timer_;
 };
 
-}  // namespace kmu26_pinger_homing
+}  // namespace auv_pinger_homing
 
 int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<kmu26_pinger_homing::FingerHomingController>());
+  rclcpp::spin(std::make_shared<auv_pinger_homing::FingerHomingController>());
   rclcpp::shutdown();
   return 0;
 }

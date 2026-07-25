@@ -1,5 +1,5 @@
 # Local environment and editor state
-.uuv_mujoco_env.sh
+/sim/environment.sh
 .uuv_sim_current_version
 .env
 .venv/
@@ -39,9 +39,9 @@ CMakeCache.txt
 /outputs/
 /test_artifacts/
 /MUJOCO_LOG.TXT
-/uuv_mujoco/current/logs/
-/uuv_mujoco/current/generated/
-/uuv_mujoco/current/test_artifacts/
+/sim/current/logs/
+/sim/current/generated/
+/sim/current/test_artifacts/
 *.bag
 *.db3
 *.mcap
@@ -55,13 +55,11 @@ CMakeCache.txt
 *~
 
 # Downloaded/external workspaces. Install scripts recreate these.
-/ardupilot/
-/ardupilot_sub_stable/
+/sim/ardupilot/
 /QGroundControl*.AppImage
 
 # Release artifacts are published separately, not as Git source.
-/dist4_output/
-/dist2/ubuntu22.04/out/
+/documentary/release/builds/
 /uuv_mujoco.zip
 /*.deb
 /*.zip
@@ -70,4 +68,3 @@ CMakeCache.txt
 /*.patch
 /symlink_install_manifest.txt
 /rospkg/symlink_install_manifest.txt
-

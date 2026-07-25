@@ -1,0 +1,106 @@
+{
+  "source": "/home/robot/Downloads/localization_20260707_193328_0 (1).db3",
+  "metadata": {
+    "packet_count": 47005,
+    "sample_count": 45124800,
+    "frames_per_packet_mode": 960,
+    "packet_frame_min": 960,
+    "packet_frame_max": 960,
+    "channels_bit_identical": true,
+    "clipping_sample_count": 2698465,
+    "clipping_fraction": 0.059800043435095554,
+    "header_start_s": 1783420408.6513884,
+    "header_end_s": 1783420878.6913884,
+    "header_duration_s": 470.039999961853,
+    "header_dt_median_ms": 9.999990463256836,
+    "header_dt_p99_ms": 10.000228881835938,
+    "header_gap_over_15ms_count": 0,
+    "bag_duration_s": 470.0682108402252
+  },
+  "analysis": {
+    "sample_rate_hz": 96000,
+    "analyzed_duration_s": 470.05,
+    "signal_rms_median": 0.2768090787090053,
+    "signal_rms_p95": 0.6530273000650177,
+    "dominant_frequency_hz": 21332.865892798956,
+    "dominant_psd_dbfs_per_hz": -50.6801817720222,
+    "dominant_frequency_per_second_median_hz": 23876.624940349175,
+    "dominant_frequency_per_second_p05_hz": 21332.850004814958,
+    "dominant_frequency_per_second_p95_hz": 24398.214262247435,
+    "dominant_frequency_per_second_std_hz": 946.513611329457,
+    "low_band_peak_median_hz": 21332.826617052597,
+    "high_band_peak_median_hz": 27180.010900088724,
+    "snr_21164_db_median": 2.888173665775437,
+    "snr_21164_db_p95": 7.851531105435564,
+    "snr_27211_db_median": 4.2659443526475265,
+    "snr_27211_db_p95": 12.099107043075321,
+    "top_spectral_peaks_18_30khz": [
+      {
+        "frequency_hz": 21332.865892798956,
+        "psd_dbfs_per_hz": -50.6801817720222
+      },
+      {
+        "frequency_hz": 23890.671218223513,
+        "psd_dbfs_per_hz": -55.4000415186741
+      },
+      {
+        "frequency_hz": 23885.743649979802,
+        "psd_dbfs_per_hz": -55.807616245587994
+      },
+      {
+        "frequency_hz": 23870.001171807893,
+        "psd_dbfs_per_hz": -56.037199022941024
+      },
+      {
+        "frequency_hz": 23830.162903056163,
+        "psd_dbfs_per_hz": -56.96168388213113
+      },
+      {
+        "frequency_hz": 23881.34765625,
+        "psd_dbfs_per_hz": -57.039318680077756
+      },
+      {
+        "frequency_hz": 24395.573393190396,
+        "psd_dbfs_per_hz": -57.66891129715664
+      },
+      {
+        "frequency_hz": 23903.871098525604,
+        "psd_dbfs_per_hz": -57.64574013279639
+      },
+      {
+        "frequency_hz": 24406.763947440413,
+        "psd_dbfs_per_hz": -57.72458927543889
+      },
+      {
+        "frequency_hz": 23898.04072199196,
+        "psd_dbfs_per_hz": -57.80778363074036
+      },
+      {
+        "frequency_hz": 23864.23463376386,
+        "psd_dbfs_per_hz": -57.74898481506375
+      },
+      {
+        "frequency_hz": 24362.749029768864,
+        "psd_dbfs_per_hz": -57.941990372236134
+      }
+    ],
+    "dominant_iq_magnitude_median": 0.0016211420890090834,
+    "dominant_iq_magnitude_p05": 0.0003886007676909395,
+    "dominant_iq_magnitude_p95": 0.007187739075399455,
+    "dominant_frequency_residual_median_hz": 0.06835579641213162,
+    "dominant_frequency_residual_mad_hz": 2.1989954188248904,
+    "dominant_frequency_residual_p05_hz": -8.455344090748845,
+    "dominant_frequency_residual_p95_hz": 8.75749138959608,
+    "ten_second_frequency_slope_median_hz": 0.10769647601549448,
+    "ten_second_frequency_slope_p05_hz": -0.4856205357913155,
+    "ten_second_frequency_slope_p95_hz": 0.615286063751954,
+    "phase_residual_10s_rms_rad": 5.942024535123233,
+    "phase_residual_10s_median_abs_rad": 3.208381277155567,
+    "phase_step_over_90deg_fraction": 0.21425329096686338
+  },
+  "limitations": [
+    "No independent ground truth confirms that the vehicle and pinger were mechanically stationary.",
+    "The two recorded audio channels are bit-identical, so differential-channel phase cannot be evaluated.",
+    "A strong spectral line is not automatically the competition pinger without an ON/OFF or frequency label."
+  ]
+}

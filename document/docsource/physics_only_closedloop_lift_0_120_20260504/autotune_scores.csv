@@ -1,6 +1,0 @@
-candidate,status,score,fluid_linear_scale,fluid_rot_scale,fluid_blunt_scale,fluid_slender_scale,fluid_angular_scale,fluid_kutta,fluid_magnus,profile_updates,tune_mode,command_source,out_dir
-lift_zero,ok,1.0285723789527383,1.0,1.0,1.0,1.0,1.0,0.0,0.0,{},closed-loop,,/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/physics_only_closedloop_lift_0_120_20260504/lift_zero
-kutta_100_magnus_050_buoy1020,ok,1.0342665341239254,1.0,1.0,1.0,1.0,1.0,0.1,0.05,"{""buoyancy_scale"": 1.02}",closed-loop,,/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/physics_only_closedloop_lift_0_120_20260504/kutta_100_magnus_050_buoy1020
-kutta_100_magnus_050_heavep10,ok,1.0372524255546838,1.0,1.0,1.0,1.0,1.0,0.1,0.05,"{""surface_heave_damping"": 13.2, ""heave_damping_scale"": 4.4}",closed-loop,,/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/physics_only_closedloop_lift_0_120_20260504/kutta_100_magnus_050_heavep10
-kutta_100_magnus_050,ok,1.0497902636021124,1.0,1.0,1.0,1.0,1.0,0.1,0.05,{},closed-loop,,/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/physics_only_closedloop_lift_0_120_20260504/kutta_100_magnus_050
-kutta_200_magnus_100,ok,1.0672506215687514,1.0,1.0,1.0,1.0,1.0,0.2,0.1,{},closed-loop,,/Users/kanghyunmin/Desktop/uuv_sim/document/docsource/physics_only_closedloop_lift_0_120_20260504/kutta_200_magnus_100

@@ -1,0 +1,35 @@
+{
+  "source_window_s": [
+    28.0,
+    100.0
+  ],
+  "real_source": "localization.db3:/localization/path latest pose per message",
+  "sim_source": "sim_result:/odometry/filtered during RC playback",
+  "alignment": "initial xyz translation and initial yaw rotation only; no scale or fitted registration",
+  "rc_override_messages": 4785,
+  "rc_message_span_s": 71.854861334,
+  "real_samples": 2160,
+  "sim_samples": 1428,
+  "sim_all_states_armed": true,
+  "sim_state_modes": [
+    "ALT_HOLD"
+  ],
+  "real_end_forward_lateral_z_m": [
+    0.7653871653688175,
+    0.9204324890724017,
+    -0.21041261329571354
+  ],
+  "sim_end_forward_lateral_z_m": [
+    5.271488969009722,
+    6.136880226800183,
+    -0.05387612848873713
+  ],
+  "real_xy_path_length_m": 19.12169281012793,
+  "sim_xy_path_length_m": 9.65065920816459,
+  "xy_rmse_m": 3.2272377180968728,
+  "xy_final_error_m": 6.827687990905048,
+  "z_rmse_m": 0.16758369949735283,
+  "yaw_rmse_deg": 103.07060194625552,
+  "real_final_relative_yaw_deg": 227.02839773679418,
+  "sim_final_relative_yaw_deg": 72.50693373405996
+}

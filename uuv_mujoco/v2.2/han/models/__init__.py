@@ -1,1 +1,0 @@
-"""HAN model definition boundary."""
