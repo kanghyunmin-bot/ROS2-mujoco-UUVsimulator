@@ -26,6 +26,12 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
+  scripts/pinger_detach_monitor.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME pinger_detach_monitor
+)
+
+install(PROGRAMS
   scripts/check_yolo_env.py
   scripts/setup_laptop_yolo_env.sh
   DESTINATION lib/${PROJECT_NAME}
@@ -40,5 +46,22 @@ install(TARGETS
 install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}
 )
+
+if(BUILD_TESTING)
+  enable_testing()
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  add_test(
+    NAME yolo_pinger_marker_fast_path
+    COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_yolo_pinger_marker_fast_path.py
+  )
+  add_test(
+    NAME yolo_course_buoy_filter
+    COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_yolo_course_buoy_filter.py
+  )
+  set_tests_properties(yolo_pinger_marker_fast_path PROPERTIES TIMEOUT 20)
+  set_tests_properties(yolo_course_buoy_filter PROPERTIES TIMEOUT 20)
+endif()
 
 ament_package()

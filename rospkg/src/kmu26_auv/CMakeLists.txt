@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(hit25_auv_ros2)
+project(auv)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -11,11 +11,13 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(mavros_msgs REQUIRED)
-find_package(dvl_msgs REQUIRED)
+find_package(auv_dvl_a50_msg REQUIRED)
+find_package(auv_msg REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -39,7 +41,7 @@ add_executable(tf_broadcaster src/tf_broadcaster.cpp)
 ament_target_dependencies(tf_broadcaster rclcpp geometry_msgs tf2 tf2_ros)
 
 add_executable(joy2mavros src/joy2mavros.cpp)
-ament_target_dependencies(joy2mavros rclcpp sensor_msgs mavros_msgs)
+ament_target_dependencies(joy2mavros rclcpp sensor_msgs std_msgs mavros_msgs)
 
 if(BUILD_TESTING)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
@@ -58,19 +60,27 @@ if(BUILD_TESTING)
 endif()
 
 add_executable(odom2mavros src/odom2mavros.cpp)
-ament_target_dependencies(odom2mavros rclcpp nav_msgs geometry_msgs tf2 tf2_geometry_msgs)
+target_compile_features(odom2mavros PUBLIC cxx_std_17)
+ament_target_dependencies(
+  odom2mavros
+  rclcpp
+  nav_msgs
+  geometry_msgs
+  mavros_msgs
+  std_msgs
+)
 
 add_executable(vfr2atm_pressure src/vfr2atm_pressure.cpp)
 ament_target_dependencies(vfr2atm_pressure rclcpp mavros_msgs sensor_msgs)
 
 add_executable(dvl_to_twist_bridge src/dvl_to_twist_bridge.cpp)
-ament_target_dependencies(dvl_to_twist_bridge rclcpp geometry_msgs dvl_msgs)
+ament_target_dependencies(dvl_to_twist_bridge rclcpp geometry_msgs auv_dvl_a50_msg)
 
 add_executable(dvl_position_to_odom_bridge src/dvl_position_to_odom_bridge.cpp)
 ament_target_dependencies(
   dvl_position_to_odom_bridge
   rclcpp
-  dvl_msgs
+  auv_dvl_a50_msg
   nav_msgs
   tf2
   tf2_geometry_msgs
@@ -82,8 +92,16 @@ ament_target_dependencies(pressure_to_depth_pose rclcpp geometry_msgs sensor_msg
 add_executable(localization_debug src/localization_debug.cpp)
 ament_target_dependencies(localization_debug rclcpp geometry_msgs nav_msgs)
 
-add_executable(guided_control src/guided_control.cpp)
-ament_target_dependencies(guided_control rclcpp geometry_msgs tf2 mavros_msgs)
+add_executable(guided_navigation src/guided_navigation.cpp)
+ament_target_dependencies(
+  guided_navigation
+  rclcpp
+  geometry_msgs
+  nav_msgs
+  std_msgs
+  mavros_msgs
+  auv_msg
+)
 
 add_executable(buoy_position_control src/buoy_position_control.cpp)
 ament_target_dependencies(
@@ -107,7 +125,7 @@ install(TARGETS
   dvl_position_to_odom_bridge
   pressure_to_depth_pose
   localization_debug
-  guided_control
+  guided_navigation
   buoy_position_control
   DESTINATION lib/${PROJECT_NAME}
 )
@@ -116,6 +134,7 @@ install(PROGRAMS
   scripts/dvl_setup.sh
   scripts/dronecan2mavros_battery.py
   scripts/dronecan2mavros_battery_v2.py
+  scripts/mavros_ekf_origin_config.py
   scripts/mavros_imu_rate_config.py
   DESTINATION lib/${PROJECT_NAME}
 )
@@ -124,6 +143,7 @@ install(DIRECTORY
   launch
   config
   DESTINATION share/${PROJECT_NAME}
+  PATTERN "__pycache__" EXCLUDE
 )
 
 ament_package()

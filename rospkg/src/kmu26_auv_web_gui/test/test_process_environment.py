@@ -2,9 +2,9 @@ import os
 import sys
 from pathlib import Path
 
-from kmu26_auv_web_gui.process_manager import ManagedProcess
-from kmu26_auv_web_gui.process_manager import ProcessManager
-from kmu26_auv_web_gui.process_manager import subprocess_env
+from auv_web_gui.process_manager import ManagedProcess
+from auv_web_gui.process_manager import ProcessManager
+from auv_web_gui.process_manager import subprocess_env
 
 
 def test_subprocess_environment_prefers_server_python() -> None:
@@ -42,7 +42,7 @@ def test_robot_stack_manages_localization_camera_and_audio(monkeypatch) -> None:
             [
                 "ros2",
                 "launch",
-                "hit25_auv_ros2",
+                "auv",
                 "localization_test.launch.py",
                 "joy_release_when_idle:=true",
             ],

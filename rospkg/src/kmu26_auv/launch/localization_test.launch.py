@@ -15,7 +15,7 @@ from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description() -> LaunchDescription:
-    package_share = get_package_share_directory("hit25_auv_ros2")
+    package_share = get_package_share_directory("auv")
     rov_launch_file = os.path.join(package_share, "launch", "rov_start.launch.py")
 
     setup_delay = LaunchConfiguration("setup_delay")
@@ -73,7 +73,7 @@ def generate_launch_description() -> LaunchDescription:
     )
 
     localization_debug_node = Node(
-        package="hit25_auv_ros2",
+        package="auv",
         executable="localization_debug",
         name="localization_debug_node",
         output="screen",

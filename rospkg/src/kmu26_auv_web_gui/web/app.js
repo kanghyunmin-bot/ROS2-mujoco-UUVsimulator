@@ -32,6 +32,7 @@ const state = {
   path: {
     points: [],
     pose: { x: 0, y: 0, yaw: 0 },
+    frame: { aligned: false, x_axis: "right", y_axis: "start_forward" },
     options: {
       viewMode: "fit",
       color: "#6ec6ff",
@@ -48,6 +49,10 @@ const state = {
     active: false,
     sendTimer: null,
     lastErrorAt: 0,
+    selectedMode: null,
+    guidedAvailable: false,
+    fcuConnected: false,
+    fcuArmed: false,
     axes: {
       forward: 0,
       lateral: 0,
@@ -464,6 +469,7 @@ function renderStatus(payload) {
   const mavrosState = ros.mavros_state || {};
   const joy = ros.joy || {};
   const webControl = ros.web_control || {};
+  const guided = ros.guided || {};
   const dvlConfig = ros.dvl_config || {};
   const dvlCalibration = ros.dvl_calibration || {};
   const dvlEvents = ros.dvl_events || [];
@@ -513,13 +519,17 @@ function renderStatus(payload) {
   renderTopics(topics);
   renderPinger(process, ros);
   renderWebControlStatus(webControl);
+  renderControlModeSelection(mavrosState);
+  renderGuidedStatus(guided, mavrosState);
   renderVision(process, topics, vision, depth);
   state.path.points = ros.path || [];
+  const pathPose = ros.path_pose || pose;
   state.path.pose = {
-    x: typeof pose.x === "number" ? pose.x : 0,
-    y: typeof pose.y === "number" ? pose.y : 0,
-    yaw: typeof pose.yaw === "number" ? pose.yaw : 0,
+    x: typeof pathPose.x === "number" ? pathPose.x : 0,
+    y: typeof pathPose.y === "number" ? pathPose.y : 0,
+    yaw: typeof pathPose.yaw === "number" ? pathPose.yaw : 0,
   };
+  state.path.frame = ros.path_frame || state.path.frame;
   renderPath();
   $("log-output").textContent = (process.logs || []).join("\n");
 }
@@ -593,11 +603,256 @@ function bindWebControl() {
 
   document.querySelectorAll("[data-control-mode]").forEach((button) => {
     button.addEventListener("click", () => {
-      postJson("/api/control/mode", { mode: button.dataset.controlMode }).catch(showError);
+      const mode = button.dataset.controlMode;
+      state.control.selectedMode = mode;
+      renderControlModePanel();
+      postJson("/api/control/mode", { mode }).catch(showError);
     });
   });
 
+  bindGuidedControl();
   renderControlAxisValues();
+}
+
+function bindGuidedControl() {
+  ["guided-coordinate-mode", "guided-x", "guided-y", "guided-z"].forEach((id) => {
+    $(id).addEventListener("input", syncGuidedGoalUi);
+    $(id).addEventListener("change", syncGuidedGoalUi);
+  });
+
+  $("guided-set-mode").addEventListener("click", async () => {
+    state.control.selectedMode = "GUIDED";
+    renderControlModePanel();
+    try {
+      const response = await postJson("/api/control/mode", { mode: "GUIDED" });
+      setGuidedFeedback(
+        response.accepted ? "GUIDED mode request sent." : "GUIDED mode request was not accepted.",
+        response.accepted ? "good" : "bad",
+      );
+    } catch (error) {
+      setGuidedFeedback(error.message, "bad");
+      showError(error);
+    }
+  });
+
+  $("guided-send-goal").addEventListener("click", sendGuidedGoal);
+  $("guided-cancel-goal").addEventListener("click", async () => {
+    try {
+      await postJson("/api/control/guided/cancel");
+      setGuidedFeedback("Guided goal cancelled.", "good");
+    } catch (error) {
+      setGuidedFeedback(error.message, "bad");
+      showError(error);
+    }
+  });
+  $("guided-recapture-frame").addEventListener("click", async () => {
+    if (
+      !window.confirm(
+        "Capture the current pose as the Guided start frame? The FCU must be disarmed with no active goal.",
+      )
+    ) {
+      return;
+    }
+    try {
+      await postJson("/api/control/guided/recapture");
+      setGuidedFeedback("Start-frame recapture requested.", "good");
+    } catch (error) {
+      setGuidedFeedback(error.message, "bad");
+      showError(error);
+    }
+  });
+
+  syncGuidedGoalUi();
+  renderControlModePanel();
+}
+
+function guidedGoalPayload() {
+  return {
+    mode: Number($("guided-coordinate-mode").value),
+    x: Number($("guided-x").value),
+    y: Number($("guided-y").value),
+    z: Number($("guided-z").value),
+  };
+}
+
+function guidedGoalInputsValid() {
+  const inputs = ["guided-x", "guided-y", "guided-z"].map($);
+  const invalid = inputs.find((input) => !input.checkValidity() || !Number.isFinite(Number(input.value)));
+  if (!invalid) return true;
+  invalid.focus();
+  invalid.reportValidity();
+  return false;
+}
+
+async function sendGuidedGoal() {
+  if (!guidedGoalInputsValid()) return;
+  const payload = guidedGoalPayload();
+  const modeLabel = $("guided-coordinate-mode").selectedOptions[0]?.textContent || `mode ${payload.mode}`;
+  if (
+    !window.confirm(
+      `Send this Guided goal to the vehicle?\n${modeLabel}\n` +
+        `x=${payload.x} m, y=${payload.y} m, z=${payload.z} m\nheading=AUTO (target bearing)`,
+    )
+  ) {
+    return;
+  }
+
+  try {
+    const response = await postJson("/api/control/guided/goal", payload);
+    state.control.enabled = false;
+    state.control.active = false;
+    $("control-enable").checked = false;
+    $("control-deadman").classList.remove("active");
+    stopControlLoop();
+    resetControlAxes();
+    const sent = response.guided_command?.goal || payload;
+    setGuidedFeedback(
+      `Goal sent · mode ${sent.mode} · ${sent.sent_at || "now"}`,
+      "good",
+    );
+  } catch (error) {
+    setGuidedFeedback(error.message, "bad");
+    showError(error);
+  }
+}
+
+function syncGuidedGoalUi() {
+  const payload = guidedGoalPayload();
+
+  const labels = {
+    0: "Odom absolute",
+    1: "Current offset",
+    2: "Pool / start frame",
+  };
+  $("guided-goal-preview").textContent = [
+    labels[payload.mode] || `Mode ${payload.mode}`,
+    `x ${fmt(payload.x)} m`,
+    `y ${fmt(payload.y)} m`,
+    `z ${fmt(payload.z)} m`,
+    "heading AUTO → target",
+  ].join(" · ");
+}
+
+function renderControlModeSelection(mavrosState) {
+  const actualMode = mavrosState?.connected ? mavrosState.mode || "" : "";
+  if (!state.control.selectedMode) {
+    state.control.selectedMode = actualMode || state.control.selectedMode || "MANUAL";
+  }
+  state.control.fcuConnected = Boolean(mavrosState?.connected);
+  state.control.fcuArmed = Boolean(mavrosState?.connected && mavrosState?.armed);
+
+  document.querySelectorAll("[data-control-mode]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.controlMode === actualMode);
+  });
+  renderControlModePanel();
+}
+
+function renderControlModePanel() {
+  $("guided-control-panel").hidden = false;
+}
+
+function guidedPoseText(pose) {
+  if (!pose || typeof pose !== "object") return "--";
+  return [
+    `x ${fmt(pose.x)} m`,
+    `y ${fmt(pose.y)} m`,
+    `z ${fmt(pose.z)} m`,
+    `yaw ${fmt(pose.yaw_deg, 1)}°`,
+  ].join(" · ");
+}
+
+function odomPoseToStartFrame(pose, startFrame) {
+  if (!pose || !startFrame) return null;
+  const values = [
+    pose.x,
+    pose.y,
+    pose.z,
+    pose.yaw_rad,
+    startFrame.x,
+    startFrame.y,
+    startFrame.z,
+    startFrame.yaw_rad,
+  ];
+  if (!values.every(Number.isFinite)) return null;
+
+  const dx = pose.x - startFrame.x;
+  const dy = pose.y - startFrame.y;
+  const cosine = Math.cos(startFrame.yaw_rad);
+  const sine = Math.sin(startFrame.yaw_rad);
+  const yawRad = Math.atan2(
+    Math.sin(pose.yaw_rad - startFrame.yaw_rad),
+    Math.cos(pose.yaw_rad - startFrame.yaw_rad),
+  );
+  return {
+    x: cosine * dx + sine * dy,
+    y: -sine * dx + cosine * dy,
+    z: pose.z - startFrame.z,
+    yaw_rad: yawRad,
+    yaw_deg: (yawRad * 180) / Math.PI,
+  };
+}
+
+function renderGuidedStatus(guided, mavrosState) {
+  state.control.guidedAvailable = Boolean(guided.available);
+  const mission = guided.mission_status_label || "READY";
+  const arrived = Boolean(guided.arrived);
+
+  setPillState(
+    "guided-node-state",
+    guided.available ? "NODE ONLINE" : "NODE OFF",
+    guided.available ? "good" : "warn",
+  );
+  setPillState(
+    "guided-mission-state",
+    mission,
+    mission === "COMPLETED" ? "good" : mission === "RUNNING" ? "bad" : "warn",
+  );
+  setPillState(
+    "guided-arrival-state",
+    arrived ? "ARRIVED" : "NOT ARRIVED",
+    arrived ? "good" : "warn",
+  );
+
+  $("guided-fcu-mode").textContent = mavrosState?.connected
+    ? `${mavrosState.mode || "--"} · ${mavrosState.armed ? "ARMED" : "SAFE"}`
+    : "--";
+  $("guided-controller-status").textContent = guided.status || "--";
+  const targetInStartFrame = odomPoseToStartFrame(
+    guided.active_target,
+    guided.start_frame,
+  );
+  $("guided-start-frame").textContent = guided.start_frame
+    ? "READY · x 0.00 m · y 0.00 m · z 0.00 m · yaw 0.0°"
+    : "--";
+  $("guided-active-target").textContent = targetInStartFrame
+    ? `Pool / start · ${guidedPoseText(targetInStartFrame)}`
+    : guided.active_target
+      ? `Odom · ${guidedPoseText(guided.active_target)}`
+      : "--";
+  $("guided-last-command").textContent = guided.last_command
+    ? [
+        `mode ${guided.last_command.mode}`,
+        `x ${fmt(guided.last_command.x)}`,
+        `y ${fmt(guided.last_command.y)}`,
+        `z ${fmt(guided.last_command.z)}`,
+        "heading AUTO",
+      ].join(" · ")
+    : "--";
+  $("guided-updated-at").textContent = guided.updated_at || "--";
+
+  $("guided-set-mode").disabled = !state.control.fcuConnected;
+  $("guided-send-goal").disabled =
+    !guided.available || !state.control.fcuConnected || !state.control.fcuArmed;
+  $("guided-cancel-goal").disabled = !guided.available;
+  $("guided-recapture-frame").disabled =
+    !guided.available || !state.control.fcuConnected || state.control.fcuArmed;
+}
+
+function setGuidedFeedback(message, stateName = "") {
+  const element = $("guided-command-feedback");
+  element.textContent = message;
+  element.classList.toggle("good", stateName === "good");
+  element.classList.toggle("bad", stateName === "bad");
 }
 
 async function setWebControlEnabled(enabled) {
@@ -1654,6 +1909,9 @@ function bindPathControls() {
   $("path-set-origin").addEventListener("click", () => {
     postJson("/api/localization/set_origin").then(renderStatus).catch(showError);
   });
+  $("path-align-forward").addEventListener("click", () => {
+    postJson("/api/path/align_forward").then(renderStatus).catch(showError);
+  });
 
   window.addEventListener("resize", renderPath);
 }
@@ -1745,7 +2003,12 @@ function renderPath() {
   if (options.showRobot) drawRobotMarker(ctx, state.path.pose, view);
 
   $("path-point-count").textContent = `${points.length} points`;
-  $("path-view-state").textContent = `${view.label} · ${fmt(view.pixelsPerMeter, 1)} px/m`;
+  const relativeYawDeg = state.path.pose.yaw * 180 / Math.PI;
+  const alignment = state.path.frame?.aligned
+    ? `Forward ↑ · Δyaw ${fmt(relativeYawDeg, 1)}°`
+    : "Waiting for start heading";
+  $("path-view-state").textContent =
+    `${view.label} · ${fmt(view.pixelsPerMeter, 1)} px/m · ${alignment}`;
 }
 
 function computePathView(points, pose, options, width, height) {
@@ -1882,10 +2145,10 @@ function drawRobotMarker(ctx, pose, view) {
   ctx.strokeStyle = "#d8ffe3";
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(size + 3, 0);
-  ctx.lineTo(-size, -size * 0.65);
-  ctx.lineTo(-size * 0.55, 0);
-  ctx.lineTo(-size, size * 0.65);
+  ctx.moveTo(0, -size - 3);
+  ctx.lineTo(-size * 0.65, size);
+  ctx.lineTo(0, size * 0.55);
+  ctx.lineTo(size * 0.65, size);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();

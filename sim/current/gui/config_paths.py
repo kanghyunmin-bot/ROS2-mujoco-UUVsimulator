@@ -29,7 +29,10 @@ if not ROS_SOURCE_DIR.is_dir():
     ROS_SOURCE_DIR = ROS_WORKSPACE_DIR
 ROS_PACKAGE_DIR = ROS_SOURCE_DIR / "kmu26_auv"
 PING360_MSG_PACKAGE_DIR = ROS_SOURCE_DIR / "ping360_sonar_msgs"
-ROS_PACKAGE_NAME = "hit25_auv_ros2"
+# The upstream package was renamed to ``auv``.  A stale
+# ``install/hit25_auv_ros2`` directory can survive an incremental colcon build
+# and hide this mismatch, so always launch the package that exists in src.
+ROS_PACKAGE_NAME = "auv"
 ROS_PACKAGE_LAUNCH_FILE = "rov_start.launch.py"
 ROS_PACKAGE_RVIZ_CONFIG = ROS_PACKAGE_DIR / "rviz" / "rov.rviz"
 ROS2_RVIZ_COMPAT_CONFIG = SIM_STACK_DIR / "generated" / "rviz" / "rov_ros2_compat.rviz"

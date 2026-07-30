@@ -1,0 +1,15 @@
+/**:
+  ros__parameters:
+    # Simulator profile for waypoint/GUIDED mission validation.
+    # This keeps the normal minimal simulation surface and adds setpoint_raw,
+    # which guided_navigation uses to stream local position targets to ArduSub.
+    plugin_allowlist:
+      - command
+      - imu
+      - local_position
+      - manual_control
+      - rc_io
+      - setpoint_raw
+      - sys_status
+      - sys_time
+      - vfr_hud

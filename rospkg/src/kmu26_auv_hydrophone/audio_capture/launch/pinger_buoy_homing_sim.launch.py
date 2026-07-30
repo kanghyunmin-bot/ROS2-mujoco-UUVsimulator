@@ -55,10 +55,10 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             "noise_bag",
-            default_value="/home/kim/new_hydrophone_ws/localization_20260707_193328",
+            default_value="/home/kim/new_hydrophone_ws/localization_20260719_185918",
             description="실측 배경 노이즈를 읽을 ROS 2 bag 디렉터리.",
         ),
-        DeclareLaunchArgument("frequency_hz", default_value="21134.0"),
+        DeclareLaunchArgument("frequency_hz", default_value="21164.0"),
         DeclareLaunchArgument("pinger_x", default_value="-2.0"),
         DeclareLaunchArgument("pinger_y", default_value="0.65"),
         DeclareLaunchArgument("pinger_z", default_value="-0.5"),

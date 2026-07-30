@@ -2,8 +2,11 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joy.hpp>
 #include <mavros_msgs/msg/override_rc_in.hpp>
+#include <mavros_msgs/msg/state.hpp>
 #include <mavros_msgs/srv/set_mode.hpp>
 #include <mavros_msgs/srv/command_bool.hpp>
+#include <std_msgs/msg/bool.hpp>
+#include <std_msgs/msg/empty.hpp>
 #include <vector>
 #include <algorithm>
 #include <chrono>
@@ -24,6 +27,15 @@ public:
             "/joy", rclcpp::QoS(10),
             std::bind(&JoyToMavros::joyCallback, this, std::placeholders::_1)
         );
+        state_sub_ = this->create_subscription<mavros_msgs::msg::State>(
+            "/mavros/state", rclcpp::QoS(10),
+            std::bind(&JoyToMavros::stateCallback, this, std::placeholders::_1)
+        );
+        guided_waypoint_enable_pub_ =
+            this->create_publisher<std_msgs::msg::Bool>(
+            "/guided/waypoint_enable", rclcpp::QoS(10));
+        guided_cancel_pub_ = this->create_publisher<std_msgs::msg::Empty>(
+            "/guided/cancel", rclcpp::QoS(10));
 
         // Client for arming service
         arm_client_ = this->create_client<mavros_msgs::srv::CommandBool>("/mavros/cmd/arming");
@@ -51,6 +63,9 @@ private:
 
     rclcpp::Publisher<mavros_msgs::msg::OverrideRCIn>::SharedPtr rc_pub_;
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
+    rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr state_sub_;
+    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr guided_waypoint_enable_pub_;
+    rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr guided_cancel_pub_;
     rclcpp::Client<mavros_msgs::srv::CommandBool>::SharedPtr arm_client_;
     rclcpp::Client<mavros_msgs::srv::SetMode>::SharedPtr set_mode_client_;
     rclcpp::TimerBase::SharedPtr alt_hold_timer_;
@@ -64,6 +79,7 @@ private:
     double alt_hold_entry_neutral_sec_ = 1.0;
     double alt_hold_post_entry_neutral_sec_ = 0.3;
     bool alt_hold_request_pending_ = false;
+    std::string current_mode_;
     std::chrono::steady_clock::time_point alt_hold_mode_request_at_;
     std::chrono::steady_clock::time_point alt_hold_neutral_until_;
 
@@ -147,6 +163,32 @@ private:
         rc_override_msg.channels[VERTICAL_CHANNEL_INDEX] = NEUTRAL_PWM;
         rc_pub_->publish(rc_override_msg);
     }
+
+    void stateCallback(const mavros_msgs::msg::State::SharedPtr msg) {
+        current_mode_ = msg->mode;
+    }
+
+    void publish_guided_rc_release() {
+        mavros_msgs::msg::OverrideRCIn rc_override_msg;
+        for (auto & channel : rc_override_msg.channels) {
+            channel = mavros_msgs::msg::OverrideRCIn::CHAN_NOCHANGE;
+        }
+        rc_override_msg.channels[2] = mavros_msgs::msg::OverrideRCIn::CHAN_RELEASE;
+        rc_override_msg.channels[3] = mavros_msgs::msg::OverrideRCIn::CHAN_RELEASE;
+        rc_override_msg.channels[4] = mavros_msgs::msg::OverrideRCIn::CHAN_RELEASE;
+        rc_override_msg.channels[5] = mavros_msgs::msg::OverrideRCIn::CHAN_RELEASE;
+        rc_override_msg.channels[8] = led_pwm_;
+        rc_pub_->publish(rc_override_msg);
+    }
+
+    void set_guided_waypoint_enabled(bool enabled) {
+        std_msgs::msg::Bool enable_msg;
+        enable_msg.data = enabled;
+        guided_waypoint_enable_pub_->publish(enable_msg);
+        if (!enabled) {
+            guided_cancel_pub_->publish(std_msgs::msg::Empty());
+        }
+    }
     
     void joyCallback(const sensor_msgs::msg::Joy::SharedPtr msg)
     {
@@ -174,6 +216,11 @@ private:
 
         handleLedControl(msg);
 
+        if (current_mode_ == "GUIDED") {
+            publish_guided_rc_release();
+            last_joy_msg_ = msg;
+            return;
+        }
 
         mavros_msgs::msg::OverrideRCIn rc_override_msg;
 
@@ -220,6 +267,7 @@ private:
         }
 
         if (!new_mode.empty()) {
+            set_guided_waypoint_enabled(new_mode == "GUIDED");
             if (new_mode == "ALT_HOLD") {
                 schedule_alt_hold_request();
                 return;

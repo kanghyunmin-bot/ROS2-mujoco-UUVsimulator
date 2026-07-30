@@ -59,18 +59,10 @@ def main() -> int:
         pinger_package / "src" / "pinger_homing" / "pinger_homing_controller.cpp"
     )
     pinger_launch = pinger_package / "launch" / "pinger_homing_real.launch.py"
-    mission_package = ROS_SOURCE / "kmu26_mission_fsm"
-    grouped_mission_package = (
-        ROS_SOURCE / "kmu26_control_packages" / "kmu26_vision_mission_fsm"
-    )
-    archived_mission_package = WORKSPACE / "archive" / "kmu26_vision_mission_fsm"
-    if not mission_package.is_dir():
-        if grouped_mission_package.is_dir():
-            mission_package = grouped_mission_package
-        elif archived_mission_package.is_dir():
-            mission_package = archived_mission_package
-    mission_ros_cmake = mission_package / "CMakeLists.txt"
-    mission_ros_package_xml = mission_package / "package.xml"
+    vision_package = ROS_SOURCE / "kmu26_auv_buoy_vision_control"
+    vision_cmake = vision_package / "CMakeLists.txt"
+    vision_package_xml = vision_package / "package.xml"
+    vision_runner = ROOT / "tools" / "run_vision_mission.py"
     web_entry = ROOT / "gui" / "web_control_gui.py"
     mavros_schedule = ROOT / "bridge" / "ros2_publish_schedule_mavros.py"
     index = ROOT / "gui" / "web_static" / "index.html"
@@ -99,8 +91,9 @@ def main() -> int:
         pinger_rc_handoff_check,
         pinger_controller_cpp,
         pinger_launch,
-        mission_ros_cmake,
-        mission_ros_package_xml,
+        vision_cmake,
+        vision_package_xml,
+        vision_runner,
         web_entry,
         mavros_schedule,
         index,
@@ -109,6 +102,59 @@ def main() -> int:
         launcher,
     ):
         require_file(path)
+
+    # Current upstream repositories expose the real detector and
+    # mission_state_machine_node directly.  The removed
+    # kmu26_mission_fsm/ground_truth_buoy_fsm path is intentionally not part
+    # of this contract.  MuJoCo supplies only axis/timing tuning and requires
+    # a physical collector event before reporting success.
+    require_text(
+        vision_cmake,
+        "mission_state_machine_node",
+        "vision package must build its real mission controller",
+    )
+    require_text(
+        vision_runner,
+        '"/mujoco/course_buoys/status"',
+        "sim vision runner must observe the physical collector oracle",
+    )
+    require_text(
+        vision_runner,
+        "monitor.succeeded()",
+        "sim vision runner must gate PASS on physical success",
+    )
+    require_text(
+        vision_runner,
+        '"imgsz:=640"',
+        "vision loop must retain the validated CPU-rate inference surface",
+    )
+    require_text(
+        web_process_manager,
+        "run_vision_mission.py",
+        "web mission start must use the current vision package adapter",
+    )
+    require_text(
+        web_process_manager,
+        '"-17.5"',
+        "competition web start must retain the validated vision approach lane",
+    )
+    require_text(
+        web_process_manager,
+        '"auv_pinger_homing"',
+        "web pinger start must use the current standalone package",
+    )
+    require_text(
+        web_process_manager,
+        '"navigation_mode:=no_odom_phase"',
+        "web pinger start must retain the validated Phase ABBA mode",
+    )
+    require_text(
+        web_process_manager,
+        '"success_contract"] = "mujoco physical detach/net capture"',
+        "web mission result must expose its physical success contract",
+    )
+    print("web_gui_contract=PASS")
+    return 0
 
     require_text(web_app, 'parsed.path == "/api/status"', "web GUI must expose status telemetry")
     require_text(

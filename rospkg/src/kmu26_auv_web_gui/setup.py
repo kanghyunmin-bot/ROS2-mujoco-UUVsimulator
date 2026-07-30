@@ -3,7 +3,7 @@ from glob import glob
 
 from setuptools import setup
 
-package_name = "kmu26_auv_web_gui"
+package_name = "auv_web_gui"
 
 
 def data_files_for(directory):
@@ -28,7 +28,13 @@ setup(
         (f"share/{package_name}/scripts", glob("scripts/*.sh")),
         *data_files_for("web"),
     ],
-    install_requires=["setuptools", "fastapi", "uvicorn", "websockets", "PyYAML"],
+    install_requires=[
+        "setuptools",
+        "fastapi",
+        "uvicorn",
+        "websockets>=13.0",
+        "PyYAML",
+    ],
     zip_safe=True,
     maintainer="kuuve",
     maintainer_email="kuuve@todo.todo",
@@ -37,9 +43,9 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "server = kmu26_auv_web_gui.server:main",
-            "analyze_bag = kmu26_auv_web_gui.bag_analyzer:main",
-            "dronecan_dynamic_id_allocator = kmu26_auv_web_gui.dronecan_dynamic_id_allocator:main",
+            "server = auv_web_gui.server:main",
+            "analyze_bag = auv_web_gui.bag_analyzer:main",
+            "dronecan_dynamic_id_allocator = auv_web_gui.dronecan_dynamic_id_allocator:main",
         ],
     },
 )

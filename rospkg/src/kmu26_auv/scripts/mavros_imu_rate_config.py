@@ -16,6 +16,7 @@ class MavrosImuRateConfig(Node):
     MESSAGE_IDS = {
         "ATTITUDE": 30,
         "ATTITUDE_QUATERNION": 31,
+        "LOCAL_POSITION_NED": 32,
         "RAW_IMU": 27,
         "HIGHRES_IMU": 105,
         "SCALED_PRESSURE2": 137,
@@ -52,6 +53,7 @@ class MavrosImuRateConfig(Node):
         rate_params = [
             ("ATTITUDE", "attitude_rate_hz", 50.0),
             ("RAW_IMU", "raw_imu_rate_hz", 50.0),
+            ("LOCAL_POSITION_NED", "local_position_rate_hz", 20.0),
             ("ATTITUDE_QUATERNION", "attitude_quaternion_rate_hz", -1.0),
             ("HIGHRES_IMU", "highres_imu_rate_hz", -1.0),
             ("SCALED_PRESSURE2", "baro_rate_hz", 10.0),
@@ -157,7 +159,8 @@ def main(args=None):
         success = node.configure()
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
     return 0 if success else 1
 

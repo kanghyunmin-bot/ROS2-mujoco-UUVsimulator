@@ -10,7 +10,7 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description() -> LaunchDescription:
-    package_share = get_package_share_directory("hit25_auv_ros2")
+    package_share = get_package_share_directory("auv")
 
     mavros_share = get_package_share_directory("mavros")
     # Simulation only needs the control/telemetry surface used by the GUI and

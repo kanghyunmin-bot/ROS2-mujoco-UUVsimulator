@@ -44,13 +44,13 @@ def generate_launch_description():
                 default_value="-1",
                 description="Target class id. Overrides target_class_name when >= 0.",
             ),
-            DeclareLaunchArgument("confidence_threshold", default_value="0.18"),
+            DeclareLaunchArgument("confidence_threshold", default_value="0.35"),
             DeclareLaunchArgument(
                 "device",
                 default_value="auto",
                 description="Inference device: auto, cpu, cuda:0, etc.",
             ),
-            DeclareLaunchArgument("imgsz", default_value="1280"),
+            DeclareLaunchArgument("imgsz", default_value="640"),
             DeclareLaunchArgument(
                 "show_preview",
                 default_value="true",
@@ -66,6 +66,22 @@ def generate_launch_description():
                 default_value="true",
                 description="Publish the best detection for every visible class in each frame.",
             ),
+            DeclareLaunchArgument(
+                "pinger_marker_fallback",
+                default_value="false",
+                description=(
+                    "Use the competition underwater pinger blue marker only "
+                    "when YOLO returns no detections."
+                ),
+            ),
+            DeclareLaunchArgument("pinger_marker_disable_topic", default_value=""),
+            DeclareLaunchArgument(
+                "pinger_marker_target_id",
+                default_value="course_buoy_pinger_white_1_float",
+            ),
+            DeclareLaunchArgument("course_buoy_color_filter", default_value="false"),
+            DeclareLaunchArgument("course_buoy_min_confidence", default_value="0.0"),
+            DeclareLaunchArgument("associate_stick_with_buoy", default_value="false"),
             Node(
                 package="auv_buoy_vision_control",
                 executable="yolo_buoy_detector",
@@ -97,6 +113,28 @@ def generate_launch_description():
                         "preview_window_name": LaunchConfiguration("preview_window_name"),
                         "publish_per_class": ParameterValue(
                             LaunchConfiguration("publish_per_class"), value_type=bool
+                        ),
+                        "pinger_marker_fallback": ParameterValue(
+                            LaunchConfiguration("pinger_marker_fallback"),
+                            value_type=bool,
+                        ),
+                        "pinger_marker_disable_topic": LaunchConfiguration(
+                            "pinger_marker_disable_topic"
+                        ),
+                        "pinger_marker_target_id": LaunchConfiguration(
+                            "pinger_marker_target_id"
+                        ),
+                        "course_buoy_color_filter": ParameterValue(
+                            LaunchConfiguration("course_buoy_color_filter"),
+                            value_type=bool,
+                        ),
+                        "course_buoy_min_confidence": ParameterValue(
+                            LaunchConfiguration("course_buoy_min_confidence"),
+                            value_type=float,
+                        ),
+                        "associate_stick_with_buoy": ParameterValue(
+                            LaunchConfiguration("associate_stick_with_buoy"),
+                            value_type=bool,
                         ),
                     }
                 ],

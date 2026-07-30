@@ -74,9 +74,9 @@ class PingerHomingLaunchParametersTest(unittest.TestCase):
         self.assertIn("probe_pwm_delta:=64", command)
         self.assertIn("approach_pwm_delta:=104", command)
         self.assertIn("approach_duration_s:=6.250000", command)
-        self.assertIn("probe_leg_s:=1.500000", command)
-        self.assertIn("probe_neutral_s:=0.500000", command)
-        self.assertIn("probe_settle_s:=0.800000", command)
+        self.assertIn("probe_leg_s:=1.000000", command)
+        self.assertIn("probe_neutral_s:=0.250000", command)
+        self.assertIn("probe_settle_s:=0.300000", command)
         self.assertIn("initial_confirmation_probes:=2", command)
         self.assertEqual(result["tuning"]["reference_frequency_hz"], 22750.25)  # type: ignore[index]
         self.assertEqual(result["tuning"]["probe_pwm_delta"], 64)  # type: ignore[index]

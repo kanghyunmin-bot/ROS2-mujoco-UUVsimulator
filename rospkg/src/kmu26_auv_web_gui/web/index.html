@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>AUV Localization Test</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20260719-buoy-launch-sync" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260723-odom-contract" />
   </head>
   <body>
     <main class="app">
@@ -153,6 +153,7 @@
               <input id="path-show-robot" type="checkbox" checked />
               <span>Robot</span>
             </label>
+            <button id="path-align-forward" class="primary">Align Forward ↑</button>
             <button id="path-set-origin" class="primary">Reset Origin</button>
             <button id="path-clear" class="danger">Clear Path</button>
           </div>
@@ -384,10 +385,76 @@
                 <button data-control-mode="STABILIZE">STABILIZE</button>
                 <button data-control-mode="ALT_HOLD">ALT HOLD</button>
                 <button data-control-mode="POSHOLD">POSHOLD</button>
-                <button data-control-mode="GUIDED">GUIDED</button>
+                <button data-control-mode="GUIDED" aria-controls="guided-control-panel">GUIDED</button>
               </div>
             </section>
           </div>
+
+          <section id="guided-control-panel" class="guided-control-panel">
+            <div class="guided-control-header">
+              <h2>Guided Control</h2>
+              <div class="guided-pills">
+                <span id="guided-node-state" class="pill">NODE OFF</span>
+                <span id="guided-mission-state" class="pill">READY</span>
+                <span id="guided-arrival-state" class="pill">NOT ARRIVED</span>
+              </div>
+            </div>
+
+            <div class="guided-control-grid">
+              <section class="guided-goal-fields">
+                <h2>Goal</h2>
+                <label class="guided-mode-field">
+                  <span>Coordinate Mode</span>
+                  <select id="guided-coordinate-mode">
+                    <option value="2" selected>2 · Pool / start-frame absolute</option>
+                    <option value="0">0 · Odom absolute</option>
+                    <option value="1">1 · Current-position offset</option>
+                  </select>
+                </label>
+
+                <div class="guided-coordinate-grid">
+                  <label>
+                    <span>X (m)</span>
+                    <input id="guided-x" type="number" value="0" min="-50" max="50" step="0.1" />
+                  </label>
+                  <label>
+                    <span>Y (m)</span>
+                    <input id="guided-y" type="number" value="0" min="-50" max="50" step="0.1" />
+                  </label>
+                  <label>
+                    <span>Z (m)</span>
+                    <input id="guided-z" type="number" value="0" min="-50" max="1" step="0.1" />
+                  </label>
+                </div>
+
+                <div id="guided-goal-preview" class="guided-goal-preview">
+                  Start frame · x 0.00 m · y 0.00 m · z 0.00 m · heading AUTO → target
+                </div>
+
+                <div class="guided-actions">
+                  <button id="guided-set-mode" type="button">Set FCU GUIDED</button>
+                  <button id="guided-send-goal" type="button" class="danger">Send Goal</button>
+                  <button id="guided-cancel-goal" type="button">Cancel Goal</button>
+                  <button id="guided-recapture-frame" type="button">Set Current Pose as Start Frame</button>
+                </div>
+                <p id="guided-command-feedback" class="guided-command-feedback" role="status" aria-live="polite">
+                  Waiting for a command.
+                </p>
+              </section>
+
+              <section class="guided-live-status" aria-labelledby="guided-live-heading">
+                <h2 id="guided-live-heading">Status</h2>
+                <dl>
+                  <div><dt>FCU Mode</dt><dd id="guided-fcu-mode">--</dd></div>
+                  <div><dt>Controller</dt><dd id="guided-controller-status">--</dd></div>
+                  <div><dt>Start frame</dt><dd id="guided-start-frame">--</dd></div>
+                  <div><dt>Active target (pool / start)</dt><dd id="guided-active-target">--</dd></div>
+                  <div><dt>Last command</dt><dd id="guided-last-command">--</dd></div>
+                  <div><dt>Updated</dt><dd id="guided-updated-at">--</dd></div>
+                </dl>
+              </section>
+            </div>
+          </section>
         </article>
       </section>
 
@@ -792,6 +859,6 @@
       </section>
     </main>
 
-    <script src="/static/app.js?v=20260719-buoy-launch-sync"></script>
+    <script src="/static/app.js?v=20260723-odom-contract"></script>
   </body>
 </html>

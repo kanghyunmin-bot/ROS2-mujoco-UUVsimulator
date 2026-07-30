@@ -275,7 +275,10 @@ def _remove_competition_layout(worldbody: ET.Element, root: ET.Element) -> None:
             worldbody.remove(child)
 
     for parent in root.iter():
-        if parent.tag in {"worldbody", "default"}:
+        # Asset names may share the course_buoy_ prefix with bodies that use
+        # them.  The test-tank buoy is cloned from a competition template and
+        # still needs those shared materials (notably course_buoy_pvc).
+        if parent.tag in {"asset", "worldbody", "default"}:
             continue
         for child in list(parent):
             if any("course_buoy_" in str(value) for value in child.attrib.values()):

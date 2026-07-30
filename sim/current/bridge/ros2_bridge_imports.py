@@ -22,7 +22,11 @@ def load_ros2_runtime_imports() -> dict[str, object]:
         **core_imports,
         **message_imports,
         "RCOut": optional_message_type("mavros_msgs/RCOut", optional_imports["RCOut"], log=log_optional),
-        "DVLMsg": optional_message_type("dvl_msgs/DVL", optional_imports["DVLMsg"], log=log_optional),
+        "DVLMsg": optional_message_type(
+            "auv_dvl_a50_msg/DVL or dvl_msgs/DVL",
+            optional_imports["DVLMsg"],
+            log=log_optional,
+        ),
         "DVLDRMsg": optional_message_type("dvl_msgs/DVLDR", optional_imports["DVLDRMsg"], log=log_optional),
         "SonarEcho": optional_message_type("ping360_sonar_msgs/SonarEcho", optional_imports["SonarEcho"], log=log_optional),
         "AudioData": optional_message_type("audio_common_msgs/AudioData", optional_imports["AudioData"], log=log_optional),

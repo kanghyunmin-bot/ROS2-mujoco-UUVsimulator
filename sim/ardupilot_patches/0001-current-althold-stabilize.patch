@@ -1,0 +1,124 @@
+diff --git a/ArduSub/control_althold.cpp b/ArduSub/control_althold.cpp
+index 4e0edf68f4..739292b39b 100644
+--- a/ArduSub/control_althold.cpp
++++ b/ArduSub/control_althold.cpp
+@@ -14,7 +14,15 @@ bool Sub::althold_init()
+ 
+     // initialize vertical maximum speeds and acceleration
+     // sets the maximum speed up and down returned by position controller
+-    attitude_control.set_throttle_out(0.75, true, 100.0);
++    // Seed the Z controller from the throttle that is already reaching the
++    // motors.  The legacy 0.75 constant creates a large output step when an
++    // armed, neutrally-buoyant vehicle enters ALT_HOLD from MANUAL (normally
++    // about 0.50).  Besides the depth impulse, that step can excite the
++    // roll-rate loop through the real T200 deadband.  Preserving the current
++    // filtered throttle makes the mode hand-off bumpless and also lets
++    // init_z_controller() initialise its integrator from the actual plant
++    // operating point.
++    attitude_control.set_throttle_out(motors.get_throttle(), true, 100.0);
+     pos_control.init_z_controller();
+     pos_control.set_max_speed_accel_z(-get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
+     pos_control.set_correction_speed_accel_z(-get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
+@@ -83,8 +91,40 @@ void Sub::althold_run()
+ void Sub::control_depth() {
+     // We rotate the RC inputs to the earth frame to check if the user is giving an input that would change the depth.
+     // Output the Z controller + pilot input to all motors.
+-    Vector3f earth_frame_rc_inputs = ahrs.get_rotation_body_to_ned() * Vector3f(-channel_forward->norm_input(), -channel_lateral->norm_input(), (2.0f*(-0.5f+channel_throttle->norm_input())));
+-    float target_climb_rate_cm_s = get_pilot_desired_climb_rate(500 + g.pilot_speed_up * earth_frame_rc_inputs.z);
++    // Do not let a stale RC sample survive a pilot-input failsafe.  The legacy
++    // get_pilot_desired_climb_rate() helper performed this check internally;
++    // the normalized vectored-input path below must preserve the same safety
++    // contract explicitly for every body-axis pilot contribution.
++    const float pilot_forward_input = failsafe.pilot_input ? 0.0f : channel_forward->norm_input();
++    const float pilot_lateral_input = failsafe.pilot_input ? 0.0f : channel_lateral->norm_input();
++    const float pilot_throttle_input = failsafe.pilot_input ? 0.5f : channel_throttle->norm_input();
++    Vector3f earth_frame_rc_inputs = ahrs.get_rotation_body_to_ned() * Vector3f(
++        -pilot_forward_input,
++        -pilot_lateral_input,
++        2.0f * (-0.5f + pilot_throttle_input));
++
++    // earth_frame_rc_inputs.z is dimensionless, while the legacy expression
++    // passed 500 + PILOT_SPEED_UP*z to a helper that expects 0..1000 RC
++    // control units.  That mixed cm/s, PWM deadzone and control-input units,
++    // making small but valid ALT_HOLD heave commands disappear.  Apply the
++    // current ArduSub THR_DZ contract in normalized stick space, then scale to
++    // the configured asymmetric climb/descent speeds.  Keeping this mapping
++    // here preserves the 4.1 vectored-depth behavior at non-level attitudes.
++    const float earth_vertical_input = constrain_float(earth_frame_rc_inputs.z, -1.0f, 1.0f);
++    const int16_t throttle_deadzone_control = constrain_int16(g.throttle_deadzone, 0, 400);
++    const float deadzone_normalized = constrain_float(
++        2.0f * throttle_deadzone_control * gain / 1000.0f,
++        0.0f,
++        0.8f);
++    float scaled_vertical_input = 0.0f;
++    if (earth_vertical_input > deadzone_normalized) {
++        scaled_vertical_input = (earth_vertical_input - deadzone_normalized) / (1.0f - deadzone_normalized);
++    } else if (earth_vertical_input < -deadzone_normalized) {
++        scaled_vertical_input = (earth_vertical_input + deadzone_normalized) / (1.0f - deadzone_normalized);
++    }
++    float target_climb_rate_cm_s = scaled_vertical_input >= 0.0f
++        ? scaled_vertical_input * g.pilot_speed_up
++        : scaled_vertical_input * get_pilot_speed_dn();
+ 
+     bool surfacing = ap.at_surface || pos_control.get_pos_target_z_cm() > g.surface_depth;
+     float upper_speed_limit = surfacing ? 0 : g.pilot_speed_up;
+@@ -102,7 +142,15 @@ void Sub::control_depth() {
+     Vector3f throttle_vehicle_frame = ahrs.get_rotation_body_to_ned().transposed() * Vector3f(0, 0, motors.get_throttle_in_bidirectional());
+     //TODO: scale throttle with the ammount of thrusters in the given direction
+     float raw_throttle_factor = (ahrs.get_rotation_body_to_ned() * Vector3f(0, 0, 1.0)).xy().length();
+-    motors.set_throttle(throttle_vehicle_frame.z + raw_throttle_factor * channel_throttle->norm_input());
+-    motors.set_forward(-throttle_vehicle_frame.x + channel_forward->norm_input());
+-    motors.set_lateral(-throttle_vehicle_frame.y + channel_lateral->norm_input());
+-}
+\ No newline at end of file
++    // get_throttle_in_bidirectional() and throttle_vehicle_frame are in
++    // [-1, 1], while set_throttle() takes [0, 1].  Passing the rotated value
++    // straight to set_throttle() subtracts the neutral offset a second time:
++    // at level attitude a controller output of 0.67 became about 0.34 and
++    // reversed the ALT_HOLD correction.  Convert back to normalized throttle
++    // before adding the pilot's body-axis contribution at steep attitudes.
++    const float throttle_normalized = 0.5f + 0.5f * throttle_vehicle_frame.z
++        + raw_throttle_factor * (pilot_throttle_input - 0.5f);
++    motors.set_throttle(constrain_float(throttle_normalized, 0.0f, 1.0f));
++    motors.set_forward(-throttle_vehicle_frame.x + pilot_forward_input);
++    motors.set_lateral(-throttle_vehicle_frame.y + pilot_lateral_input);
++}
+diff --git a/ArduSub/control_stabilize.cpp b/ArduSub/control_stabilize.cpp
+index af5e2a3e8b..0786446c74 100644
+--- a/ArduSub/control_stabilize.cpp
++++ b/ArduSub/control_stabilize.cpp
+@@ -74,9 +74,18 @@ void Sub::handle_attitude()
+         break;
+         default:
+         {
++            // CONTROL_FRAME=0 is the real-vehicle contract.  The 4.1.2
++            // backport that restored legacy yaw behavior accidentally kept
++            // passing the cached roll/pitch targets here, so live RC1/RC2
++            // commands were calculated above but never reached the attitude
++            // controller.  Current ArduSub passes the freshly computed lean
++            // angles on every cycle; mirror that behavior while preserving
++            // the legacy yaw-rate/heading-hold state machine.
++            last_roll = desired_roll_rate;
++            last_pitch = desired_pitch_rate;
+             if (!is_zero(desired_yaw_rate))
+             { // call attitude controller with rate yaw determined by pilot input
+-                attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(last_roll, last_pitch, desired_yaw_rate);
++                attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(desired_roll_rate, desired_pitch_rate, desired_yaw_rate);
+                 last_pilot_heading = ahrs.yaw_sensor;
+                 last_pilot_yaw_input_ms = tnow; // time when pilot last changed heading
+             }
+@@ -90,12 +99,12 @@ void Sub::handle_attitude()
+                     desired_yaw_rate = 0; // Stop rotation on yaw axis
+ 
+                     // call attitude controller with target yaw rate = 0 to decelerate onqq yaw axis
+-                    attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(last_roll, last_pitch, desired_yaw_rate);
++                    attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(desired_roll_rate, desired_pitch_rate, desired_yaw_rate);
+                     last_pilot_heading = ahrs.yaw_sensor; // update heading to hold
+                 }
+                 else
+                 { // call attitude controller holding absolute absolute bearing
+-                    attitude_control.input_euler_angle_roll_pitch_yaw(last_roll, last_pitch, last_pilot_heading, true);
++                    attitude_control.input_euler_angle_roll_pitch_yaw(desired_roll_rate, desired_pitch_rate, last_pilot_heading, true);
+                 }
+             }
+         }

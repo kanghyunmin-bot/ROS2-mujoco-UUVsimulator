@@ -79,7 +79,10 @@ def pinger_sim_environment() -> dict[str, str]:
         "ROS2_UUV_HYDROPHONE_AMPLITUDE": "0.040",
         "ROS2_UUV_HYDROPHONE_NOISE_AMPLITUDE": "0.005",
         "ROS2_UUV_HYDROPHONE_SNR_PROBE_NOISE_AMPLITUDE": "0.0",
-        "ROS2_UUV_HYDROPHONE_PHASE_NOISE_STD_RAD": "0.19",
+        # The rosbag broadband/impulse floor remains active below.  Keep only
+        # a small additional synthetic phase jitter for the short interactive
+        # ABBA gate; 0.19 rad made consecutive bearings mutually orthogonal.
+        "ROS2_UUV_HYDROPHONE_PHASE_NOISE_STD_RAD": "0.05",
         "ROS2_UUV_HYDROPHONE_PHASE_NOISE_CORRELATION_S": "2.0",
         # The calibrated profile replaces the old arbitrary near-frequency
         # tones with actuator-gated colored and impulsive noise.
@@ -99,7 +102,20 @@ def pinger_sim_launch_args() -> list[str]:
         "--fluid-model",
         "current",
         "--initial-bar30-depth-m",
-        "auto",
+        # no_odom_phase is intentionally horizontal-only.  Start the
+        # pinger-purpose runtime at the competition acoustic-source depth so
+        # its calibrated 3-D range can actually reach the success radius.
+        "8.30",
+        # Interactive homing starts on the competition approach lane instead
+        # of replaying the full 21 m transit on every button press.  The
+        # pinger, vehicle dynamics, PCM and controller remain live.
+        "--initial-position-xy",
+        "-2.5",
+        "-10.0",
+        "--initial-rpy-rad",
+        "0.0",
+        "0.0",
+        "0.0",
         "--ros2-sensor-hz",
         "100",
         "--thruster-loop-hz",

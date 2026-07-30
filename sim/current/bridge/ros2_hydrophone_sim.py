@@ -32,6 +32,7 @@ class HydrophoneConfig:
     status_hz: float
     sound_speed_mps: float
     amplitude: float
+    attenuation_exponent: float
     noise_amplitude: float
     snr_probe_noise_amplitude: float
     max_range_m: float
@@ -165,6 +166,13 @@ def configure_hydrophone_runtime(bridge: Any) -> None:
         status_hz=float(np.clip(env_to_float("ROS2_UUV_HYDROPHONE_STATUS_HZ", 10.0), 0.1, 100.0)),
         sound_speed_mps=float(np.clip(env_to_float("ROS2_UUV_HYDROPHONE_SOUND_SPEED_MPS", 1500.0), 1000.0, 1700.0)),
         amplitude=float(np.clip(env_to_float("ROS2_UUV_HYDROPHONE_AMPLITUDE", 0.040), 0.0, 0.95)),
+        attenuation_exponent=float(
+            np.clip(
+                env_to_float("ROS2_UUV_HYDROPHONE_ATTENUATION_EXPONENT", 0.5),
+                0.0,
+                2.0,
+            )
+        ),
         noise_amplitude=float(np.clip(env_to_float("ROS2_UUV_HYDROPHONE_NOISE_AMPLITUDE", 0.005), 0.0, 0.10)),
         snr_probe_noise_amplitude=float(
             np.clip(
@@ -616,9 +624,14 @@ def build_hydrophone_audio_msg(bridge, data, _stamp, state):
             np.linspace(float(start), float(end), frames, endpoint=True, dtype=np.float32)
             for start, end in zip(previous_ranges, ranges)
         ]
-        attenuation = cfg.amplitude / math.sqrt(max(float(measurement["range_m"]), 1.0))
-        minimum_amplitude = 0.0 if cfg.noise_profile == "rosbag_20260707" else 0.02
-        amplitude = float(np.clip(attenuation, minimum_amplitude, cfg.amplitude))
+        attenuation = cfg.amplitude / math.pow(
+            max(float(measurement["range_m"]), 1.0),
+            cfg.attenuation_exponent,
+        )
+        # Preserve the configured distance law for every profile.  A legacy
+        # 0.02 minimum made a noise-free source equally loud at all long
+        # ranges, so an SNR circle could not observe a spatial gradient.
+        amplitude = float(np.clip(attenuation, 0.0, cfg.amplitude))
         pinger_frequency_hz = cfg.frequency_hz + cfg.pinger_frequency_bias_hz
         pinger_phase_noise_rad = _update_pinger_phase_noise(bridge, cfg, frames)
         _add_tone(

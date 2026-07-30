@@ -6,10 +6,12 @@ from __future__ import annotations
 import argparse
 import json
 import math
+from pathlib import Path
 import statistics
 import time
 
 import rclpy
+from audio_common_msgs.msg import Float64Stamped
 from geometry_msgs.msg import Vector3Stamped
 from mavros_msgs.msg import OverrideRCIn, State
 from rclpy.node import Node
@@ -36,6 +38,7 @@ class SnrSimRuntimeCheck(Node):
         self.connected_seen = False
         self.armed_seen = False
         self.invalid_numeric = False
+        self.success_range_started_at: float | None = None
         state_qos = QoSProfile(
             depth=1,
             reliability=ReliabilityPolicy.RELIABLE,
@@ -46,7 +49,10 @@ class SnrSimRuntimeCheck(Node):
         )
         self.create_subscription(Bool, "/homing/estimator_ready", self._on_ready, 10)
         self.create_subscription(
-            Float64, "/audio_phase_estimator/iq_snr_ratio", self._on_snr, 10
+            Float64Stamped,
+            "/audio_frequency_detector/snr_db_stamped",
+            self._on_stamped_snr,
+            10,
         )
         self.create_subscription(
             Float64, "/homing/snr_confidence", self._on_confidence, 10
@@ -78,6 +84,9 @@ class SnrSimRuntimeCheck(Node):
             self.invalid_numeric = True
 
     def _on_snr(self, message: Float64) -> None:
+        self._append_finite(self.snr_values, float(message.data))
+
+    def _on_stamped_snr(self, message: Float64Stamped) -> None:
         self._append_finite(self.snr_values, float(message.data))
 
     def _on_confidence(self, message: Float64) -> None:
@@ -229,6 +238,9 @@ def main() -> int:
     parser.add_argument("--max-3d-direction-error-deg", type=float, default=180.0)
     parser.add_argument("--require-heave", action="store_true")
     parser.add_argument("--require-homing-state", action="store_true")
+    parser.add_argument("--success-range-m", type=float, default=0.8)
+    parser.add_argument("--success-hold-s", type=float, default=0.5)
+    parser.add_argument("--json-out", type=Path)
     args = parser.parse_args()
 
     rclpy.init()
@@ -237,8 +249,16 @@ def main() -> int:
     try:
         while rclpy.ok() and time.monotonic() < deadline:
             rclpy.spin_once(node, timeout_sec=0.05)
-            if node.latest_state == "ARRIVED":
-                break
+            if node.ranges_m and node.ranges_m[-1] <= args.success_range_m:
+                if node.success_range_started_at is None:
+                    node.success_range_started_at = time.monotonic()
+                elif (
+                    time.monotonic() - node.success_range_started_at
+                    >= args.success_hold_s
+                ):
+                    break
+            else:
+                node.success_range_started_at = None
         summary = node.summary()
     finally:
         node.destroy_node()
@@ -287,11 +307,20 @@ def main() -> int:
         )
     if args.require_heave and int(summary["heave_active_samples"]) == 0:
         failures.append("no active vertical RC samples")
+    minimum_range = summary["range_min_m"]
+    if minimum_range is None or float(minimum_range) > args.success_range_m:
+        failures.append(
+            f"minimum range {minimum_range} > {args.success_range_m} m"
+        )
     if summary["invalid_numeric"]:
         failures.append("non-finite runtime value observed")
     summary["failures"] = failures
     summary["result"] = "FAIL" if failures else "PASS"
-    print(json.dumps(summary, indent=2, sort_keys=True))
+    rendered = json.dumps(summary, indent=2, sort_keys=True)
+    if args.json_out is not None:
+        args.json_out.parent.mkdir(parents=True, exist_ok=True)
+        args.json_out.write_text(rendered + "\n", encoding="utf-8")
+    print(rendered)
     return 1 if failures else 0
 
 

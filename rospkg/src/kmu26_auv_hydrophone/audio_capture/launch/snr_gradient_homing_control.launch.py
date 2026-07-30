@@ -62,7 +62,7 @@ def generate_launch_description():
         DeclareLaunchArgument("depth_topic", default_value="/depth/pose"),
         DeclareLaunchArgument(
             "reference_frequency_hz",
-            default_value="21134.0",
+            default_value="21164.0",
             description="예상 pinger 주파수(Hz).",
         ),
         DeclareLaunchArgument(

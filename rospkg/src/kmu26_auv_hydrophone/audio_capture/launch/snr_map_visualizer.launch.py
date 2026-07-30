@@ -21,7 +21,7 @@ def generate_launch_description():
 
     arguments = [
         DeclareLaunchArgument("use_sim_time", default_value="false"),
-        DeclareLaunchArgument("map_cell_size_m", default_value="0.12"),
+        DeclareLaunchArgument("map_cell_size_m", default_value="0.15"),
         DeclareLaunchArgument("map_radius_m", default_value="2.0"),
         DeclareLaunchArgument("display_rotation_rad", default_value="0.0"),
         DeclareLaunchArgument("plot_rate_hz", default_value="5.0"),

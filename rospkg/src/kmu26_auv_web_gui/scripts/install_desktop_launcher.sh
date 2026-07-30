@@ -3,7 +3,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-START_SCRIPT="${SCRIPT_DIR}/start_kmu26_auv_web_gui.sh"
+START_SCRIPT="${SCRIPT_DIR}/start_auv_web_gui.sh"
 APP_DIR="${HOME}/.local/share/applications"
 DESKTOP_DIR="${HOME}/Desktop"
 APP_FILE="${APP_DIR}/kmu26-auv-web-gui.desktop"
@@ -30,7 +30,7 @@ if command -v gio >/dev/null 2>&1; then
   gio set "${DESKTOP_FILE}" metadata::trusted true >/dev/null 2>&1 || true
 fi
 
-echo "[kmu26_auv_web_gui] Installed launcher:"
+echo "[auv_web_gui] Installed launcher:"
 echo "  ${APP_FILE}"
 echo "  ${DESKTOP_FILE}"
 echo

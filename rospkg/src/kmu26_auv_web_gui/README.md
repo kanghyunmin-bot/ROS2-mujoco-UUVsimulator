@@ -14,13 +14,13 @@ The intended deployment is:
 On the Ubuntu robot PC:
 
 ```bash
-./kmu26_auv_web_gui/scripts/start_kmu26_auv_web_gui.sh
+./auv_web_gui/scripts/start_auv_web_gui.sh
 ```
 
 To add a desktop/app launcher on Ubuntu:
 
 ```bash
-./kmu26_auv_web_gui/scripts/install_desktop_launcher.sh
+./auv_web_gui/scripts/install_desktop_launcher.sh
 ```
 
 After that, open **KMU26 AUV Web GUI** from the app menu or desktop icon.
@@ -28,7 +28,7 @@ After that, open **KMU26 AUV Web GUI** from the app menu or desktop icon.
 ## ROS Run
 
 ```bash
-ros2 run kmu26_auv_web_gui server --host 0.0.0.0 --port 8081
+ros2 run auv_web_gui server --host 0.0.0.0 --port 8081
 ```
 
 Then open:
@@ -39,7 +39,7 @@ http://<ubuntu-robot-ip>:8081
 
 ## Pinger Homing tab
 
-The **Pinger Homing** tab starts the standalone `kmu26_pinger_homing` ROS 2
+The **Pinger Homing** tab starts the standalone `auv_pinger_homing` ROS 2
 package, shows its estimator/controller/RC-mux status, and supports a safe dry
 run before live MAVROS RC output.
 
@@ -48,10 +48,10 @@ Place both repositories in the same ROS 2 workspace and build them:
 ```bash
 cd ~/catkin_ws/src
 git clone https://github.com/2026-kmu-underwater-robot/kmu26_mission_fsm.git
-git clone https://github.com/2026-kmu-underwater-robot/kmu26_auv_web_gui.git
+git clone https://github.com/2026-kmu-underwater-robot/auv_web_gui.git
 cd ~/catkin_ws
 source /opt/ros/humble/setup.bash
-colcon build --symlink-install --packages-select kmu26_pinger_homing kmu26_auv_web_gui
+colcon build --symlink-install --packages-select auv_pinger_homing auv_web_gui
 source install/setup.bash
 ```
 
@@ -87,7 +87,7 @@ names:
 | Audio | `/audio`, `audio_common_msgs/msg/AudioData`, or bundled capture enabled |
 | RC output | no publisher before homing; the homing RC mux becomes the sole `/mavros/rc/override` publisher |
 
-The latest `hit25_auv_ros2/localization_test.launch.py` supplies these topic,
+The latest `auv/localization_test.launch.py` supplies these topic,
 frame, depth-sign, and joystick-mux contracts when the GUI starts the robot
 stack. A failed row identifies the exact real-vehicle integration mismatch and,
 for RC conflicts, the publisher node names.

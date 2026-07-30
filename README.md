@@ -38,6 +38,31 @@ source ./sim/environment.sh
 브라우저에서 <http://127.0.0.1:8878/>을 열고 GUI에서 시뮬레이션 스택을
 시작한다. Tk GUI는 `./run_control_gui.sh --tk`로 실행한다.
 
+## 새 Ubuntu 22.04에서 이어서 작업
+
+현재 개발 스냅샷은 `agent/publish-clean-current-workspace` 브랜치에 있다.
+YOLO 가중치는 Git LFS 객체이므로 일반 clone 전에 Git LFS를 설치한다.
+
+```bash
+sudo apt-get update
+sudo apt-get install -y git git-lfs
+git lfs install
+git clone --branch agent/publish-clean-current-workspace \
+  https://github.com/kanghyunmin-bot/ROS2-mujoco-UUVsimulator.git
+cd ROS2-mujoco-UUVsimulator
+git lfs pull
+./sim/current/tools/install/install_uuv_sim_current_ubuntu22.sh \
+  --noninteractive --skip-qgc
+source ./sim/environment.sh
+```
+
+설치기는 소스 checkout을 자동으로 인식하고 ROS 패키지를 새로 빌드한다.
+ArduPilot은 검증된 `2dd0bb7d4c85ac48437f139d66df648fc0e1d4ae`
+커밋으로 맞춘 뒤 `sim/ardupilot_patches`의 현재 제어 패치를 적용한다.
+진행 중인 하이드로폰→레인 비전 임무 상태는
+[2026-07-31 인계 문서](documentary/VISION_LANE_HANDOFF_2026-07-31.md)에
+정리되어 있다.
+
 GUI 없이 SITL과 MuJoCo를 직접 실행하려면:
 
 ```bash

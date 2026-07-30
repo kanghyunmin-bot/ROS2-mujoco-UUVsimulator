@@ -74,10 +74,6 @@ public:
                 "/audio_phase_estimator/iq_snr_ratio_stamped", 10);
         iq_coherence_pub_ =
             this->create_publisher<std_msgs::msg::Float64>("/audio_phase_estimator/iq_coherence", 10);
-        iq_magnitude_pub_ =
-            this->create_publisher<std_msgs::msg::Float64>("/audio_phase_estimator/iq_magnitude", 10);
-        delta_range_pub_ =
-            this->create_publisher<std_msgs::msg::Float64>("/audio_phase_estimator/delta_range_m", 10);
         reference_frequency_hz_ =
             this->declare_parameter<double>("reference_frequency_hz", reference_frequency_hz_);
         demodulation_frequency_hz_ = this->declare_parameter<double>(
@@ -441,10 +437,6 @@ private:
             return;
         }
 
-        std_msgs::msg::Float64 iq_magnitude_msg;
-        iq_magnitude_msg.data = iq_quality.magnitude;
-        iq_magnitude_pub_->publish(iq_magnitude_msg);
-
         double delta_phase_rad = 0.0;  //delta_theta_k = theta_k - theta_k-1
         double delta_range_m = 0.0; // Delta r = -lambda * Delta theta / (2*pi)
         if (have_previous_iq_) {  //theta_k-1가 있으면
@@ -457,9 +449,6 @@ private:
             const std::complex<double> phase_step = iq * std::conj(previous_iq_);//Z_k * Z_k-1^*
             delta_phase_rad = std::atan2(std::imag(phase_step), std::real(phase_step));
             delta_range_m = -current_wavelength_m() * delta_phase_rad / (2.0 * M_PI);
-            std_msgs::msg::Float64 delta_range_msg;
-            delta_range_msg.data = delta_range_m;
-            delta_range_pub_->publish(delta_range_msg);
             accumulate_homing_observation(
                 delta_range_m,
                 delta_time_s,
@@ -894,8 +883,6 @@ private:
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr iq_snr_ratio_pub_;
     rclcpp::Publisher<audio_common_msgs::msg::Float64Stamped>::SharedPtr iq_snr_ratio_stamped_pub_;
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr iq_coherence_pub_;
-    rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr iq_magnitude_pub_;
-    rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr delta_range_pub_;
 
     std::vector<TimedSample> sample_buffer_;
     std::mutex buffer_mutex_;

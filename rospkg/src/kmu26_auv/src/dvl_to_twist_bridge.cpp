@@ -3,7 +3,7 @@
 #include <cmath>
 #include <string>
 
-#include <dvl_msgs/msg/dvl.hpp>
+#include <auv_dvl_a50_msg/msg/dvl.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -32,7 +32,7 @@ public:
     const auto sensor_qos = rclcpp::SensorDataQoS();
 
     publisher_ = create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(output_topic_, 10);
-    subscription_ = create_subscription<dvl_msgs::msg::DVL>(
+    subscription_ = create_subscription<auv_dvl_a50_msg::msg::DVL>(
       input_topic_, sensor_qos,
       std::bind(&DvlToTwistBridge::handle_msg, this, std::placeholders::_1));
 
@@ -56,7 +56,7 @@ public:
   }
 
 private:
-  void handle_msg(const dvl_msgs::msg::DVL::SharedPtr msg)
+  void handle_msg(const auv_dvl_a50_msg::msg::DVL::SharedPtr msg)
   {
     if (require_valid_velocity_ && !msg->velocity_valid) {
       RCLCPP_WARN_THROTTLE(
@@ -131,7 +131,7 @@ private:
     publisher_->publish(out);
   }
 
-  bool is_valid_measurement(const dvl_msgs::msg::DVL & msg)
+  bool is_valid_measurement(const auv_dvl_a50_msg::msg::DVL & msg)
   {
     const auto & velocity = msg.velocity;
     if (!std::isfinite(velocity.x) || !std::isfinite(velocity.y) || !std::isfinite(velocity.z)) {
@@ -253,7 +253,7 @@ private:
   int consecutive_good_samples_{0};
   rclcpp::Time first_good_time_{0, 0, RCL_ROS_TIME};
   rclcpp::Publisher<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr publisher_;
-  rclcpp::Subscription<dvl_msgs::msg::DVL>::SharedPtr subscription_;
+  rclcpp::Subscription<auv_dvl_a50_msg::msg::DVL>::SharedPtr subscription_;
 };
 
 int main(int argc, char ** argv)

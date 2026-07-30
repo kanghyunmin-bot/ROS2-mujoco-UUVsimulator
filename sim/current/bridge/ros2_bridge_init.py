@@ -38,8 +38,9 @@ def init_ros_runtime(self) -> None:
     bind_ros2_runtime_imports(self, imports)
     if self._real_pkg_compat and self.DVLMsg is None:
         raise RuntimeError(
-            "strict real-package compatibility requires dvl_msgs/msg/DVL; "
-            "build and source the dvl_msgs workspace before launching"
+            "strict real-package compatibility requires "
+            "auv_dvl_a50_msg/msg/DVL; build and source the rospkg workspace "
+            "before launching"
         )
     initialize_ros2_context_and_node(self, imports)
     initialize_ros2_endpoints(self)

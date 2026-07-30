@@ -63,11 +63,21 @@ def load_optional_ros2_message_imports() -> dict[str, object | None]:
     except Exception:
         RCOut = None
 
+    # The real A50 driver and kmu26_auv's dvl_to_twist_bridge use
+    # auv_dvl_a50_msg/msg/DVL.  Publishing the look-alike dvl_msgs/msg/DVL on
+    # the same topic does not connect in ROS 2 even though the fields are
+    # identical, so prefer the physical package contract when it is installed.
     try:
-        from dvl_msgs.msg import DVL as DVLMsg
+        from auv_dvl_a50_msg.msg import DVL as DVLMsg
+    except Exception:
+        try:
+            from dvl_msgs.msg import DVL as DVLMsg
+        except Exception:
+            DVLMsg = None
+
+    try:
         from dvl_msgs.msg import DVLDR as DVLDRMsg
     except Exception:
-        DVLMsg = None
         DVLDRMsg = None
 
     try:

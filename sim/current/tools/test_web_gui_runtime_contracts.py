@@ -459,7 +459,7 @@ class WebGuiRuntimeContractsTest(unittest.TestCase):
         self.assertIn('id="gamepadEnabled"', index)
         self.assertIn('id="gamepadStatus"', index)
 
-    def test_mission_selects_real_and_sim_pose_contracts(self) -> None:
+    def test_sim_mission_uses_current_vision_package_and_physical_oracle(self) -> None:
         manager = WebProcessManager(_Node())
         manager._clear_mission_status_file = lambda: None  # type: ignore[method-assign]
         captured: list[list[str]] = []
@@ -470,20 +470,13 @@ class WebGuiRuntimeContractsTest(unittest.TestCase):
 
         manager._start_plain_process = capture_start  # type: ignore[method-assign]
 
-        manager._simulation_runtime_available = lambda: False  # type: ignore[method-assign]
-        manager.start_ground_truth_mission(
-            {"dry_run": True, "transport": "command_override"}
-        )
-        real_command = "\n".join(captured[-1])
-        self.assertIn("kmu26_vision_mission_fsm", real_command)
-        self.assertIn("pose_topic:=/odometry/filtered", real_command)
-        self.assertIn("transport:=command_override", real_command)
-
         manager._simulation_runtime_available = lambda: True  # type: ignore[method-assign]
         manager.start_ground_truth_mission({"dry_run": True, "transport": "rc_override"})
         sim_command = "\n".join(captured[-1])
-        self.assertIn("pose_topic:=/sim/odom", sim_command)
-        self.assertIn("transport:=rc_override", sim_command)
+        self.assertIn("run_vision_mission.py", sim_command)
+        self.assertIn("assets/yolo/best.pt", sim_command)
+        self.assertIn("--status-json", sim_command)
+        self.assertIn("--deadline-s 75", sim_command)
 
 
 if __name__ == "__main__":

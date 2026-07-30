@@ -32,41 +32,30 @@ def load_rviz_converter():
 
 
 def main() -> None:
-    cmake = read(PKG / "CMakeLists.txt")
-    package = read(PKG / "package.xml")
     launch = read(PKG / "launch" / "rov_start.launch.py")
-    node = read(PKG / "src" / "mission_rviz_visualizer.cpp")
     rviz = read(PKG / "rviz" / "rov.rviz")
-    gui_publishers = read(ROOT / "sim" / "current" / "gui" / "node_init_publishers.py")
-    gui_camera = read(ROOT / "sim" / "current" / "gui" / "node_stereo_camera.py")
+    vision_runner = read(ROOT / "sim" / "current" / "tools" / "run_vision_mission.py")
+    web_app = read(ROOT / "sim" / "current" / "gui" / "web_app.py")
 
-    require("find_package(visualization_msgs REQUIRED)" in cmake, "visualization_msgs CMake dependency missing")
-    require("add_executable(mission_rviz_visualizer" in cmake, "mission_rviz_visualizer target missing")
-    require("mission_rviz_visualizer" in launch, "mission visualizer launch node missing")
-    require("use_mission_rviz_visualizer" in launch, "launch toggle argument missing")
-    require("<depend>visualization_msgs</depend>" in package, "visualization_msgs package dependency missing")
-    require("/mission/rviz_markers" in rviz, "RViz mission marker topic missing")
+    # Upstream removed mission_rviz_visualizer.cpp.  Keep rov.rviz usable and
+    # expose the live mission state/physical collector result through the web
+    # monitor instead of requiring a deleted executable.
     require(
-        "Class: rviz_default_plugins/MarkerArray" in rviz or
-        "Class: rviz/MarkerArray" in rviz,
-        "RViz MarkerArray display missing",
+        'DeclareLaunchArgument("use_mission_rviz_visualizer", default_value="false")'
+        in launch,
+        "removed mission visualizer must stay disabled by default",
     )
-    require("mission_status_json" in node and "MarkerArray" in node, "visualizer node core behavior missing")
-    require("course_boundary_margin_m" in node, "course boundary visualization source missing")
-    require("DETECTED" in node and "SEARCHING" in node, "search/detection labels missing")
-    require("/uuv_mujoco/yolo_buoy_detections" in launch, "YOLO detection launch topic missing")
-    require("parse_yolo_status" in node and "mission_yolo_bbox" in node, "YOLO RViz marker path missing")
-    require("yolo_zone_gate_enabled" in launch, "YOLO zone gate launch toggle missing")
-    require("yolo_detection_points_to_opponent_zone" in node, "YOLO opponent-zone gate missing")
-    require("opponent zone ray" in node, "YOLO ignored-zone RViz label missing")
-    require("mission_own_course" in launch and "course_boundary_x" in launch, "RViz own-zone launch settings missing")
-    require("/uuv_mujoco/yolo_buoy_detections" in gui_publishers, "GUI YOLO publisher topic missing")
-    require("json.dumps(payload" in gui_camera, "GUI YOLO JSON publish payload missing")
+    require('"/mission/state"' in vision_runner, "current mission-state topic missing")
+    require(
+        '"/mujoco/course_buoys/status"' in vision_runner,
+        "physical mission result topic missing",
+    )
+    require("mission_monitor" in web_app, "web mission monitor missing")
 
     converter = load_rviz_converter()
     converted = converter.ros2_rviz_text(PKG / "rviz" / "rov.rviz")
-    require("Class: rviz_default_plugins/MarkerArray" in converted, "ROS2 MarkerArray conversion missing")
-    require("/mission/rviz_markers" in converted, "converted RViz marker topic missing")
+    require("Visualization Manager:" in converted, "ROS2 RViz conversion missing")
+    require(len(converted) >= len(rviz) // 2, "converted RViz config is unexpectedly truncated")
 
     print("rviz_mission_visualizer_contract=PASS")
 

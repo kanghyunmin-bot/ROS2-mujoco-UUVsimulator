@@ -1,7 +1,7 @@
 #include <cmath>
 #include <string>
 
-#include <dvl_msgs/msg/dvldr.hpp>
+#include <auv_dvl_a50_msg/msg/dvldr.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2/LinearMath/Quaternion.h>
@@ -41,7 +41,7 @@ public:
     twist_variance_angular_ = declare_parameter<double>("twist_variance_angular", 1.0);
 
     publisher_ = create_publisher<nav_msgs::msg::Odometry>(output_topic_, 10);
-    subscription_ = create_subscription<dvl_msgs::msg::DVLDR>(
+    subscription_ = create_subscription<auv_dvl_a50_msg::msg::DVLDR>(
       input_topic_, rclcpp::SensorDataQoS(),
       std::bind(&DvlPositionToOdomBridge::handle_msg, this, std::placeholders::_1));
 
@@ -52,7 +52,7 @@ public:
   }
 
 private:
-  void handle_msg(const dvl_msgs::msg::DVLDR::SharedPtr msg)
+  void handle_msg(const auv_dvl_a50_msg::msg::DVLDR::SharedPtr msg)
   {
     if (!expected_type_.empty() && msg->type != expected_type_) {
       RCLCPP_WARN_THROTTLE(
@@ -165,7 +165,7 @@ private:
     publisher_->publish(out);
   }
 
-  void set_origin(const dvl_msgs::msg::DVLDR & msg, bool initial)
+  void set_origin(const auv_dvl_a50_msg::msg::DVLDR & msg, bool initial)
   {
     origin_x_ = msg.position.x;
     origin_y_ = msg.position.y;
@@ -239,7 +239,7 @@ private:
     return degrees * M_PI / 180.0;
   }
 
-  double resolve_position_variance_xy(const dvl_msgs::msg::DVLDR & msg) const
+  double resolve_position_variance_xy(const auv_dvl_a50_msg::msg::DVLDR & msg) const
   {
     if (!use_dvl_position_stddev_) {
       return position_variance_xy_;
@@ -293,7 +293,7 @@ private:
   double last_z_{0.0};
 
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr publisher_;
-  rclcpp::Subscription<dvl_msgs::msg::DVLDR>::SharedPtr subscription_;
+  rclcpp::Subscription<auv_dvl_a50_msg::msg::DVLDR>::SharedPtr subscription_;
 };
 
 int main(int argc, char ** argv)

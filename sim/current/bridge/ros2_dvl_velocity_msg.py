@@ -25,14 +25,22 @@ def _set_dvl_altitude_fields(msg: Any, altitude_m: float | None) -> None:
         set_first_attr(msg, ("altitude", "range", "height"), float(altitude_m))
 
 
-def _new_dvl_beam() -> Any:
+def _new_dvl_beam(parent_msg: Any) -> Any:
+    parent_module = type(parent_msg).__module__
+    if parent_module.startswith("auv_dvl_a50_msg."):
+        try:
+            from auv_dvl_a50_msg.msg import DVLBeam
+
+            return DVLBeam()
+        except ImportError:
+            pass
     try:
         from dvl_msgs.msg import DVLBeam
 
         return DVLBeam()
     except ImportError:
         # Keeps the message-builder smoke test independent of a sourced ROS
-        # workspace. Production reaches this path only when dvl_msgs exists.
+        # workspace.
         return SimpleNamespace(
             id=0,
             velocity=0.0,
@@ -81,7 +89,7 @@ def _set_dvl_beams(
             ],
             dtype=float,
         )
-        beam = _new_dvl_beam()
+        beam = _new_dvl_beam(msg)
         beam.id = int(beam_id)
         beam.velocity = float(np.dot(velocity, direction)) if valid else 0.0
         beam.distance = distance_m

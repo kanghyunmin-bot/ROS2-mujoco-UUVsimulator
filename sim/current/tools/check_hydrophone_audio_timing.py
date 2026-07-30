@@ -277,8 +277,8 @@ def check_pinger_start_selects_rosbag_profile() -> None:
         "legacy arbitrary tones must not stack on the rosbag model",
     )
     _assert(
-        environment["ROS2_UUV_HYDROPHONE_PHASE_NOISE_STD_RAD"] == "0.19",
-        "quiet-state phase calibration changed unexpectedly",
+        environment["ROS2_UUV_HYDROPHONE_PHASE_NOISE_STD_RAD"] == "0.05",
+        "validated short-ABBA phase jitter changed unexpectedly",
     )
 
 

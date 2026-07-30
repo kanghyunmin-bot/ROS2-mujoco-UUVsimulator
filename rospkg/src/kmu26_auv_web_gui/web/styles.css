@@ -457,6 +457,180 @@ h2 {
   margin-bottom: 0;
 }
 
+[data-control-mode].active {
+  border-color: #45d18f;
+  background: color-mix(in srgb, #45d18f, #141b18 82%);
+  color: #dfffee;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #45d18f, transparent 55%);
+}
+
+.guided-control-panel {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.guided-control-panel[hidden] {
+  display: none;
+}
+
+.guided-control-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.guided-control-header h2,
+.guided-live-status h2 {
+  margin: 0;
+}
+
+.guided-pills {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.guided-control-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.guided-goal-fields,
+.guided-live-status {
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--border), white 8%);
+  border-radius: 6px;
+  padding: 12px;
+  background: #141b18;
+}
+
+.guided-goal-fields h2 {
+  margin: 0 0 8px;
+}
+
+.guided-mode-field {
+  display: grid;
+  gap: 6px;
+  min-height: 76px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  background: #0e1311;
+}
+
+.guided-mode-field > span,
+.guided-coordinate-grid label > span {
+  color: #c3d0c9;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.guided-mode-field select,
+.guided-coordinate-grid input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 9px;
+  background: #0e1311;
+  color: var(--text);
+  font: inherit;
+}
+
+.guided-coordinate-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.guided-coordinate-grid label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  min-height: 76px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  background: #0e1311;
+}
+
+.guided-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.guided-goal-preview {
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: #0e1311;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.guided-actions button {
+  width: 100%;
+}
+
+.guided-command-feedback {
+  min-height: 18px;
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.guided-command-feedback.good {
+  color: var(--good);
+}
+
+.guided-command-feedback.bad {
+  color: var(--bad);
+}
+
+.guided-live-status dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0 0;
+}
+
+.guided-live-status dl div {
+  min-width: 0;
+  min-height: 64px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  background: #0e1311;
+}
+
+.guided-live-status dt {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.guided-live-status dd {
+  margin: 6px 0 0;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
 .bag-mode {
   display: flex;
   flex-wrap: wrap;
@@ -691,7 +865,7 @@ h2 {
 
 .path-controls {
   display: grid;
-  grid-template-columns: 1.1fr 88px 1.4fr 1.4fr 96px repeat(3, 82px) 112px;
+  grid-template-columns: repeat(6, minmax(100px, 1fr));
   gap: 8px;
   margin-top: 14px;
 }
@@ -753,6 +927,8 @@ h2 {
   height: 18px;
 }
 
+#path-align-forward,
+#path-set-origin,
 #path-clear {
   min-height: 62px;
 }
@@ -2265,6 +2441,14 @@ pre {
     justify-content: flex-start;
   }
 
+  .guided-control-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .guided-coordinate-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .dvl-command-grid,
   .dvl-config,
   .control-layout,
@@ -2315,6 +2499,24 @@ pre {
   .vision-advanced-grid,
   .vision-detections,
   .vision-telemetry {
+    grid-template-columns: 1fr;
+  }
+
+  .guided-control-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .guided-pills {
+    justify-content: flex-start;
+  }
+
+  .guided-coordinate-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .guided-actions,
+  .guided-live-status dl {
     grid-template-columns: 1fr;
   }
 

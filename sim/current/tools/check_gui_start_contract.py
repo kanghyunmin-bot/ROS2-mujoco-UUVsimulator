@@ -447,7 +447,7 @@ def check_launch_targets_exist() -> None:
 def check_start_uses_complete_real_ros_stack() -> None:
     command = mavros_launch_command("udp://0.0.0.0:14551@")
     required = (
-        "ros2 launch hit25_auv_ros2 rov_start.launch.py",
+        "ros2 launch auv rov_start.launch.py",
         "fcu_url:=udp://0.0.0.0:14551@",
         "use_sim_time:=true",
         "use_dvl:=false",
@@ -775,7 +775,7 @@ def check_pinger_gui_start_profile() -> None:
 
     args = pinger_sim_launch_args()
     for option, value in (
-        ("--initial-bar30-depth-m", "auto"),
+        ("--initial-bar30-depth-m", "8.30"),
         ("--ros2-sensor-hz", "100"),
         ("--thruster-loop-hz", "100"),
         ("--viewer-fps", "12"),

@@ -9,6 +9,7 @@ find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(mavros_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 find_package(audio_common_msgs REQUIRED)
 find_package(diagnostic_updater REQUIRED)
 find_package(Eigen3 REQUIRED)
@@ -26,6 +27,11 @@ add_library(${PROJECT_NAME} SHARED
   src/snr_gradient_homing_node.cpp
   src/snr_gradient_homing_node_v2.cpp
   src/snr_gradient_homing_controller_node.cpp
+  src/region_local_gradient_estimator.cpp
+  src/waypoint_homing_controller.cpp
+  src/near_zone_line_search_controller.cpp
+  src/region_local_gradient_rviz_visualizer.cpp
+  src/sim_odometry_rebaser.cpp
   src/homing_controller_node.cpp
   src/simple_homing_controller_node.cpp
   src/fft_node.cpp
@@ -34,12 +40,14 @@ add_library(${PROJECT_NAME} SHARED
 # 3. 단축키(ament_target_dependencies) 대신 수동으로 헤더 파일 경로를 지정합니다.
 target_include_directories(${PROJECT_NAME}
   PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${rclcpp_INCLUDE_DIRS}
     ${rclcpp_components_INCLUDE_DIRS}
     ${std_msgs_INCLUDE_DIRS}
     ${geometry_msgs_INCLUDE_DIRS}
     ${nav_msgs_INCLUDE_DIRS}
     ${mavros_msgs_INCLUDE_DIRS}
+    ${visualization_msgs_INCLUDE_DIRS}
     ${audio_common_msgs_INCLUDE_DIRS}
     ${diagnostic_updater_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIRS}
@@ -57,6 +65,7 @@ target_link_libraries(${PROJECT_NAME}
     ${geometry_msgs_LIBRARIES}
     ${nav_msgs_LIBRARIES}
     ${mavros_msgs_LIBRARIES}
+    ${visualization_msgs_LIBRARIES}
     ${audio_common_msgs_LIBRARIES}
     ${diagnostic_updater_LIBRARIES}
   PRIVATE
@@ -112,6 +121,36 @@ rclcpp_components_register_node(
 
 rclcpp_components_register_node(
   ${PROJECT_NAME}
+  PLUGIN "audio_capture::RegionLocalGradientEstimatorNode"
+  EXECUTABLE region_local_gradient_estimator
+)
+
+rclcpp_components_register_node(
+  ${PROJECT_NAME}
+  PLUGIN "audio_capture::WaypointHomingControllerNode"
+  EXECUTABLE waypoint_homing_controller
+)
+
+rclcpp_components_register_node(
+  ${PROJECT_NAME}
+  PLUGIN "audio_capture::NearZoneLineSearchControllerNode"
+  EXECUTABLE near_zone_line_search_controller
+)
+
+rclcpp_components_register_node(
+  ${PROJECT_NAME}
+  PLUGIN "audio_capture::RegionLocalGradientRvizVisualizerNode"
+  EXECUTABLE region_local_gradient_rviz_visualizer
+)
+
+rclcpp_components_register_node(
+  ${PROJECT_NAME}
+  PLUGIN "audio_capture::SimOdometryRebaserNode"
+  EXECUTABLE sim_odometry_rebaser
+)
+
+rclcpp_components_register_node(
+  ${PROJECT_NAME}
   PLUGIN "audio_capture::HomingControllerNode"
   EXECUTABLE homing_controller
 )
@@ -138,6 +177,11 @@ install(TARGETS
   snr_gradient_homing
   snr_gradient_homing_v2
   snr_gradient_homing_controller
+  region_local_gradient_estimator
+  waypoint_homing_controller
+  near_zone_line_search_controller
+  region_local_gradient_rviz_visualizer
+  sim_odometry_rebaser
   homing_controller
   simple_homing_controller
   fft_node
@@ -147,6 +191,10 @@ install(TARGETS
 )
 
 install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
+)
+
+install(DIRECTORY rviz
   DESTINATION share/${PROJECT_NAME}
 )
 

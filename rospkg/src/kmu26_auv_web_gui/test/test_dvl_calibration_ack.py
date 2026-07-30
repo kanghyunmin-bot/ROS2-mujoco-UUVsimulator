@@ -2,10 +2,10 @@ import time
 
 import pytest
 import rclpy
-from dvl_msgs.msg import CommandResponse
+from auv_dvl_a50_msg.msg import CommandResponse
 from rclpy.qos import ReliabilityPolicy
 
-from kmu26_auv_web_gui.ros_interface import LocalizationRosNode
+from auv_web_gui.ros_interface import LocalizationRosNode
 
 
 class _FakeDvlPublisher:

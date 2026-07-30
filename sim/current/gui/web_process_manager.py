@@ -201,6 +201,26 @@ class WebProcessManager:
             launch_args = ["--scene", str(course_runtime.scene_path)]
             if start_purpose == PINGER_HOMING_SIM_PURPOSE:
                 launch_args.extend(pinger_sim_launch_args())
+            elif course_runtime.mode != COURSE_MODE_TEST_TANK:
+                # The normal web runtime owns the camera/vision mission.  Its
+                # old real-start replay pose was over eight metres from the
+                # first visible float, so even full physical-package surge
+                # exceeded an interactive mission deadline.  Start on the
+                # competition red-buoy approach lane; pinger homing keeps its
+                # separate depth-matched acoustic profile above.
+                launch_args.extend(
+                    [
+                        "--initial-bar30-depth-m",
+                        "0.50",
+                        "--initial-position-xy",
+                        "-17.5",
+                        "-3.903",
+                        "--initial-rpy-rad",
+                        "0.0",
+                        "0.0",
+                        "0.0",
+                    ]
+                )
             cmd = build_sim_stack_launch_command(
                 self,
                 start_script=target.start_script,
@@ -551,10 +571,14 @@ class WebProcessManager:
         ):
             tank_max_depth_m = 11.0
         success_range_m = _float_range(
-            values.get("success_range_m", values.get("stop_range_m", 1.05)),
+            values.get("success_range_m", values.get("stop_range_m", 1.5)),
             lower=0.0,
             upper=10.0,
         )
+        if not test_tank_active and success_range_m <= 1.05 + 1.0e-6:
+            # Migrate the old web-panel default.  The deadline oracle and
+            # physical collector contract both use the 1.5 m approach gate.
+            success_range_m = 1.5
         success_hold_s = _float_range(
             values.get("success_hold_s", 0.5),
             lower=0.1,
@@ -590,17 +614,19 @@ class WebProcessManager:
         # test tank before ALIGN can start.  Keep the conservative two-probe
         # confirmation in the competition scene, but use a shorter still-
         # moving profile in the bounded test tank.
+        # Two short ABBA observations reject a bad phase bearing while still
+        # completing the interactive approach well inside one minute.
         initial_confirmation_probes = 1 if test_tank_active else 2
-        probe_leg_s = 1.00 if test_tank_active else 1.5
-        probe_neutral_s = 0.25 if test_tank_active else 0.50
-        probe_settle_s = 0.30 if test_tank_active else 0.80
-        probe_sample_delay_s = 0.20 if test_tank_active else 0.45
+        probe_leg_s = 1.00
+        probe_neutral_s = 0.25
+        probe_settle_s = 0.30
+        probe_sample_delay_s = 0.20
         # The ABBA legs themselves move on every axis.  A non-zero common
         # bias adds several metres of one-way travel across the eight legs and
         # drove the vehicle into the end wall before its first bearing was
         # available.  Zero bias keeps the excitation moving but symmetric.
-        probe_forward_bias = 0.0 if test_tank_active else 0.24
-        approach_max_s = min(approach_duration_s, 5.0) if test_tank_active else 25.0
+        probe_forward_bias = 0.0
+        approach_max_s = min(approach_duration_s, 5.0 if test_tank_active else 35.0)
 
         launch_arguments = [
             "dry_run:=false",
@@ -622,6 +648,9 @@ class WebProcessManager:
             "audio_topic:=/audio",
             f"reference_frequency_hz:={reference_frequency_hz:.6f}",
             "odometry_topic:=/odometry/filtered",
+            # Probe timing is deterministic in MuJoCo. Disabling only the
+            # odometry-based leg extension keeps estimator/controller parity.
+            "motion_response_enabled:=false",
             "imu_topic:=/mavros/imu/data",
             "depth_topic:=/depth/pose",
             "state_topic:=/mavros/state",
@@ -646,6 +675,10 @@ class WebProcessManager:
             f"probe_settle_s:={probe_settle_s:.6f}",
             f"probe_sample_delay_s:={probe_sample_delay_s:.6f}",
             f"approach_max_s:={approach_max_s:.6f}",
+            # The two-probe average is the bearing gate in this deterministic
+            # sim profile. Avoid spending another 10 s on noise-only
+            # innovation reprobes during the first long approach.
+            "innovation_enabled:=false",
             f"initial_confirmation_probes:={initial_confirmation_probes}",
             "continuous_probe_forward:=true",
             f"probe_forward_bias:={probe_forward_bias:.6f}",
@@ -753,7 +786,6 @@ class WebProcessManager:
             "cpu_threads:=1",
             "confidence_threshold:=0.18",
             "target_class_id:=-1",
-            "target_class_name:=",
             "publish_per_class:=true",
             "show_preview:=false",
         ]
@@ -911,6 +943,52 @@ class WebProcessManager:
             mission_args.append("--nearest-first")
         if bool(values.get("dry_run", False)):
             mission_args.append("--dry-run")
+
+        vision_runner = SIM_STACK_DIR / "tools" / "run_vision_mission.py"
+        vision_model_path = SIM_STACK_DIR / "assets" / "yolo" / "best.pt"
+        if simulation_running and vision_runner.is_file() and vision_model_path.is_file():
+            # The upstream repositories no longer ship kmu26_mission_fsm.
+            # Keep their actual detector and mission-state-machine binaries
+            # untouched, and provide only the MuJoCo axis/timing/oracle adapter
+            # from sim/current.
+            if _process_running(self._vision_process):
+                self._terminate_named_process(
+                    "_vision_process", "_vision_status", "vision", push_event=False
+                )
+            self.node.set_mode("MANUAL")
+            self.node.arm(True)
+            self.node.push_event("vision mission requested MANUAL mode and arm")
+            runner_command = " ".join(
+                shlex.quote(part)
+                for part in (
+                    "env",
+                    "OMP_NUM_THREADS=1",
+                    "MKL_NUM_THREADS=1",
+                    "OPENBLAS_NUM_THREADS=1",
+                    sys.executable,
+                    str(vision_runner),
+                    "--model",
+                    str(vision_model_path),
+                    "--status-json",
+                    str(self._mission_status_path),
+                    "--deadline-s",
+                    "75",
+                )
+            )
+            result = self._start_plain_process(
+                cmd=ros_bash_command(
+                    runner_command, cwd=ROS_WORKSPACE_DIR, include_workspace=True
+                ),
+                cwd=ROS_WORKSPACE_DIR,
+                label="vision mission",
+                log_prefix="web_vision_mission",
+                attr_name="_mission_process",
+                status_attr="_mission_status",
+            )
+            result["running"] = _process_running(self._mission_process)
+            result["controller"] = "auv_buoy_vision_control"
+            result["success_contract"] = "mujoco physical detach/net capture"
+            return result
 
         observation_package_name = "kmu26_mission_fsm"
         observation_launch = (

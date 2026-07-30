@@ -1,5 +1,6 @@
 from copy import deepcopy
 from html.parser import HTMLParser
+import math
 from pathlib import Path
 import time
 
@@ -7,14 +8,16 @@ import rclpy
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Image
 
-from kmu26_auv_web_gui.ros_interface import LocalizationRosNode
-from kmu26_auv_web_gui.ros_interface import RosInterface
-from kmu26_auv_web_gui.ros_interface import COMPRESSED_IMAGE_TYPE
-from kmu26_auv_web_gui.ros_interface import RAW_IMAGE_TYPE
-from kmu26_auv_web_gui.ros_interface import _vision_image_topic_options
-from kmu26_auv_web_gui.server import _pinger_live_preflight
-from kmu26_auv_web_gui.server import VISION_MISSION_LAUNCH_ARGS
-from kmu26_auv_web_gui.server import VISION_YOLO_LAUNCH_ARGS
+from auv_web_gui.ros_interface import LocalizationRosNode
+from auv_web_gui.ros_interface import RosInterface
+from auv_web_gui.ros_interface import COMPRESSED_IMAGE_TYPE
+from auv_web_gui.ros_interface import RAW_IMAGE_TYPE
+from auv_web_gui.ros_interface import _start_forward_pose
+from auv_web_gui.ros_interface import _vision_image_topic_options
+from auv_web_gui.server import _pinger_live_preflight
+from auv_web_gui.server import _guided_goal_values
+from auv_web_gui.server import VISION_MISSION_LAUNCH_ARGS
+from auv_web_gui.server import VISION_YOLO_LAUNCH_ARGS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -126,7 +129,7 @@ def test_vision_image_topic_selector_contract_is_complete() -> None:
     canvas = html.index('id="vision-canvas"', canvas_wrap)
     assert frame_shell < selector < canvas_wrap < canvas
     assert 'id="vision-feed-empty-topic"' in html
-    assert html.count("?v=20260719-buoy-launch-sync") == 2
+    assert html.count("?v=20260723-odom-contract") == 2
     assert ".vision-frame-source" in css
     assert "grid-template-columns: minmax(0, 7fr) minmax(320px, 3fr);" in css
     assert css.count("{") == css.count("}")
@@ -316,6 +319,61 @@ def test_pinger_parameter_controls_and_css_contract_are_complete() -> None:
     assert "bindPingerParameterControls();" in javascript
 
 
+def test_guided_control_contract_is_complete() -> None:
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    css = (ROOT / "web" / "styles.css").read_text(encoding="utf-8")
+    javascript = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+    server = (ROOT / "auv_web_gui" / "server.py").read_text(encoding="utf-8")
+    ros_interface = (ROOT / "auv_web_gui" / "ros_interface.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'data-control-mode="GUIDED"' in html
+    assert 'id="guided-control-panel"' in html
+    assert 'id="guided-control-panel" class="guided-control-panel" hidden' not in html
+    assert 'id="guided-coordinate-mode"' in html
+    assert 'id="guided-send-goal"' in html
+    assert 'id="guided-cancel-goal"' in html
+    assert 'id="guided-recapture-frame"' in html
+    assert 'id="guided-mode-help"' not in html
+    assert 'id="guided-yaw-deg"' not in html
+    assert "data-guided-yaw" not in html
+    assert ".guided-control-grid" in css
+    assert "function sendGuidedGoal()" in javascript
+    assert "function odomPoseToStartFrame(pose, startFrame)" in javascript
+    assert "Pool / start" in javascript
+    assert 'postJson("/api/control/guided/goal"' in javascript
+    assert 'postJson("/api/control/guided/cancel"' in javascript
+    assert 'postJson("/api/control/guided/recapture"' in javascript
+    assert "heading AUTO" in javascript
+    assert '@app.post("/api/control/guided/goal")' in server
+    assert 'set_guided_waypoint_enabled(mode == "GUIDED")' in server
+    assert 'AuvSetpoint, "/guided/goal"' in ros_interface
+    assert 'Bool, "/guided/waypoint_enable"' in ros_interface
+    assert 'String, "/guided/status"' in ros_interface
+
+
+def test_guided_goal_values_validate_coordinates_and_mode() -> None:
+    x, y, z, mode = _guided_goal_values(
+        {"x": 2, "y": -1.5, "z": -0.8, "mode": 2}
+    )
+    assert (x, y, z, mode) == (2.0, -1.5, -0.8, 2)
+
+    try:
+        _guided_goal_values({"x": float("nan"), "y": 0, "z": 0, "mode": 2})
+    except Exception as exc:
+        assert getattr(exc, "status_code", None) == 400
+    else:
+        raise AssertionError("non-finite guided coordinates must be rejected")
+
+    try:
+        _guided_goal_values({"x": 0, "y": 0, "z": 0, "mode": 3})
+    except Exception as exc:
+        assert getattr(exc, "status_code", None) == 400
+    else:
+        raise AssertionError("unsupported guided mode must be rejected")
+
+
 def test_pinger_top_view_contract_is_complete() -> None:
     html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
     css = (ROOT / "web" / "styles.css").read_text(encoding="utf-8")
@@ -342,6 +400,53 @@ def test_dvl_calibration_ui_waits_for_ack_contract() -> None:
     assert 'completed: `COMPLETE · ACK ${calibration.completed_at || "received"}`' in javascript
     assert 'event.type === "sent"' in javascript
     assert ".dvl-calibration-status.completed" in css
+
+
+def test_path_view_aligns_initial_vehicle_forward_with_screen_up() -> None:
+    east_start = _start_forward_pose(
+        x=2.0,
+        y=-1.0,
+        yaw=0.0,
+        origin_x=1.0,
+        origin_y=-1.0,
+        origin_yaw=0.0,
+    )
+    assert abs(east_start["x"]) < 1.0e-9
+    assert abs(east_start["y"] - 1.0) < 1.0e-9
+    assert abs(east_start["yaw"]) < 1.0e-9
+
+    north_start = _start_forward_pose(
+        x=3.0,
+        y=5.0,
+        yaw=math.pi / 2.0,
+        origin_x=3.0,
+        origin_y=4.0,
+        origin_yaw=math.pi / 2.0,
+    )
+    assert abs(north_start["x"]) < 1.0e-9
+    assert abs(north_start["y"] - 1.0) < 1.0e-9
+    assert abs(north_start["yaw"]) < 1.0e-9
+
+    right_of_north_start = _start_forward_pose(
+        x=4.0,
+        y=4.0,
+        yaw=math.pi,
+        origin_x=3.0,
+        origin_y=4.0,
+        origin_yaw=math.pi / 2.0,
+    )
+    assert abs(right_of_north_start["x"] - 1.0) < 1.0e-9
+    assert abs(right_of_north_start["y"]) < 1.0e-9
+    assert abs(right_of_north_start["yaw"] - math.pi / 2.0) < 1.0e-9
+
+
+def test_path_alignment_control_is_present() -> None:
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    javascript = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+
+    assert 'id="path-align-forward"' in html
+    assert 'postJson("/api/path/align_forward")' in javascript
+    assert "Forward ↑" in javascript
 
 
 def test_ros_bridge_keeps_pinger_subscription_separate_and_owns_no_final_rc() -> None:

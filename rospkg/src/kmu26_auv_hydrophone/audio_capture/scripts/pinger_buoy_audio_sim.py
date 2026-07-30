@@ -184,7 +184,7 @@ class PingerBuoyAudioSim(Node):
 
         bag_path = self.declare_parameter(
             "noise_bag",
-            "/home/kim/new_hydrophone_ws/localization_20260707_193328",
+            "/home/kim/new_hydrophone_ws/localization_20260719_185918",
         ).value
         noise_topic = self.declare_parameter("noise_topic", "/audio").value
         audio_topic = self.declare_parameter("audio_topic", "/audio").value
@@ -209,7 +209,7 @@ class PingerBuoyAudioSim(Node):
             self.declare_parameter("frames_per_message", 960).value
         )
         self.frequency_hz = float(
-            self.declare_parameter("frequency_hz", 21134.0).value
+            self.declare_parameter("frequency_hz", 21164.0).value
         )
         self.sound_speed_mps = float(
             self.declare_parameter("sound_speed_mps", 1500.0).value
@@ -262,6 +262,7 @@ class PingerBuoyAudioSim(Node):
         self.auv_position: np.ndarray | None = None
         self.first_sample_index = 0
         self.expected_pcm_bytes = self.frames_per_message * self.channels * 4
+        self.pending_noise_pcm: bytes | None = None
         self.clean_noise_generator = np.random.default_rng(clean_noise_seed)
         self.noise_reader: NoiseBagReader | None = None
         self.background_filter: BackgroundNotchFilter | None = None
@@ -270,6 +271,15 @@ class PingerBuoyAudioSim(Node):
             self.background_filter = BackgroundNotchFilter(
                 self.sample_rate_hz, self.channels
             )
+            self.pending_noise_pcm = self.noise_reader.next_audio_bytes()
+            bytes_per_frame = self.channels * 4
+            if len(self.pending_noise_pcm) % bytes_per_frame != 0:
+                raise RuntimeError(
+                    f"noise chunk has {len(self.pending_noise_pcm)} bytes, which is "
+                    f"not divisible by {bytes_per_frame} bytes per frame"
+                )
+            self.frames_per_message = len(self.pending_noise_pcm) // bytes_per_frame
+            self.expected_pcm_bytes = len(self.pending_noise_pcm)
 
         self.audio_pub = self.create_publisher(AudioData, str(audio_topic), 10)
         self.stamped_pub = self.create_publisher(
@@ -319,7 +329,11 @@ class PingerBuoyAudioSim(Node):
     def publish_audio(self) -> None:
         try:
             if self.signal_mode == "noisy":
-                pcm = self.noise_reader.next_audio_bytes()
+                if self.pending_noise_pcm is not None:
+                    pcm = self.pending_noise_pcm
+                    self.pending_noise_pcm = None
+                else:
+                    pcm = self.noise_reader.next_audio_bytes()
                 if len(pcm) != self.expected_pcm_bytes:
                     raise RuntimeError(
                         f"noise chunk has {len(pcm)} bytes; "

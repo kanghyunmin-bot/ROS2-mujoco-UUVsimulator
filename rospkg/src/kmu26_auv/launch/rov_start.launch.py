@@ -8,6 +8,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.actions import IncludeLaunchDescription
 from launch.actions import LogInfo
+from launch.actions import SetEnvironmentVariable
 from launch.conditions import IfCondition
 from launch.launch_description_sources import AnyLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -21,6 +22,22 @@ def _default_launch_file(package_name: str, relative_path: str) -> str:
         return os.path.join(get_package_share_directory(package_name), relative_path)
     except PackageNotFoundError:
         return ""
+
+
+def _geographiclib_geoid_path() -> str:
+    configured = os.environ.get("GEOGRAPHICLIB_GEOID_PATH", "")
+    if configured:
+        return configured
+
+    candidates = [
+        os.path.expanduser("~/.local/share/GeographicLib/geoids"),
+        "/usr/share/GeographicLib/geoids",
+        "/usr/local/share/GeographicLib/geoids",
+    ]
+    for candidate in candidates:
+        if os.path.isfile(os.path.join(candidate, "egm96-5.pgm")):
+            return candidate
+    return ""
 
 
 def _static_tf_node(
@@ -50,12 +67,12 @@ def _static_tf_node(
 
 
 def generate_launch_description() -> LaunchDescription:
-    package_share = get_package_share_directory("hit25_auv_ros2")
+    package_share = get_package_share_directory("auv")
     dvl_default = _default_launch_file(
-        "dvl_a50", os.path.join("launch", "dvl_a50.launch.py")
+        "auv_dvl_a50", os.path.join("launch", "dvl_a50.launch.py")
     )
     mavros_default = _default_launch_file(
-        "hit25_auv_ros2", os.path.join("launch", "mavros_auv.launch")
+        "auv", os.path.join("launch", "mavros_auv.launch")
     )
     mavros_sim_default = os.path.join(
         package_share, "launch", "mavros_apm_sim.launch.py")
@@ -64,6 +81,7 @@ def generate_launch_description() -> LaunchDescription:
     dronecan_python_default = os.path.expanduser("~/miniconda3/envs/auv_ros2/bin/python")
     if not os.path.exists(dronecan_python_default):
         dronecan_python_default = "python3"
+    geoid_path = _geographiclib_geoid_path()
 
     launch_arguments = [
         # Core connections
@@ -77,9 +95,14 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("mavros_launch_file", default_value=mavros_default),
         DeclareLaunchArgument("mavros_sim_launch_file", default_value=mavros_sim_default),
         DeclareLaunchArgument("configure_mavros_imu_rate", default_value="true"),
+        DeclareLaunchArgument("configure_mavros_ekf_origin", default_value="true"),
         DeclareLaunchArgument("mavros_imu_rate_hz", default_value="50.0"),
         DeclareLaunchArgument("mavros_raw_imu_rate_hz", default_value="50.0"),
         DeclareLaunchArgument("mavros_baro_rate_hz", default_value="10.0"),
+        DeclareLaunchArgument("mavros_local_position_rate_hz", default_value="20.0"),
+        DeclareLaunchArgument("ekf_origin_latitude", default_value="37.0"),
+        DeclareLaunchArgument("ekf_origin_longitude", default_value="127.0"),
+        DeclareLaunchArgument("ekf_origin_altitude", default_value="0.0"),
         DeclareLaunchArgument("dronecan_python", default_value=dronecan_python_default),
         DeclareLaunchArgument("use_external_baro_bridge", default_value="false"),
         DeclareLaunchArgument(
@@ -93,16 +116,16 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("depth_frame", default_value="depth_link"),
         DeclareLaunchArgument("imu_frame", default_value="imu_link"),
         # base_link -> fcu_link (FCU/IMU) static TF
-        DeclareLaunchArgument("base_to_fcu_x", default_value="0.11"),
-        DeclareLaunchArgument("base_to_fcu_y", default_value="-0.00034"),
-        DeclareLaunchArgument("base_to_fcu_z", default_value="0.092"),
+        DeclareLaunchArgument("base_to_fcu_x", default_value="0.09135"),
+        DeclareLaunchArgument("base_to_fcu_y", default_value="0.0"),
+        DeclareLaunchArgument("base_to_fcu_z", default_value="0.08541"),
         DeclareLaunchArgument("base_to_fcu_roll", default_value="0.0"),
         DeclareLaunchArgument("base_to_fcu_pitch", default_value="0.0"),
         DeclareLaunchArgument("base_to_fcu_yaw", default_value="0.0"),
         # base_link -> DVL static TF
-        DeclareLaunchArgument("dvl_x", default_value="-0.03196"),
+        DeclareLaunchArgument("dvl_x", default_value="-0.00488"),
         DeclareLaunchArgument("dvl_y", default_value="0.0"),
-        DeclareLaunchArgument("dvl_z", default_value="-0.097"),
+        DeclareLaunchArgument("dvl_z", default_value="-0.03910"),
         DeclareLaunchArgument("dvl_roll", default_value="3.141592653589793"),
         DeclareLaunchArgument("dvl_pitch", default_value="0.0"),
         DeclareLaunchArgument("dvl_yaw", default_value="0.0"),
@@ -174,6 +197,29 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("joy_pwm_range", default_value="300.0"),
         DeclareLaunchArgument("alt_hold_entry_neutral_sec", default_value="1.0"),
         DeclareLaunchArgument("alt_hold_post_entry_neutral_sec", default_value="0.3"),
+        DeclareLaunchArgument("use_guided_navigation", default_value="true"),
+        DeclareLaunchArgument("guided_goal_topic", default_value="/guided/goal"),
+        DeclareLaunchArgument("guided_waypoint_topic", default_value="/waypoint"),
+        DeclareLaunchArgument(
+            "guided_waypoint_enable_topic",
+            default_value="/guided/waypoint_enable"),
+        DeclareLaunchArgument("guided_waypoint_update_epsilon", default_value="0.02"),
+        DeclareLaunchArgument("guided_waypoint_cache_timeout", default_value="1.0"),
+        DeclareLaunchArgument("guided_arrival_radius", default_value="0.20"),
+        DeclareLaunchArgument("guided_arrival_speed", default_value="0.10"),
+        DeclareLaunchArgument("guided_arrival_settle_time", default_value="1.0"),
+        DeclareLaunchArgument(
+            "guided_arrival_yaw_tolerance_rad", default_value="0.1745329252"),
+        DeclareLaunchArgument("guided_align_heading_before_move", default_value="true"),
+        DeclareLaunchArgument("guided_heading_tolerance_rad", default_value="0.0872664626"),
+        DeclareLaunchArgument("guided_heading_settle_time", default_value="0.5"),
+        DeclareLaunchArgument("guided_heading_timeout", default_value="5.0"),
+        DeclareLaunchArgument(
+            "guided_heading_update_min_distance", default_value="0.20"),
+        DeclareLaunchArgument("guided_max_goal_distance", default_value="20.0"),
+        DeclareLaunchArgument("guided_min_z", default_value="-50.0"),
+        DeclareLaunchArgument("guided_max_z", default_value="1.0"),
+        DeclareLaunchArgument("guided_restore_mode", default_value="true"),
         DeclareLaunchArgument("use_buoy_control", default_value="false"),
         DeclareLaunchArgument("buoy_topic", default_value="/buoy"),
         DeclareLaunchArgument("buoy_arrival_radius", default_value="0.10"),
@@ -242,12 +288,45 @@ def generate_launch_description() -> LaunchDescription:
     joy_pwm_range = LaunchConfiguration("joy_pwm_range")
     alt_hold_entry_neutral_sec = LaunchConfiguration("alt_hold_entry_neutral_sec")
     alt_hold_post_entry_neutral_sec = LaunchConfiguration("alt_hold_post_entry_neutral_sec")
+    use_guided_navigation = LaunchConfiguration("use_guided_navigation")
+    guided_goal_topic = LaunchConfiguration("guided_goal_topic")
+    guided_waypoint_topic = LaunchConfiguration("guided_waypoint_topic")
+    guided_waypoint_enable_topic = LaunchConfiguration(
+        "guided_waypoint_enable_topic")
+    guided_waypoint_update_epsilon = LaunchConfiguration(
+        "guided_waypoint_update_epsilon")
+    guided_waypoint_cache_timeout = LaunchConfiguration(
+        "guided_waypoint_cache_timeout")
+    guided_arrival_radius = LaunchConfiguration("guided_arrival_radius")
+    guided_arrival_speed = LaunchConfiguration("guided_arrival_speed")
+    guided_arrival_settle_time = LaunchConfiguration("guided_arrival_settle_time")
+    guided_arrival_yaw_tolerance_rad = LaunchConfiguration(
+        "guided_arrival_yaw_tolerance_rad")
+    guided_align_heading_before_move = LaunchConfiguration(
+        "guided_align_heading_before_move")
+    guided_heading_tolerance_rad = LaunchConfiguration(
+        "guided_heading_tolerance_rad")
+    guided_heading_settle_time = LaunchConfiguration(
+        "guided_heading_settle_time")
+    guided_heading_timeout = LaunchConfiguration("guided_heading_timeout")
+    guided_heading_update_min_distance = LaunchConfiguration(
+        "guided_heading_update_min_distance")
+    guided_max_goal_distance = LaunchConfiguration("guided_max_goal_distance")
+    guided_min_z = LaunchConfiguration("guided_min_z")
+    guided_max_z = LaunchConfiguration("guided_max_z")
+    guided_restore_mode = LaunchConfiguration("guided_restore_mode")
     mavros_launch_file = LaunchConfiguration("mavros_launch_file")
     mavros_sim_launch_file = LaunchConfiguration("mavros_sim_launch_file")
     configure_mavros_imu_rate = LaunchConfiguration("configure_mavros_imu_rate")
+    configure_mavros_ekf_origin = LaunchConfiguration("configure_mavros_ekf_origin")
     mavros_imu_rate_hz = LaunchConfiguration("mavros_imu_rate_hz")
     mavros_raw_imu_rate_hz = LaunchConfiguration("mavros_raw_imu_rate_hz")
     mavros_baro_rate_hz = LaunchConfiguration("mavros_baro_rate_hz")
+    mavros_local_position_rate_hz = LaunchConfiguration(
+        "mavros_local_position_rate_hz")
+    ekf_origin_latitude = LaunchConfiguration("ekf_origin_latitude")
+    ekf_origin_longitude = LaunchConfiguration("ekf_origin_longitude")
+    ekf_origin_altitude = LaunchConfiguration("ekf_origin_altitude")
     dronecan_python = LaunchConfiguration("dronecan_python")
     use_external_baro_bridge = LaunchConfiguration("use_external_baro_bridge")
     external_baro_connection_url = LaunchConfiguration("external_baro_connection_url")
@@ -319,6 +398,18 @@ def generate_launch_description() -> LaunchDescription:
             mavros_launch_file, "' != '' and '",
             configure_mavros_imu_rate, "' == 'true'",
         ]))
+    mavros_ekf_origin_config_enabled = IfCondition(
+        PythonExpression([
+            "'", mavros_launch_file, "' != '' and '",
+            configure_mavros_ekf_origin, "' == 'true'",
+        ]))
+    guided_navigation_enabled = IfCondition(
+        PythonExpression([
+            "'", use_guided_navigation, "' == 'true' and '",
+            use_localization, "' == 'true' and '",
+            use_buoy_control, "' != 'true' and '",
+            mavros_launch_file, "' != ''",
+        ]))
     joy2mavros_enabled = IfCondition(PythonExpression([
         "'", use_joy2mavros, "' == 'true'",
     ]))
@@ -326,12 +417,25 @@ def generate_launch_description() -> LaunchDescription:
         "'", use_battery_bridge, "' == 'true'",
     ]))
     odom2mavros_enabled = IfCondition(PythonExpression([
-        "'", use_odom2mavros, "' == 'true'",
+        "'", use_localization, "' == 'true' and '",
+        use_odom2mavros, "' == 'true'",
     ]))
     static_tf_enabled = IfCondition(PythonExpression([
         "'", publish_static_tf, "' == 'true'",
     ]))
     buoy_control_enabled = IfCondition(PythonExpression(["'", use_buoy_control, "' == 'true'"]))
+
+    environment_actions = []
+    if geoid_path:
+        environment_actions.extend(
+            [
+                SetEnvironmentVariable(
+                    name="GEOGRAPHICLIB_GEOID_PATH",
+                    value=geoid_path,
+                ),
+                LogInfo(msg=f"[rov_start] GeographicLib geoid path: {geoid_path}"),
+            ]
+        )
 
     launch_actions = [
         # LogInfo(
@@ -384,7 +488,7 @@ def generate_launch_description() -> LaunchDescription:
             condition=mavros_sim_enabled,
         ),
         Node(
-            package="hit25_auv_ros2",
+            package="auv",
             executable="mavros_imu_rate_config.py",
             name="mavros_imu_rate_config",
             output="screen",
@@ -394,12 +498,33 @@ def generate_launch_description() -> LaunchDescription:
                         mavros_imu_rate_hz, value_type=float),
                     "raw_imu_rate_hz": ParameterValue(
                         mavros_raw_imu_rate_hz, value_type=float),
-                    "use_sim_time": ParameterValue(use_sim_time, value_type=bool),
                     "baro_rate_hz": ParameterValue(
                         mavros_baro_rate_hz, value_type=float),
+                    "local_position_rate_hz": ParameterValue(
+                        mavros_local_position_rate_hz, value_type=float),
+                    "use_sim_time": ParameterValue(use_sim_time, value_type=bool),
                 }
             ],
             condition=mavros_imu_rate_config_enabled,
+        ),
+        Node(
+            package="auv",
+            executable="mavros_ekf_origin_config.py",
+            name="mavros_ekf_origin_config",
+            output="screen",
+            parameters=[
+                {
+                    "latitude": ParameterValue(
+                        ekf_origin_latitude, value_type=float),
+                    "longitude": ParameterValue(
+                        ekf_origin_longitude, value_type=float),
+                    "altitude": ParameterValue(
+                        ekf_origin_altitude, value_type=float),
+                    "require_disarmed": True,
+                    "set_home": False,
+                }
+            ],
+            condition=mavros_ekf_origin_config_enabled,
         ),
         # 3) Vehicle and sensor static TFs
         _static_tf_node(
@@ -456,7 +581,7 @@ def generate_launch_description() -> LaunchDescription:
         ),
         # 4) AUV nodes in this package
         Node(
-            package="hit25_auv_ros2",
+            package="auv",
             executable="joy2mavros",
             name="joy2mavros",
             output="screen",
@@ -477,7 +602,7 @@ def generate_launch_description() -> LaunchDescription:
             condition=joy2mavros_enabled,
         ),
         Node(
-            package="hit25_auv_ros2",
+            package="auv",
             executable="vfr2atm_pressure",
             name="vfr2atm_pressure",
             output="screen",
@@ -488,7 +613,7 @@ def generate_launch_description() -> LaunchDescription:
             }],
         ),
         Node(
-            package="hit25_auv_ros2",
+            package="auv",
             executable="dvl_to_twist_bridge",
             name="dvl_to_twist_bridge",
             output="screen",
@@ -519,7 +644,7 @@ def generate_launch_description() -> LaunchDescription:
             condition=localization_enabled,
         ),
         Node(
-            package="hit25_auv_ros2",
+            package="auv",
             executable="dvl_position_to_odom_bridge",
             name="dvl_position_to_odom_bridge",
             output="screen",
@@ -555,7 +680,7 @@ def generate_launch_description() -> LaunchDescription:
             condition=dvl_position_odom_enabled,
         ),
         Node(
-            package="hit25_auv_ros2",
+            package="auv",
             executable="pressure_to_depth_pose",
             name="pressure_to_depth_pose",
             output="screen",
@@ -585,9 +710,9 @@ def generate_launch_description() -> LaunchDescription:
             condition=ekf_enabled,
         ),
         Node(
-            package="hit25_auv_ros2",
+            package="auv",
             executable="odom2mavros",
-            name="odom2mavros",
+            name="external_nav_odometry_gateway",
             output="screen",
             respawn=True,
             parameters=[{
@@ -596,7 +721,48 @@ def generate_launch_description() -> LaunchDescription:
             condition=odom2mavros_enabled,
         ),
         Node(
-            package="hit25_auv_ros2",
+            package="auv",
+            executable="guided_navigation",
+            name="guided_navigation",
+            output="screen",
+            respawn=True,
+            parameters=[
+                {"goal_topic": guided_goal_topic},
+                {"waypoint_topic": guided_waypoint_topic},
+                {"waypoint_enable_topic": guided_waypoint_enable_topic},
+                {"waypoint_update_epsilon_m": ParameterValue(
+                    guided_waypoint_update_epsilon, value_type=float)},
+                {"waypoint_cache_timeout_s": ParameterValue(
+                    guided_waypoint_cache_timeout, value_type=float)},
+                {"arrival_radius_m": ParameterValue(
+                    guided_arrival_radius, value_type=float)},
+                {"arrival_speed_mps": ParameterValue(
+                    guided_arrival_speed, value_type=float)},
+                {"arrival_settle_time_s": ParameterValue(
+                    guided_arrival_settle_time, value_type=float)},
+                {"arrival_yaw_tolerance_rad": ParameterValue(
+                    guided_arrival_yaw_tolerance_rad, value_type=float)},
+                {"align_heading_before_move": ParameterValue(
+                    guided_align_heading_before_move, value_type=bool)},
+                {"heading_tolerance_rad": ParameterValue(
+                    guided_heading_tolerance_rad, value_type=float)},
+                {"heading_settle_time_s": ParameterValue(
+                    guided_heading_settle_time, value_type=float)},
+                {"heading_timeout_s": ParameterValue(
+                    guided_heading_timeout, value_type=float)},
+                {"heading_update_min_distance_m": ParameterValue(
+                    guided_heading_update_min_distance, value_type=float)},
+                {"max_goal_distance_m": ParameterValue(
+                    guided_max_goal_distance, value_type=float)},
+                {"min_goal_z_m": ParameterValue(guided_min_z, value_type=float)},
+                {"max_goal_z_m": ParameterValue(guided_max_z, value_type=float)},
+                {"restore_guided_mode": ParameterValue(
+                    guided_restore_mode, value_type=bool)},
+            ],
+            condition=guided_navigation_enabled,
+        ),
+        Node(
+            package="auv",
             executable="buoy_position_control",
             name="buoy_position_control",
             output="screen",
@@ -614,7 +780,7 @@ def generate_launch_description() -> LaunchDescription:
         ),
         # 5) DroneCAN battery bridge
         Node(
-            package="hit25_auv_ros2",
+            package="auv",
             executable="dronecan2mavros_battery_v2.py",
             name="dronecan2mavros_battery",
             output="screen",
@@ -633,4 +799,4 @@ def generate_launch_description() -> LaunchDescription:
         ),
     ]
 
-    return LaunchDescription(launch_arguments + launch_actions)
+    return LaunchDescription(launch_arguments + environment_actions + launch_actions)

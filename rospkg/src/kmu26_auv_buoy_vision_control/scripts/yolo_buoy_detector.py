@@ -10,7 +10,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CompressedImage
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Float32MultiArray, String
 
 
 BBOX_FORMAT = (
@@ -33,12 +33,39 @@ class YoloBuoyDetector(Node):
         self.declare_parameter("model_path", "/home/auv/models/buoy.pt")
         self.declare_parameter("target_class_id", -1)
         self.declare_parameter("target_class_name", "")
-        self.declare_parameter("confidence_threshold", 0.18)
+        self.declare_parameter("confidence_threshold", 0.35)
         self.declare_parameter("device", "auto")
-        self.declare_parameter("imgsz", 1280)
+        self.declare_parameter("imgsz", 640)
         self.declare_parameter("show_preview", True)
         self.declare_parameter("preview_window_name", "YOLO Buoy Detection")
         self.declare_parameter("publish_per_class", True)
+        # Competition-map 수중 핑거는 학습된 buoy/stick 외형보다 훨씬 가늘다.
+        # 파란 표식이 보이면 무거운 YOLO보다 먼저 buoy/stick bbox를 복원하고,
+        # 표식이 없을 때만 YOLO로 되돌아가는 수중 전용 fast path다.
+        # 일반/수면 launch에서는 비활성이다.
+        self.declare_parameter("pinger_marker_fallback", False)
+        self.declare_parameter("pinger_marker_disable_topic", "")
+        self.declare_parameter(
+            "pinger_marker_target_id", "course_buoy_pinger_white_1_float"
+        )
+        # Competition lane profile: the current YOLO weights also emit boxes
+        # on the cyan pool wall/floor.  Require the buoy class ROI to contain
+        # the saturated orange/yellow float colour, then keep only a stick box
+        # spatially associated with that selected float.  This remains opt-in
+        # so the generic/surface profiles preserve their previous behaviour.
+        self.declare_parameter("course_buoy_color_filter", False)
+        self.declare_parameter("course_buoy_hue_min", 12)
+        self.declare_parameter("course_buoy_hue_max", 40)
+        self.declare_parameter("course_buoy_saturation_min", 100)
+        self.declare_parameter("course_buoy_value_min", 80)
+        self.declare_parameter("course_buoy_color_pixel_ratio_min", 0.04)
+        # Optional second-stage threshold for the float only.  Keep the YOLO
+        # inference threshold lower so a weaker associated stick box remains
+        # available for fork alignment.
+        self.declare_parameter("course_buoy_min_confidence", 0.0)
+        self.declare_parameter("associate_stick_with_buoy", False)
+        self.declare_parameter("buoy_class_id", 0)
+        self.declare_parameter("stick_class_id", 1)
         # 다중 부표 선택: 면적 큰 것 → 박스 확률(confidence) → 이미지 오른쪽
         self.declare_parameter("area_similar_ratio", 0.15)
         self.declare_parameter("confidence_similar_delta", 0.05)
@@ -70,10 +97,57 @@ class YoloBuoyDetector(Node):
         self.show_preview = bool(self.get_parameter("show_preview").value)
         self.preview_window_name = str(self.get_parameter("preview_window_name").value)
         self.publish_per_class = bool(self.get_parameter("publish_per_class").value)
+        self.pinger_marker_fallback = bool(
+            self.get_parameter("pinger_marker_fallback").value
+        )
+        self.pinger_marker_disable_topic = str(
+            self.get_parameter("pinger_marker_disable_topic").value
+        ).strip()
+        self.pinger_marker_target_id = str(
+            self.get_parameter("pinger_marker_target_id").value
+        ).strip()
+        self.course_buoy_color_filter = bool(
+            self.get_parameter("course_buoy_color_filter").value
+        )
+        self.course_buoy_hue_min = int(
+            self.get_parameter("course_buoy_hue_min").value
+        )
+        self.course_buoy_hue_max = int(
+            self.get_parameter("course_buoy_hue_max").value
+        )
+        self.course_buoy_saturation_min = int(
+            self.get_parameter("course_buoy_saturation_min").value
+        )
+        self.course_buoy_value_min = int(
+            self.get_parameter("course_buoy_value_min").value
+        )
+        self.course_buoy_color_pixel_ratio_min = float(
+            self.get_parameter("course_buoy_color_pixel_ratio_min").value
+        )
+        self.course_buoy_min_confidence = float(
+            self.get_parameter("course_buoy_min_confidence").value
+        )
+        self.associate_stick_with_buoy = bool(
+            self.get_parameter("associate_stick_with_buoy").value
+        )
+        self.buoy_class_id = int(self.get_parameter("buoy_class_id").value)
+        self.stick_class_id = int(self.get_parameter("stick_class_id").value)
         self.area_similar_ratio = float(self.get_parameter("area_similar_ratio").value)
         self.confidence_similar_delta = float(
             self.get_parameter("confidence_similar_delta").value
         )
+        if not 0 <= self.course_buoy_hue_min <= self.course_buoy_hue_max <= 179:
+            raise ValueError("course buoy hue range must stay within OpenCV HSV [0, 179]")
+        if not 0 <= self.course_buoy_saturation_min <= 255:
+            raise ValueError("course_buoy_saturation_min must be in [0, 255]")
+        if not 0 <= self.course_buoy_value_min <= 255:
+            raise ValueError("course_buoy_value_min must be in [0, 255]")
+        if not 0.0 <= self.course_buoy_color_pixel_ratio_min <= 1.0:
+            raise ValueError("course_buoy_color_pixel_ratio_min must be in [0, 1]")
+        if not 0.0 <= self.course_buoy_min_confidence <= 1.0:
+            raise ValueError("course_buoy_min_confidence must be in [0, 1]")
+        if self.buoy_class_id == self.stick_class_id:
+            raise ValueError("buoy_class_id and stick_class_id must differ")
         self._preview_prev_time: Optional[float] = None
         self._preview_fps = 0.0
 
@@ -97,6 +171,20 @@ class YoloBuoyDetector(Node):
         self.annotated_image_pub = self.create_publisher(
             CompressedImage, self.annotated_image_topic, image_qos
         )
+        self.pinger_marker_disable_sub = None
+        if self.pinger_marker_fallback and self.pinger_marker_disable_topic:
+            detach_event_qos = QoSProfile(
+                history=HistoryPolicy.KEEP_LAST,
+                depth=16,
+                reliability=ReliabilityPolicy.RELIABLE,
+                durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            )
+            self.pinger_marker_disable_sub = self.create_subscription(
+                String,
+                self.pinger_marker_disable_topic,
+                self._on_pinger_detached_id,
+                detach_event_qos,
+            )
 
         self.get_logger().info(f"Subscribing: {self.image_topic}")
         self.get_logger().info(f"Publishing: {self.bbox_topic} ({BBOX_FORMAT})")
@@ -109,7 +197,11 @@ class YoloBuoyDetector(Node):
         self.get_logger().info(
             f"YOLO PT model={self.model_path}, device={self.device}, imgsz={self.imgsz}, "
             f"target_class_id={self.target_class_id}, target_class_name='{self.target_class_name}', "
-            f"show_preview={self.show_preview}, publish_per_class={self.publish_per_class}"
+            f"show_preview={self.show_preview}, publish_per_class={self.publish_per_class}, "
+            f"pinger_marker_fallback={self.pinger_marker_fallback}, "
+            f"pinger_marker_disable_topic='{self.pinger_marker_disable_topic}', "
+            f"course_buoy_color_filter={self.course_buoy_color_filter}, "
+            f"associate_stick_with_buoy={self.associate_stick_with_buoy}"
         )
         if self.show_preview:
             self.get_logger().info(
@@ -132,6 +224,18 @@ class YoloBuoyDetector(Node):
         except ImportError:
             pass
         return "cpu"
+
+    def _on_pinger_detached_id(self, msg: String) -> None:
+        """Switch from the pinger marker fast path to the course YOLO profile."""
+
+        if not self.pinger_marker_fallback:
+            return
+        if str(msg.data).strip() != self.pinger_marker_target_id:
+            return
+        self.pinger_marker_fallback = False
+        self.get_logger().info(
+            "Physical pinger detach confirmed; disabling pinger marker fallback"
+        )
 
     def _format_class_names(self) -> str:
         if not self.class_names:
@@ -165,7 +269,20 @@ class YoloBuoyDetector(Node):
             return
 
         image_height, image_width = image.shape[:2]
-        detection, all_detections = self._detect_targets(image)
+        detection = None
+        all_detections = []
+        if self.pinger_marker_fallback:
+            marker_detection, marker_detections = self._detect_pinger_marker(image)
+            if marker_detection is not None:
+                detection = marker_detection
+                all_detections = marker_detections
+        if detection is None:
+            detection, all_detections = self._detect_targets(image)
+            if self.course_buoy_color_filter:
+                all_detections = self._filter_course_buoy_detections(
+                    image, all_detections
+                )
+                detection = self._best_matching_detection(all_detections)
         stamp_sec = float(msg.header.stamp.sec) + float(msg.header.stamp.nanosec) * 1e-9
 
         published_detections = [detection] if detection is not None else []
@@ -231,6 +348,121 @@ class YoloBuoyDetector(Node):
             if previous is None or self._is_better_detection(candidate, previous):
                 best_by_class[class_id] = candidate
         return [best_by_class[class_id] for class_id in sorted(best_by_class)]
+
+    def _best_matching_detection(
+        self,
+        all_detections: list[
+            Tuple[int, float, float, float, float, float, int, int, int, int]
+        ],
+    ) -> Optional[Tuple[int, float, float, float, float, float]]:
+        best = None
+        for class_id, confidence, center_x, center_y, width, height, *_ in all_detections:
+            if not self._class_matches(class_id):
+                continue
+            candidate = (
+                class_id,
+                confidence,
+                center_x,
+                center_y,
+                width,
+                height,
+            )
+            if best is None or self._is_better_detection(candidate, best):
+                best = candidate
+        return best
+
+    def _filter_course_buoy_detections(
+        self,
+        image: np.ndarray,
+        all_detections: list[
+            Tuple[int, float, float, float, float, float, int, int, int, int]
+        ],
+    ) -> list[
+        Tuple[int, float, float, float, float, float, int, int, int, int]
+    ]:
+        """Reject cyan pool false positives and unrelated stick boxes.
+
+        The orange/yellow float is the stable long-range feature.  Once the
+        nearest valid float has been selected, a class-1 box is useful only
+        when it is horizontally aligned with that float and begins around its
+        lower half.  The pinger blue-marker fast path bypasses this function.
+        """
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        valid_buoys = []
+        other_detections = []
+        for detection in all_detections:
+            class_id = detection[0]
+            if class_id != self.buoy_class_id:
+                other_detections.append(detection)
+                continue
+            if detection[1] < self.course_buoy_min_confidence:
+                continue
+
+            x1, y1, x2, y2 = detection[6:10]
+            x1 = max(0, min(image.shape[1] - 1, int(x1)))
+            y1 = max(0, min(image.shape[0] - 1, int(y1)))
+            x2 = max(x1 + 1, min(image.shape[1], int(x2)))
+            y2 = max(y1 + 1, min(image.shape[0], int(y2)))
+            roi = hsv[y1:y2, x1:x2]
+            colour_mask = cv2.inRange(
+                roi,
+                np.array(
+                    (
+                        self.course_buoy_hue_min,
+                        self.course_buoy_saturation_min,
+                        self.course_buoy_value_min,
+                    ),
+                    dtype=np.uint8,
+                ),
+                np.array(
+                    (self.course_buoy_hue_max, 255, 255),
+                    dtype=np.uint8,
+                ),
+            )
+            colour_ratio = float(np.count_nonzero(colour_mask)) / float(
+                max(1, colour_mask.size)
+            )
+            if colour_ratio >= self.course_buoy_color_pixel_ratio_min:
+                valid_buoys.append(detection)
+
+        if not valid_buoys:
+            return []
+
+        best_buoy_short = self._best_matching_detection(valid_buoys)
+        if best_buoy_short is None:
+            return valid_buoys
+        best_buoy = next(
+            detection
+            for detection in valid_buoys
+            if (
+                detection[0],
+                detection[1],
+                detection[2],
+                detection[3],
+                detection[4],
+                detection[5],
+            )
+            == best_buoy_short
+        )
+        if not self.associate_stick_with_buoy:
+            return valid_buoys + other_detections
+
+        buoy_center_x = best_buoy[2]
+        buoy_center_y = best_buoy[3]
+        buoy_width = max(1.0, best_buoy[4])
+        buoy_height = max(1.0, best_buoy[5])
+        associated_sticks = []
+        for detection in other_detections:
+            if detection[0] != self.stick_class_id:
+                continue
+            horizontal_error = abs(detection[2] - buoy_center_x)
+            vertical_offset = detection[3] - buoy_center_y
+            if (
+                horizontal_error <= max(1.25 * buoy_width, 0.02 * image.shape[1])
+                and -0.15 * buoy_height <= vertical_offset <= 2.5 * buoy_height
+            ):
+                associated_sticks.append(detection)
+        return [best_buoy] + associated_sticks
 
     def _publish_detection(
         self,
@@ -325,6 +557,92 @@ class YoloBuoyDetector(Node):
             )
 
         return best, all_detections
+
+    def _detect_pinger_marker(
+        self, image: np.ndarray
+    ) -> Tuple[
+        Optional[Tuple[int, float, float, float, float, float]],
+        list[Tuple[int, float, float, float, float, float, int, int, int, int]],
+    ]:
+        """Recover the thin competition pinger from its saturated blue marker.
+
+        The supplied YOLO model does not emit a reliable box for the simulated
+        white pinger.  Its blue marker is unique in the competition scene, so
+        this inexpensive detector runs before YOLO in the underwater profile.
+        """
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        marker_mask = cv2.inRange(
+            hsv,
+            np.array((98, 180, 150), dtype=np.uint8),
+            np.array((115, 255, 255), dtype=np.uint8),
+        )
+        count, _, stats, _ = cv2.connectedComponentsWithStats(marker_mask)
+        candidates = []
+        for index in range(1, count):
+            x, y, width, height, area = [
+                int(value) for value in stats[index]
+            ]
+            if area < 5 or width < 2 or height < 4 or height < width:
+                continue
+            candidates.append((area, x, y, width, height))
+        if not candidates:
+            return None, []
+
+        _, x, y, marker_width, marker_height = max(candidates)
+        image_height, image_width = image.shape[:2]
+        center_x = x + 0.5 * marker_width
+
+        def clamp_box(
+            box_center_x: float,
+            box_center_y: float,
+            box_width: float,
+            box_height: float,
+        ) -> Tuple[float, float, float, float, int, int, int, int]:
+            x1 = max(0, int(round(box_center_x - 0.5 * box_width)))
+            y1 = max(0, int(round(box_center_y - 0.5 * box_height)))
+            x2 = min(image_width - 1, int(round(box_center_x + 0.5 * box_width)))
+            y2 = min(image_height - 1, int(round(box_center_y + 0.5 * box_height)))
+            width = float(max(1, x2 - x1))
+            height = float(max(1, y2 - y1))
+            return (
+                x1 + 0.5 * width,
+                y1 + 0.5 * height,
+                width,
+                height,
+                x1,
+                y1,
+                x2,
+                y2,
+            )
+
+        # 파란 표식 위의 흰 float부터 아래 자석 블록까지를 class 0으로 복원한다.
+        buoy_center_y = y + 0.5 * marker_height - 0.9 * marker_height
+        buoy = clamp_box(
+            center_x,
+            buoy_center_y,
+            4.0 * marker_width,
+            5.2 * marker_height,
+        )
+        # rake와 충돌 가능한 geom은 아래 자석(visual-only)이 아니라 파란 표식과
+        # 겹치는 PVC pipe다. class 1은 이 실제 접촉 높이를 가리켜야 한다.
+        stick_center_y = y + 0.5 * marker_height
+        stick = clamp_box(
+            center_x,
+            stick_center_y,
+            2.0 * marker_width,
+            1.2 * marker_height,
+        )
+        confidence = 0.80
+        all_detections = [
+            (0, confidence, *buoy),
+            (1, confidence, *stick),
+        ]
+        selected = (0, confidence, buoy[0], buoy[1], buoy[2], buoy[3])
+        self.get_logger().info(
+            "Using underwater pinger blue-marker fallback",
+            throttle_duration_sec=3.0,
+        )
+        return selected, all_detections
 
     def _class_matches(self, class_id: int) -> bool:
         if self.target_class_id >= 0:

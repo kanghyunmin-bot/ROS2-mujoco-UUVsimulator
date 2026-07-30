@@ -247,6 +247,21 @@ def main() -> int:
         worldbody = root.find("worldbody")
         if worldbody is None:
             raise AssertionError("generated scene has no worldbody")
+        asset = root.find("asset")
+        pvc_material = (
+            None
+            if asset is None
+            else next(
+                (
+                    element
+                    for element in asset.findall("material")
+                    if element.get("name") == "course_buoy_pvc"
+                ),
+                None,
+            )
+        )
+        if pvc_material is None:
+            raise AssertionError("generated scene dropped shared course_buoy_pvc material")
         names = {str(element.get("name")) for element in worldbody.iter() if element.get("name")}
         for required in (
             "base_link",

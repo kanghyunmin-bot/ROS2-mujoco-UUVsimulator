@@ -645,6 +645,16 @@ is_sim_forced_param() {
       fi
       return 1
       ;;
+    # Keep the real vehicle's waypoint acceptance radius unless a mission
+    # profile explicitly requests a simulation override. Region/local SNR
+    # advances a short look-ahead target around its scan circle, so the
+    # hardware dump's 2 m radius would classify every such target as reached.
+    WPNAV_RADIUS)
+      if [[ -n "${SITL_WPNAV_RADIUS:-}" ]]; then
+        return 0
+      fi
+      return 1
+      ;;
     # The measured 20 V T200 curve has a wide zero-force PWM band.  The real
     # vehicle's ACCZ P=0.5 never clears it for ordinary ALT_HOLD commands in
     # the lower-inertia simulation, so use a sim-only proportional authority.
@@ -1006,7 +1016,7 @@ append_param_if_not_overridden "PSC_ACCZ_FLTT" "${SITL_PSC_ACCZ_FLTT:-0.0}"
 append_param_if_not_overridden "WPNAV_ACCEL" "250.0"
 append_param_if_not_overridden "WPNAV_ACCEL_Z" "100.0"
 append_param_if_not_overridden "WPNAV_JERK" "1.0"
-append_param_if_not_overridden "WPNAV_RADIUS" "200.0"
+append_param_if_not_overridden "WPNAV_RADIUS" "${SITL_WPNAV_RADIUS:-200.0}"
 append_param_if_not_overridden "WPNAV_SPEED" "100.0"
 append_param_if_not_overridden "WPNAV_SPEED_DN" "150.0"
 append_param_if_not_overridden "WPNAV_SPEED_UP" "250.0"

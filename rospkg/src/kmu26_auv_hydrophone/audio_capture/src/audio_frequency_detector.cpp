@@ -29,6 +29,13 @@ class AudioFrequencyDetectorNode : public rclcpp::Node
     public:
     explicit AudioFrequencyDetectorNode(const rclcpp::NodeOptions & options = rclcpp::NodeOptions()) 
     : Node("audio_frequency_detector", options) {
+        // With a noise-free simulator, FFT leakage scales with the signal and
+        // peak/local-floor SNR becomes almost independent of distance.  A
+        // fixed receiver reference restores amplitude-versus-distance SNR
+        // without injecting artificial waveform noise.
+        noise_floor_reference_magnitude_ = std::max(
+            0.0,
+            declare_parameter<double>("noise_floor_reference_magnitude", 0.0));
         // V2의 SNR-odometry 동기화를 위해 캡처 시작 시각이 포함된 오디오를 받는다.
         audio_stamped_sub_ =
             this->create_subscription<audio_common_msgs::msg::AudioDataStamped>(
@@ -196,12 +203,14 @@ class AudioFrequencyDetectorNode : public rclcpp::Node
         
         // peak_bin을 주파수로 변환
         const double peak_frequency_hz = static_cast<double>(peak_bin) * frequency_resolution_hz;
-        const double noise_floor = calculate_local_noise_floor(
+        const double measured_noise_floor = calculate_local_noise_floor(
             frequency_bins,
             peak_bin,
             min_bin,
             max_bin,
             frequency_resolution_hz);
+        const double noise_floor = std::max(
+            measured_noise_floor, noise_floor_reference_magnitude_);
         const double snr_db = 20.0 * std::log10((peak_magnitude + epsilon_) / (noise_floor + epsilon_));   //SNR 계산
         const bool snr_detected = snr_db >= min_snr_db_; //SNR이 최소 SNR 이상이면 true, 아니면 false
 
@@ -217,21 +226,17 @@ class AudioFrequencyDetectorNode : public rclcpp::Node
             locked_frequency_pub_->publish(frequency_msg);
         }
 
-        const std::string lock_detail =
-            locked_on_ ? ", locked_freq: " + std::to_string(locked_frequency_hz_) + " Hz" : "";
-
         RCLCPP_INFO_THROTTLE(
             this->get_logger(),
             *this->get_clock(),
             1000,
-            "target %.0f Hz peak: %.1f Hz, mag: %.6f, noise: %.6f, snr: %.1f dB, lock: %s%s",
+            "[SIGNAL] target=%.0f Hz frequency=%.1f Hz SNR=%.1f dB "
+            "peak=%.4g floor=%.4g",
             peak_target_frequency_hz,
             peak_frequency_hz,
-            peak_magnitude,
-            noise_floor,
             snr_db,
-            locked_on_ ? "true" : "false",
-            lock_detail.c_str());
+            peak_magnitude,
+            noise_floor);
     }
 
     double calculate_median(std::vector<double> values) const
@@ -398,6 +403,7 @@ class AudioFrequencyDetectorNode : public rclcpp::Node
     double locked_frequency_hz_ = 0.0;  // lock-on된 주파수: 판정할 주파수 후보들의 최빈값
     std::deque<double> candidate_frequencies_hz_;   // 판정할 주파수 후보들을 저장할 큐
     double epsilon_ = 1.0e-12;  // SNR 계산할 때 0으로 나누는 걸 막기 위한 아주 작은 값
+    double noise_floor_reference_magnitude_ = 0.0;
 
 
     //FFT 계산 관련 파라미터

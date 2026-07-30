@@ -37,6 +37,7 @@ CMakeCache.txt
 # Runtime output and mutable simulator state
 /logs/
 /outputs/
+/recordings/
 /test_artifacts/
 /MUJOCO_LOG.TXT
 /sim/current/logs/
@@ -49,6 +50,8 @@ CMakeCache.txt
 *.xwd
 
 # Generated backups and temporary scene edits
+/backups/
+/sim/.ardupilot-git/
 *.bak
 *.bak_*
 *.orig

@@ -13,10 +13,29 @@ def generate_launch_description():
             DeclareLaunchArgument("depth_pose_topic", default_value="/depth/pose"),
             DeclareLaunchArgument("depth_pose_scale", default_value="-1.0"),
             DeclareLaunchArgument("depth_pose_offset_m", default_value="0.0"),
-            DeclareLaunchArgument("enable_topic", default_value="/mission/control_enable"),
+            # [ACOUSTIC-VISION HANDSHAKE] Acoustic 요청/타깃 확인/제어권 승인
+            DeclareLaunchArgument(
+                "vision_search_request_topic",
+                default_value="/homing/vision_search_active",
+            ),
+            DeclareLaunchArgument(
+                "target_confirmed_topic", default_value="/vision/target_confirmed"
+            ),
+            DeclareLaunchArgument(
+                "vision_control_granted_topic",
+                default_value="/homing/vision_control_granted",
+            ),
+            DeclareLaunchArgument(
+                "physical_detached_topic",
+                default_value="/vision/pinger_detached",
+            ),
             DeclareLaunchArgument("state_topic", default_value="/mission/state"),
+            DeclareLaunchArgument("success_topic", default_value="/mission/success"),
             DeclareLaunchArgument("rc_override_topic", default_value="/mavros/rc/override"),
             DeclareLaunchArgument("rc_monitor_topic", default_value="/mission/rc_command"),
+            DeclareLaunchArgument("force_control_grant", default_value="false"),
+            DeclareLaunchArgument("require_physical_detach", default_value="false"),
+            DeclareLaunchArgument("single_target_mode", default_value="false"),
             DeclareLaunchArgument("control_rate_hz", default_value="20.0"),
             DeclareLaunchArgument("throttle_channel", default_value="3"),
             DeclareLaunchArgument("yaw_channel", default_value="4"),
@@ -43,14 +62,16 @@ def generate_launch_description():
             DeclareLaunchArgument("search_yaw_pwm", default_value="1600"),
             DeclareLaunchArgument("yaw_invert", default_value="false"),
             DeclareLaunchArgument("vertical_positive_is_up", default_value="true"),
-            DeclareLaunchArgument("work_depth_m", default_value="0.4"),
-            DeclareLaunchArgument("surface_depth_m", default_value="0.1"),
-            DeclareLaunchArgument("max_depth_m", default_value="1.5"),
+            DeclareLaunchArgument("work_depth_m", default_value="9.5"),
+            DeclareLaunchArgument("surface_depth_m", default_value="0.4"),
+            DeclareLaunchArgument("max_depth_m", default_value="10.5"),
             DeclareLaunchArgument("buoyancy_hold_delta_pwm", default_value="40"),
             DeclareLaunchArgument("lpf_tau_sec", default_value="0.3"),
             DeclareLaunchArgument("buoy_class_id", default_value="0"),
             DeclareLaunchArgument("stick_class_id", default_value="1"),
             DeclareLaunchArgument("min_detection_hits", default_value="5"),
+            DeclareLaunchArgument("target_confirm_hits", default_value="4"),
+            DeclareLaunchArgument("target_confirm_sec", default_value="0.3"),
             DeclareLaunchArgument("approach_area_ratio", default_value="0.30"),
             DeclareLaunchArgument("approach_vision_throttle_weight", default_value="0.4"),
             DeclareLaunchArgument("fork_target_x", default_value="0.30"),
@@ -82,10 +103,31 @@ def generate_launch_description():
                         "depth_pose_offset_m": ParameterValue(
                             LaunchConfiguration("depth_pose_offset_m"), value_type=float
                         ),
-                        "enable_topic": LaunchConfiguration("enable_topic"),
+                        "vision_search_request_topic": LaunchConfiguration(
+                            "vision_search_request_topic"
+                        ),
+                        "target_confirmed_topic": LaunchConfiguration(
+                            "target_confirmed_topic"
+                        ),
+                        "vision_control_granted_topic": LaunchConfiguration(
+                            "vision_control_granted_topic"
+                        ),
+                        "physical_detached_topic": LaunchConfiguration(
+                            "physical_detached_topic"
+                        ),
                         "state_topic": LaunchConfiguration("state_topic"),
+                        "success_topic": LaunchConfiguration("success_topic"),
                         "rc_override_topic": LaunchConfiguration("rc_override_topic"),
                         "rc_monitor_topic": LaunchConfiguration("rc_monitor_topic"),
+                        "force_control_grant": ParameterValue(
+                            LaunchConfiguration("force_control_grant"), value_type=bool
+                        ),
+                        "require_physical_detach": ParameterValue(
+                            LaunchConfiguration("require_physical_detach"), value_type=bool
+                        ),
+                        "single_target_mode": ParameterValue(
+                            LaunchConfiguration("single_target_mode"), value_type=bool
+                        ),
                         "control_rate_hz": ParameterValue(
                             LaunchConfiguration("control_rate_hz"), value_type=float
                         ),
@@ -113,6 +155,12 @@ def generate_launch_description():
                         ),
                         "min_detection_hits": ParameterValue(
                             LaunchConfiguration("min_detection_hits"), value_type=int
+                        ),
+                        "target_confirm_hits": ParameterValue(
+                            LaunchConfiguration("target_confirm_hits"), value_type=int
+                        ),
+                        "target_confirm_sec": ParameterValue(
+                            LaunchConfiguration("target_confirm_sec"), value_type=float
                         ),
                         "fork_target_x": ParameterValue(
                             LaunchConfiguration("fork_target_x"), value_type=float

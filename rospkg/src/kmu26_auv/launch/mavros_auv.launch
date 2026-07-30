@@ -1,6 +1,6 @@
 <launch>
   <arg name="fcu_url" default="/dev/ttyACM0:57600" />
-  <arg name="gcs_url" default="udp://192.168.0.6:14500@192.168.0.5:14500" />
+  <arg name="gcs_url" default="udp://0.0.0.0:14500@192.168.70.20:14500" />
   <arg name="system_id" default="255" />
   <arg name="component_id" default="240" />
   <arg name="tgt_system" default="1" />
@@ -11,7 +11,7 @@
   <arg name="namespace" default="mavros" />
 
   <include file="$(find-pkg-share mavros)/launch/node.launch">
-    <arg name="pluginlists_yaml" value="$(find-pkg-share hit25_auv_ros2)/config/mavros_auv_pluginlists.yaml" />
+    <arg name="pluginlists_yaml" value="$(find-pkg-share auv)/config/mavros_auv_pluginlists.yaml" />
     <arg name="config_yaml" value="$(find-pkg-share mavros)/launch/apm_config.yaml" />
     <arg name="fcu_url" value="$(var fcu_url)" />
     <arg name="gcs_url" value="$(var gcs_url)" />

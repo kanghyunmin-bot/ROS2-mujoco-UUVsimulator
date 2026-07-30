@@ -74,31 +74,31 @@ export SITL_SPEEDUP_DEFAULT="1"
 # MuJoCo vehicle.  The bridge already sends VISION_POSITION_DELTA.  Enable the
 # existing ArduPilot MAV/VISO backend for this homing acceptance profile so the
 # real-package localization stack receives a coherent attitude/velocity frame.
-export UUV_EKF_CONTRACT="althold_baro"
+export UUV_EKF_CONTRACT="${UUV_EKF_CONTRACT:-althold_baro}"
 export ROS2_UUV_ASYNC_CAMERA_RENDER="1"
 export ROS2_UUV_HYDROPHONE_AUDIO_HZ="23.4375"
 export ROS2_UUV_HYDROPHONE_SYNC_HZ="50"
 export ROS2_UUV_HYDROPHONE_STATUS_HZ="10"
-export ROS2_UUV_HYDROPHONE_NOISE_PROFILE="rosbag_20260707"
+export ROS2_UUV_HYDROPHONE_NOISE_PROFILE="${ROS2_UUV_HYDROPHONE_NOISE_PROFILE:-rosbag_20260707}"
 # The competition pinger starts about 22 m from the vehicle.  At 0.020 the
 # inverse-sqrt range model produced only 0.5--2.0 IQ SNR against the measured
 # July 7 receiver floor, below the real estimator's 2.0 acceptance gate.  That
 # left the Phase controller with zero delta-range samples.  Keep the measured
 # noise profile unchanged and model a pinger with enough source level to be
 # detectable at the configured start range.
-export ROS2_UUV_HYDROPHONE_AMPLITUDE="0.040"
-export ROS2_UUV_HYDROPHONE_NOISE_AMPLITUDE="0.005"
-export ROS2_UUV_HYDROPHONE_SNR_PROBE_NOISE_AMPLITUDE="0.0"
-export ROS2_UUV_HYDROPHONE_PHASE_NOISE_STD_RAD="0.19"
+export ROS2_UUV_HYDROPHONE_AMPLITUDE="${ROS2_UUV_HYDROPHONE_AMPLITUDE:-0.040}"
+export ROS2_UUV_HYDROPHONE_NOISE_AMPLITUDE="${ROS2_UUV_HYDROPHONE_NOISE_AMPLITUDE:-0.005}"
+export ROS2_UUV_HYDROPHONE_SNR_PROBE_NOISE_AMPLITUDE="${ROS2_UUV_HYDROPHONE_SNR_PROBE_NOISE_AMPLITUDE:-0.0}"
+export ROS2_UUV_HYDROPHONE_PHASE_NOISE_STD_RAD="${ROS2_UUV_HYDROPHONE_PHASE_NOISE_STD_RAD:-0.05}"
 export ROS2_UUV_HYDROPHONE_PHASE_NOISE_CORRELATION_S="2.0"
 export ROS2_UUV_HYDROPHONE_INTERFERERS_ENABLE="0"
 export ROS2_UUV_HYDROPHONE_ROSBAG_ACTIVITY_REFERENCE="0.12"
-export ROS2_UUV_HYDROPHONE_ROSBAG_BROADBAND_RMS="0.34"
-export ROS2_UUV_HYDROPHONE_ROSBAG_IMPULSE_PROBABILITY="0.07"
-export ROS2_UUV_HYDROPHONE_ROSBAG_IMPULSE_AMPLITUDE="1.50"
+export ROS2_UUV_HYDROPHONE_ROSBAG_BROADBAND_RMS="${ROS2_UUV_HYDROPHONE_ROSBAG_BROADBAND_RMS:-0.34}"
+export ROS2_UUV_HYDROPHONE_ROSBAG_IMPULSE_PROBABILITY="${ROS2_UUV_HYDROPHONE_ROSBAG_IMPULSE_PROBABILITY:-0.07}"
+export ROS2_UUV_HYDROPHONE_ROSBAG_IMPULSE_AMPLITUDE="${ROS2_UUV_HYDROPHONE_ROSBAG_IMPULSE_AMPLITUDE:-1.50}"
 export ROS2_UUV_HYDROPHONE_ROSBAG_COMMON_FRACTION="1.0"
 export ROS2_UUV_HYDROPHONE_ROSBAG_STATIONARY_TONE_HZ="21332.8645"
-export ROS2_UUV_HYDROPHONE_ROSBAG_STATIONARY_TONE_AMPLITUDE="0.021"
+export ROS2_UUV_HYDROPHONE_ROSBAG_STATIONARY_TONE_AMPLITUDE="${ROS2_UUV_HYDROPHONE_ROSBAG_STATIONARY_TONE_AMPLITUDE:-0.021}"
 
 # Lightweight homing may disable camera/YOLO work, but it must not turn the
 # canonical course scene into inert display geometry.  CourseBuoyRuntime is
@@ -114,7 +114,7 @@ exec "${SIM_DIR}/start_sitl_mujoco_mj311.sh" \
   -- \
   --scene "${SIM_DIR}/scenes/tank_current_scene.xml" \
   --fluid-model current \
-  --initial-bar30-depth-m auto \
+  --initial-bar30-depth-m 8.30 \
   --ros2-sensor-hz 100 \
   --thruster-loop-hz 100 \
   --viewer-fps 12 \
