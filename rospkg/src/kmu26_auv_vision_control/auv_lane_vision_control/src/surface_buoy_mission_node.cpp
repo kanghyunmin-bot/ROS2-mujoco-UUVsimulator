@@ -31,6 +31,9 @@ namespace auv_lane_vision_control
 {
 namespace
 {
+// /mission/surface_start는 가벼운 문자열 계약을 사용한다.
+// 예: "cycle=2;final=false;work_depth=0.85"
+// 아래 두 함수는 이 문자열에서 필요한 필드만 꺼낸다.
 uint32_t parse_uint_field(const std::string & text, const std::string & key)
 {
   const auto begin = text.find(key + "=");
@@ -50,6 +53,21 @@ double parse_double_field(const std::string & text, const std::string & key, dou
 }
 }  // namespace
 
+/**
+ * @brief 수면 부표 수집과 가점존 배출을 담당하는 ROS 2 상태 머신 노드.
+ *
+ * 전체 임무 흐름
+ *   1. 레인 노드에서 /mission/surface_start를 받고 RC 제어권을 넘겨받는다.
+ *   2. 수집 수심으로 상승한 뒤 수면 레인을 순회하며 정면 카메라로 부표를 찾는다.
+ *   3. 정면 bbox를 화면 중심에 맞추고 전진한다. 부표가 정면 영상의 아래쪽에서
+ *      상단 카메라 영역으로 넘어가거나 CollectorState가 netted=true이면 포획으로 센다.
+ *   4. 수집망이 차거나 모든 레인을 확인하면 가점존으로 이동하여 배출한다.
+ *   5. 상단 카메라로 수집망이 비었는지 확인하고, 필요하면 최대 횟수만큼 재배출한다.
+ *   6. 작업 수심으로 복귀한 뒤 /mission/surface_complete를 발행하고 RC 제어권을 놓는다.
+ *
+ * 이 노드는 물리적인 부표 삭제를 직접 수행하지 않는다. /mission/score_release에
+ * RELEASE 계약을 발행하고, 시뮬레이터가 위치 조건과 계약을 함께 검사해 배출을 확정한다.
+ */
 class SurfaceBuoyMissionNode : public rclcpp::Node
 {
 public:
@@ -69,6 +87,8 @@ public:
 
   void publish_release_once()
   {
+    // 노드 종료나 미션 완료 시 RC override를 한 번만 해제한다. 반복 해제 메시지로
+    // 다음 제어 노드의 출력을 덮지 않기 위한 보호 장치다.
     if (!active_ || release_sent_) {
       return;
     }
@@ -79,24 +99,28 @@ public:
   }
 
 private:
+  // 상태 전이는 on_timer()에서 20 Hz로 실행된다. 각 상태는 RC 채널 3(상하),
+  // 4(yaw), 5(전후)에 필요한 값만 기록한다.
   enum class State
   {
-    IDLE,
-    ASCEND_TO_COLLECTION_DEPTH,
-    INITIAL_TOP_CHECK,
-    SURFACE_SEARCH,
-    SURFACE_ALIGN,
-    SURFACE_CAPTURE,
-    MOVE_TO_BONUS,
-    DESCEND_TO_DUMP_DEPTH,
-    MOVE_TO_BONUS_CENTER,
-    DUMP_EJECT,
-    DUMP_CHECK,
-    RETURN_TO_BONUS_CENTER,
-    RETURN_TO_WORK_DEPTH,
-    FAILSAFE
+    IDLE,                        // 대기: RC 명령을 발행하지 않는다.
+    ASCEND_TO_COLLECTION_DEPTH,  // 수면 부표를 담을 수집 수심까지 상승한다.
+    INITIAL_TOP_CHECK,           // 시작 직후 상단 카메라로 현재 망 상태를 한 번 확인한다.
+    SURFACE_SEARCH,              // 대회장 레인을 왕복하며 정면 부표를 탐색한다.
+    SURFACE_ALIGN,               // 정면 bbox 중심을 영상 중심선에 맞춘다.
+    SURFACE_CAPTURE,             // 일정 시간 전진하며 포획 여부를 확정한다.
+    MOVE_TO_BONUS,               // 수집한 부표를 가지고 가점존 근처로 이동한다.
+    DESCEND_TO_DUMP_DEPTH,       // 배출에 사용할 수심까지 잠수한다.
+    MOVE_TO_BONUS_CENTER,        // 가점존 중심과 배출 방향을 맞춘다.
+    DUMP_EJECT,                  // 전진/후진 기동과 RELEASE 계약으로 부표를 배출한다.
+    DUMP_CHECK,                  // 상단 카메라로 수집망이 비었는지 확인한다.
+    RETURN_TO_BONUS_CENTER,      // 재배출을 위해 가점존 중심으로 돌아온다.
+    RETURN_TO_WORK_DEPTH,        // 배출 또는 빈 레인 확인 후 원래 작업 수심으로 복귀한다.
+    FAILSAFE                     // 비정상 상황에서 계약과 RC 제어권을 안전하게 종료한다.
   };
 
+  // YOLO 노드가 보내는 한 개 bbox를 내부에서 사용하기 편한 형태로 보관한다.
+  // 좌표와 크기는 픽셀 단위이며 received로 검출 데이터의 신선도를 판단한다.
   struct Detection
   {
     double cx{0.0};
@@ -111,6 +135,7 @@ private:
 
   void declare_parameters()
   {
+    // 입력·출력 토픽 계약. launch에서 바꿀 수 있지만 기본값은 시뮬레이터와 일치한다.
     front_bbox_topic_ = declare_parameter<std::string>(
       "surface_front_bbox_topic", "/vision/surface/front/buoy_bbox");
     top_bbox_topic_ = declare_parameter<std::string>(
@@ -124,6 +149,7 @@ private:
     score_release_topic_ = declare_parameter<std::string>("score_release_topic", "/mission/score_release");
     rc_topic_ = declare_parameter<std::string>("rc_override_topic", "/mavros/rc/override");
 
+    // 가점존 위치와 임무 수심. bonus_center_는 대회장 좌표계 기준이다.
     bonus_center_.x = declare_parameter<double>("bonus_zone_center_x_m", 9.081);
     bonus_center_.y = declare_parameter<double>("bonus_zone_center_y_m", -1.305);
     bonus_radius_m_ = declare_parameter<double>("bonus_zone_radius_m", 0.65);
@@ -134,6 +160,7 @@ private:
     dump_depth_m_ = declare_parameter<double>("dump_depth_m", 0.85);
     depth_tolerance_m_ = declare_parameter<double>("depth_tolerance_m", 0.12);
 
+    // 한 번에 담을 개수와 배출 반복 조건. 실제 수집망 용량보다 크게 설정하지 않는다.
     batch_capacity_ = declare_parameter<int>("batch_capacity", 3);
     surface_total_buoy_count_ = declare_parameter<int>("surface_total_buoy_count", 5);
     max_dump_attempts_ = declare_parameter<int>("max_dump_attempts", 3);
@@ -143,6 +170,7 @@ private:
     capture_forward_s_ = declare_parameter<double>("capture_forward_sec", 2.0);
     capture_ignore_s_ = declare_parameter<double>("capture_ignore_sec", 0.8);
 
+    // 상단 카메라 ROI와 시간 필터. 단일 프레임 오검출로 망 상태가 뒤집히지 않게 한다.
     top_roi_x_min_ = declare_parameter<double>("top_net_roi_x_min", 0.10);
     top_roi_x_max_ = declare_parameter<double>("top_net_roi_x_max", 0.90);
     top_roi_y_min_ = declare_parameter<double>("top_net_roi_y_min", 0.05);
@@ -154,6 +182,7 @@ private:
     align_stable_s_ = declare_parameter<double>("surface_align_stable_sec", 0.4);
     capture_bottom_ratio_ = declare_parameter<double>("surface_capture_bottom_ratio", 0.82);
 
+    // MAVROS RC override 제어 이득과 PWM 제한값.
     control_rate_hz_ = declare_parameter<double>("control_rate_hz", 20.0);
     depth_kp_pwm_per_m_ = declare_parameter<double>("surface_depth_kp_pwm_per_m", 130.0);
     max_depth_delta_pwm_ = declare_parameter<int>("surface_max_depth_delta_pwm", 180);
@@ -176,6 +205,8 @@ private:
 
   void create_interfaces()
   {
+    // 임무 시작 전에 발행된 시작 좌표·대회장 설정도 새 구독자가 받을 수 있도록
+    // transient_local QoS를 사용한다.
     const auto latched = rclcpp::QoS(1).reliable().transient_local();
     front_sub_ = create_subscription<std_msgs::msg::Float32MultiArray>(
       front_bbox_topic_, 10, std::bind(&SurfaceBuoyMissionNode::on_front_bbox, this, std::placeholders::_1));
@@ -194,6 +225,7 @@ private:
     collector_sub_ = create_subscription<auv_msg::msg::CollectorState>(
       "/collector/state", 30, std::bind(&SurfaceBuoyMissionNode::on_collector_state, this, std::placeholders::_1));
 
+    // 상태와 누적 개수는 GUI/감시 노드가 늦게 연결돼도 현재값을 알 수 있게 latched로 발행한다.
     state_pub_ = create_publisher<std_msgs::msg::String>("/mission/surface_state", latched);
     complete_pub_ = create_publisher<std_msgs::msg::String>(surface_complete_topic_, 10);
     score_release_pub_ = create_publisher<std_msgs::msg::String>(score_release_topic_, 10);
@@ -219,6 +251,9 @@ private:
     config.lane_search_offset_m = msg->data[5];
     config.start_corner = msg->data[6] > 0.5 ? "bottom_right" : "bottom_left";
     lane_planner_ = std::make_unique<LanePlanner>(config);
+
+    // 가점존 원 전체가 공용 안전 경계 안에 들어오는지 시작 전에 검증한다.
+    // 좌표 계약이 틀린 상태에서 차량을 움직이는 것보다 즉시 실패시키는 편이 안전하다.
     const auto & bounds = lane_planner_->safe_bounds();
     if (
       bonus_center_.x - bonus_radius_m_ < bounds.x_min ||
@@ -239,6 +274,7 @@ private:
     const double yaw = ArenaFrameTransform::yaw_from_quaternion(
       msg->pose.orientation.w, msg->pose.orientation.x,
       msg->pose.orientation.y, msg->pose.orientation.z);
+    // 이후 waypoint와 가점존 계산은 모두 대회장 좌표계로 통일한다.
     arena_transform_.initialize({msg->pose.position.x, msg->pose.position.y}, yaw);
   }
 
@@ -268,6 +304,8 @@ private:
 
   std::vector<Detection> detections(const std_msgs::msg::Float32MultiArray & msg) const
   {
+    // YOLO bbox 배열은 검출 하나당 10개 값이다. confidence/class/image size가
+    // 유효한 부표만 골라 Detection 목록으로 변환한다.
     std::vector<Detection> rows;
     for (std::size_t base = 0; base + 9 < msg.data.size(); base += 10) {
       if (
@@ -291,6 +329,7 @@ private:
       front_.reset();
       return;
     }
+    // 여러 부표가 보이면 가장 크게 보이는 bbox를 현재 접근 대상으로 선택한다.
     front_ = *std::max_element(
       rows.begin(), rows.end(), [](const Detection & a, const Detection & b) {
         return a.width * a.height < b.width * b.height;
@@ -306,6 +345,8 @@ private:
       const double x1 = (row.cx + 0.5 * row.width) / row.image_width;
       const double y0 = (row.cy - 0.5 * row.height) / row.image_height;
       const double y1 = (row.cy + 0.5 * row.height) / row.image_height;
+      // 초기 점검에서는 화면 전체를 보고, 실제 수집/배출 중에는 수집망 ROI와
+      // 겹치는 bbox만 망 내부 부표로 인정한다.
       if (state_ == State::INITIAL_TOP_CHECK ||
         (x1 >= top_roi_x_min_ && x0 <= top_roi_x_max_ &&
         y1 >= top_roi_y_min_ && y0 <= top_roi_y_max_))
@@ -331,6 +372,8 @@ private:
 
   void on_collector_state(const auv_msg::msg::CollectorState::SharedPtr msg)
   {
+    // target_id 집합으로 같은 부표 이벤트가 여러 번 들어와도 한 번만 센다.
+    // 시뮬레이터의 물리 접촉 판정은 카메라 추정보다 우선하는 확정 신호다.
     if (msg->netted && !msg->target_id.empty() && captured_ids_.insert(msg->target_id).second) {
       if (active_) {
         ++batch_capture_count_;
@@ -349,6 +392,7 @@ private:
     if (cycle == 0 || cycle <= last_completed_cycle_ || cycle == cycle_id_) {
       return;
     }
+    // arena/start_frame이 늦게 도착하면 시작 계약을 버리지 않고 보류한다.
     if (!lane_planner_ || !arena_transform_.initialized()) {
       RCLCPP_WARN(get_logger(), "Surface start deferred: shared arena/start frame unavailable");
       pending_start_ = msg->data;
@@ -359,6 +403,8 @@ private:
 
   void begin_cycle(const std::string & contract)
   {
+    // 새 cycle마다 순간 상태만 초기화한다. captured_ids_/deposited_ids_는
+    // 전체 미션 누적 점수이므로 지우지 않는다.
     cycle_id_ = parse_uint_field(contract, "cycle");
     final_cycle_ = contract.find("final=true") != std::string::npos;
     work_depth_m_ = parse_double_field(contract, "work_depth", dump_depth_m_);
@@ -388,6 +434,8 @@ private:
     if (!have_odometry_ || !depth_m_) {
       return;
     }
+    // 매 주기 중립값에서 시작하여 현재 상태가 필요한 채널만 덮어쓴다.
+    // 이렇게 하면 이전 상태의 PWM이 다음 상태에 남지 않는다.
     auto channels = nochange_channels();
     set_neutral(channels);
     switch (state_) {
@@ -423,6 +471,7 @@ private:
 
   void run_initial_top_check(std::array<uint16_t, 18> & channels)
   {
+    // 요구사항상 시작할 때 망이 비었으면 대기하지 않고 바로 레인 탐색으로 간다.
     hold_depth(channels, collection_depth_m_);
     if (recent_top() || state_age() >= detection_timeout_s_) {
       initial_top_check_done_ = true;
@@ -442,6 +491,7 @@ private:
 
   void select_surface_lane()
   {
+    // 현재 위치에서 가장 가까운 미완료 레인의 끝점을 선택해 불필요한 이동을 줄인다.
     const auto choice = lane_planner_->closest_uncompleted_endpoint(
       current_position_, surface_lane_completed_);
     if (!choice) {
@@ -466,6 +516,7 @@ private:
       finish_search();
       return;
     }
+    // 한 레인의 시작점에 먼저 간 뒤 반대 끝까지 주행하면 해당 레인 검색을 완료한 것으로 본다.
     const Vec2 target = surface_heading_to_start_ ? surface_lane_start_ : surface_lane_finish_;
     if (follow_waypoint(channels, target, search_forward_pwm_, collection_depth_m_)) {
       if (surface_heading_to_start_) {
@@ -487,6 +538,8 @@ private:
       begin_search("front target lost");
       return;
     }
+    // 정면 영상 중심 x=0.5를 기준으로 yaw를 보정한다. 중심선이 일정 시간 안정되고
+    // bbox 아래쪽이 화면 하단에 충분히 가까워졌을 때만 포획 전진을 시작한다.
     const double nx = front_->cx / front_->image_width;
     const double error = 0.5 - nx;
     const int yaw_delta = static_cast<int>(std::lround(std::clamp(380.0 * error, -1.0 * max_yaw_delta_pwm_, 1.0 * max_yaw_delta_pwm_)));
@@ -518,6 +571,9 @@ private:
     if (recent_front()) {
       capture_front_min_y_ = std::min(capture_front_min_y_, front_->cy / front_->image_height);
     }
+    // 포획 성공은 두 경로로 확정한다.
+    // 1) CollectorState의 실제 netted 이벤트
+    // 2) 정면 bbox가 위로 이동한 뒤 상단 카메라에서 연속 확인되는 영상 전이
     const bool front_moved_up = capture_front_start_y_ - capture_front_min_y_ >= 0.08;
     const bool transitioned_to_top = front_moved_up && top_occupied_confirmed();
     if (capture_confirmed_ || transitioned_to_top) {
@@ -540,6 +596,7 @@ private:
 
   void finish_search()
   {
+    // 전 레인을 돌았을 때 망에 부표가 있으면 가점존으로, 없으면 곧바로 작업 수심으로 복귀한다.
     if (batch_capture_count_ > 0) {
       transition(State::MOVE_TO_BONUS, "all surface lanes searched");
     } else {
@@ -566,6 +623,7 @@ private:
 
   void run_bonus_center(std::array<uint16_t, 18> & channels)
   {
+    // 가점존 중심 도착만으로 배출하지 않고 지정된 heading까지 맞춘 뒤 계약을 연다.
     if (follow_waypoint(channels, bonus_center_, search_forward_pwm_, dump_depth_m_)) {
       const double heading_error = wrap_pi(bonus_dump_heading_rad_ - current_yaw_rad_);
       set_channel(channels, 4, neutral_pwm_ + static_cast<int>(std::lround(
@@ -586,6 +644,7 @@ private:
   void run_dump_eject(std::array<uint16_t, 18> & channels)
   {
     hold_depth(channels, dump_depth_m_);
+    // 1·3차는 전진, 2차는 후진하여 같은 방향 기동만 반복할 때 생기는 걸림을 줄인다.
     const bool forward = dump_attempt_count_ == 1 || dump_attempt_count_ == 3;
     set_channel(channels, 5, forward ? dump_forward_pwm_ : dump_reverse_pwm_);
     if (distance(current_position_, bonus_center_) >= dump_exit_radius_m_ || state_age() >= dump_motion_timeout_s_) {
@@ -600,6 +659,8 @@ private:
     if (state_age() < dump_settle_s_) {
       return;
     }
+    // 카메라가 오래됐으면 '비었다'고 추측하지 않는다. 테스트용으로 무한 재시도는
+    // 하지 않고 현재 배출 루프를 종료해 다음 미션이 진행될 수 있게 한다.
     TopNetStatus top_status = TopNetStatus::OCCUPIED;
     if (!recent_top()) {
       top_status = TopNetStatus::STALE;
@@ -640,6 +701,8 @@ private:
     std::array<uint16_t, 18> & channels, const Vec2 & target,
     int forward_pwm, double target_depth)
   {
+    // 위치 오차로 목표 방위를 계산하고, 선수가 충분히 맞을 때만 전진한다.
+    // 깊이 P 제어는 이동 상태와 독립적으로 매 주기 함께 적용한다.
     hold_depth(channels, target_depth);
     const Vec2 delta = target - current_position_;
     if (norm(delta) <= waypoint_tolerance_m_) {
@@ -658,6 +721,8 @@ private:
 
   void hold_depth(std::array<uint16_t, 18> & channels, double target_depth)
   {
+    // 이 프로젝트의 깊이는 수면 아래가 양수다. depth_p_pwm()가 RC 채널 3의
+    // 방향과 PWM 상한/하한을 함께 처리한다.
     set_channel(
       channels, 3,
       depth_p_pwm(
@@ -690,6 +755,8 @@ private:
 
   void open_score_gate()
   {
+    // 가점존 중심을 대회장 좌표에서 odom/world 좌표로 변환해 시뮬레이터에 전달한다.
+    // 시뮬레이터는 이 계약이 RELEASE이고 부표가 실제 영역 안에 있을 때만 점수 처리한다.
     const Vec2 world = arena_transform_.position_to_odom(bonus_center_);
     std_msgs::msg::String msg;
     std::ostringstream out;
@@ -708,6 +775,8 @@ private:
 
   void complete_cycle()
   {
+    // 완료 순서: 배출 계약 닫기 -> RC 해제 -> 완료 발행 -> IDLE 전환.
+    // 다음 레인 제어 노드가 RC를 이어받기 전에 남은 명령이 없도록 한다.
     close_score_gate();
     publish_release_once();
     rc_pub_.reset();
@@ -736,6 +805,7 @@ private:
 
   void transition(State next, const std::string & reason)
   {
+    // 모든 상태 전이는 이 함수를 통해 시간 기준과 모니터링 토픽을 함께 갱신한다.
     RCLCPP_INFO(get_logger(), "Surface %s -> %s: %s", state_name(state_), state_name(next), reason.c_str());
     state_ = next;
     state_entered_at_ = now();
@@ -828,6 +898,7 @@ private:
     rc_pub_->publish(msg);
   }
 
+  // ROS 토픽 및 조정 가능한 임무 파라미터
   std::string front_bbox_topic_, top_bbox_topic_, odometry_topic_, depth_pose_topic_;
   std::string start_frame_topic_, surface_start_topic_, surface_complete_topic_;
   std::string arena_config_topic_, score_release_topic_, rc_topic_;
@@ -848,6 +919,7 @@ private:
   int dump_forward_pwm_{1660}, dump_reverse_pwm_{1340}, max_yaw_delta_pwm_{150};
   int buoy_class_id_{0};
 
+  // 상태 머신의 현재 위치·센서·카운트 메모리
   State state_{State::IDLE};
   rclcpp::Time state_entered_at_{0, 0, RCL_ROS_TIME};
   ArenaFrameTransform arena_transform_;
@@ -872,6 +944,7 @@ private:
   std::string pending_start_;
   std::set<std::string> captured_ids_, deposited_ids_;
 
+  // ROS 인터페이스 수명은 노드와 함께 유지한다.
   rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr front_sub_, top_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr depth_sub_;
@@ -891,6 +964,7 @@ int main(int argc, char ** argv)
   rclcpp::init(argc, argv);
   auto node = std::make_shared<auv_lane_vision_control::SurfaceBuoyMissionNode>();
   rclcpp::spin(node);
+  // Ctrl+C나 executor 종료 시 마지막으로 RC override를 해제한다.
   node->publish_release_once();
   rclcpp::shutdown();
   return 0;
