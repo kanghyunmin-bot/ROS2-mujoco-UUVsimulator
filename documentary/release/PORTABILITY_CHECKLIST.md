@@ -1,52 +1,38 @@
-# Current Dist Portability Checklist
+# Ubuntu 배포 검증 체크리스트
 
-Run before shipping:
-
-```bash
-./sim/current/tools/package_dist.sh
-./verify_current_dist.sh \
-  ./documentary/release/builds/latest/uuv_sim_current_ubuntu22.04.zip
-```
-
-Run on the target Ubuntu 22.04 PC:
+## 개발 PC에서 생성
 
 ```bash
-./preflight_uuv_sim_current.sh
-./install_uuv_sim_current_ubuntu22.sh --noninteractive
-source ./sim/environment.sh
-./preflight_uuv_sim_current.sh --post-install --python "$MJ311_PYTHON"
+./packaging/build_release.sh
+./packaging/verify_release.sh \
+  documentary/release/builds/2026.08.01/kmu-auv-simulator_2026.08.01_amd64.deb
+cd documentary/release/builds/2026.08.01
+sha256sum -c SHA256SUMS.txt
 ```
 
-Required OS baseline:
+## 깨끗한 Ubuntu 22.04 amd64에서 확인
 
-- Ubuntu 22.04
-- x86_64/amd64 recommended, especially for QGroundControl AppImage
-- ROS 2 Humble
-- Python 3.10
+- DEB 더블클릭 설치 및 앱 메뉴 아이콘 생성
+- first-run 안내창, 터미널 로그, 관리자 암호 요청
+- 동일 버전 복구 설치
+- `/opt/kmu-auv-simulator` 삭제/업데이트 시 사용자 작업공간 보존
+- MuJoCo viewer 및 headless 실행
+- SITL 연결, ARM, RC 이동
+- 정면/상향 카메라 1280x720@10Hz
+- `/audio`, `/depth/pose`, DVL, Ping360 토픽
+- `competition_a_lane_mission.launch.py` 실행
+- `/mavros/rc/override` publisher 한 개
+- `/mission/score_release`, `/collector/state`, 누적 count 토픽
 
-Graphics/display cases:
+필요 포트는 `8878`, `14550`, `14551`, `14660`, `14661`, `9002`, `9003`이다.
+Wayland에서는 XWayland/libdecor를 사용하며 GLFW의 window-position 경고는
+비치명적이다.
 
-- X11: native MuJoCo GLFW viewer should work after apt dependencies.
-- Wayland: XWayland/libdecor must be installed. GLFW may emit a harmless window
-  position warning.
-- No display: use `--run-headless` or start the web GUI without launching the
-  MuJoCo viewer.
+배포 ROS source에는 다음 14개 패키지가 있어야 한다.
 
-Ports that should normally be free before start:
-
-- `8878`: web GUI
-- `14550`, `14551`: QGC/MAVROS-facing links
-- `14660`, `14661`: internal SITL/MuJoCo MAVLink links
-- `9002`, `9003`: ArduPilot JSON sensor/servo links
-
-Current-runtime sanity markers:
-
-- `sim/current/gui/sim_stack_env_defaults.py` has
-  `UUV_MUJOCO_TIMESTEP=0.008` and the default camera is 1280x720@30Hz.
-- `UUV_COURSE_BUOY_TRACK_CSV_ENABLE=0` by default.
-- The ROS source bundle contains all 12 active packages, including
-  `hit25_auv_ros2_msg`, `audio_capture`, `auv_buoy_vision_control`,
-  `kmu26_pinger_homing`, `kmu26_auv_web_gui`,
-  and `robot_localization`.
-- `sim/current/scenes/tank_current_scene.xml` has no buoy projection
-  discs/contact helper discs.
+```text
+dvl_msgs auv_dvl_a50_msg ping360_sonar_msgs auv_msg auv
+audio_common_msgs audio_common audio_capture hydrophone_ctrl
+auv_buoy_vision_control auv_lane_vision_control auv_web_gui
+auv_pinger_homing robot_localization
+```

@@ -40,7 +40,6 @@ setup(
     maintainer_email="kuuve@todo.todo",
     description="Web control panel for AUV localization tests and pinger homing.",
     license="TODO: License declaration",
-    tests_require=["pytest"],
     entry_points={
         "console_scripts": [
             "server = auv_web_gui.server:main",

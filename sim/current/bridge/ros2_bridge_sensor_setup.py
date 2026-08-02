@@ -37,6 +37,7 @@ def configure_mujoco_sensor_runtime(
     bridge._dvl_site_id = mujoco_ids.dvl_site_id
     bridge._cam_left_site_id = mujoco_ids.cam_left_site_id
     bridge._cam_right_site_id = mujoco_ids.cam_right_site_id
+    bridge._cam_top_site_id = mujoco_ids.cam_top_site_id
 
     ping360_default_config = Path(__file__).resolve().parents[1] / "config" / "ping360.json"
     bridge._ping360_config = Ping360Config.from_file(

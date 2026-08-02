@@ -37,11 +37,32 @@ IDLE
        -> buoy 발견: FIND_AND_ALIGN
        -> 제거/포기 후 RETURN_TO_ACTIVE_LANE
        -> 기존 레인 주행 재개
-  -> 모든 레인 완료
-  -> COMPLETE
+  -> 레인 하나 완료
+  -> WAIT_SURFACE_CYCLE (lane RC publisher 제거)
+  -> surface_buoy_mission_node가 수면 레인 전체 탐색/수집
+  -> 가점존 조건부 배출 또는 빈 수면 확인
+  -> 저장해 둔 다음 수중 레인으로 복귀
+  -> 마지막 수면 cycle 완료 후 COMPLETE
 ```
 
 odom·수심 유실, 최대수심 초과 또는 비상정지 시 `FAILSAFE`로 전환합니다.
+
+## 수면 수집과 가점존 배출
+
+`surface_buoy_mission_node`는 별도 C++ 노드지만 handoff 중에만
+`/mavros/rc/override` publisher를 생성합니다. 레인 노드는 RELEASE 한 번 후 자신의
+publisher를 제거하므로 정상 실행 중 RC owner는 한 개입니다.
+
+- 정면/상향 YOLO 입력: `/vision/surface/front/buoy_bbox`,
+  `/vision/surface/top/buoy_bbox`
+- 카메라 입력은 정면과 상향 모두 `1280x720 @ 10 Hz` 고정
+- 포획 성공: 정면 중심선 안정·근접 후 bbox가 위로 이동하여 상단 ROI로 전환되거나
+  `/collector/state`에서 실제 `NETTED` 이벤트 수신
+- 수면 탐색 종료: 공유 `LanePlanner`로 생성한 모든 수면 레인을 완료했을 때
+- 배출: 첫 시도는 항상 실행하고, 상단 ROI가 occupied일 때만 최대 3회 F/R/F
+- 상단이 empty면 즉시 수중 레인으로 복귀하며 stale/unknown이면 추가 배출하지 않음
+- 누적 카운트: `/mission/bonus_deposit_count`, `/mission/surface_remaining_count`
+- 시뮬레이터 배출 허가: `/mission/score_release` ROS 계약과 실제 가점존 반경 판정
 
 ## Hydrophone handshake
 
@@ -236,7 +257,7 @@ source install/setup.bash
 ## 실행
 
 ```bash
-ros2 run auv_lane_vision_control lane_vision_controller_node
+ros2 launch auv_lane_vision_control competition_a_lane_mission.launch.py
 ```
 
 파라미터 변경 예:

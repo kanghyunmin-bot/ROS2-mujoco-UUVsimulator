@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PACKAGE_ROOT="${KMU_AUV_PACKAGE_ROOT:-/opt/kmu-auv-simulator}"
+BUNDLE_ROOT="${PACKAGE_ROOT}/bundle"
+PACKAGE_VERSION="$(tr -d '[:space:]' <"${PACKAGE_ROOT}/VERSION")"
+INSTALL_ROOT="${UUV_SIM_INSTALL_ROOT:-${XDG_DATA_HOME:-${HOME}/.local/share}/kmu-auv-simulator/current}"
+FORCE_REFRESH=0
+
+if [[ "${1:-}" == "--reinstall" || "${1:-}" == "--repair" ]]; then
+  FORCE_REFRESH=1
+fi
+
+INSTALLER="${BUNDLE_ROOT}/install_uuv_sim_current_ubuntu22.sh"
+[[ -x "$INSTALLER" ]] || {
+  echo "[kmu-auv] bundled installer missing: $INSTALLER" >&2
+  exit 1
+}
+
+LOG_DIR="${XDG_STATE_HOME:-${HOME}/.local/state}/kmu-auv-simulator"
+mkdir -p "$LOG_DIR"
+LOG_FILE="${LOG_DIR}/install-${PACKAGE_VERSION}-$(date +%Y%m%d-%H%M%S).log"
+
+if [[ -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]]; then
+  exec env \
+    UUV_SIM_DIST_VERSION="$PACKAGE_VERSION" \
+    UUV_SIM_FORCE_REFRESH="$FORCE_REFRESH" \
+    "$INSTALLER" --install-root "$INSTALL_ROOT" --noninteractive
+fi
+
+if command -v zenity >/dev/null 2>&1; then
+  zenity --question \
+    --title="KMU AUV Simulator ${PACKAGE_VERSION}" \
+    --width=500 \
+    --ok-label="설치 시작" \
+    --cancel-label="취소" \
+    --text="KMU AUV Simulator를 설치합니다.\n\n설치 위치: ${INSTALL_ROOT}\nUbuntu 22.04, 인터넷 연결과 관리자 암호가 필요합니다.\n처음 설치는 ROS 2와 ArduPilot 빌드 때문에 시간이 걸릴 수 있습니다." || exit 0
+fi
+
+TERMINAL=""
+for candidate in x-terminal-emulator gnome-terminal konsole xterm; do
+  if command -v "$candidate" >/dev/null 2>&1; then
+    TERMINAL="$candidate"
+    break
+  fi
+done
+
+if [[ -z "$TERMINAL" ]]; then
+  exec env \
+    UUV_SIM_DIST_VERSION="$PACKAGE_VERSION" \
+    UUV_SIM_FORCE_REFRESH="$FORCE_REFRESH" \
+    "$INSTALLER" --install-root "$INSTALL_ROOT" --noninteractive
+fi
+
+STATUS_FILE="$(mktemp "${XDG_RUNTIME_DIR:-/tmp}/kmu-auv-install-status.XXXXXX")"
+rm -f "$STATUS_FILE"
+printf -v INSTALL_COMMAND '%q ' \
+  env \
+  UUV_SIM_DIST_VERSION="$PACKAGE_VERSION" \
+  UUV_SIM_FORCE_REFRESH="$FORCE_REFRESH" \
+  "$INSTALLER" --install-root "$INSTALL_ROOT" --noninteractive
+printf -v LOG_QUOTED '%q' "$LOG_FILE"
+printf -v STATUS_QUOTED '%q' "$STATUS_FILE"
+TERMINAL_COMMAND="set +e; ${INSTALL_COMMAND} 2>&1 | tee ${LOG_QUOTED}; code=\${PIPESTATUS[0]}; printf '%s\\n' \"\$code\" > ${STATUS_QUOTED}; echo; if [[ \$code -eq 0 ]]; then echo '설치가 완료되었습니다. 이 창을 닫아도 됩니다.'; else echo '설치에 실패했습니다. 위 로그를 확인하세요.'; fi; sleep 3; exit \$code"
+
+case "$TERMINAL" in
+  gnome-terminal)
+    gnome-terminal --wait --title="KMU AUV Simulator 설치" -- bash -lc "$TERMINAL_COMMAND" || true
+    ;;
+  konsole)
+    konsole --nofork -p tabtitle="KMU AUV Simulator 설치" -e bash -lc "$TERMINAL_COMMAND" || true
+    ;;
+  xterm)
+    xterm -T "KMU AUV Simulator 설치" -e bash -lc "$TERMINAL_COMMAND" || true
+    ;;
+  *)
+    x-terminal-emulator -T "KMU AUV Simulator 설치" -e bash -lc "$TERMINAL_COMMAND" || true
+    ;;
+esac
+
+STATUS=1
+if [[ -f "$STATUS_FILE" ]]; then
+  STATUS="$(tr -dc '0-9' <"$STATUS_FILE")"
+  rm -f "$STATUS_FILE"
+fi
+if [[ "$STATUS" == "0" ]]; then
+  if command -v zenity >/dev/null 2>&1; then
+    zenity --info --title="KMU AUV Simulator" \
+      --text="설치가 완료되었습니다. 시뮬레이터를 시작합니다.\n\n로그: ${LOG_FILE}"
+  fi
+  exec kmu-auv-simulator --no-install-check
+fi
+
+if command -v zenity >/dev/null 2>&1; then
+  zenity --error --title="KMU AUV Simulator 설치 실패" \
+    --text="설치가 완료되지 않았습니다.\n\n로그: ${LOG_FILE}"
+fi
+exit 1

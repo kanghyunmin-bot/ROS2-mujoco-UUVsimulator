@@ -32,6 +32,11 @@ def generate_launch_description() -> LaunchDescription:
         "launch",
         "underwater_pinger_yolo.launch.py",
     )
+    generic_detector_launch = os.path.join(
+        get_package_share_directory("auv_buoy_vision_control"),
+        "launch",
+        "laptop_yolo_detection.launch.py",
+    )
 
     use_sim_time = LaunchConfiguration("use_sim_time")
     odometry_topic = LaunchConfiguration("odometry_topic")
@@ -67,6 +72,34 @@ def generate_launch_description() -> LaunchDescription:
                     "image_topic": LaunchConfiguration("image_topic"),
                     "device": LaunchConfiguration("device"),
                     "show_preview": LaunchConfiguration("show_preview"),
+                    "bbox_topic": "/vision/surface/front/buoy_bbox",
+                    "annotated_image_topic": (
+                        "/vision/surface/front/annotated/compressed"
+                    ),
+                    "node_name": "surface_front_yolo_detector",
+                }.items(),
+            ),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(generic_detector_launch),
+                condition=IfCondition(LaunchConfiguration("include_detector")),
+                launch_arguments={
+                    "model_path": LaunchConfiguration("model_path"),
+                    "image_topic": "/camera/top/color/image_raw/compressed",
+                    "bbox_topic": "/vision/surface/top/buoy_bbox",
+                    "annotated_image_topic": (
+                        "/vision/surface/top/annotated/compressed"
+                    ),
+                    "target_class_id": "0",
+                    "target_class_name": "",
+                    "publish_per_class": "true",
+                    "pinger_marker_fallback": "false",
+                    "course_buoy_color_filter": "false",
+                    "associate_stick_with_buoy": "false",
+                    "publish_annotated_image": "false",
+                    "imgsz": "640",
+                    "device": LaunchConfiguration("device"),
+                    "show_preview": "false",
+                    "node_name": "surface_top_yolo_detector",
                 }.items(),
             ),
             Node(
@@ -93,7 +126,7 @@ def generate_launch_description() -> LaunchDescription:
                             use_sim_time, value_type=bool
                         ),
                         "odometry_topic": odometry_topic,
-                        "bbox_topic": "/vision/buoy_bbox",
+                        "bbox_topic": "/vision/surface/front/buoy_bbox",
                         "depth_pose_topic": "/depth/pose",
                         "depth_topic": "/auv/depth",
                         "start_frame_topic": "/start_frame",
@@ -167,6 +200,44 @@ def generate_launch_description() -> LaunchDescription:
                         "vertical_full_weight_error": 0.25,
                         "buoyancy_hold_delta_pwm": 0,
                         "depth_deadband_m": 0.04,
+                    }
+                ],
+            ),
+            Node(
+                package="auv_lane_vision_control",
+                executable="surface_buoy_mission_node",
+                name="competition_a_surface_buoy_mission",
+                output="screen",
+                parameters=[
+                    {
+                        "use_sim_time": ParameterValue(use_sim_time, value_type=bool),
+                        "odometry_topic": odometry_topic,
+                        "depth_pose_topic": "/depth/pose",
+                        "start_frame_topic": "/start_frame",
+                        "surface_front_bbox_topic": (
+                            "/vision/surface/front/buoy_bbox"
+                        ),
+                        "surface_top_bbox_topic": (
+                            "/vision/surface/top/buoy_bbox"
+                        ),
+                        # Course-A score hoop (-6.8, 0.0) transformed into
+                        # the shared hydrophone start/arena frame.
+                        "bonus_zone_center_x_m": 9.081,
+                        "bonus_zone_center_y_m": -1.305,
+                        "bonus_zone_radius_m": 0.65,
+                        "bonus_approach_distance_m": 1.0,
+                        "bonus_dump_heading_rad": 0.0,
+                        "score_zone_world_z_m": -0.30,
+                        "collection_depth_m": 0.30,
+                        "dump_depth_m": 0.85,
+                        "dump_exit_radius_m": 0.70,
+                        "batch_capacity": 3,
+                        "surface_total_buoy_count": 5,
+                        "max_dump_attempts": 3,
+                        "top_net_roi_x_min": 0.10,
+                        "top_net_roi_x_max": 0.90,
+                        "top_net_roi_y_min": 0.05,
+                        "top_net_roi_y_max": 0.95,
                     }
                 ],
             ),

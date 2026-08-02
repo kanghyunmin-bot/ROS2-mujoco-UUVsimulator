@@ -19,6 +19,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/bool.hpp>
 #include <std_msgs/msg/float32_multi_array.hpp>
+#include <std_msgs/msg/float64_multi_array.hpp>
 #include <std_msgs/msg/float64.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_msgs/msg/u_int32.hpp>
@@ -59,6 +60,7 @@ public:
     publish_target_confirmed(false);
     publish_success(false);
     publish_lane_event("ready");
+    publish_arena_config();
 
     const auto & bounds = lane_planner_->safe_bounds();
     RCLCPP_INFO(
@@ -108,6 +110,7 @@ private:
     MOVE_TO_LANE_START,
     LANE_FOLLOWING_WITH_SEARCH,
     RETURN_TO_ACTIVE_LANE,
+    WAIT_SURFACE_CYCLE,
     COMPLETE,
     FAILSAFE
   };
@@ -175,6 +178,12 @@ private:
       declare_parameter<std::string>("lane_event_topic", "/mission/lane_event");
     success_topic_ =
       declare_parameter<std::string>("success_topic", "/mission/success");
+    surface_start_topic_ = declare_parameter<std::string>(
+      "surface_start_topic", "/mission/surface_start");
+    surface_complete_topic_ = declare_parameter<std::string>(
+      "surface_complete_topic", "/mission/surface_complete");
+    arena_config_topic_ = declare_parameter<std::string>(
+      "arena_config_topic", "/mission/arena_config");
     required_fcu_mode_ =
       declare_parameter<std::string>("required_fcu_mode", "");
   }
@@ -434,6 +443,11 @@ private:
       std::bind(
         &LaneVisionControllerNode::on_fcu_state, this,
         std::placeholders::_1));
+    surface_complete_sub_ = create_subscription<std_msgs::msg::String>(
+      surface_complete_topic_, rclcpp::QoS(10).reliable(),
+      std::bind(
+        &LaneVisionControllerNode::on_surface_complete, this,
+        std::placeholders::_1));
 
     rc_pub_ = create_publisher<mavros_msgs::msg::OverrideRCIn>(rc_override_topic_, 10);
     rc_monitor_pub_ =
@@ -446,6 +460,10 @@ private:
       lane_event_topic_, rclcpp::QoS(10).reliable().transient_local());
     success_pub_ = create_publisher<std_msgs::msg::Bool>(
       success_topic_, rclcpp::QoS(1).reliable().transient_local());
+    surface_start_pub_ = create_publisher<std_msgs::msg::String>(
+      surface_start_topic_, rclcpp::QoS(1).reliable().transient_local());
+    arena_config_pub_ = create_publisher<std_msgs::msg::Float64MultiArray>(
+      arena_config_topic_, rclcpp::QoS(1).reliable().transient_local());
 
     const double period_sec = 1.0 / control_rate_hz_;
     timer_ = create_wall_timer(
@@ -746,6 +764,34 @@ private:
     current_fcu_mode_ = msg->mode;
   }
 
+  void on_surface_complete(const std_msgs::msg::String::SharedPtr msg)
+  {
+    if (state_ != State::WAIT_SURFACE_CYCLE) {
+      return;
+    }
+    const std::string expected = "cycle=" + std::to_string(surface_cycle_id_);
+    if (msg->data.find(expected) == std::string::npos) {
+      return;
+    }
+    if (msg->data.find("success=true") == std::string::npos) {
+      transition_to(State::FAILSAFE, "surface mission reported failure");
+      return;
+    }
+    surface_release_sent_ = false;
+    vision_has_control_ = true;
+    if (!rc_pub_) {
+      rc_pub_ = create_publisher<mavros_msgs::msg::OverrideRCIn>(rc_override_topic_, 10);
+    }
+    if (!pending_lane_choice_) {
+      publish_lane_event("coverage_complete");
+      publish_success(true);
+      transition_to(State::COMPLETE, "last surface cycle completed");
+      return;
+    }
+    activate_lane_choice(*pending_lane_choice_, "surface cycle completed");
+    pending_lane_choice_.reset();
+  }
+
   // 새 임무를 시작할 수 있도록 진행 상태와 제어 누적값을 초기화한다.
   void reset_mission()
   {
@@ -762,6 +808,9 @@ private:
     vision_has_control_ = false;
     target_retry_count_ = 0;
     target_lost_started_at_.reset();
+    pending_lane_choice_.reset();
+    surface_release_sent_ = false;
+    terminal_release_sent_ = false;
     reset_waypoint_pid();
     reset_depth_pid();
   }
@@ -777,14 +826,26 @@ private:
       run_target_confirm();
       return;
     }
+    if (state_ == State::WAIT_SURFACE_CYCLE) {
+      if (!surface_release_sent_) {
+        auto release = nochange_channels();
+        release_controlled_channels(release);
+        publish_channels(release);
+        surface_release_sent_ = true;
+      }
+      return;
+    }
     if (state_ == State::WAIT_CONTROL_GRANT || !vision_has_control_) {
       return;
     }
 
     auto channels = nochange_channels();
     if (state_ == State::COMPLETE || state_ == State::FAILSAFE) {
-      release_controlled_channels(channels);
-      publish_channels(channels);
+      if (!terminal_release_sent_) {
+        release_controlled_channels(channels);
+        publish_channels(channels);
+        terminal_release_sent_ = true;
+      }
       return;
     }
 
@@ -803,6 +864,7 @@ private:
     if (state_ == State::FAILSAFE) {
       release_controlled_channels(channels);
       publish_channels(channels);
+      terminal_release_sent_ = true;
       return;
     }
 
@@ -846,11 +908,14 @@ private:
       case State::RETURN_TO_ACTIVE_LANE:
         run_return_to_active_lane(channels);
         break;
+      case State::WAIT_SURFACE_CYCLE:
+        break;
     }
 
     if (state_ == State::COMPLETE || state_ == State::FAILSAFE) {
       channels = nochange_channels();
       release_controlled_channels(channels);
+      terminal_release_sent_ = true;
     }
     publish_channels(channels);
   }
@@ -1288,15 +1353,21 @@ private:
       return;
     }
 
-    active_lane_index_ = choice->lane_index;
-    active_lane_start_at_a_ = choice->start_at_a;
-    active_lane_start_ = choice->start;
-    active_lane_finish_ = choice->finish;
+    activate_lane_choice(*choice, reason);
+  }
+
+  void activate_lane_choice(
+    const LaneEndpointChoice & choice, const std::string & reason)
+  {
+    active_lane_index_ = choice.lane_index;
+    active_lane_start_at_a_ = choice.start_at_a;
+    active_lane_start_ = choice.start;
+    active_lane_finish_ = choice.finish;
     waypoint_ = active_lane_start_;
     ignore_detections_until_progress_m_.reset();
     reset_waypoint_pid();
     transition_to(State::MOVE_TO_LANE_START, reason);
-    publish_lane_event("lane_selected:" + std::to_string(*active_lane_index_));
+    publish_lane_event("lane_selected:" + std::to_string(choice.lane_index));
     RCLCPP_INFO(
       get_logger(),
       "Selected lane %zu start=(%.2f, %.2f) finish=(%.2f, %.2f)",
@@ -1342,7 +1413,23 @@ private:
         "lane_completed:" + std::to_string(completed_index) +
         ":count=" + std::to_string(completed_count));
       active_lane_index_.reset();
-      select_next_lane("active lane completed");
+      pending_lane_choice_ = lane_planner_->closest_uncompleted_endpoint(
+        current_position_, lane_completed_);
+      ++surface_cycle_id_;
+      release_controlled_channels(channels);
+      surface_release_sent_ = true;
+      std_msgs::msg::String start;
+      start.data =
+        "cycle=" + std::to_string(surface_cycle_id_) +
+        ";final=" + (pending_lane_choice_ ? std::string("false") : std::string("true")) +
+        ";work_depth=" + std::to_string(mission_hold_depth_m_.value_or(0.85));
+      // Release and remove the lane publisher before waking the surface node;
+      // this keeps the live ROS graph at one RC owner.
+      publish_channels(channels);
+      rc_pub_.reset();
+      surface_start_pub_->publish(start);
+      channels = nochange_channels();
+      transition_to(State::WAIT_SURFACE_CYCLE, "RC handed to surface mission");
       return;
     }
 
@@ -1689,6 +1776,7 @@ private:
       case State::MOVE_TO_LANE_START: return "MOVE_TO_LANE_START";
       case State::LANE_FOLLOWING_WITH_SEARCH: return "LANE_FOLLOWING_WITH_SEARCH";
       case State::RETURN_TO_ACTIVE_LANE: return "RETURN_TO_ACTIVE_LANE";
+      case State::WAIT_SURFACE_CYCLE: return "WAIT_SURFACE_CYCLE";
       case State::COMPLETE: return "COMPLETE";
       case State::FAILSAFE: return "FAILSAFE";
     }
@@ -1725,6 +1813,19 @@ private:
     std_msgs::msg::String msg;
     msg.data = event;
     lane_event_pub_->publish(msg);
+  }
+
+  void publish_arena_config()
+  {
+    if (!arena_config_pub_) {
+      return;
+    }
+    std_msgs::msg::Float64MultiArray msg;
+    msg.data = {
+      arena_length_m_, arena_width_m_, arena_offset_x_m_, arena_offset_y_m_,
+      arena_safety_margin_m_, lane_search_offset_m_,
+      arena_start_corner_ == "bottom_right" ? 1.0 : 0.0};
+    arena_config_pub_->publish(msg);
   }
 
   void publish_success(const bool success)
@@ -1779,7 +1880,9 @@ private:
   {
     mavros_msgs::msg::OverrideRCIn msg;
     msg.channels = channels;
-    rc_pub_->publish(msg);
+    if (rc_pub_) {
+      rc_pub_->publish(msg);
+    }
     rc_monitor_pub_->publish(msg);
   }
 
@@ -1815,6 +1918,9 @@ private:
   std::string physical_detach_count_topic_;
   std::string lane_event_topic_;
   std::string success_topic_;
+  std::string surface_start_topic_;
+  std::string surface_complete_topic_;
+  std::string arena_config_topic_;
   std::string required_fcu_mode_;
 
   double arena_length_m_{15.0};
@@ -1936,6 +2042,10 @@ private:
   uint32_t target_detach_baseline_count_{0};
 
   std::vector<bool> lane_completed_;
+  std::optional<LaneEndpointChoice> pending_lane_choice_;
+  uint32_t surface_cycle_id_{0};
+  bool surface_release_sent_{false};
+  bool terminal_release_sent_{false};
   std::optional<std::size_t> active_lane_index_;
   bool active_lane_start_at_a_{true};
   Vec2 active_lane_start_{};
@@ -1965,12 +2075,15 @@ private:
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr emergency_stop_sub_;
   rclcpp::Subscription<std_msgs::msg::UInt32>::SharedPtr physical_detach_count_sub_;
   rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr fcu_state_sub_;
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr surface_complete_sub_;
   rclcpp::Publisher<mavros_msgs::msg::OverrideRCIn>::SharedPtr rc_pub_;
   rclcpp::Publisher<mavros_msgs::msg::OverrideRCIn>::SharedPtr rc_monitor_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr state_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr target_confirmed_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr lane_event_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr success_pub_;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr surface_start_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr arena_config_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
 };
 }  // namespace auv_lane_vision_control

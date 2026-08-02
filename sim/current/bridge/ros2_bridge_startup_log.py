@@ -5,11 +5,16 @@ from __future__ import annotations
 from .ros2_topic_registry import build_ros2_bridge_active_log
 from .ros2_stereo_image import REAL_CAMERA_COMPRESSED_TOPIC
 from .ros2_stereo_image import REAL_CAMERA_RAW_TOPIC
+from .ros2_stereo_image import TOP_CAMERA_RAW_TOPIC
+from .ros2_mission_contract import SCORE_RELEASE_TOPIC
 
 
 def log_ros2_bridge_startup(self) -> None:
     self.node.get_logger().info(
         build_ros2_bridge_active_log(mavros_surface_enabled=bool(self._mavros_surface_enabled))
+    )
+    self.node.get_logger().info(
+        f"Score release gate: {SCORE_RELEASE_TOPIC} (ROS state + physical zone check)"
     )
     if self._ping360_config.publish_echo and self.SonarEcho is None:
         self.node.get_logger().warn(
@@ -19,8 +24,8 @@ def log_ros2_bridge_startup(self) -> None:
         )
     if getattr(self, "_stereo_image_enabled", False):
         self.node.get_logger().info(
-            "Stereo image bridge active: /stereo/left/image_raw, /stereo/right/image_raw, "
-            f"{REAL_CAMERA_RAW_TOPIC}, {REAL_CAMERA_COMPRESSED_TOPIC} "
+            "Camera image bridge active: /stereo/left/image_raw, /stereo/right/image_raw, "
+            f"{REAL_CAMERA_RAW_TOPIC}, {REAL_CAMERA_COMPRESSED_TOPIC}, {TOP_CAMERA_RAW_TOPIC} "
             f"({self._stereo_image_width}x{self._stereo_image_height}@{self._stereo_image_hz:.1f}Hz on demand)."
         )
 

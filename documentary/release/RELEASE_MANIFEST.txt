@@ -1,38 +1,20 @@
-release: 2026.07.16-dist4
-package: uuv_sim_current_ubuntu22.04
-source_workspace: /home/robot/uuv_sim_current
-template_reference: UUV_Sim_Install_and_Run_2026.07.01-dist2.zip
-repository_reference: https://github.com/kanghyunmin-bot/ROS2-mujoco-UUVsimulator
-built_at_utc: generated_at_package_time
+release: 2026.08.01
+package: kmu-auv-simulator
+architecture: amd64
+target_os: Ubuntu 22.04
+ros_distro: humble
+builder: packaging/build_release.sh
+template_reference: none
 
 included_changes:
-- Ships the 12 active packages from the organized `rospkg/src` workspace: the standalone C++ `kmu26_pinger_homing`, shared `kmu26_auv_web_gui`, external `auv_buoy_vision_control`, real-vehicle drivers/messages, hydrophone/audio packages, simulator oracle, localization, DVL, and Ping360. The superseded duplicate vision FSM is retained only in the developer archive and is not installed.
-- Removes pinger RC ownership from `kmu26_mission_fsm` and `hit25_auv_ros2`; phase/SNR estimation integration, the C++ controller, and the exclusive RC mux now have one installed owner in `kmu26_pinger_homing`.
-- Defaults phase homing to direct bearing feedback after a short probe while source-position lock remains optional; live MuJoCo validation reached APPROACH and emitted non-neutral MAVROS RC with the viewer direction subscriber attached.
-- Installs every bundled ROS 2 package under the standard `rospkg/src` colcon layout, includes the dedicated `kmu26_auv_web_gui` package, and migrates prior flat `rospkg/<package>` installs during an in-place upgrade.
-- Upgrades an existing ~/uuv_sim_current workspace in place on first launch after installing the new DEB, refreshes and rebuilds bundled ROS packages, and preserves user course/Ping360/physics settings and logs without retaining a parallel previous runtime.
-- Reinstalling a corrected one-click ZIP with the same public dist4 version forces both DEB replacement and workspace refresh, preventing stale same-version payloads from being silently reused.
-- Keeps the bundled mission controller opt-in and starts a real external MAVROS surface with the simulator so another FSM can exchange state, odometry, camera, hydrophone, collector, and RC override topics.
-- Adds a live external-FSM MAVROS contract probe that sends a safe CHAN_NOCHANGE RC message and verifies every required receive path.
-- Restores DIST3 collector guidance, soft collector weld slots, score-zone-only release, and 25 scene equality constraints while retaining the current 10 g / 1 N buoy contract.
-- Evaluates rake contact every physics step and releases yellow/orange buoys on immediate blade/root contact without changing qpos or qvel.
-- Adds the same buoy release implementation to the test tank with a 0.05 m nylon tether.
-- Keeps rigid collector collision geometry so captured buoys cannot pass through the net, while allowing a natural reverse exit through the mouth before weld capture.
-- Adds active-range hydrophone RC homing with automatic vertical search bounded only by the configured tank maximum depth.
-- Provides the real-contract C++ phase/Doppler and 3-D SNR-gradient pinger controller, RC override mux, bounded automatic depth search, dry-run safety gate, and dedicated web-GUI tab while keeping the forked hydrophone estimator sources separate.
-- Packages the zetex-derived C++ buoy-vision FSM as the separate `auv_buoy_vision_control` package; its synchronized YOLO path defaults to 320 px, 1 Hz, 4 Torch threads and an 8-CPU affinity for NUC-class CPU-only deployment.
-- Uses MAVROS-compatible best-effort sensor QoS for the web GUI IMU monitor while retaining reliable transient-local QoS for `/mavros/state`.
-- Archives the superseded custom Python pinger and custom observation FSM instead of running them, so pinger homing and vision control have separate, unambiguous RC ownership.
-- Packages the working 2026.07.01-dist2 ELF double-click launcher and validates its executable bit, script resolution, and checksum after ZIP extraction.
-- Web GUI camera panel under Tools with stream on/off, zoom, and selectable resolution/FPS profiles.
-- Stereo stream displays one camera view only to reduce GUI load.
-- Camera profile apply/restart flow for balanced, 960x540@10Hz, and selectable 720p rates up to 30Hz.
-- Joystick pointer handling refactored for click-and-drag, release centering, and pilot-input auto-enable.
-- Vehicle summary/attitude/depth telemetry repaint and stale-frame handling fixes.
-- MuJoCo viewer defaults force XWayland/system GLFW on Wayland sessions unless explicitly opted out.
-- Runtime payload version bumped so existing installs refresh from prior dist2 releases.
-- Packages the current 1280x720@30Hz camera path and asynchronous JPEG pipeline.
-- Packages the current physical buoy cables, buoyancy, magnets, collector net and score release runtime.
-- Adds real-package-compatible message, hydrophone, buoy vision and C++ mission packages.
-- Builds bundled ROS 2 packages sequentially by default to avoid OOM on 16 GB hosts.
-- Excludes logs, build trees, local Git metadata, caches, rosbag data, ArduPilot and QGroundControl.
+- Builds a native DEB directly from the current workspace without a dist2 template.
+- Adds application-menu launchers for normal start and repair/update installation.
+- Installs heavy dependencies only during first-run; DEB postinst performs no network build.
+- Bundles the fixed 1280x720@10Hz front/top camera runtime and upward camera model.
+- Bundles ROS score-release, collector-state and physical score-zone contracts.
+- Bundles auv_lane_vision_control with the separate surface C++ node and single-owner RC handoff.
+- Bundles auv_dvl_a50_msg, hydrophone_ctrl, auv_msg and all required autonomy packages.
+- Removes stale kmu26_mission_fsm and hit25 package-name assumptions from the installer.
+- Pins MuJoCo 3.8.0, NumPy below 2, and the validated ArduPilot commit/patch.
+- Preserves mutable runtime configuration and logs during an in-place payload update.
+- Excludes source-control metadata, build trees, caches, logs, rosbag files and ArduPilot source.

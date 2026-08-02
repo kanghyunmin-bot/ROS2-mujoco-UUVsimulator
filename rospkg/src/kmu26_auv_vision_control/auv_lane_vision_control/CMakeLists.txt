@@ -7,6 +7,7 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(auv_msg REQUIRED)
 find_package(mavros_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -35,8 +36,22 @@ ament_target_dependencies(
   std_msgs
 )
 
+add_executable(surface_buoy_mission_node src/surface_buoy_mission_node.cpp)
+target_compile_features(surface_buoy_mission_node PUBLIC cxx_std_17)
+target_include_directories(surface_buoy_mission_node PRIVATE include)
+target_link_libraries(surface_buoy_mission_node lane_planner)
+ament_target_dependencies(
+  surface_buoy_mission_node
+  auv_msg
+  geometry_msgs
+  mavros_msgs
+  nav_msgs
+  rclcpp
+  std_msgs
+)
+
 install(
-  TARGETS lane_planner lane_vision_controller_node
+  TARGETS lane_planner lane_vision_controller_node surface_buoy_mission_node
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}

@@ -17,6 +17,7 @@ def initialize_static_context_publisher(self) -> None:
         ping360_frame_id=self._ping360_config.frame_id,
         cam_left_site_id=self._cam_left_site_id,
         cam_right_site_id=self._cam_right_site_id,
+        cam_top_site_id=self._cam_top_site_id,
     )
     self._static_context_publisher = StaticContextPublisher(
         tf_static_pub=self.pub_tf_static,

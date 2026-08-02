@@ -11,6 +11,7 @@ from . import (
     ros2_bridge_runtime_methods,
     ros2_sitl_poll_thread,
     ros2_ping360_config,
+    ros2_mission_contract,
     ros2_publish_runtime,
     ros2_sitl_sensor_feed,
     ros2_stereo_image,
@@ -42,6 +43,7 @@ def bind_ros2_bridge_methods(cls: type[Any]) -> None:
     cls._publish_static_context = ros2_bridge_runtime_methods.publish_static_context
 
     cls._on_ping360_config = ros2_ping360_config.on_ping360_config
+    cls._on_score_release_contract = ros2_mission_contract.on_score_release_contract
 
     cls._apply_cmd_deadband = ros2_bridge_commands._apply_cmd_deadband
     cls._handle_normalized_cmd = ros2_bridge_commands._handle_normalized_cmd

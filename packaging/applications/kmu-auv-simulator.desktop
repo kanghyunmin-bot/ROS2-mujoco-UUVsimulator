@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=KMU AUV Simulator
+Name[ko]=KMU AUV 시뮬레이터
+Comment=MuJoCo, ArduSub SITL and ROS 2 competition simulator
+Comment[ko]=MuJoCo·ArduSub SITL·ROS 2 대회 시뮬레이터
+Exec=kmu-auv-simulator
+Icon=kmu-auv-simulator
+Terminal=false
+Categories=Education;Science;Robotics;
+Keywords=AUV;ROS;MuJoCo;ArduSub;Simulation;
+StartupNotify=true

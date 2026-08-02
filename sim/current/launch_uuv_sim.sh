@@ -1011,7 +1011,7 @@ if [ "$ROS2_REQUESTED" = true ]; then
         echo "            /mavros/vision_pose/pose, /mavros/battery, /mavros/rc/*"
     fi
     if [ -n "$IMAGES" ]; then
-        echo "    Images: disabled in lightweight real-robot bridge (legacy flag ignored)"
+        echo "    Images: forward stereo + top_up fixed at 1280x720@10Hz when --ros2-images is set"
     fi
 else
     echo "  ROS2 Transport: disabled (--no-ros2; SITL UDP JSON only)"

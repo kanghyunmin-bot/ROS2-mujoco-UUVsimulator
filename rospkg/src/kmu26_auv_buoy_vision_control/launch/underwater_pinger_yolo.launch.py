@@ -38,14 +38,22 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument("device", default_value="auto"),
             DeclareLaunchArgument("show_preview", default_value="false"),
+            DeclareLaunchArgument(
+                "node_name", default_value="underwater_pinger_yolo_detector"
+            ),
+            DeclareLaunchArgument("bbox_topic", default_value="/vision/buoy_bbox"),
+            DeclareLaunchArgument(
+                "annotated_image_topic",
+                default_value="/vision/yolo/underwater_pinger/annotated/compressed",
+            ),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(detector_launch),
                 launch_arguments={
                     "model_path": LaunchConfiguration("model_path"),
                     "image_topic": LaunchConfiguration("image_topic"),
-                    "bbox_topic": "/vision/buoy_bbox",
-                    "annotated_image_topic": (
-                        "/vision/yolo/underwater_pinger/annotated/compressed"
+                    "bbox_topic": LaunchConfiguration("bbox_topic"),
+                    "annotated_image_topic": LaunchConfiguration(
+                        "annotated_image_topic"
                     ),
                     "target_class_id": "-1",
                     "target_class_name": "",
@@ -65,6 +73,7 @@ def generate_launch_description():
                     "publish_annotated_image": "true",
                     "device": LaunchConfiguration("device"),
                     "show_preview": LaunchConfiguration("show_preview"),
+                    "node_name": LaunchConfiguration("node_name"),
                 }.items(),
             ),
         ]

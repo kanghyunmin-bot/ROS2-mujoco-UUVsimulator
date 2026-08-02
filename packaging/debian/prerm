@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -e
+# Per-user simulator data is intentionally preserved for upgrades/reinstall.
+exit 0

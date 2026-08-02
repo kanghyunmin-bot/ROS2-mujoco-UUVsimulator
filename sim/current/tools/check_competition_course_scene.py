@@ -176,6 +176,24 @@ def check_tank(root: ET.Element, failures: list[str]) -> None:
             failures,
         )
         require(camera.get("quat") is None, f"{name} must use explicit xyaxes, not ambiguous quat", failures)
+    top_camera = cameras.get("top_up")
+    require(top_camera is not None, "missing upward collection camera top_up", failures)
+    if top_camera is not None:
+        require(
+            floats(top_camera.get("pos")) == (0.0, 0.0, 0.170),
+            "top_up must remain 35 mm below Ping360",
+            failures,
+        )
+        require(
+            floats(top_camera.get("xyaxes")) == (0.0, -1.0, 0.0, -1.0, 0.0, 0.0),
+            "top_up must look along robot +Z",
+            failures,
+        )
+        require(
+            math.isclose(float_attr(top_camera, "fovy"), 82.0, abs_tol=1e-6),
+            "top_up FOV must remain moderate at 82 degrees",
+            failures,
+        )
 
 
 def check_red_buoys(bodies: dict[str, ET.Element], failures: list[str]) -> None:

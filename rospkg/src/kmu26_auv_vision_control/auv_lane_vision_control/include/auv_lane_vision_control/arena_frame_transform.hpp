@@ -44,6 +44,14 @@ public:
       -sin_yaw_ * relative.x + cos_yaw_ * relative.y};
   }
 
+  Vec2 position_to_odom(const Vec2 & arena_position) const
+  {
+    require_initialized();
+    return {
+      odom_origin_.x + cos_yaw_ * arena_position.x - sin_yaw_ * arena_position.y,
+      odom_origin_.y + sin_yaw_ * arena_position.x + cos_yaw_ * arena_position.y};
+  }
+
   // 주행 좌표의 방향을 수조 기준 방향으로 변환한다.
   double yaw_from_odom(const double odom_yaw_rad) const
   {

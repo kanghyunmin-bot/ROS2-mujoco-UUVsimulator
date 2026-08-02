@@ -287,15 +287,13 @@ class YoloBuoyDetector(Node):
 
         published_detections = [detection] if detection is not None else []
         if self.publish_per_class:
-            published_detections = self._best_detection_per_class(all_detections)
+            # Preserve the existing 10-float block while carrying every buoy
+            # in one message; a collected buoy must not hide the next target.
+            published_detections = [tuple(row[:6]) for row in all_detections]
 
-        if published_detections:
-            for published_detection in published_detections:
-                self._publish_detection(
-                    stamp_sec, published_detection, image_width, image_height
-                )
-        else:
-            self._publish_detection(stamp_sec, None, image_width, image_height)
+        self._publish_detections(
+            stamp_sec, published_detections, image_width, image_height
+        )
 
         if self.publish_annotated_image or self.show_preview:
             self._update_preview_fps()
@@ -484,6 +482,36 @@ class YoloBuoyDetector(Node):
                 float(center_x), float(center_y), float(width), float(height),
                 float(image_width), float(image_height),
             ]
+        self.bbox_pub.publish(out)
+
+    def _publish_detections(
+        self,
+        stamp_sec: float,
+        detections: list[Tuple[int, float, float, float, float, float]],
+        image_width: int,
+        image_height: int,
+    ) -> None:
+        """Publish every selected buoy in one concatenated 10-float message."""
+        if not detections:
+            self._publish_detection(stamp_sec, None, image_width, image_height)
+            return
+        out = Float32MultiArray()
+        out.data = []
+        for class_id, confidence, center_x, center_y, width, height in detections:
+            out.data.extend(
+                [
+                    stamp_sec,
+                    1.0,
+                    float(class_id),
+                    float(confidence),
+                    float(center_x),
+                    float(center_y),
+                    float(width),
+                    float(height),
+                    float(image_width),
+                    float(image_height),
+                ]
+            )
         self.bbox_pub.publish(out)
 
     def _detect_targets(

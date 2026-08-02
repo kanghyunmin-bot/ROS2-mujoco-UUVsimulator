@@ -322,9 +322,10 @@ class WebProcessManager:
         }
 
     def configure_camera(self, values: dict[str, Any], *, restart: bool = False) -> dict[str, Any]:
-        config = normalize_camera_config(values, strict_preset=True)
+        del values
+        config = normalize_camera_config()
         self._camera_config = config
-        self.node.push_event(f"Camera profile selected: {config['label']}")
+        self.node.push_event(f"Camera is fixed: {config['label']}")
         result: dict[str, Any] = {
             "status": f"camera profile: {config['label']}",
             "camera_config": self.camera_config_payload(),
@@ -778,11 +779,10 @@ class WebProcessManager:
             "publish_annotated_image:=true",
             "annotated_jpeg_quality:=80",
             "bbox_topic:=/vision/buoy_bbox",
-            # This upstream detector infers on each received frame.  Thread
-            # caps above plus the GUI's 4 Hz balanced camera preset keep the
-            # CPU-only laptop preview bounded without relying on removed
-            # private launch parameters.
-            "imgsz:=1280",
+            # Camera transport stays fixed at 720p/10 Hz.  YOLO's square
+            # inference tensor is a separate implementation detail; 640 keeps
+            # the CPU/GPU workload bounded without changing camera geometry.
+            "imgsz:=640",
             "cpu_threads:=1",
             "confidence_threshold:=0.18",
             "target_class_id:=-1",

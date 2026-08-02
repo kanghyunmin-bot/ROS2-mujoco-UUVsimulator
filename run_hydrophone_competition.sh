@@ -9,6 +9,15 @@ set -Eeuo pipefail
 # 8.3 m hydrophone spawn.  MuJoCo's native viewer and follow-RViz are started.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "${SCRIPT_DIR}/sim/environment.sh" ]]; then
+    # Use the same desktop-local MuJoCo/ArduPilot paths as the normal GUI
+    # entrypoint.  Without this, a stale ~/.venvs/uuv_mujoco from another
+    # machine or notebook can silently win the launcher's fallback search.
+    set +u
+    # shellcheck source=/dev/null
+    source "${SCRIPT_DIR}/sim/environment.sh"
+    set -u
+fi
 ROS_WORKSPACE="${SCRIPT_DIR}/rospkg"
 SIM_START="${SCRIPT_DIR}/sim/current/tools/start_snr_homing_sim.sh"
 SIM_RESET="${SCRIPT_DIR}/sim/current/reset_uuv_sim.sh"

@@ -30,6 +30,7 @@ SKIP_APT=0
 SKIP_QGC=0
 SKIP_ARDUPILOT=0
 SKIP_ARDUPILOT_PREREQS=0
+SKIP_ARDUPILOT_BUILD=0
 SKIP_ROSPKG_BUILD=0
 SKIP_PYTHON_ENV=0
 NONINTERACTIVE=0
@@ -85,6 +86,7 @@ Options:
   --skip-qgc                Skip QGroundControl AppImage download
   --skip-ardupilot          Skip ArduPilot clone/update
   --skip-ardupilot-prereqs  Skip ArduPilot Ubuntu prereq helper
+  --skip-ardupilot-build    Skip the ArduSub SITL prebuild
   --skip-rospkg-build       Skip bundled ROS2 helper package build
   --skip-python-env         Skip Python virtualenv package install
   --force-reextract         Replace existing uuv_mujoco directory from zip
@@ -152,6 +154,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --skip-ardupilot-prereqs)
       SKIP_ARDUPILOT_PREREQS=1
+      shift
+      ;;
+    --skip-ardupilot-build)
+      SKIP_ARDUPILOT_BUILD=1
       shift
       ;;
     --skip-rospkg-build)
@@ -619,6 +625,14 @@ setup_ardupilot() {
   fi
   if [[ "$new_checkout" -eq 1 && -n "$ARDUPILOT_BASE_COMMIT" ]]; then
     run git -C "$ARDUPILOT_DIR" checkout --detach "$ARDUPILOT_BASE_COMMIT"
+  elif [[ -n "$ARDUPILOT_BASE_COMMIT" ]]; then
+    local installed_head
+    installed_head="$(git -C "$ARDUPILOT_DIR" rev-parse HEAD)"
+    if [[ "$installed_head" != "$ARDUPILOT_BASE_COMMIT" ]]; then
+      echo "[install] managed ArduPilot checkout is at ${installed_head}, expected ${ARDUPILOT_BASE_COMMIT}" >&2
+      echo "[install] move that checkout aside or use --skip-ardupilot" >&2
+      exit 1
+    fi
   fi
   run git -C "$ARDUPILOT_DIR" submodule sync --recursive
   run git -C "$ARDUPILOT_DIR" submodule update --init --recursive
@@ -639,6 +653,18 @@ setup_ardupilot() {
   if [[ "$SKIP_ARDUPILOT_PREREQS" -eq 0 && -x "$ARDUPILOT_DIR/Tools/environment_install/install-prereqs-ubuntu.sh" ]]; then
     run "$ARDUPILOT_DIR/Tools/environment_install/install-prereqs-ubuntu.sh" -y
   fi
+  if [[ "$SKIP_ARDUPILOT_BUILD" -eq 0 ]]; then
+    log "building pinned ArduSub SITL binary"
+    (
+      cd "$ARDUPILOT_DIR"
+      run ./waf configure --board sitl
+      run ./waf sub -j "${UUV_DIST_BUILD_JOBS:-1}"
+    )
+    [[ -x "$ARDUPILOT_DIR/build/sitl/bin/ardusub" ]] || {
+      echo "[install] ArduSub SITL build did not produce build/sitl/bin/ardusub" >&2
+      exit 1
+    }
+  fi
 }
 
 setup_python_env() {
@@ -657,7 +683,7 @@ setup_python_env() {
     --index-url https://download.pytorch.org/whl/cpu \
     torch torchvision
   run env -u PYTHONPATH -u PYTHONHOME "$py" -m pip install -U \
-    numpy matplotlib rosbags python-pptx "$MUJOCO_PIP_SPEC" \
+    "numpy<2" matplotlib rosbags python-pptx "$MUJOCO_PIP_SPEC" \
     pymavlink MAVProxy pexpect pillow future dronecan gnureadline "empy==3.3.4" \
     "opencv-python-headless<5" ultralytics
   env -u PYTHONPATH -u PYTHONHOME "$py" - <<'PY'
@@ -765,14 +791,16 @@ setup_ros_packages() {
     run cp -a "${BUNDLE_ROOT}/rospkg/README.md" "${ROS_SOURCE_DIR}/README.md"
   fi
   extract_ros_zip dvl_msgs "${BUNDLE_ROOT}/rospkg/dvl_msgs.zip"
+  extract_ros_zip auv_dvl_a50_msg "${BUNDLE_ROOT}/rospkg/auv_dvl_a50_msg.zip"
   extract_ros_zip ping360_sonar_msgs "${BUNDLE_ROOT}/rospkg/ping360_sonar_msgs.zip"
   extract_ros_zip kmu26_auv_msg "${BUNDLE_ROOT}/rospkg/kmu26_auv_msg.zip"
   extract_ros_zip kmu26_auv "${BUNDLE_ROOT}/rospkg/kmu26_auv.zip"
   extract_ros_zip audio_common_msgs "${BUNDLE_ROOT}/rospkg/audio_common_msgs.zip"
   extract_ros_zip audio_common "${BUNDLE_ROOT}/rospkg/audio_common.zip"
   extract_ros_zip audio_capture "${BUNDLE_ROOT}/rospkg/audio_capture.zip"
+  extract_ros_zip hydrophone_ctrl "${BUNDLE_ROOT}/rospkg/hydrophone_ctrl.zip"
   extract_ros_zip kmu26_auv_buoy_vision_control "${BUNDLE_ROOT}/rospkg/kmu26_auv_buoy_vision_control.zip"
-  extract_ros_zip kmu26_mission_fsm "${BUNDLE_ROOT}/rospkg/kmu26_mission_fsm.zip"
+  extract_ros_zip auv_lane_vision_control "${BUNDLE_ROOT}/rospkg/auv_lane_vision_control.zip"
   extract_ros_zip kmu26_auv_web_gui "${BUNDLE_ROOT}/rospkg/kmu26_auv_web_gui.zip"
   extract_ros_zip kmu26_pinger_homing "${BUNDLE_ROOT}/rospkg/kmu26_pinger_homing.zip"
   extract_ros_zip robot_localization "${BUNDLE_ROOT}/rospkg/robot_localization.zip"
@@ -788,9 +816,9 @@ setup_ros_packages() {
     python3 -m pip install --user 'setuptools<80'
     env CMAKE_BUILD_PARALLEL_LEVEL="${UUV_DIST_BUILD_JOBS:-1}" \
       colcon build --symlink-install --executor sequential --packages-select \
-        dvl_msgs ping360_sonar_msgs hit25_auv_ros2_msg hit25_auv_ros2 \
-        audio_common_msgs audio_common audio_capture auv_buoy_vision_control \
-        kmu26_mission_fsm kmu26_auv_web_gui kmu26_pinger_homing \
+        dvl_msgs auv_dvl_a50_msg ping360_sonar_msgs auv_msg auv \
+        audio_common_msgs audio_common audio_capture hydrophone_ctrl \
+        auv_buoy_vision_control auv_lane_vision_control auv_web_gui auv_pinger_homing \
         robot_localization \
         --cmake-args -DBUILD_TESTING=OFF
   )
@@ -802,7 +830,14 @@ download_qgc() {
   if [[ -f "$QGC_APP" ]]; then
     log "reusing QGroundControl: $QGC_APP"
   else
-    run curl -fL --retry 3 -o "$QGC_APP" "$QGC_URL"
+    local qgc_tmp
+    qgc_tmp="${QGC_APP}.part"
+    if ! run curl -fL --retry 3 -o "$qgc_tmp" "$QGC_URL"; then
+      rm -f "$qgc_tmp"
+      log "warning: QGroundControl download failed; simulator installation will continue"
+      return 0
+    fi
+    run mv "$qgc_tmp" "$QGC_APP"
   fi
   chmod +x "$QGC_APP"
 }
@@ -821,7 +856,7 @@ export ARDUPILOT_DIR="\${ARDUPILOT_DIR:-\${WORKSPACE_DIR}/sim/ardupilot}"
 export KMU26_AUV_DIR="\${KMU26_AUV_DIR:-\${ROS_SOURCE_DIR}/kmu26_auv}"
 export KMU26_AUV_MSG_DIR="\${KMU26_AUV_MSG_DIR:-\${ROS_SOURCE_DIR}/kmu26_auv_msg}"
 export KMU26_VISION_DIR="\${KMU26_VISION_DIR:-\${ROS_SOURCE_DIR}/kmu26_auv_buoy_vision_control}"
-export KMU26_MISSION_FSM_DIR="\${KMU26_MISSION_FSM_DIR:-\${ROS_SOURCE_DIR}/kmu26_mission_fsm}"
+export KMU26_LANE_VISION_DIR="\${KMU26_LANE_VISION_DIR:-\${ROS_SOURCE_DIR}/auv_lane_vision_control}"
 export KMU26_WEB_GUI_DIR="\${KMU26_WEB_GUI_DIR:-\${ROS_SOURCE_DIR}/kmu26_auv_web_gui}"
 export KMU26_PINGER_HOMING_DIR="\${KMU26_PINGER_HOMING_DIR:-\${ROS_SOURCE_DIR}/kmu26_pinger_homing}"
 export UUV_YOLO_MODEL="\${UUV_YOLO_MODEL:-\${WORKSPACE_DIR}/sim/current/assets/yolo/best.pt}"
@@ -859,8 +894,8 @@ verify_install() {
     fail=1
   fi
   if [[ "$SOURCE_CHECKOUT" -eq 0 ]] &&
-     ! grep -Fq '"UUV_MUJOCO_TIMESTEP": "0.008"' "$UUV_MUJOCO_DIR/gui/sim_stack_env_defaults.py"; then
-    echo "[FAIL] current runtime does not have 0.008 stable timestep default"
+     ! grep -Fq '"UUV_MUJOCO_TIMESTEP": "0.005"' "$UUV_MUJOCO_DIR/gui/sim_stack_env_defaults.py"; then
+    echo "[FAIL] current runtime does not have 0.005 competition timestep default"
     fail=1
   fi
   if [[ ! -s "${INSTALL_ROOT}/sim/current/assets/yolo/best.pt" ]]; then
@@ -876,9 +911,10 @@ verify_install() {
     else
       local package_dir
       for package_dir in \
-        dvl_msgs ping360_sonar_msgs kmu26_auv_msg kmu26_auv \
-        audio_common_msgs audio_common audio_capture kmu26_auv_buoy_vision_control \
-        kmu26_mission_fsm kmu26_auv_web_gui kmu26_pinger_homing \
+        dvl_msgs auv_dvl_a50_msg ping360_sonar_msgs kmu26_auv_msg kmu26_auv \
+        audio_common_msgs audio_common audio_capture hydrophone_ctrl \
+        kmu26_auv_buoy_vision_control auv_lane_vision_control \
+        kmu26_auv_web_gui kmu26_pinger_homing \
         robot_localization
       do
         if [[ ! -f "${ROS_SOURCE_DIR}/${package_dir}/package.xml" ]]; then

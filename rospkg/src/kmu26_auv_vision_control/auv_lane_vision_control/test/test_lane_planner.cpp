@@ -6,12 +6,19 @@
 #include <gtest/gtest.h>
 
 #include "auv_lane_vision_control/lane_planner.hpp"
+#include "auv_lane_vision_control/arena_frame_transform.hpp"
+#include "auv_lane_vision_control/depth_p_controller.hpp"
+#include "auv_lane_vision_control/dump_cycle.hpp"
 
 namespace
 {
 using auv_lane_vision_control::ArenaConfig;
+using auv_lane_vision_control::DepthPConfig;
 using auv_lane_vision_control::LanePlanner;
+using auv_lane_vision_control::TopNetStatus;
 using auv_lane_vision_control::Vec2;
+using auv_lane_vision_control::depth_p_pwm;
+using auv_lane_vision_control::should_repeat_dump;
 
 constexpr double kTolerance = 1.0e-9;
 
@@ -26,6 +33,35 @@ LanePlanner competition_a_planner()
       0.45,
       3.6375,
       "bottom_left"});
+}
+
+TEST(SurfaceMission, BonusCircleFitsSharedCompetitionArena)
+{
+  const LanePlanner planner(ArenaConfig{17.5, 30.0, -1.619, 13.695, 0.45, 3.6375, "bottom_left"});
+  const auto & bounds = planner.safe_bounds();
+  const Vec2 center{9.081, -1.305};
+  constexpr double radius = 0.65;
+  EXPECT_GE(center.x - radius, bounds.x_min);
+  EXPECT_LE(center.x + radius, bounds.x_max);
+  EXPECT_GE(center.y - radius, bounds.y_min);
+  EXPECT_LE(center.y + radius, bounds.y_max);
+}
+
+TEST(SurfaceMission, DepthPUsesPositiveDownAndClamps)
+{
+  const DepthPConfig config{100.0, 180, 1500, true};
+  EXPECT_EQ(depth_p_pwm(0.85, 0.30, config), 1445);
+  EXPECT_EQ(depth_p_pwm(0.20, 1.00, config), 1580);
+  EXPECT_EQ(depth_p_pwm(4.00, 0.00, config), 1320);
+}
+
+TEST(SurfaceMission, DumpRepeatsOnlyForFreshOccupiedNet)
+{
+  EXPECT_TRUE(should_repeat_dump(TopNetStatus::OCCUPIED, 1, 3));
+  EXPECT_TRUE(should_repeat_dump(TopNetStatus::OCCUPIED, 2, 3));
+  EXPECT_FALSE(should_repeat_dump(TopNetStatus::OCCUPIED, 3, 3));
+  EXPECT_FALSE(should_repeat_dump(TopNetStatus::EMPTY, 1, 3));
+  EXPECT_FALSE(should_repeat_dump(TopNetStatus::STALE, 1, 3));
 }
 
 TEST(LanePlanner, CompetitionAHalfProducesExactlyFourSweeps)

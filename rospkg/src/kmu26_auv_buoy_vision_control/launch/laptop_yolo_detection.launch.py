@@ -8,6 +8,7 @@ from launch_ros.parameter_descriptions import ParameterValue
 def generate_launch_description():
     return LaunchDescription(
         [
+            DeclareLaunchArgument("node_name", default_value="yolo_buoy_detector"),
             DeclareLaunchArgument(
                 "image_topic",
                 default_value="/camera/camera/color/image_raw/compressed",
@@ -85,7 +86,7 @@ def generate_launch_description():
             Node(
                 package="auv_buoy_vision_control",
                 executable="yolo_buoy_detector",
-                name="yolo_buoy_detector",
+                name=LaunchConfiguration("node_name"),
                 output="screen",
                 parameters=[
                     {

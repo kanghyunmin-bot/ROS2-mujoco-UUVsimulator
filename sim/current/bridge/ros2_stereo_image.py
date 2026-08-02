@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import threading
+import time
 from array import array
 from typing import Any
 
@@ -11,15 +12,19 @@ import mujoco
 import numpy as np
 
 
-CAMERA_NAMES = ("stereo_left", "stereo_right")
-DEFAULT_IMAGE_WIDTH = 960
-DEFAULT_IMAGE_HEIGHT = 540
+CAMERA_NAMES = ("stereo_left", "stereo_right", "top_up")
+DEFAULT_IMAGE_WIDTH = 1280
+DEFAULT_IMAGE_HEIGHT = 720
 DEFAULT_IMAGE_HZ = 10.0
 DEFAULT_COMPRESSED_JPEG_QUALITY = 75
 REAL_CAMERA_RAW_TOPIC = "/camera/camera/color/image_raw"
 REAL_CAMERA_COMPRESSED_TOPIC = "/camera/camera/color/image_raw/compressed"
 REAL_CAMERA_INFO_TOPIC = "/camera/camera/color/camera_info"
 REAL_CAMERA_OPTICAL_FRAME = "camera_color_optical_frame"
+TOP_CAMERA_RAW_TOPIC = "/camera/top/color/image_raw"
+TOP_CAMERA_COMPRESSED_TOPIC = "/camera/top/color/image_raw/compressed"
+TOP_CAMERA_INFO_TOPIC = "/camera/top/color/camera_info"
+TOP_CAMERA_OPTICAL_FRAME = "top_camera_optical_frame"
 _CV2: Any | None = None
 _CV2_IMPORT_ATTEMPTED = False
 
@@ -33,9 +38,13 @@ def configure_stereo_image_runtime(
     image_hz: float,
 ) -> None:
     bridge._stereo_image_enabled = bool(publish_images)
-    bridge._stereo_image_width = int(np.clip(int(image_width), 64, 1920))
-    bridge._stereo_image_height = int(np.clip(int(image_height), 64, 1080))
-    bridge._stereo_image_hz = float(np.clip(float(image_hz), 0.1, 60.0))
+    # Competition camera transport is intentionally one fixed operating point.
+    # Keep constructor arguments for launch compatibility, but do not allow
+    # different GUI/CLI paths to silently change detector timing or geometry.
+    del image_width, image_height, image_hz
+    bridge._stereo_image_width = DEFAULT_IMAGE_WIDTH
+    bridge._stereo_image_height = DEFAULT_IMAGE_HEIGHT
+    bridge._stereo_image_hz = DEFAULT_IMAGE_HZ
     bridge._stereo_image_jpeg_quality = _env_int(
         "ROS2_UUV_CAMERA_JPEG_QUALITY",
         DEFAULT_COMPRESSED_JPEG_QUALITY,
@@ -80,11 +89,17 @@ def create_stereo_image_publishers(bridge: Any, *, q1: Any) -> None:
         REAL_CAMERA_INFO_TOPIC,
         q1,
     )
+    bridge.pub_top_camera_raw = node.create_publisher(bridge.Image, TOP_CAMERA_RAW_TOPIC, q1)
+    bridge.pub_top_camera_compressed = node.create_publisher(
+        bridge.CompressedImage, TOP_CAMERA_COMPRESSED_TOPIC, q1
+    )
+    bridge.pub_top_camera_info = node.create_publisher(bridge.CameraInfo, TOP_CAMERA_INFO_TOPIC, q1)
 
 
 def build_stereo_publish_builders(self: Any, data: Any, stamp: Any) -> dict[str, object]:
     left_rgb_cache: dict[str, np.ndarray | None] = {}
     left_image_cache: dict[str, Any] = {}
+    top_rgb_cache: dict[str, np.ndarray | None] = {}
 
     def render_left_rgb() -> np.ndarray | None:
         if "rgb" not in left_rgb_cache:
@@ -121,12 +136,53 @@ def build_stereo_publish_builders(self: Any, data: Any, stamp: Any) -> dict[str,
             self, "stereo_left", rgb, stamp
         )
 
+    def render_top_rgb() -> np.ndarray | None:
+        if "rgb" not in top_rgb_cache:
+            top_rgb_cache["rgb"] = _camera_rgb_for_publish(self, "top_up", data)
+        return top_rgb_cache["rgb"]
+
+    def build_top_camera_raw() -> Any | None:
+        return build_stereo_image_msg_from_rgb(
+            self,
+            "top_up",
+            render_top_rgb(),
+            stamp,
+            frame_id=TOP_CAMERA_OPTICAL_FRAME,
+        )
+
+    def build_top_camera_compressed() -> Any | None:
+        rgb = render_top_rgb()
+        if bool(getattr(self, "_stereo_image_async_enabled", False)):
+            encoded = _latest_async_camera_jpeg(self, "top_up")
+            return build_stereo_compressed_image_msg_from_jpeg(
+                self,
+                "top_up",
+                encoded,
+                stamp,
+                frame_id=TOP_CAMERA_OPTICAL_FRAME,
+            )
+        return build_stereo_compressed_image_msg_from_rgb(
+            self,
+            "top_up",
+            rgb,
+            stamp,
+            frame_id=TOP_CAMERA_OPTICAL_FRAME,
+        )
+
     return {
         "stereo_left_image": build_left_image,
         "stereo_right_image": lambda: build_stereo_image_msg(self, "stereo_right", data, stamp),
         "real_camera_raw": build_real_camera_raw,
         "real_camera_compressed": build_real_camera_compressed,
         "real_camera_info": lambda: build_camera_info_msg(self, stamp),
+        "top_camera_raw": build_top_camera_raw,
+        "top_camera_compressed": build_top_camera_compressed,
+        "top_camera_info": lambda: build_camera_info_msg(
+            self,
+            stamp,
+            camera_name="top_up",
+            frame_id=TOP_CAMERA_OPTICAL_FRAME,
+        ),
     }
 
 
@@ -137,44 +193,41 @@ def schedule_stereo_image_jobs(
     *,
     builders: dict[str, object],
 ) -> None:
+    del add_rate_limited
     if not bool(getattr(self, "_stereo_image_enabled", False)):
         return
     hz = float(getattr(self, "_stereo_image_hz", DEFAULT_IMAGE_HZ))
-    add_rate_limited(
-        self.pub_stereo_left_image,
-        "/stereo/left/image_raw",
-        builders["stereo_left_image"],
-        hz,
-        on_demand=True,
+    camera_jobs = (
+        (self.pub_stereo_left_image, "/stereo/left/image_raw", "stereo_left_image"),
+        (self.pub_stereo_right_image, "/stereo/right/image_raw", "stereo_right_image"),
+        (self.pub_real_camera_raw, REAL_CAMERA_RAW_TOPIC, "real_camera_raw"),
+        (self.pub_real_camera_compressed, REAL_CAMERA_COMPRESSED_TOPIC, "real_camera_compressed"),
+        (self.pub_real_camera_info, REAL_CAMERA_INFO_TOPIC, "real_camera_info"),
+        (self.pub_top_camera_raw, TOP_CAMERA_RAW_TOPIC, "top_camera_raw"),
+        (self.pub_top_camera_compressed, TOP_CAMERA_COMPRESSED_TOPIC, "top_camera_compressed"),
+        (self.pub_top_camera_info, TOP_CAMERA_INFO_TOPIC, "top_camera_info"),
     )
-    add_rate_limited(
-        self.pub_stereo_right_image,
-        "/stereo/right/image_raw",
-        builders["stereo_right_image"],
-        hz,
-        on_demand=True,
-    )
-    add_rate_limited(
-        self.pub_real_camera_raw,
-        REAL_CAMERA_RAW_TOPIC,
-        builders["real_camera_raw"],
-        hz,
-        on_demand=True,
-    )
-    add_rate_limited(
-        self.pub_real_camera_compressed,
-        REAL_CAMERA_COMPRESSED_TOPIC,
-        builders["real_camera_compressed"],
-        hz,
-        on_demand=True,
-    )
-    add_rate_limited(
-        self.pub_real_camera_info,
-        REAL_CAMERA_INFO_TOPIC,
-        builders["real_camera_info"],
-        hz,
-        on_demand=True,
-    )
+    for publisher, label, builder_key in camera_jobs:
+        if _camera_wall_due(self, label, hz):
+            jobs.add(publisher, label, builders[builder_key], on_demand=True)
+
+
+def _camera_wall_due(self: Any, label: str, hz: float) -> bool:
+    """Keep detector input at 10 Hz even when heavy course physics is sub-real-time."""
+    now_wall = time.monotonic()
+    next_by_topic = getattr(self, "_stereo_image_next_wall", None)
+    if next_by_topic is None:
+        next_by_topic = {}
+        self._stereo_image_next_wall = next_by_topic
+    next_wall = float(next_by_topic.get(label, now_wall))
+    if now_wall + 1.0e-9 < next_wall:
+        return False
+    period_s = 1.0 / max(float(hz), 1.0e-6)
+    next_wall += period_s
+    if next_wall <= now_wall - period_s:
+        next_wall = now_wall + period_s
+    next_by_topic[label] = next_wall
+    return True
 
 
 def can_share_camera_renderer(self: Any, camera_name: str, width: int, height: int) -> bool:
@@ -246,6 +299,8 @@ def build_stereo_compressed_image_msg_from_rgb(
     camera_name: str,
     rgb: np.ndarray | None,
     stamp: Any,
+    *,
+    frame_id: str | None = None,
 ) -> Any | None:
     if rgb is None:
         return None
@@ -264,7 +319,7 @@ def build_stereo_compressed_image_msg_from_rgb(
         _warn_once(self, f"{camera_name}_compressed_encode", "compressed camera JPEG encode failed")
         return None
     return build_stereo_compressed_image_msg_from_jpeg(
-        self, camera_name, encoded.tobytes(), stamp
+        self, camera_name, encoded.tobytes(), stamp, frame_id=frame_id
     )
 
 
@@ -273,12 +328,14 @@ def build_stereo_compressed_image_msg_from_jpeg(
     camera_name: str,
     encoded: bytes | None,
     stamp: Any,
+    *,
+    frame_id: str | None = None,
 ) -> Any | None:
     if not encoded:
         return None
     msg = self.CompressedImage()
     msg.header.stamp = stamp
-    msg.header.frame_id = (
+    msg.header.frame_id = frame_id or (
         REAL_CAMERA_OPTICAL_FRAME
         if camera_name == "stereo_left"
         else f"{camera_name}_optical"
@@ -288,11 +345,17 @@ def build_stereo_compressed_image_msg_from_jpeg(
     return msg
 
 
-def build_camera_info_msg(self: Any, stamp: Any) -> Any:
+def build_camera_info_msg(
+    self: Any,
+    stamp: Any,
+    *,
+    camera_name: str = "stereo_left",
+    frame_id: str = REAL_CAMERA_OPTICAL_FRAME,
+) -> Any:
     width = int(self._stereo_image_width)
     height = int(self._stereo_image_height)
     fovy_deg = 90.0
-    camera_id = int(getattr(self, "_cam_left_id", -1))
+    camera_id = int(mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_CAMERA, camera_name))
     if camera_id >= 0:
         try:
             fovy_deg = float(self.model.cam_fovy[camera_id])
@@ -304,7 +367,7 @@ def build_camera_info_msg(self: Any, stamp: Any) -> Any:
     cy = 0.5 * (height - 1)
     msg = self.CameraInfo()
     msg.header.stamp = stamp
-    msg.header.frame_id = REAL_CAMERA_OPTICAL_FRAME
+    msg.header.frame_id = frame_id
     msg.width = width
     msg.height = height
     msg.distortion_model = "plumb_bob"
@@ -335,29 +398,29 @@ def _submit_async_camera_render(self: Any, camera_name: str, data: Any) -> np.nd
     lock = self._stereo_image_async_lock
     with lock:
         latest = self._stereo_image_async_latest.get(camera)
-        # One queued snapshot is enough.  Replacing it requires another full
-        # MjData copy on the physics thread and cannot make the renderer catch
-        # up any faster.
-        if camera in self._stereo_image_async_pending:
+        pending_snapshot = self._stereo_image_async_pending.get("snapshot")
+        if pending_snapshot is not None:
+            self._stereo_image_async_pending.setdefault("cameras", set()).add(camera)
             return latest
-    snapshot = _acquire_async_camera_snapshot(self, camera)
+    snapshot = _acquire_async_camera_snapshot(self, "__shared__")
     try:
         mujoco.mj_copyData(snapshot, self.model, data)
     except Exception as exc:
-        _recycle_async_camera_snapshot(self, camera, snapshot)
+        _recycle_async_camera_snapshot(self, "__shared__", snapshot)
         _warn_once(self, "async_camera_snapshot", f"async camera snapshot failed: {exc}")
         return None
 
     with lock:
-        # Be defensive if another caller filled the single pending slot while
-        # this snapshot was copied.  Do not replace a frame already queued for
-        # the renderer; return this buffer to the bounded pool instead.
-        if camera in self._stereo_image_async_pending:
-            free = self._stereo_image_async_free.setdefault(camera, [])
+        if self._stereo_image_async_pending.get("snapshot") is not None:
+            self._stereo_image_async_pending.setdefault("cameras", set()).add(camera)
+            free = self._stereo_image_async_free.setdefault("__shared__", [])
             if len(free) < 2:
                 free.append(snapshot)
             return self._stereo_image_async_latest.get(camera)
-        self._stereo_image_async_pending[camera] = snapshot
+        self._stereo_image_async_pending = {
+            "snapshot": snapshot,
+            "cameras": {camera},
+        }
         latest = self._stereo_image_async_latest.get(camera)
     self._stereo_image_async_event.set()
     return latest
@@ -387,10 +450,14 @@ def _async_camera_worker(self: Any) -> None:
         with lock:
             pending = self._stereo_image_async_pending
             self._stereo_image_async_pending = {}
-        for camera_name, snapshot in pending.items():
-            try:
+        snapshot = pending.get("snapshot")
+        camera_names = tuple(pending.get("cameras", ()))
+        if snapshot is None:
+            continue
+        try:
+            for camera_name in camera_names:
                 if stop.is_set():
-                    continue
+                    break
                 rgb = _render_camera_rgb_or_none(self, camera_name, snapshot)
                 if rgb is None:
                     continue
@@ -399,8 +466,8 @@ def _async_camera_worker(self: Any) -> None:
                     self._stereo_image_async_latest[camera_name] = rgb
                     if encoded is not None:
                         self._stereo_image_async_latest_jpeg[camera_name] = encoded
-            finally:
-                _recycle_async_camera_snapshot(self, camera_name, snapshot)
+        finally:
+            _recycle_async_camera_snapshot(self, "__shared__", snapshot)
 
 
 def _acquire_async_camera_snapshot(self: Any, camera_name: str) -> Any:
@@ -569,6 +636,9 @@ def _warn_once(self: Any, key: str, message: str) -> None:
 __all__ = [
     "REAL_CAMERA_COMPRESSED_TOPIC",
     "REAL_CAMERA_RAW_TOPIC",
+    "TOP_CAMERA_COMPRESSED_TOPIC",
+    "TOP_CAMERA_INFO_TOPIC",
+    "TOP_CAMERA_RAW_TOPIC",
     "build_stereo_compressed_image_msg",
     "build_stereo_compressed_image_msg_from_jpeg",
     "build_stereo_compressed_image_msg_from_rgb",

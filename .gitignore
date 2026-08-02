@@ -34,6 +34,14 @@ CMakeCache.txt
 /rospkg/log/
 /rospkg_fresh/
 
+# Optional upstream organization checkouts used for source audits. The release
+# installs their required runtime pieces through apt or the curated payload.
+/rospkg/src/auv_mavlink/
+/rospkg/src/auv_mavros/
+/rospkg/src/auv_realsense/
+/rospkg/src/auv_vision_nav_control/
+/rospkg/src/ping360_image_compensation/
+
 # Runtime output and mutable simulator state
 /logs/
 /outputs/

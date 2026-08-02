@@ -94,7 +94,10 @@ def load_optional_ros2_message_imports() -> dict[str, object | None]:
     try:
         from hit25_auv_ros2_msg.msg import CollectorState
     except Exception:
-        CollectorState = None
+        try:
+            from auv_msg.msg import CollectorState
+        except Exception:
+            CollectorState = None
 
     return {
         "RCOut": RCOut,

@@ -643,9 +643,9 @@ def check_gui_start_uses_dist_like_transport_default() -> None:
         raise AssertionError("native GUI Start must skip rebuild and use the existing stable ArduSub binary")
     if "--ros2-images" not in native_cmd:
         raise AssertionError("native GUI Start must enable ROS2 stereo camera image topics")
-    _assert_equal(native_cmd[native_cmd.index("--ros2-image-width") + 1], "640", "default stereo image width")
-    _assert_equal(native_cmd[native_cmd.index("--ros2-image-height") + 1], "360", "default stereo image height")
-    _assert_equal(native_cmd[native_cmd.index("--ros2-image-hz") + 1], "4", "default stereo image Hz")
+    _assert_equal(native_cmd[native_cmd.index("--ros2-image-width") + 1], "1280", "fixed camera width")
+    _assert_equal(native_cmd[native_cmd.index("--ros2-image-height") + 1], "720", "fixed camera height")
+    _assert_equal(native_cmd[native_cmd.index("--ros2-image-hz") + 1], "10", "fixed camera Hz")
     if "--direct-mavlink" in native_cmd:
         raise AssertionError("native GUI Start must get direct MAVLink from env, not duplicate wrapper args")
 
@@ -689,9 +689,9 @@ def check_gui_start_uses_dist_like_transport_default() -> None:
         backend="native",
         extra_args=[],
     )
-    _assert_equal(env_size[env_size.index("--ros2-image-width") + 1], "800", "env stereo image width")
-    _assert_equal(env_size[env_size.index("--ros2-image-height") + 1], "450", "env stereo image height")
-    _assert_equal(env_size[env_size.index("--ros2-image-hz") + 1], "3", "env stereo image Hz")
+    _assert_equal(env_size[env_size.index("--ros2-image-width") + 1], "1280", "env cannot override fixed width")
+    _assert_equal(env_size[env_size.index("--ros2-image-height") + 1], "720", "env cannot override fixed height")
+    _assert_equal(env_size[env_size.index("--ros2-image-hz") + 1], "10", "env cannot override fixed Hz")
 
     selected_owner = _LaunchOwner()
     selected_owner._camera_config = {"preset_id": "hd720_realtime"}
@@ -703,7 +703,7 @@ def check_gui_start_uses_dist_like_transport_default() -> None:
     )
     _assert_equal(selected_size[selected_size.index("--ros2-image-width") + 1], "1280", "GUI stereo image width")
     _assert_equal(selected_size[selected_size.index("--ros2-image-height") + 1], "720", "GUI stereo image height")
-    _assert_equal(selected_size[selected_size.index("--ros2-image-hz") + 1], "30", "GUI stereo image Hz")
+    _assert_equal(selected_size[selected_size.index("--ros2-image-hz") + 1], "10", "GUI fixed image Hz")
 
     explicit_size = build_sim_stack_launch_command(
         _LaunchOwner(),
@@ -711,17 +711,20 @@ def check_gui_start_uses_dist_like_transport_default() -> None:
         backend="native",
         extra_args=["--ros2-image-width=640", "--ros2-image-height", "360", "--ros2-image-hz", "12"],
     )
-    if "--ros2-image-width" in explicit_size:
-        raise AssertionError("explicit --ros2-image-width must not be duplicated")
+    _assert_equal(
+        explicit_size[explicit_size.index("--ros2-image-width") + 1],
+        "1280",
+        "explicit GUI width is replaced by fixed contract",
+    )
     _assert_equal(
         explicit_size[explicit_size.index("--ros2-image-height") + 1],
-        "360",
-        "explicit stereo image height",
+        "720",
+        "explicit GUI height is replaced by fixed contract",
     )
     _assert_equal(
         explicit_size[explicit_size.index("--ros2-image-hz") + 1],
-        "12",
-        "explicit stereo image Hz",
+        "10",
+        "explicit GUI Hz is replaced by fixed contract",
     )
 
 

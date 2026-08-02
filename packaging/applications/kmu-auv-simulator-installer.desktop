@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Repair KMU AUV Simulator
+Name[ko]=KMU AUV 시뮬레이터 복구 설치
+Comment=Repair or update the KMU AUV simulator workspace
+Comment[ko]=KMU AUV 시뮬레이터 작업공간을 복구하거나 업데이트합니다
+Exec=kmu-auv-simulator-installer --reinstall
+Icon=kmu-auv-simulator
+Terminal=false
+Categories=Settings;Science;Robotics;
+StartupNotify=true

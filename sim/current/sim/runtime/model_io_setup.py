@@ -62,7 +62,7 @@ def create_runtime_model_io_setup(
         model,
         mujoco_module,
         mujoco_module.mjtObj.mjOBJ_CAMERA,
-        ("course_overview", "course_side", "stereo_left", "stereo_right"),
+        ("course_overview", "course_side", "stereo_left", "stereo_right", "top_up"),
     )
 
     qgc_video = QgcVideoRuntime.create(
@@ -84,6 +84,7 @@ def create_runtime_model_io_setup(
             "ping360": "ping360_site",
             "cam_left": "cam_left_site",
             "cam_right": "cam_right_site",
+            "cam_top": "cam_top_site",
         },
     )
     sensor_value = SensorDataReader(model=model, data=data, sensor_ids=sensor_ids).value

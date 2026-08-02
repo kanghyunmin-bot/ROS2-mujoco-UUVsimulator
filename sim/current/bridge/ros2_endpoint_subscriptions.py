@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .ros2_hydrophone_sim import create_hydrophone_subscriptions
+from .ros2_mission_contract import SCORE_RELEASE_TOPIC
 
 
 def create_core_subscriptions(bridge, *, q10) -> None:
@@ -28,6 +29,12 @@ def create_core_subscriptions(bridge, *, q10) -> None:
         "/ping360/config",
         bridge._on_ping360_config,
         q10,
+    )
+    bridge.sub_score_release_contract = node.create_subscription(
+        bridge.String,
+        SCORE_RELEASE_TOPIC,
+        bridge._on_score_release_contract,
+        1,
     )
 
 

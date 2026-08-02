@@ -947,8 +947,11 @@
       <site name="hydrophone_right_site" pos="0.2150 -0.0600 -0.0350" quat="1 0 0 0" size="0.014" rgba="0.0 0.9 1.0 1" />
       <site name="cam_left_site" pos="0.1493 -0.0225 -0.02" size="0.018" rgba="1 0 1 1" quat="1 0 0 0" />
       <site name="cam_right_site" pos="0.1493 0.0225 -0.02" size="0.018" rgba="1 0.5 0 1" quat="1 0 0 0" />
+      <site name="cam_top_site" pos="0 0 0.170" size="0.018" rgba="0.3 1 0.3 1" quat="1 0 0 0" />
       <camera name="stereo_left" pos="0.1493 -0.0225 -0.02" xyaxes="0 -1 0 0 0 1" fovy="70" />
       <camera name="stereo_right" pos="0.1493 0.0225 -0.02" xyaxes="0 -1 0 0 0 1" fovy="70" />
+      <!-- Upward collection camera: 35 mm below Ping360, moderate FOV. -->
+      <camera name="top_up" pos="0 0 0.170" xyaxes="0 -1 0 -1 0 0" fovy="82" />
       <body name="prop_ver_lf" pos="0.16 0.2345 -0.078408" quat="0 -1 0 0">
         <inertial pos="-0.035221 -0.040788 -0.015008" mass="0.001" diaginertia="0.000001 0.000001 0.000001" />
         <joint name="prop_ver_lf_j" type="hinge" axis="0 0 1" damping="1.0" armature="0.01" />

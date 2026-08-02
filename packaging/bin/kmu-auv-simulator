@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PACKAGE_ROOT="${KMU_AUV_PACKAGE_ROOT:-/opt/kmu-auv-simulator}"
+PACKAGE_VERSION="$(tr -d '[:space:]' <"${PACKAGE_ROOT}/VERSION")"
+INSTALL_ROOT="${UUV_SIM_INSTALL_ROOT:-${XDG_DATA_HOME:-${HOME}/.local/share}/kmu-auv-simulator/current}"
+MODE="web"
+SKIP_INSTALL_CHECK=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --install|--repair)
+      exec kmu-auv-simulator-installer --reinstall
+      ;;
+    --desktop|--tk)
+      MODE="desktop"
+      shift
+      ;;
+    --headless)
+      MODE="headless"
+      shift
+      ;;
+    --no-install-check)
+      SKIP_INSTALL_CHECK=1
+      shift
+      ;;
+    -h|--help)
+      cat <<'USAGE'
+Usage: kmu-auv-simulator [--desktop|--headless|--install]
+
+Starts the installed KMU AUV simulator. The first invocation opens the
+installer automatically. Set UUV_SIM_INSTALL_ROOT to use another workspace.
+USAGE
+      exit 0
+      ;;
+    *)
+      echo "[kmu-auv] unknown option: $1" >&2
+      exit 2
+      ;;
+  esac
+done
+
+MARKER="${INSTALL_ROOT}/.uuv_sim_current_version"
+INSTALLED_VERSION=""
+if [[ -f "$MARKER" ]]; then
+  INSTALLED_VERSION="$(tr -d '[:space:]' <"$MARKER")"
+fi
+if [[ "$SKIP_INSTALL_CHECK" -eq 0 && "$INSTALLED_VERSION" != "$PACKAGE_VERSION" ]]; then
+  exec kmu-auv-simulator-installer
+fi
+
+ENV_FILE="${INSTALL_ROOT}/sim/environment.sh"
+[[ -f "$ENV_FILE" ]] || exec kmu-auv-simulator-installer
+# shellcheck source=/dev/null
+source "$ENV_FILE"
+export UUV_MUJOCO_SKIP_FRESHNESS_CHECK=1
+
+case "$MODE" in
+  web)
+    exec "${INSTALL_ROOT}/run_control_gui.sh" \
+      --web --host 127.0.0.1 --port "${UUV_WEB_PORT:-8878}" --open-browser
+    ;;
+  desktop)
+    exec "${INSTALL_ROOT}/run_control_gui.sh" --tk
+    ;;
+  headless)
+    cd "${INSTALL_ROOT}/sim/current"
+    exec ./start_sitl_mujoco_mj311.sh -- --headless
+    ;;
+esac

@@ -9,6 +9,17 @@ GUI, MAVROS 호환 제어면, 카메라·DVL·압력·하이드로폰·Ping360 �
 > 소스 트리다. Git에는 소스와 문서만 올리고 ArduPilot, QGroundControl, 빌드
 > 결과와 로그는 포함하지 않는다.
 
+## Ubuntu 22.04 원클릭 설치
+
+[⬇ KMU AUV Simulator 2026.08.01 설치판 다운로드](https://github.com/kanghyunmin-bot/ROS2-mujoco-UUVsimulator/releases/download/v2026.08.01/KMU_AUV_Simulator_Installer_2026.08.01.zip)
+
+ZIP을 푼 뒤 `kmu-auv-simulator_2026.08.01_amd64.deb`를 더블클릭하고 Ubuntu
+앱 센터에서 설치한다. 설치 후 앱 목록의 **KMU AUV Simulator**를 실행하면
+ROS 2 Humble, MuJoCo, ArduSub SITL과 현재 대회 ROS 패키지를 자동 구성한다.
+대상 환경은 Ubuntu 22.04 amd64이며 첫 설치에는 인터넷 연결과 약 15GB의 여유
+공간이 필요하다. 체크섬과 개별 파일은
+[v2026.08.01 릴리스 페이지](https://github.com/kanghyunmin-bot/ROS2-mujoco-UUVsimulator/releases/tag/v2026.08.01)에서 확인한다.
+
 <p align="center">
   <img src="documentary/assets/simulator-overview.png" width="100%" alt="MuJoCo top view and YOLO buoy tracking view">
 </p>
@@ -37,6 +48,20 @@ source ./sim/environment.sh
 
 브라우저에서 <http://127.0.0.1:8878/>을 열고 GUI에서 시뮬레이션 스택을
 시작한다. Tk GUI는 `./run_control_gui.sh --tk`로 실행한다.
+
+## Ubuntu 설치 배포판 만들기
+
+현재 소스에서 이전 배포 템플릿 없이 Ubuntu 22.04 amd64용 DEB를 생성한다.
+
+```bash
+./packaging/build_release.sh
+```
+
+결과는 `documentary/release/builds/<VERSION>/`에 생성된다. 사용자에게는
+`KMU_AUV_Simulator_Installer_<VERSION>.zip` 또는 그 안의 `.deb`를 전달한다.
+DEB를 더블클릭해 설치한 뒤 앱 목록의 **KMU AUV Simulator**를 누르면 첫 실행
+설치기가 ROS 2, MuJoCo, ArduPilot과 ROS 패키지를 자동 구성한다. 상세 검증 절차는
+[배포 체크리스트](documentary/release/PORTABILITY_CHECKLIST.md)를 따른다.
 
 ## 새 Ubuntu 22.04에서 이어서 작업
 
@@ -96,8 +121,8 @@ Controller or operator
 ```
 
 기본 폐루프 런타임은 100 Hz 센서/추력 루프와 0.005초 MuJoCo timestep을
-사용한다. 웹 GUI의 기본 카메라 프로필은 CPU 여유를 위해 640x360 @ 4 Hz이며,
-720p 프로필은 GUI에서 선택할 수 있다.
+사용한다. 정면·상향 카메라는 검출 입력 계약을 일정하게 유지하기 위해 GUI와
+런타임 모두 `1280x720 @ 10 Hz`로 고정되어 있으며 별도 화질/속도 프리셋은 없다.
 
 상세한 프로세스, 포트, 토픽 소유권과 부표 수집 상태 머신은
 [시뮬레이터 아키텍처](documentary/SIM_ARCHITECTURE.md)에 정리되어 있다.

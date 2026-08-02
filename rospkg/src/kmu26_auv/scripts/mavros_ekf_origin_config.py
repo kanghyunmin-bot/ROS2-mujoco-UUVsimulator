@@ -8,6 +8,7 @@ from geographic_msgs.msg import GeoPointStamped
 from mavros_msgs.msg import State
 from mavros_msgs.srv import CommandHome
 from nav_msgs.msg import Odometry
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy
 from rclpy.qos import QoSProfile
@@ -213,7 +214,7 @@ def main(args=None):
     node = MavrosEkfOriginConfig()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
         node.destroy_node()

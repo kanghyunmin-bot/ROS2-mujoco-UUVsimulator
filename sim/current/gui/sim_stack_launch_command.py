@@ -2,41 +2,19 @@
 
 from __future__ import annotations
 
-import os
-
-
-DEFAULT_CAMERA_WIDTH = "640"
-DEFAULT_CAMERA_HEIGHT = "360"
-DEFAULT_CAMERA_HZ = "4"
-# The control loop must retain real-time headroom on the CPU-only laptop.
-# HD presets remain selectable in the GUI, but they are opt-in because a
-# concurrent CPU YOLO node can otherwise starve SITL/MuJoCo and destabilize
-# STABILIZE/ALT_HOLD.
-DEFAULT_CAMERA_PRESET_ID = "balanced"
-
-CAMERA_PRESETS = (
-    {"id": "balanced", "label": "640x360 @ 4Hz", "width": 640, "height": 360, "hz": 4.0},
-    {"id": "smooth540", "label": "960x540 @ 10Hz", "width": 960, "height": 540, "hz": 10.0},
-    {"id": "hd720", "label": "1280x720 @ 5Hz", "width": 1280, "height": 720, "hz": 5.0},
-    {"id": "hd720_fast", "label": "1280x720 @ 10Hz", "width": 1280, "height": 720, "hz": 10.0},
-    {"id": "hd720_smooth", "label": "1280x720 @ 20Hz", "width": 1280, "height": 720, "hz": 20.0},
-    {"id": "hd720_realtime", "label": "1280x720 @ 30Hz", "width": 1280, "height": 720, "hz": 30.0},
-)
-
-
-def _env_value(owner, name: str, default: str) -> str:
-    env = getattr(owner, "env", None)
-    raw = env.get(name) if isinstance(env, dict) else os.environ.get(name)
-    value = str(raw if raw is not None else default).strip()
-    return value or default
-
-
-def _env_value_any(owner, names: tuple[str, ...], default: str) -> str:
-    for name in names:
-        value = _env_value(owner, name, "")
-        if value:
-            return value
-    return default
+DEFAULT_CAMERA_WIDTH = "1280"
+DEFAULT_CAMERA_HEIGHT = "720"
+DEFAULT_CAMERA_HZ = "10"
+DEFAULT_CAMERA_PRESET_ID = "competition_fixed"
+FIXED_CAMERA_CONFIG = {
+    "preset_id": DEFAULT_CAMERA_PRESET_ID,
+    "label": "1280x720 @ 10Hz (fixed)",
+    "width": 1280,
+    "height": 720,
+    "hz": 10.0,
+    "hz_arg": "10",
+}
+CAMERA_PRESETS: tuple[dict[str, object], ...] = ()
 
 
 def _append_arg_default(owner, args: list[str], option: str, value: str) -> None:
@@ -44,93 +22,30 @@ def _append_arg_default(owner, args: list[str], option: str, value: str) -> None
         args.extend([option, value])
 
 
-def _preset_by_id(preset_id: str) -> dict[str, object] | None:
-    for preset in CAMERA_PRESETS:
-        if preset["id"] == preset_id:
-            return dict(preset)
-    return None
-
-
-def _matching_preset_id(width: int, height: int, hz: float) -> str:
-    for preset in CAMERA_PRESETS:
-        if preset["width"] == width and preset["height"] == height and abs(float(preset["hz"]) - hz) < 0.001:
-            return str(preset["id"])
-    return "custom"
-
-
-def _format_hz(value: float) -> str:
-    return str(int(value)) if float(value).is_integer() else f"{value:g}"
-
-
-def _coerce_int(value: object, default: int, *, minimum: int, maximum: int) -> int:
-    try:
-        parsed = int(float(str(value).strip()))
-    except (TypeError, ValueError):
-        parsed = default
-    return max(minimum, min(maximum, parsed))
-
-
-def _coerce_float(value: object, default: float, *, minimum: float, maximum: float) -> float:
-    try:
-        parsed = float(str(value).strip())
-    except (TypeError, ValueError):
-        parsed = default
-    return max(minimum, min(maximum, parsed))
+def _remove_arg(args: list[str], option: str) -> None:
+    index = 0
+    while index < len(args):
+        if args[index] == option:
+            del args[index : index + 2]
+            continue
+        if args[index].startswith(option + "="):
+            del args[index]
+            continue
+        index += 1
 
 
 def normalize_camera_config(values: dict[str, object] | None = None, *, strict_preset: bool = False) -> dict[str, object]:
-    values = values or {}
-    preset_id = str(values.get("preset_id", values.get("preset", DEFAULT_CAMERA_PRESET_ID))).strip()
-    preset = _preset_by_id(preset_id)
-    if preset is None and strict_preset and preset_id:
-        raise ValueError(f"unsupported camera preset: {preset_id}")
-    base = preset or _preset_by_id(DEFAULT_CAMERA_PRESET_ID) or {}
-    width = _coerce_int(values.get("width", base.get("width", DEFAULT_CAMERA_WIDTH)), int(base.get("width", 640)), minimum=64, maximum=1920)
-    height = _coerce_int(
-        values.get("height", base.get("height", DEFAULT_CAMERA_HEIGHT)),
-        int(base.get("height", 360)),
-        minimum=64,
-        maximum=1080,
-    )
-    hz = _coerce_float(values.get("hz", base.get("hz", DEFAULT_CAMERA_HZ)), float(base.get("hz", 4.0)), minimum=0.1, maximum=60.0)
-    matched_id = _matching_preset_id(width, height, hz)
-    matched = _preset_by_id(matched_id) if matched_id != "custom" else None
-    label = str(matched["label"]) if matched else f"{width}x{height} @ {_format_hz(hz)}Hz"
-    return {
-        "preset_id": matched_id,
-        "label": label,
-        "width": width,
-        "height": height,
-        "hz": hz,
-        "hz_arg": _format_hz(hz),
-    }
+    del values, strict_preset
+    return dict(FIXED_CAMERA_CONFIG)
 
 
 def camera_config_from_owner(owner) -> dict[str, object]:
-    selected = getattr(owner, "_camera_config", None)
-    if isinstance(selected, dict):
-        return normalize_camera_config(selected)
-    return normalize_camera_config(
-        {
-            "preset_id": "custom",
-            "width": _env_value_any(owner, ("UUV_GUI_CAMERA_WIDTH", "UUV_GUI_STEREO_CAMERA_WIDTH"), DEFAULT_CAMERA_WIDTH),
-            "height": _env_value_any(owner, ("UUV_GUI_CAMERA_HEIGHT", "UUV_GUI_STEREO_CAMERA_HEIGHT"), DEFAULT_CAMERA_HEIGHT),
-            "hz": _env_value_any(owner, ("UUV_GUI_CAMERA_HZ", "UUV_GUI_STEREO_CAMERA_HZ"), DEFAULT_CAMERA_HZ),
-        }
-    )
+    del owner
+    return dict(FIXED_CAMERA_CONFIG)
 
 
 def camera_presets_payload() -> list[dict[str, object]]:
-    return [
-        {
-            "id": str(preset["id"]),
-            "label": str(preset["label"]),
-            "width": int(preset["width"]),
-            "height": int(preset["height"]),
-            "hz": float(preset["hz"]),
-        }
-        for preset in CAMERA_PRESETS
-    ]
+    return []
 
 
 def _append_default_stereo_camera_args(
@@ -146,6 +61,8 @@ def _append_default_stereo_camera_args(
     if not owner._arg_present(launch_extra_args, "--ros2-images"):
         launch_extra_args.append("--ros2-images")
     config = camera_config_from_owner(owner)
+    for option in ("--ros2-image-width", "--ros2-image-height", "--ros2-image-hz"):
+        _remove_arg(launch_extra_args, option)
     _append_arg_default(
         owner,
         launch_extra_args,

@@ -6,7 +6,10 @@ from __future__ import annotations
 import time
 
 import rclpy
-from hit25_auv_ros2_msg.msg import CollectorState
+try:
+    from auv_msg.msg import CollectorState
+except ImportError:  # Compatibility with pre-2026 installed workspaces.
+    from hit25_auv_ros2_msg.msg import CollectorState
 from mavros_msgs.srv import CommandBool
 from rclpy.node import Node
 from rclpy.executors import ExternalShutdownException

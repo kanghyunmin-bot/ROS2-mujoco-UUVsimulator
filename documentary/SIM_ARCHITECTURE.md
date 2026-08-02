@@ -59,13 +59,13 @@
 | MAVLink servo | 30 Hz |
 | MuJoCo timestep | 0.005 s |
 | viewer | 1280x720 @ 30 FPS |
-| GUI camera stream | 640x360 @ 4 Hz |
+| GUI camera stream | 1280x720 @ 10 Hz (fixed) |
 | course buoy update | 10 Hz |
 | course buoy CSV | off |
 
-카메라는 960x540 @ 10 Hz 및 1280x720 @ 5/10/20/30 Hz 프로필을 제공하지만
-CPU-only YOLO와 폐루프 안정성 때문에 balanced가 기본이다. high 프로필의
-timestep은 0.002초이며, course-buoy 장면에서는 timestep guard가 활성화된다.
+정면·상향 카메라는 detector의 픽셀 좌표와 시간 계약을 일정하게 유지하도록
+1280x720 @ 10 Hz 한 가지 설정만 제공한다. high 물리 프로필의 timestep은
+0.002초이며, course-buoy 장면에서는 timestep guard가 활성화된다.
 
 ## 4. 물리 모델
 
@@ -147,8 +147,8 @@ PR에서 우선 실행할 저비용 검사는 루트 README의 “빠른 검증�
 - `uuv_mujoco/CURRENT.md`의 symlink/2026-06-07 설명과 실제 독립 `current`
   디렉터리 상태가 다르다.
 - `RUNTIME_VERSION.json` 일부 note는 dist3를 가리키지만 루트 배포 버전은 dist4다.
-- 루트 배포 가이드의 0.008초/720p@30 기본값은 dist4 artifact에는 맞지만 현재
-  개발 runtime 기본값(0.005초/640x360@4)과 다르다.
+- 과거 dist4의 720p@30 선택형 카메라 설명은 현재 고정 720p@10 계약으로
+  대체되었다.
 - `rospkg/src`에 독립 Git 저장소가 중첩되어 있으며 일부는 수정 상태다.
 - 모델, 배포물, ArduPilot, 로그를 일반 Git object로 추가하면 저장소가 지나치게
   커지므로 `.gitignore`와 Git LFS 정책을 지켜야 한다.

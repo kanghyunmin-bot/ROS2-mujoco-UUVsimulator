@@ -24,7 +24,6 @@ const state = {
   stereoCameraVisionEnabled: true,
   stereoSeq: { left: 0 },
   cameraPollBusy: false,
-  cameraPresetSignature: "",
   pingerStartPending: false,
   pilotDock: null,
 };
@@ -659,35 +658,7 @@ function yoloStatusText(detection) {
 }
 
 function renderCameraConfig(config) {
-  const select = $("stereoCameraProfile");
-  if (!select) {
-    return;
-  }
-  const presets = Array.isArray(config.presets) ? config.presets : [];
-  const signature = presets
-    .map((preset) => `${preset.id}:${preset.width}x${preset.height}@${preset.hz}`)
-    .join("|");
-  if (signature && signature !== state.cameraPresetSignature) {
-    select.innerHTML = "";
-    for (const preset of presets) {
-      const option = document.createElement("option");
-      option.value = String(preset.id || "");
-      option.textContent = cameraConfigLabel(preset);
-      select.appendChild(option);
-    }
-    state.cameraPresetSignature = signature;
-  }
-  const presetId = String(config.preset_id || "");
-  if (presetId && !Array.from(select.options).some((option) => option.value === presetId)) {
-    const option = document.createElement("option");
-    option.value = presetId;
-    option.textContent = cameraConfigLabel(config);
-    select.appendChild(option);
-  }
-  if (presetId && document.activeElement !== select) {
-    select.value = presetId;
-  }
-  setText("stereoCameraConfigStatus", `profile: ${cameraConfigLabel(config)}`);
+  setText("stereoCameraConfigStatus", `camera: ${cameraConfigLabel(config)}`);
 }
 
 function cameraConfigLabel(config) {
@@ -702,29 +673,6 @@ function cameraConfigLabel(config) {
     return `${width}x${height} @ ${hzText}Hz`;
   }
   return "n/a";
-}
-
-function selectedCameraPresetPayload() {
-  return {
-    preset_id: $("stereoCameraProfile").value,
-  };
-}
-
-function selectedCameraPresetLabel() {
-  const select = $("stereoCameraProfile");
-  return select.options[select.selectedIndex]?.textContent || "n/a";
-}
-
-async function applyCameraConfig(restart) {
-  setText("stereoCameraConfigStatus", restart ? "profile: restarting" : "profile: saving");
-  const body = await postCommand({
-    command: "camera_config",
-    values: selectedCameraPresetPayload(),
-    restart,
-  });
-  const config = body.camera_config || {};
-  setText("stereoCameraConfigStatus", `profile: ${cameraConfigLabel(config)}`);
-  await pollStatus();
 }
 
 function stereoStatusText(frame) {
@@ -1781,11 +1729,6 @@ function bindControls() {
       .then(pollStatus)
       .catch(console.error);
   });
-  $("stereoCameraProfile").addEventListener("change", () => {
-    setText("stereoCameraConfigStatus", `profile: ${selectedCameraPresetLabel()} selected`);
-  });
-  $("stereoCameraApplyBtn").addEventListener("click", () => applyCameraConfig(true).catch(console.error));
-  $("stereoCameraSaveBtn").addEventListener("click", () => applyCameraConfig(false).catch(console.error));
   $("stereoCameraZoomBtn").addEventListener("click", toggleStereoCameraZoom);
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {

@@ -31,6 +31,7 @@ class Ros2MujocoIds:
     dvl_site_id: int
     cam_left_site_id: int
     cam_right_site_id: int
+    cam_top_site_id: int
     bar30_depth_source: str
 
 
@@ -63,6 +64,7 @@ def lookup_ros2_mujoco_ids(model: mujoco.MjModel) -> Ros2MujocoIds:
         dvl_site_id=site_id(model, "dvl_site"),
         cam_left_site_id=site_id(model, "cam_left_site"),
         cam_right_site_id=site_id(model, "cam_right_site"),
+        cam_top_site_id=site_id(model, "cam_top_site"),
         bar30_depth_source=bar30_depth_source,
     )
 

@@ -24,6 +24,7 @@ def build_static_tf_specs(
     ping360_frame_id: str,
     cam_left_site_id: int,
     cam_right_site_id: int,
+    cam_top_site_id: int,
 ) -> list[TfSpec]:
     zero = np.zeros(3, dtype=np.float64)
     ident = quat_identity()
@@ -48,6 +49,7 @@ def build_static_tf_specs(
             model=model,
             cam_left_site_id=cam_left_site_id,
             cam_right_site_id=cam_right_site_id,
+            cam_top_site_id=cam_top_site_id,
             zero=zero,
             ident=ident,
             optical_quat=camera_optical_quat(),

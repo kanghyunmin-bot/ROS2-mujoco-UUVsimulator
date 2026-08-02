@@ -14,6 +14,7 @@ from sim.runtime.physics_step_descent import (
     build_descent_guard,
     enforce_descent_contract as enforce_descent_contract_payload,
 )
+from bridge.ros2_mission_contract import apply_pending_score_release_contract
 
 
 @dataclass
@@ -61,6 +62,7 @@ def build_aux_step_callbacks(
     active_bridge = ros_bridge_runtime.get() if ros_bridge_runtime is not None else None
     if active_bridge is not None:
         setattr(active_bridge, "_course_buoy_runtime", course_buoy_runtime)
+        apply_pending_score_release_contract(active_bridge, course_buoy_runtime)
 
     def apply_underwater_wrench(dt: float) -> None:
         underwater_wrench_runtime.apply(dt)

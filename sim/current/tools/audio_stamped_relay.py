@@ -7,6 +7,7 @@ import argparse
 
 import rclpy
 from audio_common_msgs.msg import AudioData, AudioDataStamped
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 
 
@@ -77,7 +78,7 @@ def main() -> None:
     )
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
         node.destroy_node()

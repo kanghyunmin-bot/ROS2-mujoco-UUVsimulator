@@ -1,109 +1,42 @@
-# UUV Sim Current Ubuntu 22.04 Dist4
+# KMU AUV Simulator 2026.08.01
 
-This package installs the current UUV MuJoCo + ArduSub SITL simulator state for
-Ubuntu 22.04.
+Ubuntu 22.04 amd64용 MuJoCo + ArduSub SITL + ROS 2 Humble 배포판이다.
 
-## One-click Install ZIP
+## 설치
 
-For the release ZIP named `UUV_Sim_Install_and_Run_2026.07.16-dist4.zip`:
+1. `kmu-auv-simulator_2026.08.01_amd64.deb`를 더블클릭한다.
+2. Ubuntu 앱 센터에서 **설치**를 누른다.
+3. 앱 목록에서 **KMU AUV Simulator**를 실행한다.
+4. 첫 실행 창에서 **설치 시작**을 누르고 관리자 암호를 입력한다.
+5. 설치가 끝나면 웹 GUI가 자동으로 열린다.
 
-1. Extract the ZIP completely.
-2. Open the extracted folder and double-click `Install and Run UUV Sim`.
-3. If Ubuntu asks, choose `Allow Launching` / `신뢰하고 실행`.
-4. Enter the administrator password when prompted.
-5. After installation, choose `웹 GUI 실행`.
+첫 설치에는 인터넷 연결이 필요하다. ROS 2, Python 환경, 고정 커밋의
+ArduPilot과 QGroundControl을 내려받으며, 프로그램 작업공간은 기본적으로
+`~/.local/share/kmu-auv-simulator/current`에 생성된다.
 
-If an older release is already installed, run the new ZIP in exactly the same
-way. The Debian package is upgraded first, then the existing
-`~/uuv_sim_current` workspace is refreshed in place before the GUI starts. The
-installer preserves course layout, Ping360, physics/thruster settings, logs,
-and generated runtime state. ArduPilot, the Python environment, and downloaded
-assets are reused. The old runtime is removed after those mutable files are
-restored, so a parallel previous-version tree is not retained.
-Re-running a corrected ZIP with the same dist4 version also reinstalls its DEB
-and refreshes the workspace payload; the version label alone never suppresses
-an explicit one-click upgrade.
+앱 목록의 **KMU AUV 시뮬레이터 복구 설치**를 실행하면 같은 버전도 payload를
+다시 풀고 ROS 패키지를 재빌드한다. 사용자 수조·Ping360·추력 설정과 로그는
+runtime 교체 과정에서 보존한다.
 
-The double-click launcher is the unchanged executable from the
-`2026.07.01-dist2` installer layout. The packaged checksum manifest covers the
-launcher, installer script, Debian payload, README and release notes.
-
-## Fresh Install
+## 명령행 실행
 
 ```bash
-sudo apt-get update
-sudo apt-get install -y unzip
-unzip uuv_sim_current_ubuntu22.04.zip
-cd uuv_sim_current_ubuntu22.04
-./preflight_uuv_sim_current.sh
-./install_uuv_sim_current_ubuntu22.sh --noninteractive
-source ./sim/environment.sh
-./run_control_gui.sh --web --host 127.0.0.1 --port 8878
+kmu-auv-simulator                 # 웹 GUI
+kmu-auv-simulator --desktop       # Tk GUI
+kmu-auv-simulator --headless      # SITL + MuJoCo headless
+kmu-auv-simulator --repair        # 복구 설치
 ```
 
-Open:
+## 고정 계약
 
-```text
-http://127.0.0.1:8878/
-```
+- Ubuntu 22.04, amd64, ROS 2 Humble, Python 3.10
+- MuJoCo `3.8.0`
+- ArduPilot commit `2dd0bb7d4c85ac48437f139d66df648fc0e1d4ae`
+- MuJoCo timestep `0.005 s`
+- 정면·상향 카메라 `1280x720 @ 10 Hz`
+- YOLO 모델 `sim/current/assets/yolo/best.pt`
+- ROS 기반 `/mission/score_release`와 물리 가점존 판정
+- lane/surface 동적 단일 `/mavros/rc/override` 소유권
 
-Starting the simulation stack from this GUI also starts the external
-`mavros_node`. An independent FSM can then subscribe to `/mavros/state`,
-`/odometry/filtered`, the compressed camera, `/collector/state` and `/audio`,
-and publish RC commands to `/mavros/rc/override`. The bundled mission FSM does
-not start unless its own Start mission button is pressed.
-
-With the stack running, verify that external-FSM transport end to end with:
-
-```bash
-python3 sim/current/tools/check_external_fsm_mavros_contract.py
-```
-
-## What This Dist Pins
-
-- Runtime path: `sim/current`
-- YOLO buoy model: `sim/current/assets/yolo/best.pt`
-- Default camera contract: `1280x720 @ 30 Hz`
-- Stable MuJoCo timestep: `0.008s`
-- Course-buoy CSV tracking: disabled by default
-- Physical cable, magnet release, buoyancy and front collector-net runtime
-- Web GUI and Tk GUI both available through `run_control_gui.sh`
-- Web GUI camera stream can draw YOLO/OpenCV buoy boxes and labels
-- Real-package-compatible ROS 2 surface including MAVROS, odometry, camera,
-  hydrophone, buoy observation, collector state, mission FSM and RViz markers
-
-## Wayland And X11
-
-Ubuntu 22.04 often runs GNOME Wayland. This dist installs XWayland/libdecor and
-Qt/XCB helper libraries. A MuJoCo/GLFW warning like this is expected and
-non-fatal on Wayland:
-
-```text
-Wayland: The platform does not provide the window position
-```
-
-For the most portable GUI path, run the web GUI:
-
-```bash
-./run_control_gui.sh --web --host 127.0.0.1 --port 8878
-```
-
-For headless smoke testing:
-
-```bash
-cd sim/current
-READY_WAIT_SECS=60 SITL_WAIT_SECS=360 ./start_sitl_mujoco_mj311.sh -- --headless
-```
-
-## Not Bundled
-
-- ArduPilot source checkout: installer clones it.
-- QGroundControl AppImage: installer downloads it.
-- Rosbag data and generated logs.
-
-## Included ROS 2 Sources
-
-The installer extracts and builds the bundled message, vehicle, hydrophone,
-buoy vision, C++ pinger mission, web GUI, DVL and Ping360 helper packages under
-`rospkg/src`. The upstream hydrophone estimator fork is packaged separately
-from the controller and is not rewritten by the mission package.
+ArduPilot, QGroundControl, 빌드 산출물과 로그는 DEB에 넣지 않는다. 설치기가
+ArduPilot/QGroundControl을 내려받고 ROS 패키지는 대상 PC에서 빌드한다.

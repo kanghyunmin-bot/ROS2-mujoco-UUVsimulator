@@ -83,9 +83,10 @@ class PingerMarkerFastPathTest(unittest.TestCase):
             raise AssertionError("_detect_targets must not run for a valid blue marker")
 
         detector._detect_targets = unexpected_yolo
-        detector._publish_detection = (
-            lambda stamp, detection, width, height: published.append(
+        detector._publish_detections = (
+            lambda stamp, detections, width, height: published.extend(
                 (stamp, tuple(detection), width, height)
+                for detection in detections
             )
         )
         message = SimpleNamespace(

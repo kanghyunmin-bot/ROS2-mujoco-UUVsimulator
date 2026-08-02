@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Collection
 from dataclasses import dataclass, field
-import json
 import os
 from pathlib import Path
 from typing import Any, Callable
@@ -349,12 +348,9 @@ class CourseBuoyRuntime:
             collector_net_score_release_phase_gate=bool(
                 env_flag("UUV_COURSE_BUOY_COLLECTOR_SCORE_RELEASE_REQUIRE_MISSION_PHASE", True)
             ),
-            collector_net_score_release_status_path=Path(
-                os.getenv(
-                    "UUV_COURSE_BUOY_COLLECTOR_SCORE_RELEASE_STATUS_JSON",
-                    "sim/current/generated/mission_fsm_status.json",
-                )
-            ),
+            # Release authorization is supplied live over ROS2 by the mission
+            # node.  The field remains for constructor compatibility only.
+            collector_net_score_release_status_path=None,
             surface_max_angular_speed_rps=float(env_float("UUV_COURSE_BUOY_SURFACE_MAX_ANGULAR_SPEED_RPS", 0.25)),
             score_zone_a=(
                 float(env_float("UUV_COURSE_A_SCORE_X_M", -6.8)),
@@ -982,55 +978,31 @@ class CourseBuoyRuntime:
         return False
 
     def _score_release_phase_allowed_now(self, now_s: float) -> bool:
+        del now_s
         if not self.collector_net_score_release_phase_gate:
             return True
-        if self.collector_net_score_release_status_path is None:
-            return False
-        if now_s - self._score_release_phase_check_time_s < 0.20:
-            return self._score_release_phase_allowed
-        self._score_release_phase_check_time_s = now_s
-        try:
-            status_path = self._score_release_status_path()
-            if status_path is None:
-                raise FileNotFoundError("mission FSM status JSON not found")
-            status = json.loads(status_path.read_text())
-        except Exception:
-            self._score_release_phase_allowed = False
-            self._score_release_phase_state = ""
-            self._score_release_zone_target = None
-            return False
-        state = str(status.get("state") or "")
+        return bool(self._score_release_phase_allowed)
+
+    def set_score_release_contract(self, state: str, score_zone_xyz: Any) -> bool:
+        """Update the live ROS mission release authorization.
+
+        A release remains subject to the physical score-zone radius and height
+        checks.  Invalid or non-release messages close the gate immediately.
+        """
+        state = str(state or "").strip().upper()
         self._score_release_phase_state = state
-        self._score_release_phase_allowed = state in {
-            "RELEASE",
-            "SCORE_RELEASE",
-        }
-        zone_payload = status.get("score_zone")
-        zone_xyz = zone_payload.get("xyz") if isinstance(zone_payload, dict) else None
         try:
-            zone_target = np.asarray(zone_xyz, dtype=np.float64).reshape(3)
+            zone_target = np.asarray(score_zone_xyz, dtype=np.float64).reshape(3)
         except (TypeError, ValueError):
             zone_target = None
-        if zone_target is None or not np.all(np.isfinite(zone_target)):
+        valid_zone = zone_target is not None and bool(np.all(np.isfinite(zone_target)))
+        allowed_state = state in {"RELEASE", "SCORE_RELEASE"}
+        if not valid_zone:
             self._score_release_zone_target = None
-            self._score_release_phase_allowed = False
         else:
             self._score_release_zone_target = zone_target
+        self._score_release_phase_allowed = bool(allowed_state and valid_zone)
         return self._score_release_phase_allowed
-
-    def _score_release_status_path(self) -> Path | None:
-        candidates: list[Path] = []
-        if self.collector_net_score_release_status_path is not None:
-            candidates.append(self.collector_net_score_release_status_path)
-        candidates.append(Path("generated/mission_fsm_status.json"))
-        candidates.append(Path.cwd() / "generated" / "mission_fsm_status.json")
-        for path in candidates:
-            try:
-                if path.exists():
-                    return path
-            except OSError:
-                continue
-        return None
 
     def _release_netted_buoy_into_score_zone(self, buoy: CourseBuoy) -> None:
         # Releasing an equality must preserve the exact generalized state.

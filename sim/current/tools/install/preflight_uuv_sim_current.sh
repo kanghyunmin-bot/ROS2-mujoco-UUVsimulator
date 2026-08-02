@@ -174,6 +174,22 @@ check_ports() {
   done
 }
 
+check_resources() {
+  local available_kib total_mem_kib
+  available_kib="$(df -Pk "$INSTALL_ROOT" | awk 'NR == 2 {print $4}')"
+  total_mem_kib="$(awk '/^MemTotal:/ {print $2}' /proc/meminfo 2>/dev/null || printf '0')"
+  if [[ "${available_kib:-0}" -ge 15728640 ]]; then
+    pass "free disk space is at least 15 GiB"
+  else
+    fail "at least 15 GiB free disk space is required"
+  fi
+  if [[ "${total_mem_kib:-0}" -ge 7864320 ]]; then
+    pass "system memory is at least 8 GiB"
+  else
+    warn "less than 8 GiB RAM; keep UUV_DIST_BUILD_JOBS=1 and enable swap"
+  fi
+}
+
 check_python_imports() {
   if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
     warn "Python executable not available yet: ${PYTHON_BIN}"
@@ -262,12 +278,12 @@ check_runtime_files() {
     fi
   done
 
-  if grep -Fq '"UUV_MUJOCO_TIMESTEP": "0.008"' "${runtime}/gui/sim_stack_env_defaults.py" \
+  if grep -Fq '"UUV_MUJOCO_TIMESTEP": "0.005"' "${runtime}/gui/sim_stack_env_defaults.py" \
     && grep -Fq '"UUV_COURSE_BUOY_TRACK_CSV_ENABLE": "0"' "${runtime}/gui/sim_stack_env_defaults.py" \
-    && grep -Fq 'DEFAULT_CAMERA_PRESET_ID = "hd720_realtime"' "${runtime}/gui/sim_stack_launch_command.py"; then
-    pass "current runtime includes balanced physics and 720p camera defaults"
+    && grep -Fq 'DEFAULT_CAMERA_PRESET_ID = "competition_fixed"' "${runtime}/gui/sim_stack_launch_command.py"; then
+    pass "current runtime includes balanced physics and fixed 720p/10Hz camera defaults"
   else
-    fail "current runtime does not include expected dist4 runtime defaults"
+    fail "current runtime does not include expected competition runtime defaults"
   fi
 }
 
@@ -283,6 +299,7 @@ check_core_commands() {
 check_os
 check_core_commands
 check_display_stack
+check_resources
 check_ros
 check_python_imports
 check_ports
