@@ -37,6 +37,12 @@ required=(
 for path in "${required[@]}"; do
   [[ -s "$ROOT/$path" ]] || fail "required DEB path missing: $path"
 done
+if find "$BUNDLE" -type f ! -perm -004 -print -quit | grep -q .; then
+  fail "bundle contains a file that the installing user cannot read"
+fi
+if find "$BUNDLE" -type d ! -perm -005 -print -quit | grep -q .; then
+  fail "bundle contains a directory that the installing user cannot traverse"
+fi
 pass "native DEB layout"
 
 bash -n "$ROOT/usr/bin/kmu-auv-simulator" \
@@ -104,6 +110,12 @@ grep -Fq 'auv_lane_vision_control' "$BUNDLE/install_uuv_sim_current_ubuntu22.sh"
   fail "installer does not build lane/surface autonomy"
 grep -Fq 'kmu26_auv_surface_buoy_mission' "$BUNDLE/install_uuv_sim_current_ubuntu22.sh" || \
   fail "installer does not build the separate surface package"
+if grep -Fq 'run "$ARDUPILOT_DIR/Tools/environment_install/install-prereqs-ubuntu.sh"' \
+  "$BUNDLE/install_uuv_sim_current_ubuntu22.sh"; then
+  fail "installer still executes the ArduSub 4.1.2 legacy Ubuntu prerequisite helper"
+fi
+grep -Fq 'python-is-python3' "$BUNDLE/install_uuv_sim_current_ubuntu22.sh" || \
+  fail "installer does not provide the ArduSub Python 3 command contract"
 pass "competition installer contracts"
 
 UNINSTALL_HOME="$TMP_DIR/uninstall-home"

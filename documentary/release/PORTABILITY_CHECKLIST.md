@@ -5,15 +5,27 @@
 ```bash
 ./packaging/build_release.sh
 ./packaging/verify_release.sh \
-  documentary/release/builds/2026.08.02/kmu-auv-simulator_2026.08.02_amd64.deb
-cd documentary/release/builds/2026.08.02
+  documentary/release/builds/2026.08.02.1/kmu-auv-simulator_2026.08.02.1_amd64.deb
+cd documentary/release/builds/2026.08.02.1
 sha256sum -c SHA256SUMS.txt
+```
+
+로컬 의존성을 재사용하지 않는 새 Ubuntu 22.04 일반 사용자 설치와 ArduSub SITL
+빌드, 동일 작업공간 복구 재시도는 다음으로 검증한다. 첫 실행은 Docker 이미지,
+APT 패키지와 ArduPilot submodule을 내려받으므로 시간이 걸린다.
+
+```bash
+./packaging/verify_clean_jammy.sh \
+  documentary/release/builds/2026.08.02.1/kmu-auv-simulator_2026.08.02.1_amd64.deb
 ```
 
 ## 깨끗한 Ubuntu 22.04 amd64에서 확인
 
 - DEB 더블클릭 설치 및 앱 메뉴 아이콘 생성
 - first-run 안내창, 터미널 로그, 관리자 암호 요청
+- DEB의 `/opt/kmu-auv-simulator/bundle` 전체가 일반 사용자에게 read/traverse 가능
+- ArduSub 4.1.2 구형 Python 2 prerequisite helper 미실행
+- 깨끗한 Jammy에서 installer-managed Python 3 SITL 의존성으로 ArduSub 빌드
 - 동일 버전 복구 설치
 - 복구 설치·업데이트 시 사용자 작업공간 보존
 - 앱 메뉴의 완전 제거 실행 후 작업공간·전용 venv·상태·캐시·DEB 삭제

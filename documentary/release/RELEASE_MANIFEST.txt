@@ -1,4 +1,4 @@
-release: 2026.08.02
+release: 2026.08.02.1
 package: kmu-auv-simulator
 architecture: amd64
 target_os: Ubuntu 22.04
@@ -19,4 +19,7 @@ included_changes:
 - Preserves mutable runtime configuration and logs during an in-place payload update.
 - Adds a complete uninstaller for the workspace, ArduPilot, QGroundControl, ROS build trees, dedicated venv, state and logs.
 - Records newly installed APT packages so an explicit --purge-system-deps removal can restore shared system dependencies when requested.
+- Replaces the ArduSub 4.1.2 legacy Python 2 prerequisite helper with explicit Ubuntu 22.04 Python 3 SITL packages.
+- Normalizes DEB bundle permissions and verifies that the installing user can read the packaged YOLO model.
+- Adds a clean ubuntu:22.04 non-root Docker gate for ArduSub build and repair retry.
 - Excludes source-control metadata, build trees, caches, logs, rosbag files and ArduPilot source.

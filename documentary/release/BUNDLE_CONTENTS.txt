@@ -1,5 +1,5 @@
 KMU AUV Simulator bundle
-Version: 2026.08.02
+Version: 2026.08.02.1
 Target: Ubuntu 22.04 amd64 / ROS 2 Humble
 
 - Native DEB with application-menu launchers and SVG icon

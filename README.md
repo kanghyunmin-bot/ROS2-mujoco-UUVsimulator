@@ -11,14 +11,14 @@ GUI, MAVROS 호환 제어면, 카메라·DVL·압력·하이드로폰·Ping360 �
 
 ## Ubuntu 22.04 원클릭 설치
 
-[⬇ KMU AUV Simulator 2026.08.02 설치판 다운로드](https://github.com/kanghyunmin-bot/ROS2-mujoco-UUVsimulator/releases/download/v2026.08.02/KMU_AUV_Simulator_Installer_2026.08.02.zip)
+[⬇ KMU AUV Simulator 2026.08.02.1 설치판 다운로드](https://github.com/kanghyunmin-bot/ROS2-mujoco-UUVsimulator/releases/download/v2026.08.02.1/KMU_AUV_Simulator_Installer_2026.08.02.1.zip)
 
-ZIP을 푼 뒤 `kmu-auv-simulator_2026.08.02_amd64.deb`를 더블클릭하고 Ubuntu
+ZIP을 푼 뒤 `kmu-auv-simulator_2026.08.02.1_amd64.deb`를 더블클릭하고 Ubuntu
 앱 센터에서 설치한다. 설치 후 앱 목록의 **KMU AUV Simulator**를 실행하면
 ROS 2 Humble, MuJoCo, ArduSub SITL과 현재 대회 ROS 패키지를 자동 구성한다.
 대상 환경은 Ubuntu 22.04 amd64이며 첫 설치에는 인터넷 연결과 약 15GB의 여유
 공간이 필요하다. 체크섬과 개별 파일은
-[v2026.08.02 릴리스 페이지](https://github.com/kanghyunmin-bot/ROS2-mujoco-UUVsimulator/releases/tag/v2026.08.02)에서 확인한다.
+[v2026.08.02.1 릴리스 페이지](https://github.com/kanghyunmin-bot/ROS2-mujoco-UUVsimulator/releases/tag/v2026.08.02.1)에서 확인한다.
 
 <p align="center">
   <img src="documentary/assets/simulator-overview.png" width="100%" alt="MuJoCo top view and YOLO buoy tracking view">

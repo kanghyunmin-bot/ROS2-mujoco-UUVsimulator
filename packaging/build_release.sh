@@ -146,6 +146,10 @@ cp -a "${ROOT_DIR}/sim/current/assets/yolo/best.pt" \
   "${BUNDLE_ROOT}/sim/current/assets/yolo/best.pt"
 cp -a "${ROOT_DIR}/sim/ardupilot_patches/0001-current-althold-stabilize.patch" \
   "${BUNDLE_ROOT}/sim/ardupilot_patches/"
+# Source files can come from a private developer checkout (for example a
+# Git-LFS model with mode 0600). Everything below /opt is read by the regular
+# desktop user after dpkg installs it as root, so normalize bundle access here.
+chmod -R a+rX "$BUNDLE_ROOT"
 chmod +x "${BUNDLE_ROOT}/"*.sh "${BUNDLE_ROOT}/"*.py
 zip_entry "$TMP_DIR" bundle "$BUNDLE_ZIP"
 

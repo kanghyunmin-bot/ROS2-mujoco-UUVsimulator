@@ -434,8 +434,11 @@ install_system_packages() {
   apt_run apt-get update
   apt_run apt-get install -y \
     git curl unzip zip ca-certificates gnupg lsb-release software-properties-common \
-    build-essential ccache gawk make cmake pkg-config gcc g++ \
-    python3 python3-venv python3-pip python3-dev python3-tk python3-numpy \
+    build-essential ccache gawk make cmake pkg-config gcc g++ wget rsync \
+    libtool libtool-bin \
+    python3 python-is-python3 python3-venv python3-pip python3-dev python3-tk \
+    python3-numpy python3-setuptools python3-wheel python3-future python3-lxml \
+    python3-pexpect python3-yaml python3-serial python3-psutil python3-pyparsing \
     ffmpeg jq xz-utils file lsof iproute2 net-tools ripgrep can-utils \
     libeigen3-dev libboost-dev libboost-thread-dev \
     libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
@@ -692,8 +695,22 @@ setup_ardupilot() {
     echo "[install] sim_vehicle.py missing after ArduPilot setup" >&2
     exit 1
   }
-  if [[ "$SKIP_ARDUPILOT_PREREQS" -eq 0 && -x "$ARDUPILOT_DIR/Tools/environment_install/install-prereqs-ubuntu.sh" ]]; then
-    run "$ARDUPILOT_DIR/Tools/environment_install/install-prereqs-ubuntu.sh" -y
+  if [[ "$SKIP_ARDUPILOT_PREREQS" -eq 0 ]]; then
+    # ArduSub 4.1.2 predates Ubuntu 22.04. Its upstream prerequisite helper
+    # treats Jammy as a Python 2 distribution, requests packages that no
+    # longer exist, and is not idempotent when its pkg-config symlink already
+    # exists. install_system_packages() installs the required Jammy/Python 3
+    # SITL toolchain explicitly, so never execute that legacy helper here.
+    log "using installer-managed Ubuntu 22.04 ArduPilot SITL prerequisites"
+    require_cmd python
+    python - <<'PY'
+import future
+import lxml
+import pexpect
+import serial
+import yaml
+print("ArduPilot Python 3 build prerequisites OK")
+PY
   fi
   if [[ "$SKIP_ARDUPILOT_BUILD" -eq 0 ]]; then
     log "building pinned ArduSub SITL binary"
@@ -962,6 +979,7 @@ verify_install() {
         dvl_msgs auv_dvl_a50_msg ping360_sonar_msgs kmu26_auv_msg kmu26_auv \
         audio_common_msgs audio_common audio_capture hydrophone_ctrl \
         kmu26_auv_buoy_vision_control auv_lane_vision_control \
+        kmu26_auv_surface_buoy_mission \
         kmu26_auv_web_gui kmu26_pinger_homing \
         robot_localization
       do
