@@ -17,7 +17,7 @@ command -v docker >/dev/null 2>&1 || {
 DEB_PATH="$(cd "$(dirname "$DEB_PATH")" && pwd)/$(basename "$DEB_PATH")"
 
 echo "[clean-jammy] testing ${DEB_PATH} as a regular user on ubuntu:22.04"
-docker run --rm \
+docker run --rm -i \
   -e "KMU_AUV_TEST_VERSION=${VERSION}" \
   -v "${DEB_PATH}:/input/kmu-auv.deb:ro" \
   ubuntu:22.04 bash -s <<'CONTAINER'
