@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
 set -e
-# Per-user simulator data is intentionally preserved for upgrades/reinstall.
+# apt/dpkg may run this as root without a reliable desktop-user identity.
+# Per-user data is therefore removed by kmu-auv-simulator-uninstall, which
+# validates the exact user-owned targets before purging this package.
 exit 0

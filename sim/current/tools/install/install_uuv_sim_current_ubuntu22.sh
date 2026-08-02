@@ -234,6 +234,10 @@ ARDUPILOT_DIR="${ARDUPILOT_DIR:-${INSTALL_ROOT}/sim/ardupilot}"
 UUV_MUJOCO_DIR="${UUV_MUJOCO_DIR:-${INSTALL_ROOT}/sim/current}"
 ROS_WORKSPACE_DIR="${ROS_WORKSPACE_DIR:-${INSTALL_ROOT}/rospkg}"
 ROS_SOURCE_DIR="${ROS_SOURCE_DIR:-${ROS_WORKSPACE_DIR}/src}"
+STATE_ROOT="${XDG_STATE_HOME:-${HOME}/.local/state}/kmu-auv-simulator"
+APT_MANIFEST="${STATE_ROOT}/apt-installed-by-kmu-auv.txt"
+APT_BEFORE_FILE=""
+APT_TRACKING_ACTIVE=0
 PAYLOAD_REFRESH="$FORCE_REEXTRACT"
 WORKSPACE_VERSION_FILE="${INSTALL_ROOT}/.uuv_sim_current_version"
 INSTALLED_WORKSPACE_VERSION=""
@@ -247,6 +251,40 @@ if [[ -z "$QGC_APP" ]]; then
   QGC_APP="${INSTALL_ROOT}/QGroundControl-x86_64.AppImage"
 fi
 QGC_APP="$(cd "$(dirname "${QGC_APP}")" && pwd)/$(basename "${QGC_APP}")"
+
+mkdir -p "$STATE_ROOT"
+printf '%s\n' "$INSTALL_ROOT" >"$STATE_ROOT/install-root"
+printf '%s\n' "$VENV_ROOT" >"$STATE_ROOT/venv-root"
+
+begin_apt_tracking() {
+  [[ "$SKIP_APT" -eq 0 ]] || return 0
+  APT_BEFORE_FILE="$(mktemp "${STATE_ROOT}/apt-before.XXXXXX")"
+  dpkg-query -W -f='${binary:Package}\n' 2>/dev/null | sort -u >"$APT_BEFORE_FILE"
+  APT_TRACKING_ACTIVE=1
+}
+
+finalize_apt_tracking() {
+  [[ "$APT_TRACKING_ACTIVE" -eq 1 && -n "$APT_BEFORE_FILE" ]] || return 0
+  local after_file new_file
+  after_file="$(mktemp "${STATE_ROOT}/apt-after.XXXXXX")"
+  new_file="$(mktemp "${STATE_ROOT}/apt-new.XXXXXX")"
+  dpkg-query -W -f='${binary:Package}\n' 2>/dev/null | sort -u >"$after_file" || true
+  comm -13 "$APT_BEFORE_FILE" "$after_file" >"$new_file" || true
+  if [[ -s "$APT_MANIFEST" ]]; then
+    cat "$APT_MANIFEST" >>"$new_file"
+  fi
+  sort -u "$new_file" >"${APT_MANIFEST}.tmp"
+  mv -f "${APT_MANIFEST}.tmp" "$APT_MANIFEST"
+  rm -f "$APT_BEFORE_FILE" "$after_file" "$new_file"
+  APT_TRACKING_ACTIVE=0
+}
+
+finalize_apt_tracking_on_exit() {
+  local exit_status=$?
+  set +e
+  finalize_apt_tracking
+  exit "$exit_status"
+}
 
 log() {
   echo "[uuv-current-dist] $*"
@@ -335,6 +373,7 @@ ensure_ros_apt_repo() {
   repair_ros_apt_source_conflicts "$repo_file"
   sudo_run mkdir -p /usr/share/keyrings
   if [[ ! -f "$keyring" ]]; then
+    : >"$STATE_ROOT/ros-keyring-created-by-kmu-auv"
     local tmp_key
     tmp_key="$(mktemp)"
     require_cmd curl
@@ -342,6 +381,9 @@ ensure_ros_apt_repo() {
     run curl -fsSL -o "$tmp_key" https://raw.githubusercontent.com/ros/rosdistro/master/ros.key
     sudo_run gpg --dearmor -o "$keyring" "$tmp_key"
     rm -f "$tmp_key"
+  fi
+  if [[ ! -f "$repo_file" ]]; then
+    : >"$STATE_ROOT/ros-apt-repo-created-by-kmu-auv"
   fi
   printf '%s\n' "$repo_line" | sudo_run tee "$repo_file" >/dev/null
 }
@@ -779,7 +821,10 @@ setup_ros_packages() {
       "${ROS_SOURCE_DIR}/kmu26_vision_mission_fsm" \
       "${ROS_WORKSPACE_DIR}/kmu26_vision_mission_fsm" \
       "${ROS_WORKSPACE_DIR}/build/kmu26_vision_mission_fsm" \
-      "${ROS_WORKSPACE_DIR}/install/kmu26_vision_mission_fsm"
+      "${ROS_WORKSPACE_DIR}/install/kmu26_vision_mission_fsm" \
+      "${ROS_SOURCE_DIR}/auv_surface_buoy_mission" \
+      "${ROS_WORKSPACE_DIR}/build/auv_surface_buoy_mission" \
+      "${ROS_WORKSPACE_DIR}/install/auv_surface_buoy_mission"
     do
       if [[ -e "$obsolete_path" || -L "$obsolete_path" ]]; then
         log "removing superseded vision FSM from previous release: ${obsolete_path}"
@@ -801,6 +846,7 @@ setup_ros_packages() {
   extract_ros_zip hydrophone_ctrl "${BUNDLE_ROOT}/rospkg/hydrophone_ctrl.zip"
   extract_ros_zip kmu26_auv_buoy_vision_control "${BUNDLE_ROOT}/rospkg/kmu26_auv_buoy_vision_control.zip"
   extract_ros_zip auv_lane_vision_control "${BUNDLE_ROOT}/rospkg/auv_lane_vision_control.zip"
+  extract_ros_zip kmu26_auv_surface_buoy_mission "${BUNDLE_ROOT}/rospkg/kmu26_auv_surface_buoy_mission.zip"
   extract_ros_zip kmu26_auv_web_gui "${BUNDLE_ROOT}/rospkg/kmu26_auv_web_gui.zip"
   extract_ros_zip kmu26_pinger_homing "${BUNDLE_ROOT}/rospkg/kmu26_pinger_homing.zip"
   extract_ros_zip robot_localization "${BUNDLE_ROOT}/rospkg/robot_localization.zip"
@@ -818,7 +864,8 @@ setup_ros_packages() {
       colcon build --symlink-install --executor sequential --packages-select \
         dvl_msgs auv_dvl_a50_msg ping360_sonar_msgs auv_msg auv \
         audio_common_msgs audio_common audio_capture hydrophone_ctrl \
-        auv_buoy_vision_control auv_lane_vision_control auv_web_gui auv_pinger_homing \
+        auv_buoy_vision_control auv_lane_vision_control \
+        kmu26_auv_surface_buoy_mission auv_web_gui auv_pinger_homing \
         robot_localization \
         --cmake-args -DBUILD_TESTING=OFF
   )
@@ -840,6 +887,7 @@ download_qgc() {
     run mv "$qgc_tmp" "$QGC_APP"
   fi
   chmod +x "$QGC_APP"
+  : >"$STATE_ROOT/qgc-managed-by-kmu-auv"
 }
 
 write_env_file() {
@@ -1002,11 +1050,15 @@ run_preflight
 if [[ "$CHECK_ONLY" -eq 1 ]]; then
   exit 0
 fi
+begin_apt_tracking
+trap finalize_apt_tracking_on_exit EXIT
 install_system_packages
 extract_uuv_mujoco
 install_support_files
 setup_ardupilot
 setup_ros_packages
+finalize_apt_tracking
+trap - EXIT
 download_qgc
 setup_python_env
 write_env_file

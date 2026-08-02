@@ -5,8 +5,8 @@
 ```bash
 ./packaging/build_release.sh
 ./packaging/verify_release.sh \
-  documentary/release/builds/2026.08.01/kmu-auv-simulator_2026.08.01_amd64.deb
-cd documentary/release/builds/2026.08.01
+  documentary/release/builds/2026.08.02/kmu-auv-simulator_2026.08.02_amd64.deb
+cd documentary/release/builds/2026.08.02
 sha256sum -c SHA256SUMS.txt
 ```
 
@@ -15,7 +15,9 @@ sha256sum -c SHA256SUMS.txt
 - DEB 더블클릭 설치 및 앱 메뉴 아이콘 생성
 - first-run 안내창, 터미널 로그, 관리자 암호 요청
 - 동일 버전 복구 설치
-- `/opt/kmu-auv-simulator` 삭제/업데이트 시 사용자 작업공간 보존
+- 복구 설치·업데이트 시 사용자 작업공간 보존
+- 앱 메뉴의 완전 제거 실행 후 작업공간·전용 venv·상태·캐시·DEB 삭제
+- `--purge-system-deps` 실행 시 설치기가 기록한 신규 APT 패키지만 제거
 - MuJoCo viewer 및 headless 실행
 - SITL 연결, ARM, RC 이동
 - 정면/상향 카메라 1280x720@10Hz
@@ -28,11 +30,11 @@ sha256sum -c SHA256SUMS.txt
 Wayland에서는 XWayland/libdecor를 사용하며 GLFW의 window-position 경고는
 비치명적이다.
 
-배포 ROS source에는 다음 14개 패키지가 있어야 한다.
+배포 ROS source에는 다음 15개 패키지가 있어야 한다.
 
 ```text
 dvl_msgs auv_dvl_a50_msg ping360_sonar_msgs auv_msg auv
 audio_common_msgs audio_common audio_capture hydrophone_ctrl
 auv_buoy_vision_control auv_lane_vision_control auv_web_gui
-auv_pinger_homing robot_localization
+kmu26_auv_surface_buoy_mission auv_pinger_homing robot_localization
 ```

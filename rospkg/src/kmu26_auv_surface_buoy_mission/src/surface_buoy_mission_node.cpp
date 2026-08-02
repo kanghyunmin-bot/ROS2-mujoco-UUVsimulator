@@ -22,12 +22,13 @@
 #include <std_msgs/msg/string.hpp>
 #include <std_msgs/msg/u_int32.hpp>
 
-#include "auv_lane_vision_control/arena_frame_transform.hpp"
-#include "auv_lane_vision_control/depth_p_controller.hpp"
-#include "auv_lane_vision_control/dump_cycle.hpp"
-#include "auv_lane_vision_control/lane_planner.hpp"
+#include "kmu26_auv_surface_buoy_mission/arena_frame_transform.hpp"
+#include "kmu26_auv_surface_buoy_mission/depth_p_controller.hpp"
+#include "kmu26_auv_surface_buoy_mission/dump_cycle.hpp"
+#include "kmu26_auv_surface_buoy_mission/dump_motion.hpp"
+#include "kmu26_auv_surface_buoy_mission/lane_planner.hpp"
 
-namespace auv_lane_vision_control
+namespace kmu26_auv_surface_buoy_mission
 {
 namespace
 {
@@ -82,8 +83,8 @@ public:
     publish_counts();
     RCLCPP_INFO(
       get_logger(),
-      "Surface mission ready: front=%s top=%s score=(%.3f, %.3f), camera contract=1280x720@10Hz",
-      front_bbox_topic_.c_str(), top_bbox_topic_.c_str(), bonus_center_.x, bonus_center_.y);
+      "Surface mission ready: front=%s top=%s, camera contract=1280x720@10Hz",
+      front_bbox_topic_.c_str(), top_bbox_topic_.c_str());
   }
 
   void publish_release_once()
@@ -150,10 +151,11 @@ private:
     score_release_topic_ = declare_parameter<std::string>("score_release_topic", "/mission/score_release");
     rc_topic_ = declare_parameter<std::string>("rc_override_topic", "/mavros/rc/override");
 
-    // 가점존 위치와 임무 수심. bonus_center_는 대회장 좌표계 기준이다.
-    bonus_center_.x = declare_parameter<double>("bonus_zone_center_x_m", 9.081);
-    bonus_center_.y = declare_parameter<double>("bonus_zone_center_y_m", -1.305);
+    // 가점존은 arena safe bounds 중앙에서의 offset으로 계산한다.
+    bonus_center_offset_x_m_ = declare_parameter<double>("bonus_zone_center_offset_x_m", 1.95);
+    bonus_center_offset_y_m_ = declare_parameter<double>("bonus_zone_center_offset_y_m", 0.0);
     bonus_radius_m_ = declare_parameter<double>("bonus_zone_radius_m", 0.65);
+    bonus_lane_clearance_m_ = declare_parameter<double>("bonus_zone_lane_clearance_m", 0.35);
     bonus_approach_distance_m_ = declare_parameter<double>("bonus_approach_distance_m", 1.0);
     bonus_dump_heading_rad_ = declare_parameter<double>("bonus_dump_heading_rad", 0.0);
     score_zone_world_z_m_ = declare_parameter<double>("score_zone_world_z_m", -0.30);
@@ -161,12 +163,15 @@ private:
     dump_depth_m_ = declare_parameter<double>("dump_depth_m", 0.85);
     depth_tolerance_m_ = declare_parameter<double>("depth_tolerance_m", 0.12);
 
-    // 한 번에 담을 개수와 배출 반복 조건. 실제 수집망 용량보다 크게 설정하지 않는다.
-    batch_capacity_ = declare_parameter<int>("batch_capacity", 3);
+    min_surface_lane_segment_length_m_ = declare_parameter<double>(
+      "min_surface_lane_segment_length_m", 1.0);
+    // 레인별 가점존 배출은 항상 전진 overshoot 후 즉시 급후진한다.
     surface_total_buoy_count_ = declare_parameter<int>("surface_total_buoy_count", 5);
     max_dump_attempts_ = declare_parameter<int>("max_dump_attempts", 3);
-    dump_exit_radius_m_ = declare_parameter<double>("dump_exit_radius_m", 0.70);
-    dump_motion_timeout_s_ = declare_parameter<double>("dump_motion_timeout_sec", 4.0);
+    dump_forward_overshoot_m_ = declare_parameter<double>("dump_forward_overshoot_m", 0.70);
+    dump_reverse_distance_m_ = declare_parameter<double>("dump_reverse_distance_m", 1.10);
+    dump_forward_timeout_s_ = declare_parameter<double>("dump_forward_timeout_sec", 4.0);
+    dump_reverse_timeout_s_ = declare_parameter<double>("dump_reverse_timeout_sec", 4.0);
     dump_settle_s_ = declare_parameter<double>("dump_settle_sec", 0.7);
     capture_forward_s_ = declare_parameter<double>("capture_forward_sec", 2.0);
     capture_ignore_s_ = declare_parameter<double>("capture_ignore_sec", 0.8);
@@ -199,8 +204,14 @@ private:
     heading_tolerance_rad_ = declare_parameter<double>("surface_heading_tolerance_rad", 0.20);
     buoy_class_id_ = declare_parameter<int>("buoy_class_id", 0);
 
-    if (batch_capacity_ < 1 || batch_capacity_ > 4) {
-      throw std::invalid_argument("batch_capacity must be in [1, 4]");
+    if (
+      bonus_radius_m_ <= 0.0 || bonus_lane_clearance_m_ < 0.0 ||
+      min_surface_lane_segment_length_m_ <= 0.0 ||
+      dump_forward_overshoot_m_ <= 0.0 || dump_reverse_distance_m_ <= 0.0 ||
+      dump_forward_timeout_s_ <= 0.0 || dump_reverse_timeout_s_ <= 0.0 ||
+      max_dump_attempts_ < 1)
+    {
+      throw std::invalid_argument("surface lane or dump parameters are invalid");
     }
   }
 
@@ -210,7 +221,8 @@ private:
     // transient_local QoS를 사용한다.
     const auto latched = rclcpp::QoS(1).reliable().transient_local();
     front_sub_ = create_subscription<std_msgs::msg::Float32MultiArray>(
-      front_bbox_topic_, 10, std::bind(&SurfaceBuoyMissionNode::on_front_bbox, this, std::placeholders::_1));
+      front_bbox_topic_, 10,
+      std::bind(&SurfaceBuoyMissionNode::on_front_bbox, this, std::placeholders::_1));
     top_sub_ = create_subscription<std_msgs::msg::Float32MultiArray>(
       top_bbox_topic_, 10, std::bind(&SurfaceBuoyMissionNode::on_top_bbox, this, std::placeholders::_1));
     odom_sub_ = create_subscription<nav_msgs::msg::Odometry>(
@@ -251,20 +263,36 @@ private:
     config.safety_margin_m = msg->data[4];
     config.lane_search_offset_m = msg->data[5];
     config.start_corner = msg->data[6] > 0.5 ? "bottom_right" : "bottom_left";
-    lane_planner_ = std::make_unique<LanePlanner>(config);
+    config.lane_orientation = LaneOrientation::VERTICAL;
 
-    // 가점존 원 전체가 공용 안전 경계 안에 들어오는지 시작 전에 검증한다.
+    // 먼저 제외영역 없는 planner로 safe bounds를 얻고 중앙+offset 가점존을 계산한다.
+    const LanePlanner bounds_planner(config);
+    const auto & bounds = bounds_planner.safe_bounds();
+    bonus_center_.x = 0.5 * (bounds.x_min + bounds.x_max) + bonus_center_offset_x_m_;
+    bonus_center_.y = 0.5 * (bounds.y_min + bounds.y_max) + bonus_center_offset_y_m_;
+    const double exclusion_radius = bonus_radius_m_ + bonus_lane_clearance_m_;
+
+    // 가점존과 lane clearance 전체가 공용 안전 경계 안에 들어오는지 검증한다.
     // 좌표 계약이 틀린 상태에서 차량을 움직이는 것보다 즉시 실패시키는 편이 안전하다.
-    const auto & bounds = lane_planner_->safe_bounds();
     if (
-      bonus_center_.x - bonus_radius_m_ < bounds.x_min ||
-      bonus_center_.x + bonus_radius_m_ > bounds.x_max ||
-      bonus_center_.y - bonus_radius_m_ < bounds.y_min ||
-      bonus_center_.y + bonus_radius_m_ > bounds.y_max)
+      bonus_center_.x - exclusion_radius < bounds.x_min ||
+      bonus_center_.x + exclusion_radius > bounds.x_max ||
+      bonus_center_.y - exclusion_radius < bounds.y_min ||
+      bonus_center_.y + exclusion_radius > bounds.y_max)
     {
-      throw std::invalid_argument("bonus-zone circle is outside the shared arena safe bounds");
+      throw std::invalid_argument(
+              "bonus-zone circle and lane clearance are outside the shared arena safe bounds");
     }
+
+    config.circular_exclusion_enabled = true;
+    config.circular_exclusion_center = bonus_center_;
+    config.circular_exclusion_radius_m = exclusion_radius;
+    config.min_lane_segment_length_m = min_surface_lane_segment_length_m_;
+    lane_planner_ = std::make_unique<LanePlanner>(config);
     surface_lane_completed_.assign(lane_planner_->lanes().size(), false);
+    RCLCPP_INFO(
+      get_logger(), "Vertical surface lanes=%zu, score=(%.3f, %.3f), exclusion_radius=%.2f",
+      lane_planner_->lanes().size(), bonus_center_.x, bonus_center_.y, exclusion_radius);
   }
 
   void on_start_frame(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
@@ -330,7 +358,8 @@ private:
       front_.reset();
       return;
     }
-    // 여러 부표가 보이면 가장 크게 보이는 bbox를 현재 접근 대상으로 선택한다.
+    // 3D active-lane 필터는 후속 예외처리 설계 전까지 적용하지 않는다.
+    // 기존 동작대로 화면에서 가장 큰 부표 bbox를 현재 접근 대상으로 선택한다.
     front_ = *std::max_element(
       rows.begin(), rows.end(), [](const Detection & a, const Detection & b) {
         return a.width * a.height < b.width * b.height;
@@ -377,7 +406,6 @@ private:
     // 시뮬레이터의 물리 접촉 판정은 카메라 추정보다 우선하는 확정 신호다.
     if (msg->netted && !msg->target_id.empty() && captured_ids_.insert(msg->target_id).second) {
       if (active_) {
-        ++batch_capture_count_;
         ++lane_capture_count_;
         capture_confirmed_ = true;
       }
@@ -410,7 +438,6 @@ private:
     cycle_id_ = parse_uint_field(contract, "cycle");
     final_cycle_ = contract.find("final=true") != std::string::npos;
     work_depth_m_ = parse_double_field(contract, "work_depth", dump_depth_m_);
-    batch_capture_count_ = 0;
     lane_capture_count_ = 0;
     dump_attempt_count_ = 0;
     surface_lane_completed_.assign(lane_planner_->lanes().size(), false);
@@ -500,6 +527,7 @@ private:
       transition(State::RETURN_TO_WORK_DEPTH, "surface lane unavailable");
       return;
     }
+    front_.reset();
     transition(State::SURFACE_SEARCH, reason);
   }
 
@@ -590,7 +618,6 @@ private:
     const bool transitioned_to_top = front_moved_up && top_occupied_confirmed();
     if (capture_confirmed_ || transitioned_to_top) {
       if (!capture_confirmed_) {
-        ++batch_capture_count_;
         ++lane_capture_count_;
         publish_counts();
       }
@@ -609,6 +636,8 @@ private:
     // 해당 레인에서 포획한 것이 있으면 먼저 배출하고, 없으면 바로 다음 레인을 선택한다.
     active_surface_lane_.reset();
     if (lane_capture_count_ > 0) {
+      // 각 레인의 첫 배출은 반드시 attempt 1부터 시작한다.
+      reset_dump_attempts_for_lane(dump_attempt_count_);
       transition(State::MOVE_TO_BONUS, "current lane complete with captures");
       return;
     }
@@ -653,7 +682,10 @@ private:
 
   void start_dump_attempt()
   {
-    ++dump_attempt_count_;
+    next_dump_attempt(dump_attempt_count_);
+    dump_motion_phase_ = DumpMotionPhase::FORWARD_OVERSHOOT;
+    dump_motion_phase_started_at_ = now();
+    dump_forward_peak_ = current_position_;
     open_score_gate();
     transition(State::DUMP_EJECT, "dump attempt " + std::to_string(dump_attempt_count_));
   }
@@ -661,12 +693,33 @@ private:
   void run_dump_eject(std::array<uint16_t, 18> & channels)
   {
     hold_depth(channels, dump_depth_m_);
-    // 1·3차는 전진, 2차는 후진하여 같은 방향 기동만 반복할 때 생기는 걸림을 줄인다.
-    const bool forward = dump_attempt_count_ == 1 || dump_attempt_count_ == 3;
-    set_channel(channels, 5, forward ? dump_forward_pwm_ : dump_reverse_pwm_);
-    if (distance(current_position_, bonus_center_) >= dump_exit_radius_m_ || state_age() >= dump_motion_timeout_s_) {
+    const double heading_error = wrap_pi(bonus_dump_heading_rad_ - current_yaw_rad_);
+    set_channel(channels, 4, neutral_pwm_ + static_cast<int>(std::lround(
+      std::clamp(350.0 * heading_error, -1.0 * max_yaw_delta_pwm_, 1.0 * max_yaw_delta_pwm_))));
+
+    if (dump_motion_phase_ == DumpMotionPhase::FORWARD_OVERSHOOT) {
+      const bool forward_complete = dump_forward_target_reached(
+        current_position_, bonus_center_, bonus_dump_heading_rad_, dump_forward_overshoot_m_) ||
+        (now() - dump_motion_phase_started_at_).seconds() >= dump_forward_timeout_s_;
+      if (!forward_complete) {
+        set_channel(channels, 5, dump_forward_pwm_);
+        return;
+      }
+
+      // 같은 제어 주기에서 바로 후진 PWM을 기록하므로 중립 대기 구간이 없다.
+      dump_forward_peak_ = current_position_;
+      dump_motion_phase_ = DumpMotionPhase::SHARP_REVERSE;
+      dump_motion_phase_started_at_ = now();
+    }
+
+    set_channel(channels, 5, dump_reverse_pwm_);
+    const bool reverse_complete = dump_reverse_target_reached(
+      current_position_, dump_forward_peak_, bonus_center_, bonus_dump_heading_rad_,
+      dump_reverse_distance_m_) ||
+      (now() - dump_motion_phase_started_at_).seconds() >= dump_reverse_timeout_s_;
+    if (reverse_complete) {
       close_score_gate();
-      transition(State::DUMP_CHECK, "dump exit reached");
+      transition(State::DUMP_CHECK, "forward overshoot and sharp reverse complete");
     }
   }
 
@@ -688,7 +741,6 @@ private:
     if (!should_repeat_dump(
         top_status, dump_attempt_count_, static_cast<uint32_t>(max_dump_attempts_)))
     {
-      batch_capture_count_ = 0;
       lane_capture_count_ = 0;
       const bool lanes_remaining = std::any_of(
         surface_lane_completed_.begin(), surface_lane_completed_.end(),
@@ -929,11 +981,14 @@ private:
   std::string start_frame_topic_, surface_start_topic_, surface_complete_topic_;
   std::string arena_config_topic_, score_release_topic_, rc_topic_;
   Vec2 bonus_center_{};
+  double bonus_center_offset_x_m_{1.95}, bonus_center_offset_y_m_{0.0};
   double bonus_radius_m_{0.65}, bonus_approach_distance_m_{1.0}, bonus_dump_heading_rad_{0.0};
+  double bonus_lane_clearance_m_{0.35}, min_surface_lane_segment_length_m_{1.0};
   double score_zone_world_z_m_{-0.3}, collection_depth_m_{0.30}, dump_depth_m_{0.85};
   double work_depth_m_{0.85}, depth_tolerance_m_{0.12};
-  int batch_capacity_{3}, surface_total_buoy_count_{5}, max_dump_attempts_{3};
-  double dump_exit_radius_m_{0.70}, dump_motion_timeout_s_{4.0}, dump_settle_s_{0.7};
+  int surface_total_buoy_count_{5}, max_dump_attempts_{3};
+  double dump_forward_overshoot_m_{0.70}, dump_reverse_distance_m_{1.10};
+  double dump_forward_timeout_s_{4.0}, dump_reverse_timeout_s_{4.0}, dump_settle_s_{0.7};
   double capture_forward_s_{2.0}, capture_ignore_s_{0.8};
   double top_roi_x_min_{0.1}, top_roi_x_max_{0.9}, top_roi_y_min_{0.05}, top_roi_y_max_{0.95};
   double top_confirm_s_{0.5}, top_empty_confirm_s_{0.5}, detection_timeout_s_{0.7};
@@ -965,14 +1020,18 @@ private:
   std::optional<rclcpp::Time> top_occupied_since_, top_empty_since_, align_started_at_;
   bool initial_top_check_done_{false}, capture_confirmed_{false};
   double capture_front_start_y_{0.0}, capture_front_min_y_{0.0};
-  uint32_t batch_capture_count_{0}, lane_capture_count_{0}, dump_attempt_count_{0};
+  uint32_t lane_capture_count_{0}, dump_attempt_count_{0};
   uint32_t cycle_id_{0}, last_completed_cycle_{0};
   bool final_cycle_{false}, active_{false}, release_sent_{false};
   std::string pending_start_;
   std::set<std::string> captured_ids_, deposited_ids_;
+  DumpMotionPhase dump_motion_phase_{DumpMotionPhase::FORWARD_OVERSHOOT};
+  Vec2 dump_forward_peak_{};
+  rclcpp::Time dump_motion_phase_started_at_{0, 0, RCL_ROS_TIME};
 
   // ROS 인터페이스 수명은 노드와 함께 유지한다.
-  rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr front_sub_, top_sub_;
+  rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr front_sub_;
+  rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr top_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr depth_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr start_frame_sub_;
@@ -984,12 +1043,12 @@ private:
   rclcpp::Publisher<std_msgs::msg::UInt32>::SharedPtr remaining_pub_, deposit_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
 };
-}  // namespace auv_lane_vision_control
+}  // namespace kmu26_auv_surface_buoy_mission
 
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<auv_lane_vision_control::SurfaceBuoyMissionNode>();
+  auto node = std::make_shared<kmu26_auv_surface_buoy_mission::SurfaceBuoyMissionNode>();
   rclcpp::spin(node);
   // Ctrl+C나 executor 종료 시 마지막으로 RC override를 해제한다.
   node->publish_release_once();

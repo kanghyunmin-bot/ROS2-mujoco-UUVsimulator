@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Uninstall KMU AUV Simulator
+Name[ko]=KMU AUV 시뮬레이터 완전 제거
+Comment=Remove the simulator workspace, virtualenv, logs and package
+Comment[ko]=시뮬레이터 작업공간·가상환경·로그·패키지를 완전히 삭제합니다
+Exec=kmu-auv-simulator-uninstall
+Icon=kmu-auv-simulator
+Terminal=true
+Categories=Settings;Science;Robotics;
+Keywords=AUV;ROS;MuJoCo;Uninstall;Remove;
+StartupNotify=true

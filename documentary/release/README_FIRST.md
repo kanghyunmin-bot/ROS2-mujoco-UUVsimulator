@@ -1,10 +1,10 @@
-# KMU AUV Simulator 2026.08.01
+# KMU AUV Simulator 2026.08.02
 
 Ubuntu 22.04 amd64용 MuJoCo + ArduSub SITL + ROS 2 Humble 배포판이다.
 
 ## 설치
 
-1. `kmu-auv-simulator_2026.08.01_amd64.deb`를 더블클릭한다.
+1. `kmu-auv-simulator_2026.08.02_amd64.deb`를 더블클릭한다.
 2. Ubuntu 앱 센터에서 **설치**를 누른다.
 3. 앱 목록에서 **KMU AUV Simulator**를 실행한다.
 4. 첫 실행 창에서 **설치 시작**을 누르고 관리자 암호를 입력한다.
@@ -25,6 +25,24 @@ kmu-auv-simulator                 # 웹 GUI
 kmu-auv-simulator --desktop       # Tk GUI
 kmu-auv-simulator --headless      # SITL + MuJoCo headless
 kmu-auv-simulator --repair        # 복구 설치
+kmu-auv-simulator --uninstall     # 완전 제거
+```
+
+## 완전 제거
+
+앱 목록에서 **KMU AUV 시뮬레이터 완전 제거**를 실행하거나 다음 명령을 사용한다.
+
+```bash
+kmu-auv-simulator --uninstall
+```
+
+설치 작업공간 안의 MuJoCo·ArduPilot·QGroundControl·ROS source/build/install/log,
+`~/.venvs/uuv_mujoco`, 앱 상태와 캐시를 삭제한 다음 Debian 패키지도 purge한다.
+다른 ROS 작업공간에서도 사용할 수 있는 시스템 공용 패키지는 기본적으로 보존한다.
+설치기가 새로 추가한 APT 패키지까지 제거하려면 위험 범위를 확인한 뒤 다음을 사용한다.
+
+```bash
+kmu-auv-simulator-uninstall --purge-system-deps
 ```
 
 ## 고정 계약

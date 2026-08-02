@@ -1,0 +1,250 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PACKAGE_NAME="${KMU_AUV_PACKAGE_NAME:-kmu-auv-simulator}"
+STATE_ROOT="${XDG_STATE_HOME:-${HOME}/.local/state}/kmu-auv-simulator"
+DEFAULT_INSTALL_ROOT="${XDG_DATA_HOME:-${HOME}/.local/share}/kmu-auv-simulator/current"
+DEFAULT_VENV_ROOT="${HOME}/.venvs/uuv_mujoco"
+INSTALL_ROOT="${UUV_SIM_INSTALL_ROOT:-$DEFAULT_INSTALL_ROOT}"
+VENV_ROOT="${UUV_SIM_VENV_ROOT:-$DEFAULT_VENV_ROOT}"
+if [[ -z "${UUV_SIM_INSTALL_ROOT:-}" && -s "$STATE_ROOT/install-root" ]]; then
+  INSTALL_ROOT="$(head -n 1 "$STATE_ROOT/install-root")"
+fi
+if [[ -z "${UUV_SIM_VENV_ROOT:-}" && -s "$STATE_ROOT/venv-root" ]]; then
+  VENV_ROOT="$(head -n 1 "$STATE_ROOT/venv-root")"
+fi
+CONFIG_ROOT="${XDG_CONFIG_HOME:-${HOME}/.config}/kmu-auv-simulator"
+CACHE_ROOT="${XDG_CACHE_HOME:-${HOME}/.cache}/kmu-auv-simulator"
+DATA_PARENT="$(dirname "$INSTALL_ROOT")"
+YES=0
+DRY_RUN=0
+KEEP_PACKAGE=0
+PURGE_SYSTEM_DEPS=0
+
+usage() {
+  cat <<'USAGE'
+Usage: kmu-auv-simulator-uninstall [options]
+
+Completely removes the KMU AUV simulator workspace, bundled ArduPilot/QGC,
+ROS build trees, application virtualenv, logs, state, cache and Debian package.
+
+Options:
+  --yes                 Do not ask for confirmation.
+  --dry-run             Print targets without deleting them.
+  --keep-package        Keep the Debian launcher package; remove user data only.
+  --purge-system-deps   Also purge APT packages recorded as newly installed by
+                        this simulator. This can affect other ROS workspaces.
+  -h, --help            Show this help.
+USAGE
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --yes)
+      YES=1
+      shift
+      ;;
+    --dry-run)
+      DRY_RUN=1
+      shift
+      ;;
+    --keep-package)
+      KEEP_PACKAGE=1
+      shift
+      ;;
+    --purge-system-deps)
+      PURGE_SYSTEM_DEPS=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "[kmu-auv-uninstall] unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+canonical_path() {
+  readlink -m -- "$1"
+}
+
+require_safe_target() {
+  local label="$1"
+  local raw="$2"
+  local resolved
+  resolved="$(canonical_path "$raw")"
+  case "$resolved" in
+    /|/home|/opt|"$(canonical_path "$HOME")")
+      echo "[kmu-auv-uninstall] refusing unsafe ${label} target: ${resolved}" >&2
+      exit 64
+      ;;
+  esac
+  [[ ${#resolved} -ge 12 ]] || {
+    echo "[kmu-auv-uninstall] refusing unusually short ${label} target: ${resolved}" >&2
+    exit 64
+  }
+}
+
+require_safe_target "install" "$INSTALL_ROOT"
+require_safe_target "venv" "$VENV_ROOT"
+require_safe_target "state" "$STATE_ROOT"
+require_safe_target "config" "$CONFIG_ROOT"
+require_safe_target "cache" "$CACHE_ROOT"
+
+if [[ -e "$INSTALL_ROOT" && ! -f "$INSTALL_ROOT/.uuv_sim_current_version" ]]; then
+  echo "[kmu-auv-uninstall] install marker missing; refusing to remove: $INSTALL_ROOT" >&2
+  exit 65
+fi
+if [[ -e "$VENV_ROOT" && ! -f "$VENV_ROOT/pyvenv.cfg" ]]; then
+  echo "[kmu-auv-uninstall] venv marker missing; refusing to remove: $VENV_ROOT" >&2
+  exit 65
+fi
+
+QGC_MANAGED=0
+if [[ -f "$STATE_ROOT/qgc-managed-by-kmu-auv" ]]; then
+  QGC_MANAGED=1
+fi
+APT_MANIFEST="$STATE_ROOT/apt-installed-by-kmu-auv.txt"
+ROS_REPO_MARKER="$STATE_ROOT/ros-apt-repo-created-by-kmu-auv"
+ROS_KEY_MARKER="$STATE_ROOT/ros-keyring-created-by-kmu-auv"
+
+targets=(
+  "$INSTALL_ROOT"
+  "$VENV_ROOT"
+  "$STATE_ROOT"
+  "$CONFIG_ROOT"
+  "$CACHE_ROOT"
+)
+if [[ "$QGC_MANAGED" -eq 1 ]]; then
+  targets+=(
+    "${XDG_CONFIG_HOME:-${HOME}/.config}/QGroundControl"
+    "${XDG_CONFIG_HOME:-${HOME}/.config}/QGroundControl.org"
+    "${XDG_CACHE_HOME:-${HOME}/.cache}/QGroundControl"
+    "${XDG_CACHE_HOME:-${HOME}/.cache}/QGroundControl.org"
+    "${XDG_DATA_HOME:-${HOME}/.local/share}/QGroundControl"
+    "${XDG_DATA_HOME:-${HOME}/.local/share}/QGroundControl.org"
+  )
+fi
+
+echo "KMU AUV Simulator 완전 제거 대상:"
+for target in "${targets[@]}"; do
+  printf '  - %s\n' "$target"
+done
+if [[ "$KEEP_PACKAGE" -eq 0 ]]; then
+  echo "  - Debian package: ${PACKAGE_NAME}"
+fi
+if [[ "$PURGE_SYSTEM_DEPS" -eq 1 ]]; then
+  echo "  - 설치기가 새로 추가한 APT 패키지와 해당 의존성"
+fi
+
+if [[ "$YES" -eq 0 ]]; then
+  confirmed=0
+  if [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]] && command -v zenity >/dev/null 2>&1; then
+    if zenity --question \
+      --title="KMU AUV Simulator 완전 제거" \
+      --width=560 \
+      --ok-label="완전 삭제" \
+      --cancel-label="취소" \
+      --text="시뮬레이터 작업공간, ArduPilot, QGroundControl, ROS 빌드 결과, 전용 Python 환경과 로그를 삭제합니다. 이 작업은 되돌릴 수 없습니다.\n\n계속하시겠습니까?";
+    then
+      confirmed=1
+    fi
+  else
+    read -r -p "위 항목을 완전히 삭제하려면 DELETE를 입력하세요: " answer
+    [[ "$answer" == "DELETE" ]] && confirmed=1
+  fi
+  [[ "$confirmed" -eq 1 ]] || {
+    echo "[kmu-auv-uninstall] cancelled"
+    exit 0
+  }
+fi
+
+run() {
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    printf '[dry-run]'
+    printf ' %q' "$@"
+    printf '\n'
+    return 0
+  fi
+  "$@"
+}
+
+stop_managed_processes() {
+  local pid cmdline
+  local -a managed_pids=()
+  for proc in /proc/[0-9]*; do
+    pid="${proc##*/}"
+    [[ "$pid" != "$$" && "$pid" != "$PPID" ]] || continue
+    [[ -r "$proc/status" && -r "$proc/cmdline" ]] || continue
+    [[ "$(awk '/^Uid:/ {print $2; exit}' "$proc/status")" == "$(id -u)" ]] || continue
+    cmdline="$(tr '\0' ' ' <"$proc/cmdline" 2>/dev/null || true)"
+    [[ "$cmdline" == *"$INSTALL_ROOT"* ]] || continue
+    managed_pids+=("$pid")
+  done
+  if ((${#managed_pids[@]} == 0)); then
+    return 0
+  fi
+  echo "[kmu-auv-uninstall] stopping simulator processes: ${managed_pids[*]}"
+  run kill -TERM "${managed_pids[@]}" || true
+  if [[ "$DRY_RUN" -eq 0 ]]; then
+    for _ in 1 2 3 4 5; do
+      local alive=0
+      for pid in "${managed_pids[@]}"; do
+        kill -0 "$pid" 2>/dev/null && alive=1
+      done
+      [[ "$alive" -eq 0 ]] && break
+      sleep 0.2
+    done
+    for pid in "${managed_pids[@]}"; do
+      kill -0 "$pid" 2>/dev/null && kill -KILL "$pid" 2>/dev/null || true
+    done
+  fi
+}
+
+remove_tree() {
+  local target="$1"
+  [[ -e "$target" || -L "$target" ]] || return 0
+  require_safe_target "removal" "$target"
+  echo "[kmu-auv-uninstall] removing $target"
+  run rm -rf -- "$target"
+}
+
+stop_managed_processes
+
+# Copy system cleanup metadata before STATE_ROOT is removed.
+TMP_META="$(mktemp -d "${TMPDIR:-/tmp}/kmu-auv-uninstall.XXXXXX")"
+trap 'rm -rf -- "$TMP_META"' EXIT
+[[ ! -f "$APT_MANIFEST" ]] || cp -f "$APT_MANIFEST" "$TMP_META/apt-packages.txt"
+[[ ! -f "$ROS_REPO_MARKER" ]] || : >"$TMP_META/remove-ros-repo"
+[[ ! -f "$ROS_KEY_MARKER" ]] || : >"$TMP_META/remove-ros-key"
+
+for target in "${targets[@]}"; do
+  remove_tree "$target"
+done
+if [[ -d "$DATA_PARENT" ]]; then
+  rmdir --ignore-fail-on-non-empty "$DATA_PARENT" 2>/dev/null || true
+fi
+run rm -f -- /tmp/uuv_mujoco_controller_parity.lock
+
+if [[ "$PURGE_SYSTEM_DEPS" -eq 1 && -s "$TMP_META/apt-packages.txt" ]]; then
+  mapfile -t apt_packages < <(sed '/^[[:space:]]*$/d' "$TMP_META/apt-packages.txt" | sort -u)
+  if ((${#apt_packages[@]} > 0)); then
+    echo "[kmu-auv-uninstall] purging recorded APT packages (${#apt_packages[@]})"
+    run sudo env DEBIAN_FRONTEND=noninteractive apt-get purge -y "${apt_packages[@]}"
+    run sudo env DEBIAN_FRONTEND=noninteractive apt-get autoremove --purge -y
+  fi
+  [[ ! -f "$TMP_META/remove-ros-repo" ]] || run sudo rm -f -- /etc/apt/sources.list.d/ros2.list
+  [[ ! -f "$TMP_META/remove-ros-key" ]] || run sudo rm -f -- /usr/share/keyrings/ros-archive-keyring.gpg
+  run sudo apt-get update
+fi
+
+if [[ "$KEEP_PACKAGE" -eq 0 ]]; then
+  echo "[kmu-auv-uninstall] purging Debian package ${PACKAGE_NAME}"
+  run sudo env DEBIAN_FRONTEND=noninteractive apt-get purge -y "$PACKAGE_NAME"
+fi
+
+echo "[kmu-auv-uninstall] complete"

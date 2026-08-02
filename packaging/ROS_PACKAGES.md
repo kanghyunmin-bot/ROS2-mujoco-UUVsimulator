@@ -10,5 +10,6 @@ Bundled package names:
 - `auv_msg`, `auv`
 - `audio_common_msgs`, `audio_common`, `audio_capture`, `hydrophone_ctrl`
 - `auv_buoy_vision_control`, `auv_lane_vision_control`
+- `kmu26_auv_surface_buoy_mission`
 - `auv_web_gui`, `auv_pinger_homing`
 - `robot_localization`

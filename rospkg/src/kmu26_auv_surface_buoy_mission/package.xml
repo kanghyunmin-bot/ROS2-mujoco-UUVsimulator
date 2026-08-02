@@ -3,28 +3,24 @@
   href="http://download.ros.org/schema/package_format3.xsd"
   schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>auv_lane_vision_control</name>
+  <name>kmu26_auv_surface_buoy_mission</name>
   <version>0.1.0</version>
-  <description>Arena-lane coverage and buoy removal controller for an AUV.</description>
+  <description>Surface buoy collection, lane coverage, and bonus-zone release mission for an AUV.</description>
 
   <maintainer email="kim@example.com">kim</maintainer>
   <license>BSD-3-Clause</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
+  <depend>auv_msg</depend>
   <depend>geometry_msgs</depend>
   <depend>mavros_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
 
-  <exec_depend>rclpy</exec_depend>
-  <exec_depend>ament_index_python</exec_depend>
-  <exec_depend>auv_buoy_vision_control</exec_depend>
-  <exec_depend>kmu26_auv_surface_buoy_mission</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
-
   <test_depend>ament_cmake_gtest</test_depend>
 
   <export>

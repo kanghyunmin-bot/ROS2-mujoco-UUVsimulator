@@ -204,7 +204,7 @@ def generate_launch_description() -> LaunchDescription:
                 ],
             ),
             Node(
-                package="auv_lane_vision_control",
+                package="kmu26_auv_surface_buoy_mission",
                 executable="surface_buoy_mission_node",
                 name="competition_a_surface_buoy_mission",
                 output="screen",
@@ -220,18 +220,22 @@ def generate_launch_description() -> LaunchDescription:
                         "surface_top_bbox_topic": (
                             "/vision/surface/top/buoy_bbox"
                         ),
-                        # Course-A score hoop (-6.8, 0.0) transformed into
-                        # the shared hydrophone start/arena frame.
-                        "bonus_zone_center_x_m": 9.081,
-                        "bonus_zone_center_y_m": -1.305,
+                        # safe-bounds center (7.131, -1.305) + (1.95, 0.0)
+                        # reproduces the Course-A score hoop center.
+                        "bonus_zone_center_offset_x_m": 1.95,
+                        "bonus_zone_center_offset_y_m": 0.0,
                         "bonus_zone_radius_m": 0.65,
+                        "bonus_zone_lane_clearance_m": 0.35,
+                        "min_surface_lane_segment_length_m": 1.0,
                         "bonus_approach_distance_m": 1.0,
                         "bonus_dump_heading_rad": 0.0,
                         "score_zone_world_z_m": -0.30,
                         "collection_depth_m": 0.30,
                         "dump_depth_m": 0.85,
-                        "dump_exit_radius_m": 0.70,
-                        "batch_capacity": 3,
+                        "dump_forward_overshoot_m": 0.70,
+                        "dump_reverse_distance_m": 1.10,
+                        "dump_forward_timeout_sec": 4.0,
+                        "dump_reverse_timeout_sec": 4.0,
                         "surface_total_buoy_count": 5,
                         "max_dump_attempts": 3,
                         "top_net_roi_x_min": 0.10,

@@ -121,6 +121,7 @@ make_ros_zip "${ROOT_DIR}/rospkg/src/kmu26_auv_hydrophone/audio_capture" audio_c
 make_ros_zip "${ROOT_DIR}/rospkg/src/kmu26_auv_hydrophone/hydrophone_ctrl" hydrophone_ctrl hydrophone_ctrl
 make_ros_zip "${ROOT_DIR}/rospkg/src/kmu26_auv_buoy_vision_control" kmu26_auv_buoy_vision_control kmu26_auv_buoy_vision_control
 make_ros_zip "${ROOT_DIR}/rospkg/src/kmu26_auv_vision_control/auv_lane_vision_control" auv_lane_vision_control auv_lane_vision_control
+make_ros_zip "${ROOT_DIR}/rospkg/src/kmu26_auv_surface_buoy_mission" kmu26_auv_surface_buoy_mission kmu26_auv_surface_buoy_mission
 make_ros_zip "${ROOT_DIR}/rospkg/src/kmu26_auv_web_gui" kmu26_auv_web_gui kmu26_auv_web_gui
 make_ros_zip "${ROOT_DIR}/rospkg/src/kmu26_pinger_homing" kmu26_pinger_homing kmu26_pinger_homing
 make_ros_zip "${ROOT_DIR}/rospkg/src/robot_localization" robot_localization robot_localization
@@ -157,14 +158,18 @@ cp -a "$BUNDLE_ROOT" "${DEB_ROOT}/opt/kmu-auv-simulator/bundle"
 cp -a "${ROOT_DIR}/VERSION" "${DEB_ROOT}/opt/kmu-auv-simulator/VERSION"
 cp -a "${ROOT_DIR}/packaging/bin/kmu-auv-simulator" "${DEB_ROOT}/usr/bin/"
 cp -a "${ROOT_DIR}/packaging/bin/kmu-auv-simulator-installer" "${DEB_ROOT}/usr/bin/"
+cp -a "${ROOT_DIR}/packaging/bin/kmu-auv-simulator-uninstall" "${DEB_ROOT}/usr/bin/"
 cp -a "${ROOT_DIR}/packaging/applications/"*.desktop "${DEB_ROOT}/usr/share/applications/"
 cp -a "${ROOT_DIR}/packaging/icons/kmu-auv-simulator.svg" \
   "${DEB_ROOT}/usr/share/icons/hicolor/scalable/apps/"
 cp -a "${ROOT_DIR}/packaging/debian/postinst" "${DEB_ROOT}/DEBIAN/postinst"
 cp -a "${ROOT_DIR}/packaging/debian/prerm" "${DEB_ROOT}/DEBIAN/prerm"
+cp -a "${ROOT_DIR}/packaging/debian/postrm" "${DEB_ROOT}/DEBIAN/postrm"
 chmod 0755 "${DEB_ROOT}/DEBIAN/postinst" "${DEB_ROOT}/DEBIAN/prerm" \
+  "${DEB_ROOT}/DEBIAN/postrm" \
   "${DEB_ROOT}/usr/bin/kmu-auv-simulator" \
-  "${DEB_ROOT}/usr/bin/kmu-auv-simulator-installer"
+  "${DEB_ROOT}/usr/bin/kmu-auv-simulator-installer" \
+  "${DEB_ROOT}/usr/bin/kmu-auv-simulator-uninstall"
 INSTALLED_KIB="$(du -sk "$DEB_ROOT" | awk '{print $1}')"
 cat >"${DEB_ROOT}/DEBIAN/control" <<EOF
 Package: ${PACKAGE_NAME}
@@ -193,6 +198,10 @@ KMU AUV Simulator ${VERSION} / Ubuntu 22.04 amd64
 2. Ubuntu 앱 센터에서 설치를 누릅니다.
 3. 앱 목록에서 'KMU AUV Simulator'를 실행합니다.
 4. 첫 실행 설치 창에서 '설치 시작'을 누르고 관리자 암호를 입력합니다.
+
+완전 삭제는 앱 목록의 'KMU AUV 시뮬레이터 완전 제거'를 실행합니다.
+작업공간, ArduPilot, QGroundControl, ROS 빌드 결과, 전용 Python 환경과 로그가
+삭제된 뒤 Debian 패키지도 제거됩니다.
 
 인터넷 연결이 필요합니다. 프로그램 데이터는 사용자 홈의
 ~/.local/share/kmu-auv-simulator/current 아래에 설치됩니다.

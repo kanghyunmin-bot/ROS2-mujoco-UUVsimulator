@@ -1,11 +1,12 @@
 KMU AUV Simulator bundle
-Version: 2026.08.01
+Version: 2026.08.02
 Target: Ubuntu 22.04 amd64 / ROS 2 Humble
 
 - Native DEB with application-menu launchers and SVG icon
 - Graphical first-run/repair installer
 - MuJoCo current runtime, competition scene and YOLO model
-- 14 required ROS 2 source packages
+- 15 required ROS 2 source packages
+- Complete application-data uninstaller with optional tracked APT purge
 - ArduPilot compatibility patch and pinned checkout contract
 - SHA-256 manifests
 

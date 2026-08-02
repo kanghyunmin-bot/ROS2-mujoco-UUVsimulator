@@ -12,6 +12,9 @@ while [[ $# -gt 0 ]]; do
     --install|--repair)
       exec kmu-auv-simulator-installer --reinstall
       ;;
+    --uninstall|--remove|--purge)
+      exec kmu-auv-simulator-uninstall
+      ;;
     --desktop|--tk)
       MODE="desktop"
       shift
@@ -26,10 +29,11 @@ while [[ $# -gt 0 ]]; do
       ;;
     -h|--help)
       cat <<'USAGE'
-Usage: kmu-auv-simulator [--desktop|--headless|--install]
+Usage: kmu-auv-simulator [--desktop|--headless|--install|--uninstall]
 
 Starts the installed KMU AUV simulator. The first invocation opens the
-installer automatically. Set UUV_SIM_INSTALL_ROOT to use another workspace.
+installer automatically. --uninstall completely removes the managed simulator
+data and package. Set UUV_SIM_INSTALL_ROOT to use another workspace.
 USAGE
       exit 0
       ;;

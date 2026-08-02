@@ -1,4 +1,4 @@
-release: 2026.08.01
+release: 2026.08.02
 package: kmu-auv-simulator
 architecture: amd64
 target_os: Ubuntu 22.04
@@ -12,9 +12,11 @@ included_changes:
 - Installs heavy dependencies only during first-run; DEB postinst performs no network build.
 - Bundles the fixed 1280x720@10Hz front/top camera runtime and upward camera model.
 - Bundles ROS score-release, collector-state and physical score-zone contracts.
-- Bundles auv_lane_vision_control with the separate surface C++ node and single-owner RC handoff.
+- Bundles the independent kmu26_auv_surface_buoy_mission package and topic-only RC handoff.
 - Bundles auv_dvl_a50_msg, hydrophone_ctrl, auv_msg and all required autonomy packages.
 - Removes stale kmu26_mission_fsm and hit25 package-name assumptions from the installer.
 - Pins MuJoCo 3.8.0, NumPy below 2, and the validated ArduPilot commit/patch.
 - Preserves mutable runtime configuration and logs during an in-place payload update.
+- Adds a complete uninstaller for the workspace, ArduPilot, QGroundControl, ROS build trees, dedicated venv, state and logs.
+- Records newly installed APT packages so an explicit --purge-system-deps removal can restore shared system dependencies when requested.
 - Excludes source-control metadata, build trees, caches, logs, rosbag files and ArduPilot source.
