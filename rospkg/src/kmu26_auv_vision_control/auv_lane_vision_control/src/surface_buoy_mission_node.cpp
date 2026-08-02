@@ -61,9 +61,10 @@ double parse_double_field(const std::string & text, const std::string & key, dou
  *   2. 수집 수심으로 상승한 뒤 수면 레인을 순회하며 정면 카메라로 부표를 찾는다.
  *   3. 정면 bbox를 화면 중심에 맞추고 전진한다. 부표가 정면 영상의 아래쪽에서
  *      상단 카메라 영역으로 넘어가거나 CollectorState가 netted=true이면 포획으로 센다.
- *   4. 수집망이 차거나 모든 레인을 확인하면 가점존으로 이동하여 배출한다.
- *   5. 상단 카메라로 수집망이 비었는지 확인하고, 필요하면 최대 횟수만큼 재배출한다.
- *   6. 작업 수심으로 복귀한 뒤 /mission/surface_complete를 발행하고 RC 제어권을 놓는다.
+ *   4. 포획 후에도 같은 레인의 같은 끝점을 향해 주행하고, 끝점에서만 레인을 완료한다.
+ *   5. 완료한 레인에서 부표를 잡았을 때만 가점존으로 이동해 최대 3회 배출한다.
+ *   6. 미완료 레인이 있으면 수집 수심으로 돌아가 다음 레인을 처리한다.
+ *   7. 모든 레인을 완료한 뒤 작업 수심으로 복귀해 /mission/surface_complete를 발행한다.
  *
  * 이 노드는 물리적인 부표 삭제를 직접 수행하지 않는다. /mission/score_release에
  * RELEASE 계약을 발행하고, 시뮬레이터가 위치 조건과 계약을 함께 검사해 배출을 확정한다.
@@ -377,6 +378,7 @@ private:
     if (msg->netted && !msg->target_id.empty() && captured_ids_.insert(msg->target_id).second) {
       if (active_) {
         ++batch_capture_count_;
+        ++lane_capture_count_;
         capture_confirmed_ = true;
       }
       publish_counts();
@@ -409,6 +411,7 @@ private:
     final_cycle_ = contract.find("final=true") != std::string::npos;
     work_depth_m_ = parse_double_field(contract, "work_depth", dump_depth_m_);
     batch_capture_count_ = 0;
+    lane_capture_count_ = 0;
     dump_attempt_count_ = 0;
     surface_lane_completed_.assign(lane_planner_->lanes().size(), false);
     active_surface_lane_.reset();
@@ -483,7 +486,18 @@ private:
   {
     select_surface_lane();
     if (!active_surface_lane_) {
-      finish_search();
+      transition(State::RETURN_TO_WORK_DEPTH, "all surface lanes complete");
+      return;
+    }
+    transition(State::SURFACE_SEARCH, reason);
+  }
+
+  void resume_current_lane(const std::string & reason)
+  {
+    // 정렬/포획 상태로 빠질 때 active_surface_lane_, 진행 방향, 목표 끝점은 바꾸지 않았다.
+    // 따라서 새 레인을 선택하지 않고 SURFACE_SEARCH로만 돌아가면 기존 경로가 그대로 이어진다.
+    if (!active_surface_lane_) {
+      transition(State::RETURN_TO_WORK_DEPTH, "surface lane unavailable");
       return;
     }
     transition(State::SURFACE_SEARCH, reason);
@@ -502,6 +516,7 @@ private:
     surface_lane_start_ = choice->start;
     surface_lane_finish_ = choice->finish;
     surface_heading_to_start_ = true;
+    lane_capture_count_ = 0;
   }
 
   void run_search(std::array<uint16_t, 18> & channels)
@@ -513,7 +528,7 @@ private:
       return;
     }
     if (!active_surface_lane_) {
-      finish_search();
+      transition(State::RETURN_TO_WORK_DEPTH, "all surface lanes complete");
       return;
     }
     // 한 레인의 시작점에 먼저 간 뒤 반대 끝까지 주행하면 해당 레인 검색을 완료한 것으로 본다.
@@ -523,10 +538,7 @@ private:
         surface_heading_to_start_ = false;
       } else {
         surface_lane_completed_[*active_surface_lane_] = true;
-        select_surface_lane();
-        if (!active_surface_lane_) {
-          finish_search();
-        }
+        finish_current_lane();
       }
     }
   }
@@ -535,7 +547,7 @@ private:
   {
     hold_depth(channels, collection_depth_m_);
     if (!recent_front()) {
-      begin_search("front target lost");
+      resume_current_lane("front target lost; resume current lane");
       return;
     }
     // 정면 영상 중심 x=0.5를 기준으로 yaw를 보정한다. 중심선이 일정 시간 안정되고
@@ -579,28 +591,33 @@ private:
     if (capture_confirmed_ || transitioned_to_top) {
       if (!capture_confirmed_) {
         ++batch_capture_count_;
+        ++lane_capture_count_;
         publish_counts();
       }
       capture_confirmed_ = false;
-      if (batch_capture_count_ >= static_cast<uint32_t>(batch_capacity_)) {
-        transition(State::MOVE_TO_BONUS, "batch capacity reached");
-      } else {
-        begin_search("capture committed by front-to-top transition");
-      }
+      resume_current_lane("capture committed; resume current lane");
       return;
     }
     if (state_age() >= capture_forward_s_) {
-      begin_search("capture not confirmed; resume surface lanes");
+      resume_current_lane("capture not confirmed; resume current lane");
     }
   }
 
-  void finish_search()
+  void finish_current_lane()
   {
-    // 전 레인을 돌았을 때 망에 부표가 있으면 가점존으로, 없으면 곧바로 작업 수심으로 복귀한다.
-    if (batch_capture_count_ > 0) {
-      transition(State::MOVE_TO_BONUS, "all surface lanes searched");
+    // 이 함수는 레인 끝점에 도착해 surface_lane_completed_를 true로 만든 뒤에만 호출된다.
+    // 해당 레인에서 포획한 것이 있으면 먼저 배출하고, 없으면 바로 다음 레인을 선택한다.
+    active_surface_lane_.reset();
+    if (lane_capture_count_ > 0) {
+      transition(State::MOVE_TO_BONUS, "current lane complete with captures");
+      return;
+    }
+
+    select_surface_lane();
+    if (active_surface_lane_) {
+      transition(State::SURFACE_SEARCH, "empty lane complete; start next lane");
     } else {
-      transition(State::RETURN_TO_WORK_DEPTH, "surface lanes empty");
+      transition(State::RETURN_TO_WORK_DEPTH, "all surface lanes complete");
     }
   }
 
@@ -672,11 +689,20 @@ private:
         top_status, dump_attempt_count_, static_cast<uint32_t>(max_dump_attempts_)))
     {
       batch_capture_count_ = 0;
-      transition(
-        State::RETURN_TO_WORK_DEPTH,
-        top_status == TopNetStatus::STALE ? "top stale after dump" :
-        top_status == TopNetStatus::EMPTY ? "collector empty after dump" :
-        "maximum dump attempts reached");
+      lane_capture_count_ = 0;
+      const bool lanes_remaining = std::any_of(
+        surface_lane_completed_.begin(), surface_lane_completed_.end(),
+        [](bool completed) {return !completed;});
+      if (lanes_remaining) {
+        // 다음 레인은 수집 수심에 도착한 run_ascend() -> begin_search()에서 선택한다.
+        transition(State::ASCEND_TO_COLLECTION_DEPTH, "dump complete; continue remaining lanes");
+      } else {
+        transition(
+          State::RETURN_TO_WORK_DEPTH,
+          top_status == TopNetStatus::STALE ? "top stale after final lane dump" :
+          top_status == TopNetStatus::EMPTY ? "collector empty after final lane dump" :
+          "maximum dump attempts reached after final lane");
+      }
       return;
     }
     transition(State::RETURN_TO_BONUS_CENTER, "collector still occupied");
@@ -939,7 +965,8 @@ private:
   std::optional<rclcpp::Time> top_occupied_since_, top_empty_since_, align_started_at_;
   bool initial_top_check_done_{false}, capture_confirmed_{false};
   double capture_front_start_y_{0.0}, capture_front_min_y_{0.0};
-  uint32_t batch_capture_count_{0}, dump_attempt_count_{0}, cycle_id_{0}, last_completed_cycle_{0};
+  uint32_t batch_capture_count_{0}, lane_capture_count_{0}, dump_attempt_count_{0};
+  uint32_t cycle_id_{0}, last_completed_cycle_{0};
   bool final_cycle_{false}, active_{false}, release_sent_{false};
   std::string pending_start_;
   std::set<std::string> captured_ids_, deposited_ids_;
