@@ -47,7 +47,7 @@ Place both repositories in the same ROS 2 workspace and build them:
 
 ```bash
 cd ~/catkin_ws/src
-git clone https://github.com/2026-kmu-underwater-robot/kmu26_mission_fsm.git
+git clone https://github.com/2026-kmu-underwater-robot/auv_pinger_homing.git
 git clone https://github.com/2026-kmu-underwater-robot/auv_web_gui.git
 cd ~/catkin_ws
 source /opt/ros/humble/setup.bash
