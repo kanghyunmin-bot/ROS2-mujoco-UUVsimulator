@@ -281,7 +281,7 @@ check_runtime_files() {
   if grep -Fq '"UUV_MUJOCO_TIMESTEP": "0.005"' "${runtime}/gui/sim_stack_env_defaults.py" \
     && grep -Fq '"UUV_COURSE_BUOY_TRACK_CSV_ENABLE": "0"' "${runtime}/gui/sim_stack_env_defaults.py" \
     && grep -Fq 'DEFAULT_CAMERA_PRESET_ID = "competition_fixed"' "${runtime}/gui/sim_stack_launch_command.py"; then
-    pass "current runtime includes balanced physics and fixed 720p/10Hz camera defaults"
+    pass "current runtime includes balanced physics and fixed 720p front-17Hz/top-10Hz camera defaults"
   else
     fail "current runtime does not include expected competition runtime defaults"
   fi

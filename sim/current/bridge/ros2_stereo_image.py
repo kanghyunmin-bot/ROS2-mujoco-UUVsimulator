@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import os
 import threading
 import time
@@ -15,7 +16,8 @@ import numpy as np
 CAMERA_NAMES = ("stereo_left", "stereo_right", "top_up")
 DEFAULT_IMAGE_WIDTH = 1280
 DEFAULT_IMAGE_HEIGHT = 720
-DEFAULT_IMAGE_HZ = 10.0
+DEFAULT_FRONT_IMAGE_HZ = 17.0
+DEFAULT_TOP_IMAGE_HZ = 10.0
 DEFAULT_COMPRESSED_JPEG_QUALITY = 75
 REAL_CAMERA_RAW_TOPIC = "/camera/camera/color/image_raw"
 REAL_CAMERA_COMPRESSED_TOPIC = "/camera/camera/color/image_raw/compressed"
@@ -44,7 +46,11 @@ def configure_stereo_image_runtime(
     del image_width, image_height, image_hz
     bridge._stereo_image_width = DEFAULT_IMAGE_WIDTH
     bridge._stereo_image_height = DEFAULT_IMAGE_HEIGHT
-    bridge._stereo_image_hz = DEFAULT_IMAGE_HZ
+    bridge._stereo_image_hz = DEFAULT_FRONT_IMAGE_HZ
+    bridge._top_image_hz = DEFAULT_TOP_IMAGE_HZ
+    bridge._stereo_image_use_sim_time_rate = _env_bool(
+        "ROS2_UUV_CAMERA_SIM_TIME_RATE", False
+    )
     bridge._stereo_image_jpeg_quality = _env_int(
         "ROS2_UUV_CAMERA_JPEG_QUALITY",
         DEFAULT_COMPRESSED_JPEG_QUALITY,
@@ -191,29 +197,55 @@ def schedule_stereo_image_jobs(
     jobs: Any,
     add_rate_limited: Any,
     *,
+    sim_t: float,
     builders: dict[str, object],
 ) -> None:
     del add_rate_limited
     if not bool(getattr(self, "_stereo_image_enabled", False)):
         return
-    hz = float(getattr(self, "_stereo_image_hz", DEFAULT_IMAGE_HZ))
+    front_hz = float(getattr(self, "_stereo_image_hz", DEFAULT_FRONT_IMAGE_HZ))
+    top_hz = float(getattr(self, "_top_image_hz", DEFAULT_TOP_IMAGE_HZ))
     camera_jobs = (
-        (self.pub_stereo_left_image, "/stereo/left/image_raw", "stereo_left_image"),
-        (self.pub_stereo_right_image, "/stereo/right/image_raw", "stereo_right_image"),
-        (self.pub_real_camera_raw, REAL_CAMERA_RAW_TOPIC, "real_camera_raw"),
-        (self.pub_real_camera_compressed, REAL_CAMERA_COMPRESSED_TOPIC, "real_camera_compressed"),
-        (self.pub_real_camera_info, REAL_CAMERA_INFO_TOPIC, "real_camera_info"),
-        (self.pub_top_camera_raw, TOP_CAMERA_RAW_TOPIC, "top_camera_raw"),
-        (self.pub_top_camera_compressed, TOP_CAMERA_COMPRESSED_TOPIC, "top_camera_compressed"),
-        (self.pub_top_camera_info, TOP_CAMERA_INFO_TOPIC, "top_camera_info"),
+        (self.pub_stereo_left_image, "/stereo/left/image_raw", "stereo_left_image", front_hz),
+        (self.pub_stereo_right_image, "/stereo/right/image_raw", "stereo_right_image", front_hz),
+        (self.pub_real_camera_raw, REAL_CAMERA_RAW_TOPIC, "real_camera_raw", front_hz),
+        (self.pub_real_camera_compressed, REAL_CAMERA_COMPRESSED_TOPIC, "real_camera_compressed", front_hz),
+        (self.pub_real_camera_info, REAL_CAMERA_INFO_TOPIC, "real_camera_info", front_hz),
+        (self.pub_top_camera_raw, TOP_CAMERA_RAW_TOPIC, "top_camera_raw", top_hz),
+        (self.pub_top_camera_compressed, TOP_CAMERA_COMPRESSED_TOPIC, "top_camera_compressed", top_hz),
+        (self.pub_top_camera_info, TOP_CAMERA_INFO_TOPIC, "top_camera_info", top_hz),
     )
-    for publisher, label, builder_key in camera_jobs:
-        if _camera_wall_due(self, label, hz):
+    for publisher, label, builder_key, hz in camera_jobs:
+        if _camera_due(self, label, hz, sim_t=sim_t):
             jobs.add(publisher, label, builders[builder_key], on_demand=True)
 
 
+def _camera_due(self: Any, label: str, hz: float, *, sim_t: float) -> bool:
+    if bool(getattr(self, "_stereo_image_use_sim_time_rate", False)):
+        return _camera_sim_due(self, label, hz, sim_t=sim_t)
+    return _camera_wall_due(self, label, hz)
+
+
+def _camera_sim_due(self: Any, label: str, hz: float, *, sim_t: float) -> bool:
+    """Keep each camera topic at its configured rate per simulation second."""
+    now_sim = float(sim_t)
+    next_by_topic = getattr(self, "_stereo_image_next_sim", None)
+    if next_by_topic is None:
+        next_by_topic = {}
+        self._stereo_image_next_sim = next_by_topic
+    next_sim = float(next_by_topic.get(label, now_sim))
+    period_s = 1.0 / max(float(hz), 1.0e-6)
+    if now_sim + 1.0e-9 < next_sim:
+        return False
+    next_sim += period_s
+    if next_sim <= now_sim - period_s:
+        next_sim = now_sim + period_s
+    next_by_topic[label] = next_sim
+    return True
+
+
 def _camera_wall_due(self: Any, label: str, hz: float) -> bool:
-    """Keep detector input at 10 Hz even when heavy course physics is sub-real-time."""
+    """Keep each camera topic at its configured rate when physics is sub-real-time."""
     now_wall = time.monotonic()
     next_by_topic = getattr(self, "_stereo_image_next_wall", None)
     if next_by_topic is None:
@@ -304,22 +336,11 @@ def build_stereo_compressed_image_msg_from_rgb(
 ) -> Any | None:
     if rgb is None:
         return None
-    cv2 = _load_cv2()
-    if cv2 is None:
-        _warn_once(self, "compressed_camera_cv2", "OpenCV is unavailable; compressed camera topic is disabled")
-        return None
-    try:
-        bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-        quality = int(getattr(self, "_stereo_image_jpeg_quality", DEFAULT_COMPRESSED_JPEG_QUALITY))
-        ok, encoded = cv2.imencode(".jpg", bgr, [int(cv2.IMWRITE_JPEG_QUALITY), quality])
-    except Exception as exc:
-        _warn_once(self, f"{camera_name}_compressed", f"compressed camera render failed: {exc}")
-        return None
-    if not ok:
-        _warn_once(self, f"{camera_name}_compressed_encode", "compressed camera JPEG encode failed")
+    encoded = _encode_camera_jpeg(self, camera_name, rgb)
+    if encoded is None:
         return None
     return build_stereo_compressed_image_msg_from_jpeg(
-        self, camera_name, encoded.tobytes(), stamp, frame_id=frame_id
+        self, camera_name, encoded, stamp, frame_id=frame_id
     )
 
 
@@ -496,41 +517,64 @@ def _latest_async_camera_jpeg(self: Any, camera_name: str) -> bytes | None:
 def _encode_camera_jpeg(
     self: Any, camera_name: str, rgb: np.ndarray
 ) -> bytes | None:
-    cv2 = _load_cv2()
-    if cv2 is None:
-        _warn_once(
+    quality = int(
+        getattr(
             self,
-            "compressed_camera_cv2",
-            "OpenCV is unavailable; compressed camera topic is disabled",
+            "_stereo_image_jpeg_quality",
+            DEFAULT_COMPRESSED_JPEG_QUALITY,
         )
-        return None
-    try:
-        bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-        quality = int(
-            getattr(
-                self,
-                "_stereo_image_jpeg_quality",
-                DEFAULT_COMPRESSED_JPEG_QUALITY,
+    )
+    cv2 = _load_cv2()
+    if cv2 is not None:
+        try:
+            bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+            ok, encoded = cv2.imencode(
+                ".jpg", bgr, [int(cv2.IMWRITE_JPEG_QUALITY), quality]
             )
-        )
-        ok, encoded = cv2.imencode(
-            ".jpg", bgr, [int(cv2.IMWRITE_JPEG_QUALITY), quality]
-        )
+        except Exception as exc:
+            _warn_once(
+                self,
+                "compressed_camera_cv2_encode",
+                f"OpenCV JPEG encode failed; using Pillow fallback: {exc}",
+            )
+        else:
+            if ok:
+                return encoded.tobytes()
+            _warn_once(
+                self,
+                "compressed_camera_cv2_encode",
+                "OpenCV JPEG encode failed; using Pillow fallback",
+            )
+
+    try:
+        from PIL import Image
+
+        output = io.BytesIO()
+        image = Image.fromarray(np.ascontiguousarray(rgb, dtype=np.uint8))
+        image.save(output, format="JPEG", quality=quality)
+        encoded_bytes = output.getvalue()
     except Exception as exc:
         _warn_once(
             self,
             f"{camera_name}_compressed",
-            f"compressed camera render failed: {exc}",
+            f"compressed camera JPEG encode failed: {exc}",
         )
         return None
-    if not ok:
+
+    if not encoded_bytes:
         _warn_once(
             self,
             f"{camera_name}_compressed_encode",
-            "compressed camera JPEG encode failed",
+            "compressed camera JPEG encode produced an empty image",
         )
         return None
-    return encoded.tobytes()
+    if cv2 is None:
+        _warn_once(
+            self,
+            "compressed_camera_pillow",
+            "OpenCV is unavailable; compressed camera uses Pillow JPEG fallback",
+        )
+    return encoded_bytes
 
 
 def _load_cv2() -> Any | None:

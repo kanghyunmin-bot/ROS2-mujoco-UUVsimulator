@@ -16,8 +16,8 @@ def print_ros_bridge_launch_summary(args, *, enable_ros2: bool) -> None:
         )
         if args.ros2_images:
             print(
-                "[bridge] fixed camera transport enabled: forward stereo + top_up "
-                "at 1280x720@10Hz (on demand).",
+                "[bridge] fixed camera transport enabled: forward stereo 1280x720@17Hz + "
+                "top_up 1280x720@10Hz (on demand).",
                 flush=True,
             )
         if args.ros2_real_pkg_compat and args.sitl:

@@ -17,6 +17,9 @@ COURSE_BUOY_MAX_VISIBLE_FLOAT_MASS_KG = 0.060
 COURSE_BUOY_MIN_SURFACE_CENTER_Z_M = 0.045
 COURSE_BUOY_COM_POS = (0.0, 0.0, -0.035)
 COURSE_BUOY_COB_POS = (0.0, 0.0, 0.035)
+RED_SURFACE_QUAT = (0.7071068, 0.0, 0.7071068, 0.0)
+RED_SURFACE_COM_POS = (0.070, 0.0, 0.035)
+RED_SURFACE_COB_POS = (0.0, 0.0, 0.035)
 
 
 def floats(value: str | None) -> tuple[float, ...]:
@@ -53,6 +56,17 @@ def pos_z(element: ET.Element) -> float:
     return pos[2]
 
 
+def rotated_z(quat: tuple[float, ...], vector: tuple[float, ...]) -> float:
+    """MuJoCo wxyz quaternion으로 회전한 로컬 벡터의 world z를 반환한다."""
+    w, x, y, z = quat
+    vx, vy, vz = vector
+    return (
+        2.0 * (x * z - w * y) * vx
+        + 2.0 * (y * z + w * x) * vy
+        + (1.0 - 2.0 * (x * x + y * y)) * vz
+    )
+
+
 def geom_z_bounds(element: ET.Element) -> tuple[float, float]:
     size = floats(element.get("size"))
     if len(size) < 3:
@@ -85,6 +99,12 @@ def surface_float_center_z(mass_kg: float) -> float:
 def check_tank(root: ET.Element, failures: list[str]) -> None:
     option = root.find("option")
     require(option is not None and option.get("integrator") == "Euler", "course dynamics require the stable Euler integrator", failures)
+    visual_map = root.find("./visual/map")
+    require(
+        visual_map is not None and math.isclose(float_attr(visual_map, "znear"), 0.001, abs_tol=1e-9),
+        "camera near-plane scale must remain 0.001 so the top camera can see the collector",
+        failures,
+    )
     geoms = {geom.get("name"): geom for geom in root.findall(".//geom") if geom.get("name")}
     meshes = {mesh.get("name"): mesh for mesh in root.findall(".//mesh") if mesh.get("name")}
     cameras = {camera.get("name"): camera for camera in root.findall(".//camera") if camera.get("name")}
@@ -204,6 +224,12 @@ def check_red_buoys(bodies: dict[str, ET.Element], failures: list[str]) -> None:
     for body_name in red:
         body = bodies[body_name]
         prefix = body_name.removesuffix("_float")
+        body_quat = floats(body.get("quat"))
+        require(
+            body_quat == RED_SURFACE_QUAT,
+            f"{body_name} must start lying horizontally",
+            failures,
+        )
         require(math.isclose(float_attr(body, "gravcomp"), 0.0, abs_tol=1e-9), f"{body_name} must not pin depth with gravcomp", failures)
         mass_kg = inertial_mass(body)
         target_z = surface_float_center_z(mass_kg)
@@ -211,8 +237,8 @@ def check_red_buoys(bodies: dict[str, ET.Element], failures: list[str]) -> None:
         require(inertial is not None, f"{body_name} missing explicit inertia", failures)
         if inertial is not None:
             require(
-                floats(inertial.get("pos")) == COURSE_BUOY_COM_POS,
-                f"{body_name} CoM must stay 35mm below its body frame",
+                floats(inertial.get("pos")) == RED_SURFACE_COM_POS,
+                f"{body_name} CoM must stabilize its horizontal surface pose",
                 failures,
             )
         com_site = child_by_name(body, "site", f"{prefix}_com_site")
@@ -220,10 +246,12 @@ def check_red_buoys(bodies: dict[str, ET.Element], failures: list[str]) -> None:
         require(com_site is not None, f"{body_name} missing explicit CoM site", failures)
         require(cob_site is not None, f"{body_name} missing explicit CoB site", failures)
         if com_site is not None:
-            require(floats(com_site.get("pos")) == COURSE_BUOY_COM_POS, f"{prefix} CoM site is inconsistent with inertia", failures)
+            require(floats(com_site.get("pos")) == RED_SURFACE_COM_POS, f"{prefix} CoM site is inconsistent with inertia", failures)
         if cob_site is not None:
-            require(floats(cob_site.get("pos")) == COURSE_BUOY_COB_POS, f"{prefix} CoB must stay 70mm above its CoM", failures)
-        initial_center_z = pos_z(body) + (pos_z(cob_site) if cob_site is not None else 0.0)
+            require(floats(cob_site.get("pos")) == RED_SURFACE_COB_POS, f"{prefix} CoB must stay 70mm above its CoM", failures)
+        initial_center_z = pos_z(body)
+        if cob_site is not None and len(body_quat) == 4:
+            initial_center_z += rotated_z(body_quat, floats(cob_site.get("pos")))
         require(abs(initial_center_z - target_z) < 1e-3, f"{body_name} must start at surface equilibrium z={target_z:.3f}, got {initial_center_z:.3f}", failures)
         require(
             mass_kg <= COURSE_BUOY_MAX_VISIBLE_FLOAT_MASS_KG,

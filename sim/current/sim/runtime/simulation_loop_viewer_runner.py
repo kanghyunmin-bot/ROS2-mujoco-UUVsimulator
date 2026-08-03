@@ -38,7 +38,8 @@ def run_viewer_runtime_loop(runtime: Any, viewer: Any) -> None:
     )
     print(
         "[runtime] viewer loop cadence: "
-        f"step_dt={cadence.target_dt:.4f}s sensor_dt={cadence.sensor_dt:.4f}s "
+        f"step_dt={cadence.target_dt:.4f}s wall_step_dt={cadence.wall_step_dt:.4f}s "
+        f"speed={cadence.speed_factor:.2f}x sensor_dt={cadence.sensor_dt:.4f}s "
         f"viewer_dt={cadence.viewer_dt:.4f}s catchup_steps={cadence.max_catchup_steps} "
         f"sensor_catchup={cadence.max_sensor_catchup} "
         f"max_step_lag={cadence.max_step_lag_s:.3f}s max_sensor_lag={cadence.max_sensor_lag_s:.3f}s",
@@ -151,7 +152,7 @@ def _viewer_frame_would_starve_runtime(*, cadence: Any, clocks: Any, now_wall: f
 
     step_lag = float(now_wall) - float(clocks.next_step_wall)
     sensor_lag = float(now_wall) - float(clocks.next_sensor_wall)
-    step_budget = max(3.0 * float(cadence.target_dt), 0.75 * float(cadence.viewer_dt))
+    step_budget = max(3.0 * float(cadence.wall_step_dt), 0.75 * float(cadence.viewer_dt))
     sensor_budget = max(float(cadence.sensor_dt), 0.75 * float(cadence.viewer_dt))
     return step_lag > step_budget or sensor_lag > sensor_budget
 

@@ -33,7 +33,7 @@ def run_paused_step(
 ) -> AxisCommand:
     publish_ros = float(now_wall) + 1.0e-9 >= float(clocks.next_sensor_wall)
     axis = run_step(True, publish_ros)
-    clocks.next_step_wall = now_wall + cadence.target_dt
+    clocks.next_step_wall = now_wall + cadence.wall_step_dt
     if publish_ros:
         # Advance from the scheduled deadline so pause/unpause does not drift
         # the sensor clock. Bound catch-up to one publish per viewer iteration.

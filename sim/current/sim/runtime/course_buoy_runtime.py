@@ -126,12 +126,15 @@ class CourseBuoyRuntime:
     water_surface_z: float
     water_current_world: np.ndarray
     update_period_s: float
+    force_update_period_s: float
+    force_near_field_m: float
     track_csv_path: Path | None
     track_interval_s: float
     log: Callable[[str], None]
     _last_track_time_s: float = -1.0
     _track_header_written: bool = False
     _next_update_time_s: float = -1.0
+    _next_force_update_time_by_body: dict[int, float] = field(default_factory=dict)
     _score_release_phase_check_time_s: float = -1.0
     _score_release_phase_allowed: bool = False
     _score_release_phase_state: str = ""
@@ -365,6 +368,11 @@ class CourseBuoyRuntime:
             water_surface_z=float(water_surface_z),
             water_current_world=cls._normalized_water_current(water_current_world),
             update_period_s=cls._update_period_s(env_float),
+            force_update_period_s=cls._force_update_period_s(env_float),
+            force_near_field_m=max(
+                0.25,
+                float(env_float("UUV_COURSE_BUOY_FORCE_NEAR_FIELD_M", 1.5)),
+            ),
             track_csv_path=cls._track_csv_path(env_flag("UUV_COURSE_BUOY_TRACK_CSV_ENABLE", True)),
             track_interval_s=float(env_float("UUV_COURSE_BUOY_TRACK_CSV_INTERVAL_S", 0.25)),
             log=log,
@@ -393,6 +401,7 @@ class CourseBuoyRuntime:
             )
             runtime._log_float_contract()
             runtime._log_track_contract()
+            runtime._log_force_update_contract()
         return runtime
 
     @classmethod
@@ -461,6 +470,8 @@ class CourseBuoyRuntime:
             water_surface_z=float(water_surface_z),
             water_current_world=cls._normalized_water_current(water_current_world),
             update_period_s=0.0,
+            force_update_period_s=0.0,
+            force_near_field_m=1.5,
             track_csv_path=None,
             track_interval_s=0.25,
             log=log,
@@ -475,6 +486,7 @@ class CourseBuoyRuntime:
         # mission updates, and the net entrance force must be refreshed on the
         # same cadence as the 10 g float hydrodynamics.
         logic_due = self._update_due()
+        now_s = float(getattr(self.data, "time", 0.0))
         (
             contacted_buoy_bodies,
             rake_contacted_buoy_bodies,
@@ -485,6 +497,17 @@ class CourseBuoyRuntime:
         self._velocity_cache_active = True
         try:
             for buoy in self.buoys:
+                if not self._force_refresh_due(
+                    buoy,
+                    now_s=now_s,
+                    contacted=buoy.body_id in contacted_buoy_bodies,
+                    rake_contacted=buoy.body_id in rake_contacted_buoy_bodies,
+                ):
+                    # xfrc_applied is a persistent MuJoCo control input.  The
+                    # fast competition profile intentionally holds the last
+                    # runtime-owned force between far-field refreshes.  Exact
+                    # mode has a zero period and always follows the old path.
+                    continue
                 self._clear_persisted_runtime_wrench(buoy)
                 vehicle_contact = buoy.body_id in contacted_buoy_bodies
                 was_detached = buoy.detached
@@ -863,9 +886,9 @@ class CourseBuoyRuntime:
             return
         slot = self._collector_net_slot_local(buoy)
         collector_local = np.asarray(self.model.body_pos[self.collector_body_id], dtype=np.float64)
-        # Slots describe the center of buoyancy. A weld relpose describes the
-        # buoy body frame, whose CoB is +35 mm in the current physical contract.
-        # Converting the slot to the body frame avoids a 35 mm activation snap.
+        # Slots describe the center of buoyancy while a weld relpose describes
+        # the buoy body frame. Converting with each buoy's local CoB supports
+        # both upright underwater floats and horizontal surface floats.
         cob_local = (
             np.asarray(self.model.site_pos[buoy.cob_site_id], dtype=np.float64)
             if buoy.cob_site_id >= 0
@@ -1168,12 +1191,71 @@ class CourseBuoyRuntime:
             f"update_hz={'physics' if update_hz <= 0.0 else f'{update_hz:.1f}'}"
         )
 
+    def _log_force_update_contract(self) -> None:
+        period_s = float(self.force_update_period_s)
+        if period_s <= 0.0:
+            self.log("[course] buoy force cadence: exact physics-step refresh")
+            return
+        self.log(
+            "[course] buoy force cadence: "
+            f"far_field={1.0 / period_s:.1f}Hz(sim), "
+            f"near_field=physics(within {self.force_near_field_m:.2f}m/contact/net)"
+        )
+
     @staticmethod
     def _update_period_s(env_float: Callable[[str, float], float]) -> float:
         update_hz = float(env_float("UUV_COURSE_BUOY_UPDATE_HZ", 0.0))
         if update_hz <= 0.0:
             return 0.0
         return 1.0 / max(1.0, min(500.0, update_hz))
+
+    @staticmethod
+    def _force_update_period_s(env_float: Callable[[str, float], float]) -> float:
+        update_hz = float(env_float("UUV_COURSE_BUOY_FORCE_UPDATE_HZ", 0.0))
+        if update_hz <= 0.0:
+            return 0.0
+        return 1.0 / max(10.0, min(500.0, update_hz))
+
+    def _force_refresh_due(
+        self,
+        buoy: CourseBuoy,
+        *,
+        now_s: float,
+        contacted: bool,
+        rake_contacted: bool,
+    ) -> bool:
+        period_s = float(self.force_update_period_s)
+        if period_s <= 0.0:
+            return True
+
+        urgent = bool(
+            contacted
+            or rake_contacted
+            or buoy.netting
+            or buoy.netted
+            or buoy.net_reverse_released
+            or buoy.net_score_released
+            or buoy.surface_escape_active
+        )
+        if not urgent and self.vehicle_root_body_id >= 0:
+            vehicle_pos = self.data.xpos[self.vehicle_root_body_id]
+            buoy_pos = self.data.xpos[buoy.body_id]
+            dx = float(vehicle_pos[0]) - float(buoy_pos[0])
+            dy = float(vehicle_pos[1]) - float(buoy_pos[1])
+            dz = float(vehicle_pos[2]) - float(buoy_pos[2])
+            near_m = float(self.force_near_field_m)
+            urgent = dx * dx + dy * dy + dz * dz <= near_m * near_m
+
+        body_id = int(buoy.body_id)
+        if urgent:
+            self._next_force_update_time_by_body[body_id] = float(now_s) + period_s
+            return True
+
+        next_due = self._next_force_update_time_by_body.get(body_id, -1.0)
+        if next_due < 0.0 or float(now_s) + 1.0e-9 >= float(next_due):
+            self._next_force_update_time_by_body[body_id] = float(now_s) + period_s
+            return True
+        return False
 
     def _update_due(self) -> bool:
         period_s = float(self.update_period_s)

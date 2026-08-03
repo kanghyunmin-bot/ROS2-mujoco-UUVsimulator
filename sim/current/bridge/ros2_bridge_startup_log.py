@@ -26,7 +26,8 @@ def log_ros2_bridge_startup(self) -> None:
         self.node.get_logger().info(
             "Camera image bridge active: /stereo/left/image_raw, /stereo/right/image_raw, "
             f"{REAL_CAMERA_RAW_TOPIC}, {REAL_CAMERA_COMPRESSED_TOPIC}, {TOP_CAMERA_RAW_TOPIC} "
-            f"({self._stereo_image_width}x{self._stereo_image_height}@{self._stereo_image_hz:.1f}Hz on demand)."
+            f"(front={self._stereo_image_width}x{self._stereo_image_height}@{self._stereo_image_hz:.1f}Hz, "
+            f"top={self._stereo_image_width}x{self._stereo_image_height}@{self._top_image_hz:.1f}Hz on demand)."
         )
 
 

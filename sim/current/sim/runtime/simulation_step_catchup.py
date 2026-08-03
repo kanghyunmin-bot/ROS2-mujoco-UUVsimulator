@@ -24,7 +24,7 @@ def run_simulation_catchup(
         axis = run_step(False, publish_ros)
         if publish_ros:
             clocks.next_sensor_wall += cadence.sensor_dt
-        clocks.next_step_wall += cadence.target_dt
+        clocks.next_step_wall += cadence.wall_step_dt
         step_count += 1
         now_wall = time.perf_counter()
     if step_count >= cadence.max_catchup_steps and now_wall >= clocks.next_step_wall:

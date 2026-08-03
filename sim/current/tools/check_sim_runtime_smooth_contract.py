@@ -43,6 +43,21 @@ def check_viewer_cadence_can_catch_up_dropped_frames() -> None:
     _assert(cadence.max_sleep_s <= 0.002, "viewer loop sleep must stay responsive to sim/input events")
 
 
+def check_speed_factor_shortens_only_wall_step_deadline() -> None:
+    old_value = os.environ.get("UUV_MUJOCO_SPEED_FACTOR")
+    os.environ["UUV_MUJOCO_SPEED_FACTOR"] = "2"
+    try:
+        cadence = build_viewer_loop_cadence(timestep=0.005, ros2_sensor_hz=200.0, viewer_fps=30.0)
+    finally:
+        if old_value is None:
+            os.environ.pop("UUV_MUJOCO_SPEED_FACTOR", None)
+        else:
+            os.environ["UUV_MUJOCO_SPEED_FACTOR"] = old_value
+    _assert(abs(cadence.target_dt - 0.005) < 1.0e-12, "speed mode must not alter MuJoCo timestep")
+    _assert(abs(cadence.wall_step_dt - 0.0025) < 1.0e-12, "2x mode must halve wall step deadline")
+    _assert(abs(cadence.speed_factor - 2.0) < 1.0e-12, "2x speed factor was not retained")
+
+
 def check_step_catchup_drops_long_backlog_without_future_sleep() -> None:
     cadence = build_viewer_loop_cadence(timestep=0.002, ros2_sensor_hz=50.0, viewer_fps=60.0)
     clocks = ViewerLoopClocks(next_step_wall=0.0, next_sensor_wall=0.0, next_viewer_wall=0.0)
@@ -206,6 +221,7 @@ def check_state_only_viewer_sync_preserves_external_wrenches() -> None:
 
 def main() -> int:
     check_viewer_cadence_can_catch_up_dropped_frames()
+    check_speed_factor_shortens_only_wall_step_deadline()
     check_step_catchup_drops_long_backlog_without_future_sleep()
     check_sensor_catchup_drops_long_backlog_without_future_sleep()
     check_headless_publish_survives_slow_physics()

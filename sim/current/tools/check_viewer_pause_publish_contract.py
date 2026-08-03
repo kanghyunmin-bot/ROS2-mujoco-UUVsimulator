@@ -24,6 +24,8 @@ def main() -> int:
 
     cadence = ViewerLoopCadence(
         target_dt=0.005,
+        wall_step_dt=0.005,
+        speed_factor=1.0,
         sensor_dt=0.1,
         viewer_dt=0.05,
         max_catchup_steps=4,

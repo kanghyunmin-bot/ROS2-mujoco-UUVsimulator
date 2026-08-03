@@ -14,6 +14,7 @@ SITL_NO_REBUILD="${SITL_NO_REBUILD:-1}"
 SITL_FORCE_NO_DISPLAY=1
 SITL_EKF_STABLE=1
 ROS2_MODE="full"
+COMPETITION_FAST=0
 MUJOCO_EXTRA_ARGS=()
 START_WRAPPER_EPOCH="$(date +%s)"
 UUV_RUN_MODE="$(printf '%s' "${UUV_RUN_MODE:-closed_loop}" | tr '[:upper:]' '[:lower:]')"
@@ -47,6 +48,7 @@ Options:
   --ros2            Launch MuJoCo with full lightweight ROS2 bridge (default)
   --ros2-real-pkg-compat
                     Launch MuJoCo with ROS2 sensors + compat MAVROS surface only
+  --competition-fast Run the simulation-only competition mission profile at 2x target speed
   --param-tune      Enable parameter-tuning pipeline (QGC/MAVProxy background mode)
   --direct-mavlink  Use direct UDP outputs without MAVProxy (experimental)
   --legacy-mavproxy Use legacy MAVProxy fan-out instead of direct UDP outputs (default)
@@ -75,6 +77,7 @@ Examples:
   ./start_sitl_mujoco_mj311.sh -- --headless
   ./start_sitl_mujoco_mj311.sh -- --qgc-video
   ./start_sitl_mujoco_mj311.sh --ros2-real-pkg-compat -- --headless
+  ./start_sitl_mujoco_mj311.sh --competition-fast --ros2 -- --ros2-images
 USAGE
 }
 
@@ -102,6 +105,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --ros2-real-pkg-compat)
       ROS2_MODE="compat"
+      shift
+      ;;
+    --competition-fast)
+      COMPETITION_FAST=1
       shift
       ;;
     --param-tune)
@@ -153,6 +160,49 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+configure_competition_fast_mode() {
+  [[ "$COMPETITION_FAST" -eq 1 ]] || return 0
+
+  # Keep MuJoCo data.time authoritative.  The speed factor changes only the
+  # wall deadline between 5 ms physics steps; ROS timestamps are never scaled.
+  export UUV_COMPETITION_FAST=1
+  export UUV_MUJOCO_SPEED_FACTOR="${UUV_FAST_SPEED_FACTOR:-2.0}"
+  export UUV_MUJOCO_TIMESTEP="${UUV_FAST_TIMESTEP:-0.005}"
+  export UUV_COURSE_BUOY_TIMESTEP_GUARD=1
+  export UUV_COURSE_BUOY_FORCE_UPDATE_HZ="${UUV_FAST_BUOY_FORCE_HZ:-20}"
+  export UUV_COURSE_BUOY_FORCE_NEAR_FIELD_M="${UUV_FAST_BUOY_NEAR_FIELD_M:-1.25}"
+  export UUV_COURSE_BUOY_TRACK_CSV_ENABLE="${UUV_FAST_TRACK_CSV_ENABLE:-0}"
+  export UUV_MUJOCO_VIEWER_MAX_CATCHUP_STEPS="${UUV_FAST_VIEWER_CATCHUP_STEPS:-8}"
+  export UUV_MUJOCO_VIEWER_MAX_SYNC_SKIP="${UUV_FAST_VIEWER_MAX_SYNC_SKIP:-2}"
+  export UUV_MUJOCO_CATCHUP_WINDOW_S="${UUV_FAST_CATCHUP_WINDOW_S:-0.100}"
+  export UUV_MUJOCO_SENSOR_CATCHUP_WINDOW_S="${UUV_FAST_SENSOR_CATCHUP_WINDOW_S:-0.100}"
+  export UUV_MUJOCO_MAX_STEP_LAG_S="${UUV_FAST_MAX_STEP_LAG_S:-0.100}"
+  export UUV_MUJOCO_MAX_SENSOR_LAG_S="${UUV_FAST_MAX_SENSOR_LAG_S:-0.100}"
+  export UUV_MUJOCO_DROP_EXCESS_STEP_LAG=0
+  # Camera frames must keep their contract rates in simulation time.  A
+  # wall-clock scheduler would halve the vehicle-side rate at 2x.
+  export ROS2_UUV_CAMERA_SIM_TIME_RATE=1
+  # GLFW/VirtualGL contexts are not safe when the passive viewer and offscreen
+  # camera renderer make them current from separate threads.  Keep camera
+  # rendering on the simulation thread in the interactive fast profile.
+  export ROS2_UUV_ASYNC_CAMERA_RENDER="${UUV_FAST_ASYNC_CAMERA_RENDER:-0}"
+
+  # 100 samples per simulation second at 2x requires 200 publishes per wall
+  # second.  Thruster scheduling itself is driven by simulation time.
+  export SITL_SENSOR_HZ_DEFAULT="${UUV_FAST_SENSOR_WALL_HZ:-200}"
+  export SITL_THRUSTER_LOOP_HZ_DEFAULT="${UUV_FAST_THRUSTER_SIM_HZ:-100}"
+  export SITL_SPEEDUP_DEFAULT="${UUV_FAST_SITL_SPEEDUP:-2}"
+  export ROS2_UUV_SPIN_HZ="${UUV_FAST_ROS_SPIN_HZ:-200}"
+
+  echo "[start] competition-fast mode: target=${UUV_MUJOCO_SPEED_FACTOR}x timestep=${UUV_MUJOCO_TIMESTEP}s"
+  echo "[start] competition-fast camera cadence: front=17Hz top=10Hz simulation time"
+  echo "[start] competition-fast camera renderer: synchronous (VirtualGL safe)"
+  echo "[start] competition-fast buoy forces: far=${UUV_COURSE_BUOY_FORCE_UPDATE_HZ}Hz(sim), near/contact/net=physics rate"
+  echo "[start] competition-fast is simulation-only; use the normal launcher for final exact-physics validation"
+}
+
+configure_competition_fast_mode
 
 if [[ "$ROS2_MODE" == "compat" ]]; then
   if [[ "$SITL_DIRECT_MAVLINK" -eq 1 ]]; then

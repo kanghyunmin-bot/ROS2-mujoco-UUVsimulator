@@ -6,6 +6,7 @@
   </extension>
   <visual>
     <headlight diffuse="0.9 0.9 0.9" ambient="0.3 0.3 0.3" specular="0.1 0.1 0.1" />
+    <map znear="0.001" />
   </visual>
   <default>
     <site size="0.03" rgba="0 0 0 0" />
@@ -78,10 +79,10 @@
     <geom name="course_b_score_hoop_08" type="capsule" fromto="7.330 -0.530 0.035 7.550 0.000 0.035" size="0.080" rgba="0.00 0.24 1.00 1" contype="0" conaffinity="0" group="0" />
     <geom name="course_a_entry_gate" type="box" pos="-15.7 -13.4 0.030" size="0.65 0.20 0.020" rgba="0.05 0.85 0.52 0.55" contype="0" conaffinity="0" group="0" />
     <geom name="course_b_entry_gate" type="box" pos="15.7 -13.4 0.030" size="0.65 0.20 0.020" rgba="0.05 0.85 0.52 0.55" contype="0" conaffinity="0" group="0" />
-    <body name="course_buoy_a_red_1_float" childclass="course_buoy_float_contact" gravcomp="0" pos="-7.190 3.376 0.035">
+    <body name="course_buoy_a_red_1_float" childclass="course_buoy_float_contact" gravcomp="0" pos="-7.190 3.376 0.070" quat="0.7071068 0 0.7071068 0">
       <joint name="course_buoy_a_red_1_free" type="free" />
-      <inertial pos="0 0 -0.035" mass="0.010" diaginertia="0.000025 0.000025 0.000020" />
-      <site name="course_buoy_a_red_1_com_site" pos="0 0 -0.035" size="0.006" rgba="1 0.2 0.2 0.65" group="4" />
+      <inertial pos="0.070 0 0.035" mass="0.010" diaginertia="0.000025 0.000025 0.000020" />
+      <site name="course_buoy_a_red_1_com_site" pos="0.070 0 0.035" size="0.006" rgba="1 0.2 0.2 0.65" group="4" />
       <site name="course_buoy_a_red_1_cob_site" pos="0 0 0.035" size="0.006" rgba="0.2 1 0.4 0.65" group="4" />
       <geom name="course_buoy_a_red_1_fluid_proxy" type="sphere" size="0.0001" density="0" contype="0" conaffinity="0" rgba="0 0 0 0" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
       <geom pos="0 0 0.035" name="course_buoy_a_red_1_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.04 0.02 1" density="0" contype="2" conaffinity="1" condim="3" friction="0.35 0.01 0.001" solref="0.060 1" solimp="0.82 0.95 0.003" />
@@ -102,10 +103,10 @@
       <geom name="course_buoy_a_red_1_lower_bolt" type="cylinder" pos="0 0 -0.217" size="0.008 0.010" rgba="0.04 0.04 0.04 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_red_1_lower_jig" type="cylinder" pos="0 0 -0.243" size="0.028 0.010" rgba="0.95 0.95 0.92 1" density="0" contype="0" conaffinity="0" group="0" />
     </body>
-    <body name="course_buoy_a_red_2_float" childclass="course_buoy_float_contact" gravcomp="0" pos="-8.923 -6.311 0.035">
+    <body name="course_buoy_a_red_2_float" childclass="course_buoy_float_contact" gravcomp="0" pos="-8.923 -6.311 0.070" quat="0.7071068 0 0.7071068 0">
       <joint name="course_buoy_a_red_2_free" type="free" />
-      <inertial pos="0 0 -0.035" mass="0.010" diaginertia="0.000025 0.000025 0.000020" />
-      <site name="course_buoy_a_red_2_com_site" pos="0 0 -0.035" size="0.006" rgba="1 0.2 0.2 0.65" group="4" />
+      <inertial pos="0.070 0 0.035" mass="0.010" diaginertia="0.000025 0.000025 0.000020" />
+      <site name="course_buoy_a_red_2_com_site" pos="0.070 0 0.035" size="0.006" rgba="1 0.2 0.2 0.65" group="4" />
       <site name="course_buoy_a_red_2_cob_site" pos="0 0 0.035" size="0.006" rgba="0.2 1 0.4 0.65" group="4" />
       <geom name="course_buoy_a_red_2_fluid_proxy" type="sphere" size="0.0001" density="0" contype="0" conaffinity="0" rgba="0 0 0 0" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
       <geom pos="0 0 0.035" name="course_buoy_a_red_2_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.04 0.02 1" density="0" contype="2" conaffinity="1" condim="3" friction="0.35 0.01 0.001" solref="0.060 1" solimp="0.82 0.95 0.003" />
@@ -126,10 +127,10 @@
       <geom name="course_buoy_a_red_2_lower_bolt" type="cylinder" pos="0 0 -0.217" size="0.008 0.010" rgba="0.04 0.04 0.04 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_red_2_lower_jig" type="cylinder" pos="0 0 -0.243" size="0.028 0.010" rgba="0.95 0.95 0.92 1" density="0" contype="0" conaffinity="0" group="0" />
     </body>
-    <body name="course_buoy_a_red_3_float" childclass="course_buoy_float_contact" gravcomp="0" pos="-14.759 -3.903 0.035">
+    <body name="course_buoy_a_red_3_float" childclass="course_buoy_float_contact" gravcomp="0" pos="-14.759 -3.903 0.070" quat="0.7071068 0 0.7071068 0">
       <joint name="course_buoy_a_red_3_free" type="free" />
-      <inertial pos="0 0 -0.035" mass="0.010" diaginertia="0.000025 0.000025 0.000020" />
-      <site name="course_buoy_a_red_3_com_site" pos="0 0 -0.035" size="0.006" rgba="1 0.2 0.2 0.65" group="4" />
+      <inertial pos="0.070 0 0.035" mass="0.010" diaginertia="0.000025 0.000025 0.000020" />
+      <site name="course_buoy_a_red_3_com_site" pos="0.070 0 0.035" size="0.006" rgba="1 0.2 0.2 0.65" group="4" />
       <site name="course_buoy_a_red_3_cob_site" pos="0 0 0.035" size="0.006" rgba="0.2 1 0.4 0.65" group="4" />
       <geom name="course_buoy_a_red_3_fluid_proxy" type="sphere" size="0.0001" density="0" contype="0" conaffinity="0" rgba="0 0 0 0" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
       <geom pos="0 0 0.035" name="course_buoy_a_red_3_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.04 0.02 1" density="0" contype="2" conaffinity="1" condim="3" friction="0.35 0.01 0.001" solref="0.060 1" solimp="0.82 0.95 0.003" />
@@ -150,10 +151,10 @@
       <geom name="course_buoy_a_red_3_lower_bolt" type="cylinder" pos="0 0 -0.217" size="0.008 0.010" rgba="0.04 0.04 0.04 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_red_3_lower_jig" type="cylinder" pos="0 0 -0.243" size="0.028 0.010" rgba="0.95 0.95 0.92 1" density="0" contype="0" conaffinity="0" group="0" />
     </body>
-    <body name="course_buoy_b_red_1_float" childclass="course_buoy_float_contact" gravcomp="0" pos="8.200 3.200 0.035">
+    <body name="course_buoy_b_red_1_float" childclass="course_buoy_float_contact" gravcomp="0" pos="8.200 3.200 0.070" quat="0.7071068 0 0.7071068 0">
       <joint name="course_buoy_b_red_1_free" type="free" />
-      <inertial pos="0 0 -0.035" mass="0.010" diaginertia="0.000025 0.000025 0.000020" />
-      <site name="course_buoy_b_red_1_com_site" pos="0 0 -0.035" size="0.006" rgba="1 0.2 0.2 0.65" group="4" />
+      <inertial pos="0.070 0 0.035" mass="0.010" diaginertia="0.000025 0.000025 0.000020" />
+      <site name="course_buoy_b_red_1_com_site" pos="0.070 0 0.035" size="0.006" rgba="1 0.2 0.2 0.65" group="4" />
       <site name="course_buoy_b_red_1_cob_site" pos="0 0 0.035" size="0.006" rgba="0.2 1 0.4 0.65" group="4" />
       <geom name="course_buoy_b_red_1_fluid_proxy" type="sphere" size="0.0001" density="0" contype="0" conaffinity="0" rgba="0 0 0 0" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
       <geom pos="0 0 0.035" name="course_buoy_b_red_1_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.04 0.02 1" density="0" contype="2" conaffinity="1" condim="3" friction="0.35 0.01 0.001" solref="0.060 1" solimp="0.82 0.95 0.003" />
@@ -174,10 +175,10 @@
       <geom name="course_buoy_b_red_1_lower_bolt" type="cylinder" pos="0 0 -0.217" size="0.008 0.010" rgba="0.04 0.04 0.04 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_red_1_lower_jig" type="cylinder" pos="0 0 -0.243" size="0.028 0.010" rgba="0.95 0.95 0.92 1" density="0" contype="0" conaffinity="0" group="0" />
     </body>
-    <body name="course_buoy_b_red_2_float" childclass="course_buoy_float_contact" gravcomp="0" pos="13.600 -2.000 0.035">
+    <body name="course_buoy_b_red_2_float" childclass="course_buoy_float_contact" gravcomp="0" pos="13.600 -2.000 0.070" quat="0.7071068 0 0.7071068 0">
       <joint name="course_buoy_b_red_2_free" type="free" />
-      <inertial pos="0 0 -0.035" mass="0.010" diaginertia="0.000025 0.000025 0.000020" />
-      <site name="course_buoy_b_red_2_com_site" pos="0 0 -0.035" size="0.006" rgba="1 0.2 0.2 0.65" group="4" />
+      <inertial pos="0.070 0 0.035" mass="0.010" diaginertia="0.000025 0.000025 0.000020" />
+      <site name="course_buoy_b_red_2_com_site" pos="0.070 0 0.035" size="0.006" rgba="1 0.2 0.2 0.65" group="4" />
       <site name="course_buoy_b_red_2_cob_site" pos="0 0 0.035" size="0.006" rgba="0.2 1 0.4 0.65" group="4" />
       <geom name="course_buoy_b_red_2_fluid_proxy" type="sphere" size="0.0001" density="0" contype="0" conaffinity="0" rgba="0 0 0 0" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
       <geom pos="0 0 0.035" name="course_buoy_b_red_2_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.04 0.02 1" density="0" contype="2" conaffinity="1" condim="3" friction="0.35 0.01 0.001" solref="0.060 1" solimp="0.82 0.95 0.003" />
@@ -198,10 +199,10 @@
       <geom name="course_buoy_b_red_2_lower_bolt" type="cylinder" pos="0 0 -0.217" size="0.008 0.010" rgba="0.04 0.04 0.04 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_red_2_lower_jig" type="cylinder" pos="0 0 -0.243" size="0.028 0.010" rgba="0.95 0.95 0.92 1" density="0" contype="0" conaffinity="0" group="0" />
     </body>
-    <body name="course_buoy_b_red_3_float" childclass="course_buoy_float_contact" gravcomp="0" pos="15.100 6.500 0.035">
+    <body name="course_buoy_b_red_3_float" childclass="course_buoy_float_contact" gravcomp="0" pos="15.100 6.500 0.070" quat="0.7071068 0 0.7071068 0">
       <joint name="course_buoy_b_red_3_free" type="free" />
-      <inertial pos="0 0 -0.035" mass="0.010" diaginertia="0.000025 0.000025 0.000020" />
-      <site name="course_buoy_b_red_3_com_site" pos="0 0 -0.035" size="0.006" rgba="1 0.2 0.2 0.65" group="4" />
+      <inertial pos="0.070 0 0.035" mass="0.010" diaginertia="0.000025 0.000025 0.000020" />
+      <site name="course_buoy_b_red_3_com_site" pos="0.070 0 0.035" size="0.006" rgba="1 0.2 0.2 0.65" group="4" />
       <site name="course_buoy_b_red_3_cob_site" pos="0 0 0.035" size="0.006" rgba="0.2 1 0.4 0.65" group="4" />
       <geom name="course_buoy_b_red_3_fluid_proxy" type="sphere" size="0.0001" density="0" contype="0" conaffinity="0" rgba="0 0 0 0" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
       <geom pos="0 0 0.035" name="course_buoy_b_red_3_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.04 0.02 1" density="0" contype="2" conaffinity="1" condim="3" friction="0.35 0.01 0.001" solref="0.060 1" solimp="0.82 0.95 0.003" />
@@ -222,10 +223,10 @@
       <geom name="course_buoy_b_red_3_lower_bolt" type="cylinder" pos="0 0 -0.217" size="0.008 0.010" rgba="0.04 0.04 0.04 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_red_3_lower_jig" type="cylinder" pos="0 0 -0.243" size="0.028 0.010" rgba="0.95 0.95 0.92 1" density="0" contype="0" conaffinity="0" group="0" />
     </body>
-    <body name="course_buoy_a_red_4_float" childclass="course_buoy_float_contact" gravcomp="0" pos="-8.760 -2.456 0.035">
+    <body name="course_buoy_a_red_4_float" childclass="course_buoy_float_contact" gravcomp="0" pos="-8.760 -2.456 0.070" quat="0.7071068 0 0.7071068 0">
       <joint name="course_buoy_a_red_4_free" type="free" />
-      <inertial pos="0 0 -0.035" mass="0.010" diaginertia="0.000025 0.000025 0.000020" />
-      <site name="course_buoy_a_red_4_com_site" pos="0 0 -0.035" size="0.006" rgba="1 0.2 0.2 0.65" group="4" />
+      <inertial pos="0.070 0 0.035" mass="0.010" diaginertia="0.000025 0.000025 0.000020" />
+      <site name="course_buoy_a_red_4_com_site" pos="0.070 0 0.035" size="0.006" rgba="1 0.2 0.2 0.65" group="4" />
       <site name="course_buoy_a_red_4_cob_site" pos="0 0 0.035" size="0.006" rgba="0.2 1 0.4 0.65" group="4" />
       <geom name="course_buoy_a_red_4_fluid_proxy" type="sphere" size="0.0001" density="0" contype="0" conaffinity="0" rgba="0 0 0 0" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
       <geom pos="0 0 0.035" name="course_buoy_a_red_4_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.04 0.02 1" density="0" contype="2" conaffinity="1" condim="3" friction="0.35 0.01 0.001" solref="0.060 1" solimp="0.82 0.95 0.003" />
@@ -246,10 +247,10 @@
       <geom name="course_buoy_a_red_4_lower_bolt" type="cylinder" pos="0 0 -0.217" size="0.008 0.010" rgba="0.04 0.04 0.04 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_red_4_lower_jig" type="cylinder" pos="0 0 -0.243" size="0.028 0.010" rgba="0.95 0.95 0.92 1" density="0" contype="0" conaffinity="0" group="0" />
     </body>
-    <body name="course_buoy_a_red_5_float" childclass="course_buoy_float_contact" gravcomp="0" pos="-2.259 1.623 0.035">
+    <body name="course_buoy_a_red_5_float" childclass="course_buoy_float_contact" gravcomp="0" pos="-2.259 1.623 0.070" quat="0.7071068 0 0.7071068 0">
       <joint name="course_buoy_a_red_5_free" type="free" />
-      <inertial pos="0 0 -0.035" mass="0.010" diaginertia="0.000025 0.000025 0.000020" />
-      <site name="course_buoy_a_red_5_com_site" pos="0 0 -0.035" size="0.006" rgba="1 0.2 0.2 0.65" group="4" />
+      <inertial pos="0.070 0 0.035" mass="0.010" diaginertia="0.000025 0.000025 0.000020" />
+      <site name="course_buoy_a_red_5_com_site" pos="0.070 0 0.035" size="0.006" rgba="1 0.2 0.2 0.65" group="4" />
       <site name="course_buoy_a_red_5_cob_site" pos="0 0 0.035" size="0.006" rgba="0.2 1 0.4 0.65" group="4" />
       <geom name="course_buoy_a_red_5_fluid_proxy" type="sphere" size="0.0001" density="0" contype="0" conaffinity="0" rgba="0 0 0 0" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
       <geom pos="0 0 0.035" name="course_buoy_a_red_5_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.04 0.02 1" density="0" contype="2" conaffinity="1" condim="3" friction="0.35 0.01 0.001" solref="0.060 1" solimp="0.82 0.95 0.003" />
@@ -270,10 +271,10 @@
       <geom name="course_buoy_a_red_5_lower_bolt" type="cylinder" pos="0 0 -0.217" size="0.008 0.010" rgba="0.04 0.04 0.04 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_a_red_5_lower_jig" type="cylinder" pos="0 0 -0.243" size="0.028 0.010" rgba="0.95 0.95 0.92 1" density="0" contype="0" conaffinity="0" group="0" />
     </body>
-    <body name="course_buoy_b_red_4_float" childclass="course_buoy_float_contact" gravcomp="0" pos="4.500 -7.800 0.035">
+    <body name="course_buoy_b_red_4_float" childclass="course_buoy_float_contact" gravcomp="0" pos="4.500 -7.800 0.070" quat="0.7071068 0 0.7071068 0">
       <joint name="course_buoy_b_red_4_free" type="free" />
-      <inertial pos="0 0 -0.035" mass="0.010" diaginertia="0.000025 0.000025 0.000020" />
-      <site name="course_buoy_b_red_4_com_site" pos="0 0 -0.035" size="0.006" rgba="1 0.2 0.2 0.65" group="4" />
+      <inertial pos="0.070 0 0.035" mass="0.010" diaginertia="0.000025 0.000025 0.000020" />
+      <site name="course_buoy_b_red_4_com_site" pos="0.070 0 0.035" size="0.006" rgba="1 0.2 0.2 0.65" group="4" />
       <site name="course_buoy_b_red_4_cob_site" pos="0 0 0.035" size="0.006" rgba="0.2 1 0.4 0.65" group="4" />
       <geom name="course_buoy_b_red_4_fluid_proxy" type="sphere" size="0.0001" density="0" contype="0" conaffinity="0" rgba="0 0 0 0" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
       <geom pos="0 0 0.035" name="course_buoy_b_red_4_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.04 0.02 1" density="0" contype="2" conaffinity="1" condim="3" friction="0.35 0.01 0.001" solref="0.060 1" solimp="0.82 0.95 0.003" />
@@ -294,10 +295,10 @@
       <geom name="course_buoy_b_red_4_lower_bolt" type="cylinder" pos="0 0 -0.217" size="0.008 0.010" rgba="0.04 0.04 0.04 1" density="0" contype="0" conaffinity="0" group="0" />
       <geom name="course_buoy_b_red_4_lower_jig" type="cylinder" pos="0 0 -0.243" size="0.028 0.010" rgba="0.95 0.95 0.92 1" density="0" contype="0" conaffinity="0" group="0" />
     </body>
-    <body name="course_buoy_b_red_5_float" childclass="course_buoy_float_contact" gravcomp="0" pos="11.800 8.700 0.035">
+    <body name="course_buoy_b_red_5_float" childclass="course_buoy_float_contact" gravcomp="0" pos="11.800 8.700 0.070" quat="0.7071068 0 0.7071068 0">
       <joint name="course_buoy_b_red_5_free" type="free" />
-      <inertial pos="0 0 -0.035" mass="0.010" diaginertia="0.000025 0.000025 0.000020" />
-      <site name="course_buoy_b_red_5_com_site" pos="0 0 -0.035" size="0.006" rgba="1 0.2 0.2 0.65" group="4" />
+      <inertial pos="0.070 0 0.035" mass="0.010" diaginertia="0.000025 0.000025 0.000020" />
+      <site name="course_buoy_b_red_5_com_site" pos="0.070 0 0.035" size="0.006" rgba="1 0.2 0.2 0.65" group="4" />
       <site name="course_buoy_b_red_5_cob_site" pos="0 0 0.035" size="0.006" rgba="0.2 1 0.4 0.65" group="4" />
       <geom name="course_buoy_b_red_5_fluid_proxy" type="sphere" size="0.0001" density="0" contype="0" conaffinity="0" rgba="0 0 0 0" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
       <geom pos="0 0 0.035" name="course_buoy_b_red_5_float_geom" type="ellipsoid" size="0.055 0.055 0.085" rgba="1.00 0.04 0.02 1" density="0" contype="2" conaffinity="1" condim="3" friction="0.35 0.01 0.001" solref="0.060 1" solimp="0.82 0.95 0.003" />

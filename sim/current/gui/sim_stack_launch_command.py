@@ -4,15 +4,15 @@ from __future__ import annotations
 
 DEFAULT_CAMERA_WIDTH = "1280"
 DEFAULT_CAMERA_HEIGHT = "720"
-DEFAULT_CAMERA_HZ = "10"
+DEFAULT_CAMERA_HZ = "17"
 DEFAULT_CAMERA_PRESET_ID = "competition_fixed"
 FIXED_CAMERA_CONFIG = {
     "preset_id": DEFAULT_CAMERA_PRESET_ID,
-    "label": "1280x720 @ 10Hz (fixed)",
+    "label": "front 1280x720 @ 17Hz / top 1280x720 @ 10Hz (fixed)",
     "width": 1280,
     "height": 720,
-    "hz": 10.0,
-    "hz_arg": "10",
+    "hz": 17.0,
+    "hz_arg": "17",
 }
 CAMERA_PRESETS: tuple[dict[str, object], ...] = ()
 

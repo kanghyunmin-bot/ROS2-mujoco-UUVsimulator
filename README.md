@@ -98,6 +98,20 @@ cd sim/current
 ROS 2 브리지 없이 물리 런타임만 확인하려면 `--no-ros2`를 추가한다. 실제
 MAVROS/차량 패키지와 동일한 통합면은 `--ros2-real-pkg-compat` 모드를 사용한다.
 
+VirtualGL GPU 뷰어로 대회 미션을 목표 2배속으로 반복 검증하려면 별도 빠른
+모드를 사용한다.
+
+```bash
+cd sim/current
+./start_competition_fast_vgl.sh --no-reset --keep-eeprom --ros2 -- --ros2-images
+```
+
+이 모드는 MuJoCo timestep `0.005초`, 목표 RTF `2.0`, SITL speedup `2`를 함께
+설정한다. `/clock`과 센서 stamp는 가공하지 않고 MuJoCo `data.time`을 그대로
+사용한다. 먼 대회 부표의 유체력은 20 Hz(sim time)로 유지·갱신하지만 AUV
+1.25 m 이내, 실제 접촉 중, 수집망 진입/포획/배출 중인 부표는 매 물리 스텝
+계산한다. 최종 물리 합격 판정은 일반 실행 모드에서 다시 수행해야 한다.
+
 ## 시스템 구성
 
 ```text

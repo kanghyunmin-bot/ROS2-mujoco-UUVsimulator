@@ -26,7 +26,9 @@ def schedule_ros_publish_jobs(
     schedule_core_ros_jobs(self, jobs, add_rate_limited, builders=builders)
     schedule_ping360_ros_jobs(self, jobs, add_rate_limited, builders=builders)
     schedule_hydrophone_jobs(self, jobs, add_rate_limited, builders=builders)
-    schedule_stereo_image_jobs(self, jobs, add_rate_limited, builders=builders)
+    schedule_stereo_image_jobs(
+        self, jobs, add_rate_limited, sim_t=sim_t, builders=builders
+    )
     if not self._real_pkg_compat:
         schedule_dvl_ros_jobs(
             self,

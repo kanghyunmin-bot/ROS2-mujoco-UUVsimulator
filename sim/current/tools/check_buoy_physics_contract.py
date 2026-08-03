@@ -108,14 +108,16 @@ def check_compiled_contract(mujoco, model, runtime: CourseBuoyRuntime) -> None:
     require(not runtime.proximity_release_enable, "proximity-based rake release must default off")
 
     for buoy in runtime.buoys:
+        is_red_surface = "_red_" in buoy.name
+        expected_com = [0.070, 0.0, 0.035] if is_red_surface else [0.0, 0.0, -0.035]
         require(buoy.free_qposadr >= 0 and buoy.free_dofadr >= 0, f"{buoy.name} is not a free body")
         require(
             abs(float(model.body_mass[buoy.body_id]) - 0.010) <= 1.0e-9,
             f"{buoy.name} mass is not 10 g",
         )
         require(
-            np.allclose(model.body_ipos[buoy.body_id], [0.0, 0.0, -0.035], atol=1.0e-9),
-            f"{buoy.name} center of mass is not 35 mm below the body frame",
+            np.allclose(model.body_ipos[buoy.body_id], expected_com, atol=1.0e-9),
+            f"{buoy.name} center of mass does not match its upright/horizontal contract",
         )
         require(buoy.cob_site_id >= 0, f"{buoy.name} has no center-of-buoyancy site")
         require(buoy.collector_eq_id >= 0, f"{buoy.name} has no soft collector weld")
@@ -458,7 +460,13 @@ def check_physical_collector(mujoco, model) -> None:
 
 
 def check_scene_contract_mirror() -> None:
-    require(FSM_SCENE.exists(), f"FSM scene mirror is missing: {FSM_SCENE}")
+    # The former kmu26_mission_fsm repository was renamed to auv_pinger_homing
+    # and no longer carries a scene mirror.  Keep comparing older checkouts
+    # that still provide it, but do not fail the standalone simulator release
+    # when the authoritative sim/current scene is the only copy.
+    if not FSM_SCENE.exists():
+        print(f"legacy FSM scene mirror unavailable; skipping mirror comparison: {FSM_SCENE}")
+        return
 
     def contracts(path: Path) -> tuple[dict[str, dict[str, str]], dict[str, dict[str, str]]]:
         root = ET.parse(path).getroot()

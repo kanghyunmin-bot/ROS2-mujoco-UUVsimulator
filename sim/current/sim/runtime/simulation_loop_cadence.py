@@ -13,6 +13,8 @@ DEFAULT_MAX_SLEEP_S = 0.001
 @dataclass(frozen=True)
 class ViewerLoopCadence:
     target_dt: float
+    wall_step_dt: float
+    speed_factor: float
     sensor_dt: float
     viewer_dt: float
     max_catchup_steps: int
@@ -97,20 +99,40 @@ def max_loop_sleep_s(target_dt: float) -> float:
     )
 
 
+def simulation_speed_factor() -> float:
+    """Return the requested simulation-time/wall-time ratio.
+
+    The MuJoCo timestep remains the authoritative simulation clock.  A speed
+    factor only shortens the wall-clock deadline between physics steps; it
+    never scales ``data.time`` or ROS timestamps independently.
+    """
+
+    return _env_float(
+        "UUV_MUJOCO_SPEED_FACTOR",
+        1.0,
+        min_value=0.1,
+        max_value=4.0,
+    )
+
+
 def build_viewer_loop_cadence(*, timestep: float, ros2_sensor_hz: float, viewer_fps: float) -> ViewerLoopCadence:
     target_dt = float(max(timestep, 1e-6))
+    speed_factor = simulation_speed_factor()
+    wall_step_dt = target_dt / speed_factor
     sensor_hz = float(max(ros2_sensor_hz, 1.0))
     sensor_dt = 1.0 / sensor_hz
     viewer_dt = 1.0 / bounded_viewer_fps(viewer_fps)
     return ViewerLoopCadence(
         target_dt=target_dt,
+        wall_step_dt=wall_step_dt,
+        speed_factor=speed_factor,
         sensor_dt=sensor_dt,
         viewer_dt=viewer_dt,
-        max_catchup_steps=max_catchup_steps(target_dt),
+        max_catchup_steps=max_catchup_steps(wall_step_dt),
         max_sensor_catchup=max_sensor_catchup_steps(sensor_dt),
-        max_step_lag_s=max_step_lag_s(target_dt),
+        max_step_lag_s=max_step_lag_s(wall_step_dt),
         max_sensor_lag_s=max_sensor_lag_s(sensor_dt),
-        max_sleep_s=max_loop_sleep_s(target_dt),
+        max_sleep_s=max_loop_sleep_s(wall_step_dt),
     )
 
 
@@ -128,4 +150,5 @@ __all__ = [
     "max_step_lag_s",
     "physics_catchup_window_s",
     "sensor_catchup_window_s",
+    "simulation_speed_factor",
 ]

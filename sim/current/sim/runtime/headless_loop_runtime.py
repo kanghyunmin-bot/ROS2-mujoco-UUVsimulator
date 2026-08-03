@@ -21,7 +21,8 @@ def run_headless_loop(
     cadence = build_viewer_loop_cadence(timestep=timestep, ros2_sensor_hz=ros2_sensor_hz, viewer_fps=10.0)
     print(
         "[runtime] headless loop cadence: "
-        f"step_dt={cadence.target_dt:.4f}s sensor_dt={cadence.sensor_dt:.4f}s "
+        f"step_dt={cadence.target_dt:.4f}s wall_step_dt={cadence.wall_step_dt:.4f}s "
+        f"speed={cadence.speed_factor:.2f}x sensor_dt={cadence.sensor_dt:.4f}s "
         f"catchup_steps={cadence.max_catchup_steps} "
         f"max_step_lag={cadence.max_step_lag_s:.3f}s max_sensor_lag={cadence.max_sensor_lag_s:.3f}s",
         flush=True,
@@ -49,7 +50,7 @@ def run_headless_loop(
                     max_lag_s=cadence.max_sensor_lag_s,
                     drop_to_wall=True,
                 )
-            next_step_wall = time.perf_counter() + cadence.target_dt
+            next_step_wall = time.perf_counter() + cadence.wall_step_dt
             continue
 
         step_count = 0
@@ -68,7 +69,7 @@ def run_headless_loop(
                     max_lag_s=cadence.max_sensor_lag_s,
                     drop_to_wall=True,
                 )
-            next_step_wall += cadence.target_dt
+            next_step_wall += cadence.wall_step_dt
             step_count += 1
             now_wall = time.perf_counter()
         if step_count >= cadence.max_catchup_steps and now_wall >= next_step_wall:

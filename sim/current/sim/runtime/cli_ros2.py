@@ -21,7 +21,7 @@ def add_ros2_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--ros2-images",
         action="store_true",
-        help="Publish forward stereo and upward MuJoCo camera frames at fixed 1280x720@10Hz",
+        help="Publish fixed 1280x720 MuJoCo camera frames (forward 17Hz, upward 10Hz)",
     )
     parser.add_argument(
         "--ros2-image-width",
@@ -44,8 +44,8 @@ def add_ros2_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--ros2-image-hz",
         type=float,
-        default=10.0,
-        help="ROS2 image publish rate (fixed deployment contract: 10Hz)",
+        default=17.0,
+        help="Forward ROS2 image rate (fixed deployment contract: front 17Hz, top 10Hz)",
     )
     parser.add_argument(
         "--ros2-camera-calib-left",

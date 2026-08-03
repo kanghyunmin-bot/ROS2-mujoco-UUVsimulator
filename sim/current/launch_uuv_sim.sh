@@ -93,10 +93,12 @@ MJ311_PYTHON="${MJ311_PYTHON:-}"
 MJ311_MJPYTHON="${MJ311_MJPYTHON:-}"
 ROS_ENV_SETUP="${ROS_ENV_SETUP:-}"
 if [[ -z "${ROS_WORKSPACE_SETUP:-}" ]]; then
-    if [[ -f "${PROJECT_ROOT}/install/setup.bash" ]]; then
-        ROS_WORKSPACE_SETUP="${PROJECT_ROOT}/install/setup.bash"
-    else
+    # 소스 작업공간의 실제 colcon 루트는 rospkg이다. 저장소 루트 install은
+    # 일부 패키지만 빌드된 잔여물일 수 있어 auv_msg 같은 선택 메시지를 누락한다.
+    if [[ -f "${PROJECT_ROOT}/rospkg/install/setup.bash" ]]; then
         ROS_WORKSPACE_SETUP="${PROJECT_ROOT}/rospkg/install/setup.bash"
+    else
+        ROS_WORKSPACE_SETUP="${PROJECT_ROOT}/install/setup.bash"
     fi
 fi
 
@@ -1011,7 +1013,7 @@ if [ "$ROS2_REQUESTED" = true ]; then
         echo "            /mavros/vision_pose/pose, /mavros/battery, /mavros/rc/*"
     fi
     if [ -n "$IMAGES" ]; then
-        echo "    Images: forward stereo + top_up fixed at 1280x720@10Hz when --ros2-images is set"
+        echo "    Images: forward stereo 1280x720@17Hz + top_up 1280x720@10Hz when --ros2-images is set"
     fi
 else
     echo "  ROS2 Transport: disabled (--no-ros2; SITL UDP JSON only)"
@@ -1099,7 +1101,7 @@ if [[ -n "$SITL_ARG" ]]; then
     append_extra_arg_if_missing "--sitl-mavlink-servo-hz" --sitl-mavlink-servo-hz "${SITL_MAVLINK_SERVO_HZ_DEFAULT}" >/dev/null || true
     # Legacy polynomial/gain tuned mode used:
     # append_extra_arg_if_missing "--sitl-servo-scale" --sitl-servo-scale "0.58" >/dev/null || true
-    append_extra_arg_if_missing "--sitl-servo-scale" --sitl-servo-scale "${SITL_SERVO_SCALE_DEFAULT:-1.35}" >/dev/null || true
+    append_extra_arg_if_missing "--sitl-servo-scale" --sitl-servo-scale "${SITL_SERVO_SCALE_DEFAULT:-1.0}" >/dev/null || true
     append_extra_arg_if_missing "--thruster-perf-direct" --thruster-perf-direct >/dev/null || true
     # Lower input latency defaults for SITL command loops.
     : "${ROS2_UUV_CMD_DEADBAND:=0.0}"
