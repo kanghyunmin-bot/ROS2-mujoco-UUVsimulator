@@ -35,8 +35,19 @@ ament_target_dependencies(
   std_msgs
 )
 
+add_executable(surface_test_starter_node src/surface_test_starter_node.cpp)
+target_compile_features(surface_test_starter_node PUBLIC cxx_std_17)
+ament_target_dependencies(
+  surface_test_starter_node
+  geometry_msgs
+  mavros_msgs
+  nav_msgs
+  rclcpp
+  std_msgs
+)
+
 install(
-  TARGETS surface_lane_planner surface_buoy_mission_node
+  TARGETS surface_lane_planner surface_buoy_mission_node surface_test_starter_node
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}

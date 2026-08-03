@@ -16,9 +16,11 @@
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <mavros_msgs/msg/override_rc_in.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <rclcpp/create_timer.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/float32_multi_array.hpp>
 #include <std_msgs/msg/float64_multi_array.hpp>
+#include <std_msgs/msg/bool.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_msgs/msg/u_int32.hpp>
 
@@ -27,6 +29,8 @@
 #include "kmu26_auv_surface_buoy_mission/dump_cycle.hpp"
 #include "kmu26_auv_surface_buoy_mission/dump_motion.hpp"
 #include "kmu26_auv_surface_buoy_mission/lane_planner.hpp"
+#include "kmu26_auv_surface_buoy_mission/vision_gate.hpp"
+#include "kmu26_auv_surface_buoy_mission/yaw_control.hpp"
 
 namespace kmu26_auv_surface_buoy_mission
 {
@@ -83,7 +87,7 @@ public:
     publish_counts();
     RCLCPP_INFO(
       get_logger(),
-      "Surface mission ready: front=%s top=%s, camera contract=1280x720@10Hz",
+      "Surface mission ready: external vision bbox topics front=%s top=%s",
       front_bbox_topic_.c_str(), top_bbox_topic_.c_str());
   }
 
@@ -103,23 +107,7 @@ public:
 private:
   // 상태 전이는 on_timer()에서 20 Hz로 실행된다. 각 상태는 RC 채널 3(상하),
   // 4(yaw), 5(전후)에 필요한 값만 기록한다.
-  enum class State
-  {
-    IDLE,                        // 대기: RC 명령을 발행하지 않는다.
-    ASCEND_TO_COLLECTION_DEPTH,  // 수면 부표를 담을 수집 수심까지 상승한다.
-    INITIAL_TOP_CHECK,           // 시작 직후 상단 카메라로 현재 망 상태를 한 번 확인한다.
-    SURFACE_SEARCH,              // 대회장 레인을 왕복하며 정면 부표를 탐색한다.
-    SURFACE_ALIGN,               // 정면 bbox 중심을 영상 중심선에 맞춘다.
-    SURFACE_CAPTURE,             // 일정 시간 전진하며 포획 여부를 확정한다.
-    MOVE_TO_BONUS,               // 수집한 부표를 가지고 가점존 근처로 이동한다.
-    DESCEND_TO_DUMP_DEPTH,       // 배출에 사용할 수심까지 잠수한다.
-    MOVE_TO_BONUS_CENTER,        // 가점존 중심과 배출 방향을 맞춘다.
-    DUMP_EJECT,                  // 전진/후진 기동과 RELEASE 계약으로 부표를 배출한다.
-    DUMP_CHECK,                  // 상단 카메라로 수집망이 비었는지 확인한다.
-    RETURN_TO_BONUS_CENTER,      // 재배출을 위해 가점존 중심으로 돌아온다.
-    RETURN_TO_WORK_DEPTH,        // 배출 또는 빈 레인 확인 후 원래 작업 수심으로 복귀한다.
-    FAILSAFE                     // 비정상 상황에서 계약과 RC 제어권을 안전하게 종료한다.
-  };
+  using State = SurfaceMissionState;
 
   // YOLO 노드가 보내는 한 개 bbox를 내부에서 사용하기 편한 형태로 보관한다.
   // 좌표와 크기는 픽셀 단위이며 received로 검출 데이터의 신선도를 판단한다.
@@ -142,6 +130,10 @@ private:
       "surface_front_bbox_topic", "/vision/surface/front/buoy_bbox");
     top_bbox_topic_ = declare_parameter<std::string>(
       "surface_top_bbox_topic", "/vision/surface/top/buoy_bbox");
+    front_enable_topic_ = declare_parameter<std::string>(
+      "surface_front_enable_topic", "/vision/surface/front/enabled");
+    top_enable_topic_ = declare_parameter<std::string>(
+      "surface_top_enable_topic", "/vision/surface/top/enabled");
     odometry_topic_ = declare_parameter<std::string>("odometry_topic", "/homing/sim_odom");
     depth_pose_topic_ = declare_parameter<std::string>("depth_pose_topic", "/depth/pose");
     start_frame_topic_ = declare_parameter<std::string>("start_frame_topic", "/start_frame");
@@ -161,7 +153,7 @@ private:
     score_zone_world_z_m_ = declare_parameter<double>("score_zone_world_z_m", -0.30);
     collection_depth_m_ = declare_parameter<double>("collection_depth_m", 0.30);
     dump_depth_m_ = declare_parameter<double>("dump_depth_m", 0.85);
-    depth_tolerance_m_ = declare_parameter<double>("depth_tolerance_m", 0.12);
+    depth_tolerance_m_ = declare_parameter<double>("depth_tolerance_m", 0.08);
 
     min_surface_lane_segment_length_m_ = declare_parameter<double>(
       "min_surface_lane_segment_length_m", 1.0);
@@ -183,14 +175,17 @@ private:
     top_roi_y_max_ = declare_parameter<double>("top_net_roi_y_max", 0.95);
     top_confirm_s_ = declare_parameter<double>("top_occupied_confirm_sec", 0.5);
     top_empty_confirm_s_ = declare_parameter<double>("top_empty_confirm_sec", 0.5);
-    detection_timeout_s_ = declare_parameter<double>("top_detection_timeout_sec", 0.7);
+    detection_timeout_s_ = declare_parameter<double>("top_detection_timeout_sec", 1.5);
+    front_min_bbox_height_ratio_ = declare_parameter<double>(
+      "surface_front_min_bbox_height_ratio", 0.03);
+    capture_min_bbox_height_ratio_ = declare_parameter<double>(
+      "surface_capture_min_bbox_height_ratio", 0.10);
     align_deadband_x_ = declare_parameter<double>("surface_align_deadband_x", 0.07);
     align_stable_s_ = declare_parameter<double>("surface_align_stable_sec", 0.4);
-    capture_bottom_ratio_ = declare_parameter<double>("surface_capture_bottom_ratio", 0.82);
 
     // MAVROS RC override 제어 이득과 PWM 제한값.
     control_rate_hz_ = declare_parameter<double>("control_rate_hz", 20.0);
-    depth_kp_pwm_per_m_ = declare_parameter<double>("surface_depth_kp_pwm_per_m", 130.0);
+    depth_kp_pwm_per_m_ = declare_parameter<double>("surface_depth_kp_pwm_per_m", 300.0);
     max_depth_delta_pwm_ = declare_parameter<int>("surface_max_depth_delta_pwm", 180);
     neutral_pwm_ = declare_parameter<int>("neutral_pwm", 1500);
     min_pwm_ = declare_parameter<int>("min_pwm", 1300);
@@ -199,7 +194,14 @@ private:
     capture_forward_pwm_ = declare_parameter<int>("surface_capture_forward_pwm", 1650);
     dump_forward_pwm_ = declare_parameter<int>("dump_forward_pwm", 1660);
     dump_reverse_pwm_ = declare_parameter<int>("dump_reverse_pwm", 1340);
-    max_yaw_delta_pwm_ = declare_parameter<int>("surface_max_yaw_delta_pwm", 150);
+    waypoint_yaw_kp_pwm_per_rad_ = declare_parameter<double>(
+      "surface_waypoint_yaw_kp_pwm_per_rad", 450.0);
+    align_yaw_kp_pwm_per_normalized_x_ = declare_parameter<double>(
+      "surface_align_yaw_kp_pwm_per_normalized_x", 500.0);
+    yaw_command_deadband_rad_ = declare_parameter<double>(
+      "surface_yaw_command_deadband_rad", 0.03);
+    min_yaw_delta_pwm_ = declare_parameter<int>("surface_min_yaw_delta_pwm", 55);
+    max_yaw_delta_pwm_ = declare_parameter<int>("surface_max_yaw_delta_pwm", 200);
     waypoint_tolerance_m_ = declare_parameter<double>("surface_waypoint_tolerance_m", 0.25);
     heading_tolerance_rad_ = declare_parameter<double>("surface_heading_tolerance_rad", 0.20);
     buoy_class_id_ = declare_parameter<int>("buoy_class_id", 0);
@@ -209,6 +211,14 @@ private:
       min_surface_lane_segment_length_m_ <= 0.0 ||
       dump_forward_overshoot_m_ <= 0.0 || dump_reverse_distance_m_ <= 0.0 ||
       dump_forward_timeout_s_ <= 0.0 || dump_reverse_timeout_s_ <= 0.0 ||
+      front_min_bbox_height_ratio_ < 0.0 || front_min_bbox_height_ratio_ >= 1.0 ||
+      capture_min_bbox_height_ratio_ <= front_min_bbox_height_ratio_ ||
+      capture_min_bbox_height_ratio_ >= 1.0 ||
+      align_deadband_x_ <= 0.0 || align_deadband_x_ >= 0.5 ||
+      waypoint_yaw_kp_pwm_per_rad_ <= 0.0 || align_yaw_kp_pwm_per_normalized_x_ <= 0.0 ||
+      yaw_command_deadband_rad_ < 0.0 || min_yaw_delta_pwm_ < 0 ||
+      min_yaw_delta_pwm_ > max_yaw_delta_pwm_ ||
+      max_yaw_delta_pwm_ > std::min(max_pwm_ - neutral_pwm_, neutral_pwm_ - min_pwm_) ||
       max_dump_attempts_ < 1)
     {
       throw std::invalid_argument("surface lane or dump parameters are invalid");
@@ -244,9 +254,14 @@ private:
     score_release_pub_ = create_publisher<std_msgs::msg::String>(score_release_topic_, 10);
     remaining_pub_ = create_publisher<std_msgs::msg::UInt32>("/mission/surface_remaining_count", latched);
     deposit_pub_ = create_publisher<std_msgs::msg::UInt32>("/mission/bonus_deposit_count", latched);
+    front_enable_pub_ = create_publisher<std_msgs::msg::Bool>(front_enable_topic_, latched);
+    top_enable_pub_ = create_publisher<std_msgs::msg::Bool>(top_enable_topic_, latched);
 
-    timer_ = create_wall_timer(
-      std::chrono::duration<double>(1.0 / std::max(1.0, control_rate_hz_)),
+    // /clock을 쓰는 2배속 검증에서도 차량 기준 20 Hz를 유지한다. 실물처럼
+    // use_sim_time=false이면 같은 타이머가 시스템 시간을 사용한다.
+    timer_ = rclcpp::create_timer(
+      this, get_clock(),
+      rclcpp::Duration::from_seconds(1.0 / std::max(1.0, control_rate_hz_)),
       std::bind(&SurfaceBuoyMissionNode::on_timer, this));
   }
 
@@ -353,7 +368,13 @@ private:
 
   void on_front_bbox(const std_msgs::msg::Float32MultiArray::SharedPtr msg)
   {
-    const auto rows = detections(*msg);
+    auto rows = detections(*msg);
+    rows.erase(
+      std::remove_if(
+        rows.begin(), rows.end(), [this](const Detection & row) {
+          return row.height / row.image_height < front_min_bbox_height_ratio_;
+        }),
+      rows.end());
     if (rows.empty()) {
       front_.reset();
       return;
@@ -402,6 +423,10 @@ private:
 
   void on_collector_state(const auv_msg::msg::CollectorState::SharedPtr msg)
   {
+    collector_state_received_ = true;
+    collector_physically_occupied_ =
+      msg->collector_eq_active || msg->capture_state == "NETTING" ||
+      msg->capture_state == "NETTED";
     // target_id 집합으로 같은 부표 이벤트가 여러 번 들어와도 한 번만 센다.
     // 시뮬레이터의 물리 접촉 판정은 카메라 추정보다 우선하는 확정 신호다.
     if (msg->netted && !msg->target_id.empty() && captured_ids_.insert(msg->target_id).second) {
@@ -550,7 +575,10 @@ private:
   void run_search(std::array<uint16_t, 18> & channels)
   {
     hold_depth(channels, collection_depth_m_);
-    if (recent_front() && state_age() >= capture_ignore_s_) {
+    // 레인 시작점으로 이동하는 동안 보이는 부표는 다른 레인에 있을 수 있다.
+    // 3D active-lane 필터는 추후 적용하되, 최소한 시작점에 도착해 끝점 방향으로
+    // 탐색을 시작한 뒤에만 정면 부표 추적으로 전환한다.
+    if (!surface_heading_to_start_ && recent_front() && state_age() >= capture_ignore_s_) {
       align_started_at_.reset();
       transition(State::SURFACE_ALIGN, "front buoy acquired");
       return;
@@ -564,6 +592,8 @@ private:
     if (follow_waypoint(channels, target, search_forward_pwm_, collection_depth_m_)) {
       if (surface_heading_to_start_) {
         surface_heading_to_start_ = false;
+        // 이제 레인 끝점 방향 탐색이 시작되므로 정면 detector만 켠다.
+        publish_vision_gates();
       } else {
         surface_lane_completed_[*active_surface_lane_] = true;
         finish_current_lane();
@@ -578,22 +608,32 @@ private:
       resume_current_lane("front target lost; resume current lane");
       return;
     }
-    // 정면 영상 중심 x=0.5를 기준으로 yaw를 보정한다. 중심선이 일정 시간 안정되고
-    // bbox 아래쪽이 화면 하단에 충분히 가까워졌을 때만 포획 전진을 시작한다.
+    // 정면 영상 중심 x=0.5를 기준으로 yaw를 보정한다. 수면 부표는 카메라보다 위에
+    // 있어 접근할수록 bbox가 화면 위로 이동하므로, 중심선이 안정되면 포획 전진을
+    // 시작하고 이후 정면→상단 영상 전이 또는 물리 CollectorState로 성공을 확정한다.
     const double nx = front_->cx / front_->image_width;
     const double error = 0.5 - nx;
-    const int yaw_delta = static_cast<int>(std::lround(std::clamp(380.0 * error, -1.0 * max_yaw_delta_pwm_, 1.0 * max_yaw_delta_pwm_)));
-    set_channel(channels, 4, neutral_pwm_ + yaw_delta);
+    const double bbox_height_ratio = front_->height / front_->image_height;
+    const int yaw_delta = yaw_delta_pwm(
+      error,
+      YawControlConfig{
+        align_yaw_kp_pwm_per_normalized_x_, align_deadband_x_,
+        min_yaw_delta_pwm_, max_yaw_delta_pwm_});
+    // ArduSub RC yaw는 PWM 증가가 arena/world 음의 yaw이므로 기하학적 오차와 부호가 반대다.
+    set_channel(channels, 4, neutral_pwm_ - yaw_delta);
     if (std::abs(error) <= align_deadband_x_) {
+      // 중심이 맞는 동안에는 낮은 탐색 PWM으로 천천히 접근한다. 실측상 먼 부표는
+      // bbox 높이가 약 3%, 포획권에서는 11~12%였으므로 10% 이전에는 포획 상태로
+      // 넘어가지 않는다.
+      set_channel(channels, 5, search_forward_pwm_);
+    }
+    if (capture_entry_ready(
+        error, align_deadband_x_, bbox_height_ratio, capture_min_bbox_height_ratio_))
+    {
       if (!align_started_at_) {
         align_started_at_ = now();
       }
-      set_channel(channels, 5, capture_forward_pwm_);
-      const double bbox_bottom = (front_->cy + 0.5 * front_->height) / front_->image_height;
-      if (
-        (now() - *align_started_at_).seconds() >= align_stable_s_ &&
-        bbox_bottom >= capture_bottom_ratio_)
-      {
+      if ((now() - *align_started_at_).seconds() >= align_stable_s_) {
         capture_confirmed_ = false;
         capture_front_start_y_ = front_->cy / front_->image_height;
         capture_front_min_y_ = capture_front_start_y_;
@@ -609,6 +649,16 @@ private:
     hold_depth(channels, collection_depth_m_);
     set_channel(channels, 5, capture_forward_pwm_);
     if (recent_front()) {
+      // 포획 전진 중에도 정면 bbox가 남아 있는 동안에는 yaw를 계속 보정한다.
+      // 포획 상태 진입 순간의 heading을 고정하면 작은 횡오차가 수집망 폭보다
+      // 커져 부표 옆을 지나칠 수 있다.
+      const double error = 0.5 - front_->cx / front_->image_width;
+      const int yaw_delta = yaw_delta_pwm(
+        error,
+        YawControlConfig{
+          align_yaw_kp_pwm_per_normalized_x_, align_deadband_x_,
+          min_yaw_delta_pwm_, max_yaw_delta_pwm_});
+      set_channel(channels, 4, neutral_pwm_ - yaw_delta);
       capture_front_min_y_ = std::min(capture_front_min_y_, front_->cy / front_->image_height);
     }
     // 포획 성공은 두 경로로 확정한다.
@@ -616,7 +666,12 @@ private:
     // 2) 정면 bbox가 위로 이동한 뒤 상단 카메라에서 연속 확인되는 영상 전이
     const bool front_moved_up = capture_front_start_y_ - capture_front_min_y_ >= 0.08;
     const bool transitioned_to_top = front_moved_up && top_occupied_confirmed();
-    if (capture_confirmed_ || transitioned_to_top) {
+    // CollectorState가 제공되는 시뮬레이션/실물 구성에서는 영상 전이만으로
+    // 포획을 확정하지 않는다. 기체가 부표 위를 지나치기만 해도 상단 영상에는
+    // 보이므로 반드시 물리 netted 이벤트를 기다린다. CollectorState 자체가 없는
+    // 구성에서만 기존 영상 전이를 보조 계약으로 사용한다.
+    const bool vision_capture_fallback = !collector_state_received_ && transitioned_to_top;
+    if (capture_confirmed_ || vision_capture_fallback) {
       if (!capture_confirmed_) {
         ++lane_capture_count_;
         publish_counts();
@@ -672,8 +727,7 @@ private:
     // 가점존 중심 도착만으로 배출하지 않고 지정된 heading까지 맞춘 뒤 계약을 연다.
     if (follow_waypoint(channels, bonus_center_, search_forward_pwm_, dump_depth_m_)) {
       const double heading_error = wrap_pi(bonus_dump_heading_rad_ - current_yaw_rad_);
-      set_channel(channels, 4, neutral_pwm_ + static_cast<int>(std::lround(
-        std::clamp(350.0 * heading_error, -1.0 * max_yaw_delta_pwm_, 1.0 * max_yaw_delta_pwm_))));
+      set_channel(channels, 4, neutral_pwm_ - waypoint_yaw_delta(heading_error));
       if (std::abs(heading_error) <= heading_tolerance_rad_) {
         start_dump_attempt();
       }
@@ -694,8 +748,7 @@ private:
   {
     hold_depth(channels, dump_depth_m_);
     const double heading_error = wrap_pi(bonus_dump_heading_rad_ - current_yaw_rad_);
-    set_channel(channels, 4, neutral_pwm_ + static_cast<int>(std::lround(
-      std::clamp(350.0 * heading_error, -1.0 * max_yaw_delta_pwm_, 1.0 * max_yaw_delta_pwm_))));
+    set_channel(channels, 4, neutral_pwm_ - waypoint_yaw_delta(heading_error));
 
     if (dump_motion_phase_ == DumpMotionPhase::FORWARD_OVERSHOOT) {
       const bool forward_complete = dump_forward_target_reached(
@@ -737,6 +790,9 @@ private:
       RCLCPP_WARN(get_logger(), "Top camera stale/unknown after dump; ending dump loop");
     } else if (top_empty_confirmed() || !top_occupied_) {
       top_status = TopNetStatus::EMPTY;
+    }
+    if (collector_state_received_) {
+      top_status = reconcile_dump_status(top_status, collector_physically_occupied_);
     }
     if (!should_repeat_dump(
         top_status, dump_attempt_count_, static_cast<uint32_t>(max_dump_attempts_)))
@@ -788,13 +844,20 @@ private:
     }
     const double desired = std::atan2(delta.y, delta.x);
     const double error = wrap_pi(desired - current_yaw_rad_);
-    const int yaw_delta = static_cast<int>(std::lround(
-      std::clamp(350.0 * error, -1.0 * max_yaw_delta_pwm_, 1.0 * max_yaw_delta_pwm_)));
-    set_channel(channels, 4, neutral_pwm_ + yaw_delta);
+    set_channel(channels, 4, neutral_pwm_ - waypoint_yaw_delta(error));
     if (std::abs(error) <= heading_tolerance_rad_) {
       set_channel(channels, 5, forward_pwm);
     }
     return false;
+  }
+
+  int waypoint_yaw_delta(const double heading_error) const
+  {
+    return yaw_delta_pwm(
+      heading_error,
+      YawControlConfig{
+        waypoint_yaw_kp_pwm_per_rad_, yaw_command_deadband_rad_,
+        min_yaw_delta_pwm_, max_yaw_delta_pwm_});
   }
 
   void hold_depth(std::array<uint16_t, 18> & channels, double target_depth)
@@ -879,6 +942,8 @@ private:
     msg.data = "cycle=" + std::to_string(cycle_id_) + ";success=false;reason=" + reason;
     complete_pub_->publish(msg);
     active_ = false;
+    state_ = State::IDLE;
+    publish_state();
   }
 
   void transition(State next, const std::string & reason)
@@ -915,10 +980,40 @@ private:
 
   void publish_state()
   {
-    if (!state_pub_) {return;}
-    std_msgs::msg::String msg;
-    msg.data = state_name(state_);
-    state_pub_->publish(msg);
+    if (state_pub_) {
+      std_msgs::msg::String msg;
+      msg.data = state_name(state_);
+      state_pub_->publish(msg);
+    }
+    publish_vision_gates();
+  }
+
+  void publish_vision_gates()
+  {
+    if (!front_enable_pub_ || !top_enable_pub_) {return;}
+    const auto gate = vision_gate_for_state(state_, surface_heading_to_start_);
+
+    if (gate.front_enabled != front_vision_enabled_) {
+      front_vision_enabled_ = gate.front_enabled;
+      front_.reset();
+    }
+    if (gate.top_enabled != top_vision_enabled_) {
+      top_vision_enabled_ = gate.top_enabled;
+      top_occupied_ = false;
+      top_received_at_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
+      top_occupied_since_.reset();
+      top_empty_since_.reset();
+    }
+
+    std_msgs::msg::Bool front;
+    front.data = front_vision_enabled_;
+    front_enable_pub_->publish(front);
+    std_msgs::msg::Bool top;
+    top.data = top_vision_enabled_;
+    top_enable_pub_->publish(top);
+    RCLCPP_INFO(
+      get_logger(), "Surface vision gate: front=%s top=%s",
+      front.data ? "ON" : "OFF", top.data ? "ON" : "OFF");
   }
 
   uint32_t remaining_count() const
@@ -977,7 +1072,8 @@ private:
   }
 
   // ROS 토픽 및 조정 가능한 임무 파라미터
-  std::string front_bbox_topic_, top_bbox_topic_, odometry_topic_, depth_pose_topic_;
+  std::string front_bbox_topic_, top_bbox_topic_, front_enable_topic_, top_enable_topic_;
+  std::string odometry_topic_, depth_pose_topic_;
   std::string start_frame_topic_, surface_start_topic_, surface_complete_topic_;
   std::string arena_config_topic_, score_release_topic_, rc_topic_;
   Vec2 bonus_center_{};
@@ -985,19 +1081,22 @@ private:
   double bonus_radius_m_{0.65}, bonus_approach_distance_m_{1.0}, bonus_dump_heading_rad_{0.0};
   double bonus_lane_clearance_m_{0.35}, min_surface_lane_segment_length_m_{1.0};
   double score_zone_world_z_m_{-0.3}, collection_depth_m_{0.30}, dump_depth_m_{0.85};
-  double work_depth_m_{0.85}, depth_tolerance_m_{0.12};
+  double work_depth_m_{0.85}, depth_tolerance_m_{0.08};
   int surface_total_buoy_count_{5}, max_dump_attempts_{3};
   double dump_forward_overshoot_m_{0.70}, dump_reverse_distance_m_{1.10};
   double dump_forward_timeout_s_{4.0}, dump_reverse_timeout_s_{4.0}, dump_settle_s_{0.7};
   double capture_forward_s_{2.0}, capture_ignore_s_{0.8};
   double top_roi_x_min_{0.1}, top_roi_x_max_{0.9}, top_roi_y_min_{0.05}, top_roi_y_max_{0.95};
-  double top_confirm_s_{0.5}, top_empty_confirm_s_{0.5}, detection_timeout_s_{0.7};
-  double align_deadband_x_{0.07}, align_stable_s_{0.4}, capture_bottom_ratio_{0.82};
-  double control_rate_hz_{20.0}, depth_kp_pwm_per_m_{130.0}, waypoint_tolerance_m_{0.25};
-  double heading_tolerance_rad_{0.2};
+  double top_confirm_s_{0.5}, top_empty_confirm_s_{0.5}, detection_timeout_s_{1.5};
+  double front_min_bbox_height_ratio_{0.03}, capture_min_bbox_height_ratio_{0.10};
+  double align_deadband_x_{0.07}, align_stable_s_{0.4};
+  double control_rate_hz_{20.0}, depth_kp_pwm_per_m_{300.0}, waypoint_tolerance_m_{0.25};
+  double heading_tolerance_rad_{0.2}, waypoint_yaw_kp_pwm_per_rad_{450.0};
+  double align_yaw_kp_pwm_per_normalized_x_{500.0}, yaw_command_deadband_rad_{0.03};
   int max_depth_delta_pwm_{180}, neutral_pwm_{1500}, min_pwm_{1300}, max_pwm_{1700};
   int search_forward_pwm_{1600}, capture_forward_pwm_{1650};
-  int dump_forward_pwm_{1660}, dump_reverse_pwm_{1340}, max_yaw_delta_pwm_{150};
+  int dump_forward_pwm_{1660}, dump_reverse_pwm_{1340};
+  int min_yaw_delta_pwm_{55}, max_yaw_delta_pwm_{200};
   int buoy_class_id_{0};
 
   // 상태 머신의 현재 위치·센서·카운트 메모리
@@ -1019,6 +1118,8 @@ private:
   rclcpp::Time top_received_at_{0, 0, RCL_ROS_TIME};
   std::optional<rclcpp::Time> top_occupied_since_, top_empty_since_, align_started_at_;
   bool initial_top_check_done_{false}, capture_confirmed_{false};
+  bool collector_state_received_{false}, collector_physically_occupied_{false};
+  bool front_vision_enabled_{false}, top_vision_enabled_{false};
   double capture_front_start_y_{0.0}, capture_front_min_y_{0.0};
   uint32_t lane_capture_count_{0}, dump_attempt_count_{0};
   uint32_t cycle_id_{0}, last_completed_cycle_{0};
@@ -1041,6 +1142,7 @@ private:
   rclcpp::Publisher<mavros_msgs::msg::OverrideRCIn>::SharedPtr rc_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr state_pub_, complete_pub_, score_release_pub_;
   rclcpp::Publisher<std_msgs::msg::UInt32>::SharedPtr remaining_pub_, deposit_pub_;
+  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr front_enable_pub_, top_enable_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
 };
 }  // namespace kmu26_auv_surface_buoy_mission

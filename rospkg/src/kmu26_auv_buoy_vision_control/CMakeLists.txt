@@ -60,8 +60,14 @@ if(BUILD_TESTING)
     COMMAND ${Python3_EXECUTABLE}
       ${CMAKE_CURRENT_SOURCE_DIR}/test/test_yolo_course_buoy_filter.py
   )
+  add_test(
+    NAME yolo_inference_gate
+    COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_yolo_inference_gate.py
+  )
   set_tests_properties(yolo_pinger_marker_fast_path PROPERTIES TIMEOUT 20)
   set_tests_properties(yolo_course_buoy_filter PROPERTIES TIMEOUT 20)
+  set_tests_properties(yolo_inference_gate PROPERTIES TIMEOUT 20)
 endif()
 
 ament_package()

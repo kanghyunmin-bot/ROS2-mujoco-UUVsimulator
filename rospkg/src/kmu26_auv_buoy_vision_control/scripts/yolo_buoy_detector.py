@@ -10,7 +10,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CompressedImage
-from std_msgs.msg import Float32MultiArray, String
+from std_msgs.msg import Bool, Float32MultiArray, String
 
 
 BBOX_FORMAT = (
@@ -39,6 +39,11 @@ class YoloBuoyDetector(Node):
         self.declare_parameter("show_preview", True)
         self.declare_parameter("preview_window_name", "YOLO Buoy Detection")
         self.declare_parameter("publish_per_class", True)
+        # enable_topic이 비어 있으면 기존처럼 항상 추론한다. 수면 미션에서는
+        # 상태 머신이 이 Bool 토픽으로 필요한 카메라의 추론만 활성화한다.
+        self.declare_parameter("enable_topic", "")
+        self.declare_parameter("initially_enabled", True)
+        self.declare_parameter("ready_topic", "")
         # Competition-map 수중 핑거는 학습된 buoy/stick 외형보다 훨씬 가늘다.
         # 파란 표식이 보이면 무거운 YOLO보다 먼저 buoy/stick bbox를 복원하고,
         # 표식이 없을 때만 YOLO로 되돌아가는 수중 전용 fast path다.
@@ -97,6 +102,11 @@ class YoloBuoyDetector(Node):
         self.show_preview = bool(self.get_parameter("show_preview").value)
         self.preview_window_name = str(self.get_parameter("preview_window_name").value)
         self.publish_per_class = bool(self.get_parameter("publish_per_class").value)
+        self.enable_topic = str(self.get_parameter("enable_topic").value).strip()
+        self.inference_enabled = bool(
+            self.get_parameter("initially_enabled").value
+        )
+        self.ready_topic = str(self.get_parameter("ready_topic").value).strip()
         self.pinger_marker_fallback = bool(
             self.get_parameter("pinger_marker_fallback").value
         )
@@ -171,6 +181,29 @@ class YoloBuoyDetector(Node):
         self.annotated_image_pub = self.create_publisher(
             CompressedImage, self.annotated_image_topic, image_qos
         )
+        self.enable_sub = None
+        if self.enable_topic:
+            enable_qos = QoSProfile(
+                history=HistoryPolicy.KEEP_LAST,
+                depth=1,
+                reliability=ReliabilityPolicy.RELIABLE,
+                durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            )
+            self.enable_sub = self.create_subscription(
+                Bool,
+                self.enable_topic,
+                self._on_inference_enabled,
+                enable_qos,
+            )
+        self.ready_pub = None
+        if self.ready_topic:
+            ready_qos = QoSProfile(
+                history=HistoryPolicy.KEEP_LAST,
+                depth=1,
+                reliability=ReliabilityPolicy.RELIABLE,
+                durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            )
+            self.ready_pub = self.create_publisher(Bool, self.ready_topic, ready_qos)
         self.pinger_marker_disable_sub = None
         if self.pinger_marker_fallback and self.pinger_marker_disable_topic:
             detach_event_qos = QoSProfile(
@@ -198,6 +231,8 @@ class YoloBuoyDetector(Node):
             f"YOLO PT model={self.model_path}, device={self.device}, imgsz={self.imgsz}, "
             f"target_class_id={self.target_class_id}, target_class_name='{self.target_class_name}', "
             f"show_preview={self.show_preview}, publish_per_class={self.publish_per_class}, "
+            f"enable_topic='{self.enable_topic}', enabled={self.inference_enabled}, "
+            f"ready_topic='{self.ready_topic}', "
             f"pinger_marker_fallback={self.pinger_marker_fallback}, "
             f"pinger_marker_disable_topic='{self.pinger_marker_disable_topic}', "
             f"course_buoy_color_filter={self.course_buoy_color_filter}, "
@@ -207,6 +242,10 @@ class YoloBuoyDetector(Node):
             self.get_logger().info(
                 f"Preview window '{self.preview_window_name}' enabled (press q in window to quit)"
             )
+        if self.ready_pub is not None:
+            ready = Bool()
+            ready.data = True
+            self.ready_pub.publish(ready)
 
     def _load_model(self, model_path: str):
         ultralytics = importlib.import_module("ultralytics")
@@ -237,6 +276,19 @@ class YoloBuoyDetector(Node):
             "Physical pinger detach confirmed; disabling pinger marker fallback"
         )
 
+    def _on_inference_enabled(self, msg: Bool) -> None:
+        """Keep the loaded model resident while pausing expensive frame work."""
+
+        enabled = bool(msg.data)
+        if enabled == self.inference_enabled:
+            return
+        self.inference_enabled = enabled
+        self._preview_prev_time = None
+        self._preview_fps = 0.0
+        self.get_logger().info(
+            f"YOLO inference {'enabled' if enabled else 'paused'}"
+        )
+
     def _format_class_names(self) -> str:
         if not self.class_names:
             return "[]"
@@ -263,6 +315,10 @@ class YoloBuoyDetector(Node):
             )
 
     def on_image(self, msg: CompressedImage) -> None:
+        # 비활성 상태에서는 JPEG decode, 색상 보조 검출, YOLO를 모두 생략한다.
+        # 모델 객체는 유지하므로 다시 켤 때 재로딩/재할당 지연이 없다.
+        if not getattr(self, "inference_enabled", True):
+            return
         image = self._decode_compressed_image(msg)
         if image is None:
             self.get_logger().warning("Failed to decode compressed image", throttle_duration_sec=2.0)
@@ -309,6 +365,7 @@ class YoloBuoyDetector(Node):
         data = np.frombuffer(msg.data, dtype=np.uint8)
         return cv2.imdecode(data, cv2.IMREAD_COLOR)
 
+
     def _is_better_detection(
         self,
         candidate: Tuple[int, float, float, float, float, float],
@@ -325,7 +382,6 @@ class YoloBuoyDetector(Node):
         if abs(cand_conf - cur_conf) > self.confidence_similar_delta:
             return cand_conf > cur_conf
         return cand_cx > cur_cx
-
     def _best_detection_per_class(
         self,
         all_detections: list[Tuple[int, float, float, float, float, float, int, int, int, int]],

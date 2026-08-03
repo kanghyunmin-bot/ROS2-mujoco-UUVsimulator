@@ -68,6 +68,21 @@ def generate_launch_description():
                 description="Publish the best detection for every visible class in each frame.",
             ),
             DeclareLaunchArgument(
+                "enable_topic",
+                default_value="",
+                description="Optional transient-local Bool topic that gates image inference.",
+            ),
+            DeclareLaunchArgument(
+                "initially_enabled",
+                default_value="true",
+                description="Initial inference state before an enable-topic message arrives.",
+            ),
+            DeclareLaunchArgument(
+                "ready_topic",
+                default_value="",
+                description="Optional transient-local Bool topic published after model setup.",
+            ),
+            DeclareLaunchArgument(
                 "pinger_marker_fallback",
                 default_value="false",
                 description=(
@@ -115,6 +130,11 @@ def generate_launch_description():
                         "publish_per_class": ParameterValue(
                             LaunchConfiguration("publish_per_class"), value_type=bool
                         ),
+                        "enable_topic": LaunchConfiguration("enable_topic"),
+                        "initially_enabled": ParameterValue(
+                            LaunchConfiguration("initially_enabled"), value_type=bool
+                        ),
+                        "ready_topic": LaunchConfiguration("ready_topic"),
                         "pinger_marker_fallback": ParameterValue(
                             LaunchConfiguration("pinger_marker_fallback"),
                             value_type=bool,
