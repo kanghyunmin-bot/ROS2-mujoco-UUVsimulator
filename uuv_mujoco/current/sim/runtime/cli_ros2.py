@@ -5,6 +5,11 @@ from __future__ import annotations
 import argparse
 
 from .cli_common import env_float
+from .env import env_flag
+from sim.contracts.ground_truth import (
+    UNSAFE_LEGACY_GROUND_TRUTH_ODOMETRY_FILTERED_CLI,
+    UNSAFE_LEGACY_GROUND_TRUTH_ODOMETRY_FILTERED_ENV,
+)
 
 
 def add_ros2_args(parser: argparse.ArgumentParser) -> None:
@@ -17,6 +22,20 @@ def add_ros2_args(parser: argparse.ArgumentParser) -> None:
         "--ros2-real-pkg-compat",
         action="store_true",
         help="Keep ROS2 sensor topics but reduce the simulator MAVROS surface to compat-only (/mavros/vfr_hud) for external MAVROS + kmu26_auv.",
+    )
+    parser.add_argument(
+        UNSAFE_LEGACY_GROUND_TRUTH_ODOMETRY_FILTERED_CLI,
+        action=argparse.BooleanOptionalAction,
+        default=env_flag(
+            UNSAFE_LEGACY_GROUND_TRUTH_ODOMETRY_FILTERED_ENV,
+            False,
+        ),
+        help=(
+            "UNSAFE legacy compatibility only: publish exact MuJoCo state on "
+            "/odometry/filtered. Disabled by default and forbidden with "
+            "--ros2-real-pkg-compat. Never use for estimation, control, or metrics. "
+            f"Environment: {UNSAFE_LEGACY_GROUND_TRUTH_ODOMETRY_FILTERED_ENV}=1."
+        ),
     )
     parser.add_argument(
         "--ros2-images",

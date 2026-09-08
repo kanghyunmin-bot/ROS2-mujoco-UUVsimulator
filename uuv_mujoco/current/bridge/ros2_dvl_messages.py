@@ -1,4 +1,4 @@
-"""Best-effort dvl_msgs compatibility builders."""
+"""Physical A50 and legacy DVL compatibility builders."""
 
 from __future__ import annotations
 

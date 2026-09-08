@@ -28,7 +28,15 @@ def apply_hydrostatic_wrench(
     data = runtime.data
 
     cob = data.site_xpos[hs.cob_site_id].copy() if hs.cob_site_id >= 0 else com
-    depth = runtime.water_surface_z - float(base_origin[2])
+    environment = getattr(hyd, "water_environment_runtime", None)
+    if environment is None:
+        surface_height = float(runtime.water_surface_z)
+    else:
+        surface_height = environment.surface_height_world_m(
+            base_origin,
+            float(data.time),
+        )
+    depth = surface_height - float(base_origin[2])
     submerged = submerged_fraction(depth, hyd.half_height, hyd.buoyancy_model)
     buoyancy_submerged = submerged_fraction(
         depth * hyd.buoyancy_slope_scale,

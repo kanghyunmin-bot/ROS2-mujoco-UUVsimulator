@@ -25,7 +25,7 @@ def run_raw_pwm_runtime_step(
         thruster_dt=thruster_dt,
         auto_release_initial_hold=True,
     )
-    if publish_ros:
+    if publish_ros or runtime.sitl_enabled:
         started = time.perf_counter()
         runtime.publish_ros_once()
         record_step_phase(runtime, "ros_publish", time.perf_counter() - started)

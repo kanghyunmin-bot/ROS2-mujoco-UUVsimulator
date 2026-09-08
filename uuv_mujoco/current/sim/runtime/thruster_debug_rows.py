@@ -36,6 +36,7 @@ def build_thruster_debug_values(
     thr_state: dict[str, float],
     thruster_force_cmd: dict[str, float],
     thruster_direct_scale: dict[str, float],
+    thruster_diagnostics: dict | None = None,
 ) -> list[float]:
     values = build_core_thruster_debug_values(
         data=data,
@@ -61,6 +62,11 @@ def build_thruster_debug_values(
         thruster_force_cmd=thruster_force_cmd,
         thruster_direct_scale=thruster_direct_scale,
     )
+    diagnostics = thruster_diagnostics or {}
+    values.append(float(diagnostics.get("supply_voltage_v", float("nan"))))
+    for name in thruster_names:
+        for field in ("static_force_n", "immersion_scale", "inflow_multiplier", "effective_gain"):
+            values.append(float(diagnostics.get(field, {}).get(name, float("nan"))))
     return values
 
 

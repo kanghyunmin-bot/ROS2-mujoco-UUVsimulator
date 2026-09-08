@@ -1,5 +1,12 @@
 # KMU26 UUV MuJoCo + ArduSub Simulator
 
+**최신 소스 기준: `main` · `2026.09.08-pre-vla`**
+
+VLA 적용 전 기본 ROV 시뮬레이터 기준선이다. FCU 갱신 주기, 센서 전달,
+기본 MAVROS 제어 입력과 DVL→FCU 경로를 정리했다.
+[변경 내용·검증 범위](docs/releases/2026.09.08-pre-vla.md)를 먼저 확인한다.
+이 버전은 소스 기준선이며 이전 ZIP/DEB 설치 파일을 새로 빌드한 릴리스가 아니다.
+
 Ubuntu 22.04, ROS 2 Humble, MuJoCo and ArduSub SITL을 결합한 수중 로봇
 시뮬레이션 작업공간이다. 활성 시뮬레이터는 `uuv_mujoco/current`이며, 웹/Tk
 GUI, MAVROS 호환 제어면, 카메라·DVL·압력·하이드로폰·Ping360 센서, 부표 수집
@@ -32,11 +39,16 @@ GUI, MAVROS 호환 제어면, 카메라·DVL·압력·하이드로폰·Ping360 �
 ```bash
 source /opt/ros/humble/setup.bash
 source ./.uuv_mujoco_env.sh
-./run_control_gui.sh --web --host 127.0.0.1 --port 8878
+./run_control_gui.sh --web \
+  --sim-preset research_pool_distributed \
+  --host 127.0.0.1 \
+  --port 8878
 ```
 
 브라우저에서 <http://127.0.0.1:8878/>을 열고 GUI에서 시뮬레이션 스택을
-시작한다. Tk GUI는 `./run_control_gui.sh --tk`로 실행한다.
+시작한다. 환경 선택 메뉴에서 기존 타원체 물리, 분산 물리, 파랑 포함 분산
+물리를 바꿀 수 있다. Tk GUI도 같은 프리셋을 사용하며
+`./run_control_gui.sh --tk --sim-preset research_pool_distributed`로 실행한다.
 
 GUI 없이 SITL과 MuJoCo를 직접 실행하려면:
 
@@ -76,6 +88,8 @@ Controller or operator
 
 상세한 프로세스, 포트, 토픽 소유권과 부표 수집 상태 머신은
 [시뮬레이터 아키텍처](docs/SIM_ARCHITECTURE.md)에 정리되어 있다.
+수영장 SLAM 장면과 선택형 분포 유체물리의 범위·실행법·보정 절차는
+[Research Pool 수중 물리 가이드](uuv_mujoco/current/docs/architecture/RESEARCH_POOL_HYDRODYNAMICS.md)를 참고한다.
 
 ## 주요 디렉터리
 
@@ -93,14 +107,17 @@ Controller or operator
 ## 핵심 ROS 인터페이스
 
 - 상태/제어: `/mavros/state`, `/mavros/rc/in`, `/mavros/rc/override`
-- 항법: `/imu/data`, `/dvl/odometry`, `/depth/pose`, `/odometry/filtered`
+- raw/derived 항법 센서: `/imu/data`, `/dvl/odometry`, `/depth/pose`
+- 외부 추정기 출력: `/odometry/filtered` (`robot_localization` 소유;
+  MuJoCo bridge는 기본 미발행)
 - 카메라: `/camera/camera/color/image_raw/compressed`
 - 음향: `/audio`, `/audio_info`, `/mujoco/hydrophone/direction`
 - 소나: `/ping360/scan`, `/ping360/image`, `/ping360/config`
 - 임무/평가: `/collector/state`, `/mujoco/course_buoys/status`,
   `/mujoco/ground_truth/pose`
 
-Ground truth는 검증용 oracle이며 실제 차량용 제어기의 입력으로 사용하지 않는다.
+`/mujoco/ground_truth/pose`와 `/sim/odom`은 검증/진단 전용 ground-truth
+oracle이며 실제 차량용 추정기나 제어기의 입력으로 사용하지 않는다.
 RC를 내는 임무 노드는 동시에 실행하지 않고 mux의 단일 소유권 계약을 지켜야 한다.
 
 ## ROS 패키지 빌드

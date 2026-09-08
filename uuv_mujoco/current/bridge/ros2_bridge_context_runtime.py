@@ -22,6 +22,12 @@ def initialize_ros2_context_and_node(self, imports: dict[str, object]) -> None:
 
 def initialize_ros2_endpoints(self) -> None:
     tf_qos = self.QoSProfile(depth=50)
+    dvl_sensor_qos = self.QoSProfile(
+        depth=5,
+        history=self.HistoryPolicy.KEEP_LAST,
+        reliability=self.ReliabilityPolicy.BEST_EFFORT,
+        durability=self.DurabilityPolicy.VOLATILE,
+    )
     latched_qos = self.QoSProfile(
         depth=1,
         history=self.HistoryPolicy.KEEP_LAST,
@@ -33,6 +39,7 @@ def initialize_ros2_endpoints(self) -> None:
         q10=10,
         q1=1,
         tf_qos=tf_qos,
+        dvl_sensor_qos=dvl_sensor_qos,
         latched_qos=latched_qos,
     )
 

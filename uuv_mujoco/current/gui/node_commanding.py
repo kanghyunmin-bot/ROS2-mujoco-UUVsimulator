@@ -32,6 +32,7 @@ from .node_rc_publishers import (
     publish_ping360_config,
     publish_ping360_enabled,
     publish_rc_channels,
+    publish_rc_neutral_then_release,
     publish_rc_override,
     publish_rc_release,
 )
@@ -60,6 +61,7 @@ __all__ = [
     "_on_mode_response",
     "publish_rc_override",
     "publish_manual_control",
+    "publish_rc_neutral_then_release",
     "publish_rc_release",
     "publish_rc_channels",
     "publish_ping360_config",

@@ -6,6 +6,7 @@ from typing import Any, MutableMapping
 
 from .thruster_param_common import is_number
 from .thruster_param_global_fields import (
+    apply_global_bool_fields,
     apply_global_poly_fields,
     apply_global_scalar_fields,
     clipped_global_scale,
@@ -13,6 +14,7 @@ from .thruster_param_global_fields import (
 
 
 def apply_global_params(global_cfg: dict[str, Any], thruster_global: MutableMapping[str, Any]) -> tuple[float, float]:
+    apply_global_bool_fields(global_cfg, thruster_global)
     apply_global_scalar_fields(global_cfg, thruster_global)
 
     scale_all = global_cfg.get("gain_scale_all")

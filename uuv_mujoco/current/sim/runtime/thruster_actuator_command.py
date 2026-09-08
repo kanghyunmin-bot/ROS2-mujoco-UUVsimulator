@@ -4,16 +4,20 @@ from __future__ import annotations
 
 import numpy as np
 
-from physics.hydrodynamics_helpers import first_order_response, shape_thruster_command
+from physics.hydrodynamics_helpers import shape_thruster_command
+from sim.physics.thruster_dynamics import thruster_response
 from sim.physics.thruster_force_model import force_from_shaped_command
 from sim.runtime.thruster_actuator_immersion import force_immersion_scale
 from sim.runtime.thruster_actuator_params import ThrusterUpdateParams, thruster_tau
 
 
 def update_thruster_state(runtime, name: str, dt: float, params: ThrusterUpdateParams) -> float:
-    target_norm = float(np.clip(runtime.target[name], -1.0, 1.0))
+    target_norm = float(np.clip(runtime.target[name], -params.command_limit, params.command_limit))
+    if runtime.perf_cfg.get("active") and runtime.perf_cfg.get("direct"):
+        if abs(target_norm) <= 25.0 / 400.0:
+            target_norm = 0.0
     tau_up, tau_down = thruster_tau(runtime, name, params)
-    runtime.state[name] = first_order_response(runtime.state[name], target_norm, dt, tau_up, tau_down)
+    runtime.state[name] = thruster_response(runtime.state[name], target_norm, dt, tau_up, tau_down)
     return float(runtime.state[name])
 
 
@@ -34,7 +38,11 @@ def thruster_force(runtime, name: str, shaped_cmd: float) -> float:
         thruster_force_max=runtime.thruster_force_max,
         thruster_reverse_asymmetry=runtime.thruster_reverse_asymmetry,
     )
-    return float(force * force_immersion_scale(runtime, name))
+    immersion = force_immersion_scale(runtime, name)
+    if hasattr(runtime, "last_static_force_n"):
+        runtime.last_static_force_n[name] = float(force)
+        runtime.last_immersion_scale[name] = float(immersion)
+    return float(force * immersion)
 
 
 __all__ = ["shaped_thruster_command", "thruster_force", "update_thruster_state"]

@@ -15,7 +15,7 @@ find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(mavros_msgs REQUIRED)
-find_package(dvl_msgs REQUIRED)
+find_package(auv_dvl_a50_msg REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -57,11 +57,35 @@ if(BUILD_TESTING)
   )
   set_tests_properties(sim_mavros_time_contract PROPERTIES TIMEOUT 10)
   add_test(
+    NAME basic_rov_interface
+    COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_basic_rov_interface.py
+  )
+  set_tests_properties(basic_rov_interface PROPERTIES TIMEOUT 10)
+  add_test(
     NAME dvl_frd_to_flu_contract
     COMMAND ${Python3_EXECUTABLE}
       ${CMAKE_CURRENT_SOURCE_DIR}/test/test_dvl_frd_to_flu_contract.py
   )
   set_tests_properties(dvl_frd_to_flu_contract PROPERTIES TIMEOUT 10)
+  add_test(
+    NAME imx219_static_tf_contract
+    COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_imx219_static_tf_contract.py
+  )
+  set_tests_properties(imx219_static_tf_contract PROPERTIES TIMEOUT 10)
+  add_test(
+    NAME camera_sonar_viewer
+    COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_camera_sonar_viewer.py
+  )
+  set_tests_properties(camera_sonar_viewer PROPERTIES TIMEOUT 10)
+  add_test(
+    NAME dvl_localization_visualizer
+    COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_dvl_localization_visualizer.py
+  )
+  set_tests_properties(dvl_localization_visualizer PROPERTIES TIMEOUT 10)
 endif()
 
 add_executable(odom2mavros src/odom2mavros.cpp)
@@ -71,13 +95,18 @@ add_executable(vfr2atm_pressure src/vfr2atm_pressure.cpp)
 ament_target_dependencies(vfr2atm_pressure rclcpp mavros_msgs sensor_msgs)
 
 add_executable(dvl_to_twist_bridge src/dvl_to_twist_bridge.cpp)
-ament_target_dependencies(dvl_to_twist_bridge rclcpp geometry_msgs dvl_msgs)
+ament_target_dependencies(
+  dvl_to_twist_bridge
+  rclcpp
+  geometry_msgs
+  auv_dvl_a50_msg
+)
 
 add_executable(dvl_position_to_odom_bridge src/dvl_position_to_odom_bridge.cpp)
 ament_target_dependencies(
   dvl_position_to_odom_bridge
   rclcpp
-  dvl_msgs
+  auv_dvl_a50_msg
   nav_msgs
   tf2
   tf2_geometry_msgs
@@ -124,13 +153,20 @@ install(PROGRAMS
   scripts/dronecan2mavros_battery.py
   scripts/dronecan2mavros_battery_v2.py
   scripts/mavros_imu_rate_config.py
+  scripts/camera_sonar_viewer.py
+  scripts/dvl_localization_visualizer.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
 install(DIRECTORY
   launch
   config
+  rviz
+  urdf
+  meshes
   DESTINATION share/${PROJECT_NAME}
+  PATTERN "__pycache__" EXCLUDE
+  PATTERN "*.pyc" EXCLUDE
 )
 
 ament_package()

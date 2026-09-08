@@ -43,6 +43,7 @@ from .runtime import rclpy
 from .web_process_manager import WebProcessManager
 from .web_rc_replay import WebRcReplayManager
 from .web_tool_files import WebToolFileManager
+from .sim_launch_preset import default_sim_launch_preset_id, sim_launch_preset_ids
 
 
 MODE_BUTTONS = ("MANUAL", "STABILIZE", "ALT_HOLD", "GUIDED", "SURFACE", "POSHOLD")
@@ -389,8 +390,8 @@ class WebGuiController:
             },
         }
 
-    def start_sim_stack(self) -> dict[str, Any]:
-        return self.processes.start_sim_stack()
+    def start_sim_stack(self, preset_id: str | None = None) -> dict[str, Any]:
+        return self.processes.start_sim_stack(preset_id=preset_id)
 
     def stop_sim_stack(self) -> dict[str, Any]:
         return self.processes.stop_sim_stack()
@@ -454,6 +455,19 @@ class WebGuiController:
                     "running": True,
                     "idempotent": True,
                 }
+            auto_arm_requested = bool(values.get("auto_arm", False))
+            if auto_arm_requested and not bool(self.node.snapshot().armed):
+                status = (
+                    "pinger homing: auto-arm is unavailable with strict ArduSub "
+                    "RC3 pre-arm safety; arm from the GUI first, then start "
+                    "pinger homing with auto-arm disabled"
+                )
+                self.node.push_event(status)
+                return {
+                    "status": status,
+                    "running": False,
+                    "reason": "strict_rc3_prearm_requires_gui_rc_publisher",
+                }
             sim_start_result: dict[str, Any] | None = None
             if not self.processes.simulation_runtime_available():
                 self.node.push_event("pinger homing requested with sim stopped; starting sim stack")
@@ -488,7 +502,7 @@ class WebGuiController:
             # The GUI may request ALT_HOLD through MAVROS, but the C++ node
             # will not emit RC until /mavros/state confirms it.
             mode = "ALT_HOLD"
-            auto_arm = bool(values.get("auto_arm", False))
+            auto_arm = auto_arm_requested
             initially_armed = bool(self.node.snapshot().armed)
             result = self.processes.start_pinger_homing(values)
             if sim_start_result is not None:
@@ -936,8 +950,7 @@ class WebGuiController:
     def _publish_rc_release(self) -> None:
         try:
             if GUI_PILOT_CONTROL_MODE == PILOT_CONTROL_RC_OVERRIDE:
-                self.node.publish_rc_override(yaw=0.0, heave=0.0, forward=0.0, lateral=0.0)
-                self.node.publish_rc_release()
+                self.node.publish_rc_neutral_then_release()
             else:
                 self.node.publish_manual_control(yaw=0.0, heave=0.0, forward=0.0, lateral=0.0)
                 self.node.publish_rc_release()
@@ -1069,7 +1082,11 @@ class UuvWebHandler(BaseHTTPRequestHandler):
             self.controller.enqueue("ping360_config", lambda: self.controller.node.publish_ping360_config(**config))
             return {"command": "ping360_config"}
         if command == "stack_start":
-            return {"command": "stack_start", **self.controller.start_sim_stack()}
+            preset_id = str(payload.get("sim_preset", "")).strip() or None
+            return {
+                "command": "stack_start",
+                **self.controller.start_sim_stack(preset_id=preset_id),
+            }
         if command == "stack_stop":
             return {"command": "stack_stop", **self.controller.stop_sim_stack()}
         if command == "stack_reset":
@@ -1253,6 +1270,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--host", default="127.0.0.1", help="HTTP bind host")
     parser.add_argument("--port", type=int, default=8878, help="HTTP bind port")
     parser.add_argument(
+        "--sim-preset",
+        choices=sim_launch_preset_ids(),
+        default=default_sim_launch_preset_id(),
+        help="Initial validated scene/physics preset used by Start SITL/MuJoCo",
+    )
+    parser.add_argument(
         "--image-topic",
         default=os.environ.get("UUV_GUI_STEREO_LEFT_TOPIC", "/camera/camera/color/image_raw/compressed"),
         help="ROS sensor_msgs/Image or CompressedImage topic shown in the web camera panel",
@@ -1285,6 +1308,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    os.environ["UUV_GUI_SIM_PRESET"] = args.sim_preset
     os.environ["UUV_GUI_STEREO_LEFT_TOPIC"] = args.image_topic
     os.environ["UUV_GUI_STEREO_RIGHT_TOPIC"] = args.right_image_topic
     os.environ["UUV_GUI_YOLO_DETECTION_TOPIC"] = args.yolo_detection_topic

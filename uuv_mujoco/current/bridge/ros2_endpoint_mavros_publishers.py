@@ -26,10 +26,37 @@ def disable_mavros_publishers(bridge) -> None:
         setattr(bridge, attr, None)
 
 
-def create_mavros_publishers(bridge, *, q10, latched_qos) -> None:
+def _create_sensor_publishers(bridge, *, sensor_qos) -> None:
+    """Create only the physical raw-sensor boundary owned by strict SITL."""
+
+    node = bridge.node
+    bridge.pub_mavros_imu_data_raw = node.create_publisher(
+        bridge.Imu,
+        "/mavros/imu/data_raw",
+        sensor_qos,
+    )
+    bridge.pub_mavros_imu_static_pressure = node.create_publisher(
+        bridge.FluidPressure,
+        "/mavros/imu/static_pressure",
+        sensor_qos,
+    )
+
+
+def create_mavros_publishers(
+    bridge,
+    *,
+    q10,
+    latched_qos,
+    sensor_qos=None,
+) -> None:
     node = bridge.node
     if not bridge._mavros_surface_enabled:
         disable_mavros_publishers(bridge)
+        if bool(getattr(bridge, "_strict_sitl_sensor_transport", False)):
+            _create_sensor_publishers(
+                bridge,
+                sensor_qos=q10 if sensor_qos is None else sensor_qos,
+            )
         return
 
     bridge.pub_mavros_vfr_hud = node.create_publisher(bridge.VfrHud, "/mavros/vfr_hud", q10)

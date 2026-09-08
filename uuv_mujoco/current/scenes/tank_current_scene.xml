@@ -939,9 +939,9 @@
       <site name="buoy_ver_rf" pos="0.149 -0.2344 0.040" size="0.010" rgba="0.1 1 0.6 0.85" />
       <site name="buoy_ver_rr" pos="-0.171 -0.2344 0.040" size="0.010" rgba="0.1 1 0.6 0.85" />
       <site name="cob_site" pos="0 0 0.032" size="0.015" rgba="0.1 1 0.1 0.7" quat="1 0 0 0" />
-      <site name="imu_site" pos="0.1100 -0.0003 0.0920" quat="1 0 0 0" size="0.020" rgba="1 1 0 1" />
-      <site name="bar30_site" pos="-0.1736 -0.0303 0.0536" quat="1 0 0 0" size="0.018" rgba="0.2 0.8 1.0 1" />
-      <site name="dvl_site" pos="-0.0320 0 -0.0970" quat="0 1 0 0" size="0.020" rgba="0 1 1 1" />
+      <site name="imu_site" pos="0.13135 0 0.08541" quat="1 0 0 0" size="0.020" rgba="1 1 0 1" />
+      <site name="bar30_site" pos="-0.17364 -0.03034 0.0536" quat="1 0 0 0" size="0.018" rgba="0.2 0.8 1.0 1" />
+      <site name="dvl_site" pos="-0.00488 0 -0.03910" quat="0 1 0 0" size="0.020" rgba="0 1 1 1" />
       <site name="ping360_site" pos="0 0 0.205" quat="1 0 0 0" size="0.020" rgba="0.2 0.6 1 1" />
       <site name="hydrophone_center_site" pos="0.2150 0.0000 -0.0350" quat="1 0 0 0" size="0.018" rgba="0.0 0.9 1.0 1" />
       <site name="hydrophone_left_site" pos="0.2150 0.0600 -0.0350" quat="1 0 0 0" size="0.014" rgba="0.0 0.9 1.0 1" />

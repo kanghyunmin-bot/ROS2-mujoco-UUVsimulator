@@ -14,7 +14,14 @@ def handle_arm_target_reached(self, value: bool) -> bool:
     return True
 
 
-def handle_arm_gate(self, value: bool, deadline: float, attempt: int) -> bool:
+def handle_arm_gate(
+    self,
+    value: bool,
+    deadline: float,
+    attempt: int,
+    *,
+    request_generation: int | None = None,
+) -> bool:
     gate_reason = self._arm_mode_gate_reason(arm_value=bool(value))
     if not gate_reason:
         return False
@@ -23,7 +30,12 @@ def handle_arm_gate(self, value: bool, deadline: float, attempt: int) -> bool:
         return True
     if should_log_attempt(attempt):
         self._push_event(f"arm delayed: {gate_reason}")
-    self._retry_arm_request(value, deadline, attempt)
+    self._retry_arm_request(
+        value,
+        deadline,
+        attempt,
+        request_generation=request_generation,
+    )
     return True
 
 

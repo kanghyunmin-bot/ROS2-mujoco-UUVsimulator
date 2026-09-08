@@ -24,6 +24,10 @@ def start_gui_sim_stack_process(owner, *, target, extra_args: list[str] | None, 
         return None
 
     try:
+        env.setdefault(
+            "UUV_MJ_THRUSTER_DEBUG_CSV",
+            str(log_path.with_name(f"{log_path.stem}_thrusters.csv")),
+        )
         cmd = build_sim_stack_launch_command(
             owner,
             start_script=target.start_script,

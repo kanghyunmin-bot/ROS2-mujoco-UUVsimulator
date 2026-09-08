@@ -48,6 +48,19 @@ def generate_launch_description() -> LaunchDescription:
             apm_config_yaml,
             sim_time_yaml,
         ],
+        # MAVROS retains the FCU AHRS owner for /mavros/imu/data. MuJoCo owns
+        # only the strict raw IMU and Bar30 delivery boundary, so quarantine
+        # the JSON-backend sample-and-hold copies of those two topics.
+        remappings=[
+            (
+                "/mavros/imu/data_raw",
+                "/uuv_mujoco/mavros_fcu_passthrough/imu/data_raw",
+            ),
+            (
+                "/mavros/imu/static_pressure",
+                "/uuv_mujoco/mavros_fcu_passthrough/imu/static_pressure",
+            ),
+        ],
     )
 
     return LaunchDescription(

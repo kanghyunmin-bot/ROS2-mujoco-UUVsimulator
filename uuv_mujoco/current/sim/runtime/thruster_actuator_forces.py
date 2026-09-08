@@ -5,14 +5,20 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
+from sim.physics.thruster_voltage import update_supply_voltage
 
 from sim.runtime.thruster_actuator_command import shaped_thruster_command, thruster_force, update_thruster_state
+from sim.runtime.thruster_actuator_inflow import force_with_local_inflow
 from sim.runtime.thruster_actuator_params import ThrusterUpdateParams, global_thruster_update_params
 from sim.runtime.thruster_actuator_wrench import accumulate_thruster_wrench
 
 
 def update_thruster_forces(runtime: Any, dt: float, *, base_id: int) -> None:
+    update_supply_voltage(runtime.perf_cfg, float(runtime.data.time))
+    runtime.last_static_force_n = {}
+    runtime.last_immersion_scale = {}
     runtime.last_reaction_torque_world = np.zeros(3, dtype=np.float64)
+    runtime.last_reaction_torque_body = np.zeros(3, dtype=np.float64)
     runtime.last_force_body = np.zeros(3, dtype=np.float64)
     runtime.last_torque_body = np.zeros(3, dtype=np.float64)
     base_rot = runtime.data.xmat[base_id].reshape(3, 3)
@@ -24,6 +30,7 @@ def update_thruster_forces(runtime: Any, dt: float, *, base_id: int) -> None:
             runtime=runtime,
             name=name,
             dt=dt,
+            base_id=base_id,
             base_rot=base_rot,
             com_body=com_body,
             params=params,
@@ -35,6 +42,7 @@ def _update_one_thruster(
     runtime: Any,
     name: str,
     dt: float,
+    base_id: int,
     base_rot: np.ndarray,
     com_body: np.ndarray,
     params: ThrusterUpdateParams,
@@ -44,17 +52,29 @@ def _update_one_thruster(
     state_value = update_thruster_state(runtime, name, dt, params)
     shaped_cmd = shaped_thruster_command(runtime, state_value, params)
     force = thruster_force(runtime, name, shaped_cmd)
+    sid = runtime.site_ids.get(name, -1)
+    force = force_with_local_inflow(
+        runtime,
+        name=name,
+        aid=aid,
+        sid=sid,
+        base_id=base_id,
+        base_rot=base_rot,
+        static_force_n=force,
+        command_fraction=shaped_cmd,
+        config=params.inflow,
+    )
     force = float(np.clip(force, lo, hi))
     runtime.data.ctrl[aid] = force
     runtime.force_cmd[name] = force
 
-    sid = runtime.site_ids.get(name, -1)
     accumulate_thruster_wrench(
         runtime,
         name=name,
         aid=aid,
         sid=sid,
         force=force,
+        base_id=base_id,
         base_rot=base_rot,
         com_body=com_body,
         reaction_torque_gain=params.reaction_torque_gain,

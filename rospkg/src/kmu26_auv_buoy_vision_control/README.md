@@ -134,7 +134,7 @@ ros2 run auv_buoy_vision_control check_yolo_env.py
 ```bash
 ros2 launch auv_buoy_vision_control laptop_yolo_detection.launch.py \
   model_path:=/path/to/model.pt \
-  image_topic:=/camera/camera/color/image_raw/compressed \
+  image_topic:=/imx219/camera0/image_raw/compressed \
   bbox_topic:=/vision/buoy_bbox \
   device:=cuda:0 \
   publish_per_class:=true
@@ -256,3 +256,15 @@ export ROS_LOCALHOST_ONLY=0
 - `VERIFY_RELEASE`는 buoy가 일정 시간 안 보이는 것을 **임시 성공**으로 봅니다. 실기체 최종 성공 판정용은 아닙니다.
 - APPROACH에 별도 타임아웃은 없습니다 (면적·stick 조건 또는 buoy 유실로만 빠져나옴).
 - Web GUI로 미션을 띄우면 GUI 입력값이 launch 기본보다 우선할 수 있으니, GUI 기본값이 이 README/노드와 같은지 확인하세요.
+
+
+## 실물·strict 시뮬 공통 입력과 명령 경로
+
+YOLO의 기본 입력은 `/imx219/camera0/image_raw/compressed`이다. 다른 카메라는
+`image_topic:=...`으로 명시한다. 기존 `/camera/camera/...` 입력이 필요한 실행도
+같은 인자로 지정할 수 있다.
+
+두 제어기의 기본 출력은 조직 원본과 같은 `/mavros/rc/override`이다.
+단독 실행에 mux가 필요하지 않다. 여러 제어기를 통합하는 실험에서만
+`rc_override_topic:=...`으로 출력 경로를 명시적으로 설정한다.
+대회 알고리즘의 최신 버전 동기화는 기본 ROV 기준선의 검증 범위가 아니다.

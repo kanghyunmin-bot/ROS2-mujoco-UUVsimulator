@@ -21,6 +21,7 @@ def configure_ros_runtime_state(self) -> None:
     self.RCOut = None
     self.DVLMsg = None
     self.DVLDRMsg = None
+    self.DVLPackage = None
     self.CollectorState = None
     self.Clock = None
     self._publisher_demand = PublisherDemandCache(
@@ -36,10 +37,24 @@ def configure_ros_runtime_state(self) -> None:
 def init_ros_runtime(self) -> None:
     imports = load_ros2_runtime_imports()
     bind_ros2_runtime_imports(self, imports)
-    if self._real_pkg_compat and self.DVLMsg is None:
+    direct_dvl_ros = not self._dvl_device_emulator_enabled
+    if (
+        self._real_pkg_compat
+        and direct_dvl_ros
+        and (self.DVLMsg is None or self.DVLPackage != "auv_dvl_a50_msg")
+    ):
         raise RuntimeError(
-            "strict real-package compatibility requires dvl_msgs/msg/DVL; "
-            "build and source the dvl_msgs workspace before launching"
+            "strict real-package compatibility requires auv_dvl_a50_msg/msg/DVL; "
+            "the legacy dvl_msgs fallback is allowed only outside strict mode"
+        )
+    if (
+        self._real_pkg_compat
+        and direct_dvl_ros
+        and (self.DVLDRMsg is None or self.DVLPackage != "auv_dvl_a50_msg")
+    ):
+        raise RuntimeError(
+            "strict real-package compatibility requires auv_dvl_a50_msg/msg/DVLDR; "
+            "the legacy dvl_msgs fallback is allowed only outside strict mode"
         )
     if self._real_pkg_compat and self.CollectorState is None:
         raise RuntimeError(

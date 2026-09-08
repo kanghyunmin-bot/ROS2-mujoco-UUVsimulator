@@ -41,6 +41,8 @@ def build_fossen_residual_runtime(
     cfg_active = bool(cfg.get("active", False))
     mass_active = added_mass_active(cfg, cfg_active, matrix, env_flag)
     active = fossen_runtime_active(cfg_active, mass_active, linear, forward_speed, quadratic)
+    requested_active = bool(active)
+    requested_mass_active = bool(mass_active)
     if active and use_custom_hydrodynamics:
         active = False
         mass_active = False
@@ -68,6 +70,8 @@ def build_fossen_residual_runtime(
     return FossenResidualRuntime(
         active=bool(active),
         added_mass_active=bool(mass_active),
+        requested_active=requested_active,
+        requested_added_mass_active=requested_mass_active,
         linear=linear,
         forward_speed=forward_speed,
         quadratic=quadratic,

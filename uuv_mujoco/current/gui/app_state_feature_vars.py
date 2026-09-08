@@ -8,6 +8,7 @@ from .config import (
     PHYSICS_PARAM_SPECS,
     ROS_PACKAGE_DEFAULT_FCU_URL,
 )
+from .sim_launch_preset import default_sim_launch_preset_id, resolve_sim_launch_preset
 
 
 def initialize_replay_vars(owner) -> None:
@@ -24,7 +25,7 @@ def initialize_replay_vars(owner) -> None:
 
 
 def initialize_physics_vars(owner) -> None:
-    owner.physics_status_var = tk.StringVar(value="physics params: idle")
+    owner.physics_status_var = tk.StringVar(value="physics params [current]: idle")
     owner.buoy_layout_status_var = tk.StringVar(value="course layout: idle")
     owner.physics_param_vars = {
         str(spec["key"]): tk.StringVar(value="")
@@ -33,10 +34,12 @@ def initialize_physics_vars(owner) -> None:
 
 
 def initialize_runtime_panel_vars(owner) -> None:
+    default_preset = resolve_sim_launch_preset(default_sim_launch_preset_id())
     string_vars(
         owner,
         {
             "sim_stack_status_var": "sim: stopped",
+            "sim_launch_preset_var": default_preset.label,
             "ros_pkg_status_var": "mavros: stopped",
             "ros_pkg_fcu_url_var": ROS_PACKAGE_DEFAULT_FCU_URL,
             "rviz_status_var": "rviz: stopped",

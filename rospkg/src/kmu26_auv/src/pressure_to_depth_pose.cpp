@@ -67,6 +67,7 @@ private:
     out.header = msg->header;
     out.header.frame_id = world_frame_;
     out.pose.pose.position.z = -(depth_m - reference_depth_m_) + depth_offset_m_;
+    out.pose.pose.orientation.w = 1.0;
     out.pose.covariance.fill(0.0);
     out.pose.covariance[14] = z_variance_;
     publisher_->publish(out);

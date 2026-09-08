@@ -13,6 +13,12 @@ from .baro import (
     surface_pressure_for_depth_sample,
 )
 from .observability import CONTROLLER_PARITY_OBSERVATION, PLANT_INPUT_OBSERVATION, ObservationPoint
+from .ground_truth import (
+    UNSAFE_LEGACY_GROUND_TRUTH_ODOMETRY_FILTERED_CLI,
+    UNSAFE_LEGACY_GROUND_TRUTH_ODOMETRY_FILTERED_ENV,
+    UNSAFE_LEGACY_GROUND_TRUTH_ODOMETRY_FILTERED_WARNING,
+    resolve_unsafe_legacy_ground_truth_odometry_filtered,
+)
 from .rates import REAL_ROBOT_SENSOR_RATES_HZ
 from .rc import (
     NEUTRAL_DEFAULT_CHANNEL_COUNT,
@@ -47,6 +53,10 @@ __all__ = [
     "CONTROLLER_PARITY_OBSERVATION",
     "PLANT_INPUT_OBSERVATION",
     "ObservationPoint",
+    "UNSAFE_LEGACY_GROUND_TRUTH_ODOMETRY_FILTERED_CLI",
+    "UNSAFE_LEGACY_GROUND_TRUTH_ODOMETRY_FILTERED_ENV",
+    "UNSAFE_LEGACY_GROUND_TRUTH_ODOMETRY_FILTERED_WARNING",
+    "resolve_unsafe_legacy_ground_truth_odometry_filtered",
     "NEUTRAL_DEFAULT_CHANNEL_COUNT",
     "PRIMARY_RC_CHANNEL_COUNT",
     "PWM_CENTER",

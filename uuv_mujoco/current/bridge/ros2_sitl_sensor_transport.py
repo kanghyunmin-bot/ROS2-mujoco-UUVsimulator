@@ -1,4 +1,10 @@
-"""SITL JSON transport handoff for ROS2 bridge sensor snapshots."""
+"""SITL JSON plant handoff for ROS2 bridge sensor snapshots.
+
+The JSON backend requires one complete frame at the 400 Hz controller cadence,
+so modeled IMU/Bar30 values are sample-and-held here.  In strict real-package
+mode this function is deliberately not the public raw-sensor transport: the
+delivery-driven ROS publishers consume the independent timed packet batches.
+"""
 
 from __future__ import annotations
 
@@ -14,6 +20,7 @@ def send_sitl_sensor_state(
     imu_dvl: ImuDvlState,
     vertical: Bar30VerticalState,
 ) -> None:
+    """Send one mandatory FCU plant frame without creating a ROS capture."""
     if self._sitl_transport is None or imu_dvl.gyro_bmj is None or imu_dvl.acc_bmj is None:
         return
 

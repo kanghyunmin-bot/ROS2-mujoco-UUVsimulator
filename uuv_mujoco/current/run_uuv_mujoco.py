@@ -73,6 +73,7 @@ def main() -> None:
         initial_depth_runtime=initial_setup.initial_depth_runtime,
         initial_runtime_state=initial_setup.initial_runtime_state,
         water_surface_z=initial_setup.water_surface_z,
+        scene_fluid_density=initial_setup.scene_fluid_density,
         base_origin_world=initial_setup.base_origin_world,
         bar30_depth_now_m=initial_setup.bar30_depth_now_m,
         world_qpos_adr=initial_setup.world_qpos_adr,

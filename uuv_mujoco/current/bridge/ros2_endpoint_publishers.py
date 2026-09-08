@@ -10,13 +10,27 @@ from .ros2_hydrophone_sim import create_hydrophone_publishers
 from .ros2_stereo_image import create_stereo_image_publishers
 
 
-def create_ros2_publishers(bridge, *, q10, q1, tf_qos, latched_qos) -> None:
+def create_ros2_publishers(
+    bridge,
+    *,
+    q10,
+    q1,
+    tf_qos,
+    dvl_sensor_qos,
+    latched_qos,
+) -> None:
     create_core_publishers(bridge, q10=q10)
     create_ping360_publishers(bridge, q10=q10, q1=q1)
-    create_stereo_image_publishers(bridge, q1=q1)
+    # Cameras and the A50 both use the standard best-effort sensor-data QoS.
+    create_stereo_image_publishers(bridge, camera_sensor_qos=dvl_sensor_qos)
     create_hydrophone_publishers(bridge, q10=q10)
-    create_mavros_publishers(bridge, q10=q10, latched_qos=latched_qos)
-    create_dvl_compat_publishers(bridge, q10=q10)
+    create_mavros_publishers(
+        bridge,
+        q10=q10,
+        latched_qos=latched_qos,
+        sensor_qos=dvl_sensor_qos,
+    )
+    create_dvl_compat_publishers(bridge, dvl_sensor_qos=dvl_sensor_qos)
     create_tf_publishers(bridge, tf_qos=tf_qos, latched_qos=latched_qos)
 
 

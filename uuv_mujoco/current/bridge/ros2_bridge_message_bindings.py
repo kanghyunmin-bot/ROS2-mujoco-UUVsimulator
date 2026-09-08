@@ -42,6 +42,7 @@ ROS2_IMPORT_ATTRS = (
     "MavrosSetMode",
     "DVLMsg",
     "DVLDRMsg",
+    "DVLPackage",
     "SonarEcho",
     "AudioData",
     "AudioInfo",

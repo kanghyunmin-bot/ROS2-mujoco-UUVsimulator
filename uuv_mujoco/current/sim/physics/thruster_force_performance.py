@@ -11,6 +11,10 @@ import numpy as np
 def pwm_to_force_from_performance(norm_cmd: float, perf_cfg: Mapping[str, Any]) -> float:
     """Map normalized command [-1, 1] to force using a PWM performance curve."""
     pwm = float(np.clip(norm_cmd, -1.0, 1.0) * 400.0 + 1500.0)
+    # Basic ESC signal deadband. Do not renormalize the remaining PWM range:
+    # the measured curve already contains ESC/motor startup behavior.
+    if abs(pwm - 1500.0) <= 25.0:
+        return 0.0
     return float(np.interp(pwm, perf_cfg["pwm"], perf_cfg["force"]))
 
 

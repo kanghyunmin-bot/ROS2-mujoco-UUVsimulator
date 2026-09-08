@@ -23,7 +23,7 @@ class YoloBuoyDetector(Node):
     def __init__(self) -> None:
         super().__init__("yolo_buoy_detector")
 
-        self.declare_parameter("image_topic", "/camera/camera/color/image_raw/compressed")
+        self.declare_parameter("image_topic", "/imx219/camera0/image_raw/compressed")
         self.declare_parameter("bbox_topic", "/vision/buoy_bbox")
         self.declare_parameter(
             "annotated_image_topic", "/vision/yolo/annotated/compressed"

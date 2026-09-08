@@ -3,7 +3,7 @@
 #include <cmath>
 #include <string>
 
-#include <dvl_msgs/msg/dvl.hpp>
+#include <auv_dvl_a50_msg/msg/dvl.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -15,7 +15,7 @@ public:
   {
     input_topic_ = declare_parameter<std::string>("input_topic", "/dvl/data");
     output_topic_ = declare_parameter<std::string>("output_topic", "/dvl/twist");
-    output_frame_id_ = declare_parameter<std::string>("output_frame_id", "dvl");
+    output_frame_id_ = declare_parameter<std::string>("output_frame_id", "dvl_link");
     default_linear_variance_ = declare_parameter<double>("default_linear_variance", 0.02);
     min_linear_variance_ = declare_parameter<double>("min_linear_variance", 0.005);
     max_linear_variance_ = declare_parameter<double>("max_linear_variance", 1.0);
@@ -27,12 +27,11 @@ public:
     require_valid_velocity_ = declare_parameter<bool>("require_valid_velocity", true);
     reacquire_good_samples_ = declare_parameter<int>("reacquire_good_samples", 3);
     reacquire_duration_s_ = declare_parameter<double>("reacquire_duration_s", 0.0);
-    input_velocity_is_frd_ = declare_parameter<bool>("input_velocity_is_frd", true);
 
     const auto sensor_qos = rclcpp::SensorDataQoS();
 
     publisher_ = create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(output_topic_, 10);
-    subscription_ = create_subscription<dvl_msgs::msg::DVL>(
+    subscription_ = create_subscription<auv_dvl_a50_msg::msg::DVL>(
       input_topic_, sensor_qos,
       std::bind(&DvlToTwistBridge::handle_msg, this, std::placeholders::_1));
 
@@ -49,14 +48,10 @@ public:
       get_logger(),
       "DVL reacquire gate: good_samples=%d duration=%.2fs",
       reacquire_good_samples_, reacquire_duration_s_);
-    RCLCPP_INFO(
-      get_logger(),
-      "DVL velocity frame conversion: input=%s output=ROS FLU",
-      input_velocity_is_frd_ ? "sensor FRD (x forward, y right, z down)" : "ROS FLU");
   }
 
 private:
-  void handle_msg(const dvl_msgs::msg::DVL::SharedPtr msg)
+  void handle_msg(const auv_dvl_a50_msg::msg::DVL::SharedPtr msg)
   {
     if (require_valid_velocity_ && !msg->velocity_valid) {
       RCLCPP_WARN_THROTTLE(
@@ -76,14 +71,12 @@ private:
       out.header.frame_id = output_frame_id_;
     }
 
-    // The physical Water Linked A50 driver publishes the sensor JSON velocity
-    // unchanged: x forward, y right, z down (FRD).  robot_localization expects
-    // a ROS body-frame twist: x forward, y left, z up (FLU).  Keep this
-    // conversion at the physical/simulator message boundary so both producers
-    // obey exactly the same /dvl/data contract.
+    // Keep the physical A50 vector in its native dvl_link frame (FRD).  The
+    // base_link -> dvl_link X-pi static transform performs the one and only
+    // FRD/FLU conversion for downstream consumers.
     out.twist.twist.linear.x = msg->velocity.x;
-    out.twist.twist.linear.y = input_velocity_is_frd_ ? -msg->velocity.y : msg->velocity.y;
-    out.twist.twist.linear.z = input_velocity_is_frd_ ? -msg->velocity.z : msg->velocity.z;
+    out.twist.twist.linear.y = msg->velocity.y;
+    out.twist.twist.linear.z = msg->velocity.z;
 
     auto & cov = out.twist.covariance;
     cov.fill(0.0);
@@ -102,10 +95,6 @@ private:
       cov[0] = default_linear_variance_;
       cov[7] = default_linear_variance_;
       cov[14] = default_linear_variance_;
-    }
-
-    if (input_velocity_is_frd_) {
-      convert_covariance_frd_to_flu(cov);
     }
 
     if (has_rejected_covariance(cov)) {
@@ -131,7 +120,7 @@ private:
     publisher_->publish(out);
   }
 
-  bool is_valid_measurement(const dvl_msgs::msg::DVL & msg)
+  bool is_valid_measurement(const auv_dvl_a50_msg::msg::DVL & msg)
   {
     const auto & velocity = msg.velocity;
     if (!std::isfinite(velocity.x) || !std::isfinite(velocity.y) || !std::isfinite(velocity.z)) {
@@ -192,18 +181,6 @@ private:
     return std::max(value, min_linear_variance_);
   }
 
-  static void convert_covariance_frd_to_flu(std::array<double, 36> & covariance)
-  {
-    // C_flu = S C_frd S^T.  The angular signs are included for a complete
-    // Twist covariance even though the current DVL only supplies linear data.
-    constexpr std::array<double, 6> signs{{1.0, -1.0, -1.0, 1.0, -1.0, -1.0}};
-    for (size_t row = 0; row < signs.size(); ++row) {
-      for (size_t col = 0; col < signs.size(); ++col) {
-        covariance[row * 6 + col] *= signs[row] * signs[col];
-      }
-    }
-  }
-
   void reset_reacquisition()
   {
     reacquired_ = false;
@@ -245,12 +222,11 @@ private:
   bool require_valid_velocity_;
   int reacquire_good_samples_;
   double reacquire_duration_s_;
-  bool input_velocity_is_frd_;
   bool reacquired_{false};
   int consecutive_good_samples_{0};
   rclcpp::Time first_good_time_{0, 0, RCL_ROS_TIME};
   rclcpp::Publisher<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr publisher_;
-  rclcpp::Subscription<dvl_msgs::msg::DVL>::SharedPtr subscription_;
+  rclcpp::Subscription<auv_dvl_a50_msg::msg::DVL>::SharedPtr subscription_;
 };
 
 int main(int argc, char ** argv)

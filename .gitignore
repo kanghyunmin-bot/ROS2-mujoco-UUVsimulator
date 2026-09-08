@@ -71,3 +71,6 @@ CMakeCache.txt
 /symlink_install_manifest.txt
 /rospkg/symlink_install_manifest.txt
 
+
+# Locally regenerated audit reports
+/uuv_mujoco/current/research_workspace/00_current_contract/fast_contract_sanity/

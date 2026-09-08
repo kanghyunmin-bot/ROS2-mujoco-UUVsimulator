@@ -71,6 +71,12 @@ def create_runtime_physics_setup(
 
     hydro_runtime = create_hydrodynamics_runtime(ctx, hydrostatic_context)
     thruster_actuator_runtime = create_runtime_thruster_actuator(ctx, thruster_param_runtime, hydro_runtime)
+    thruster_actuator_runtime.set_current_velocity_sampler(
+        hydro_runtime.water_environment_runtime.velocity_world
+    )
+    thruster_actuator_runtime.set_surface_height_sampler(
+        hydro_runtime.water_environment_runtime.surface_height_world_m
+    )
     underwater_wrench_runtime, body_velocity_local = create_underwater_runtime(
         ctx,
         hydrostatic_context,

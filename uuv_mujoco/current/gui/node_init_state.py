@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .config import SIM_STACK_DIR
 from .models import TelemetrySnapshot
+from .node_arm_rc_sequence import initialize_arm_rc_sequence_state
 from .node_stereo_camera import initialize_stereo_camera_state
 from .runtime import os, threading
 
@@ -21,6 +22,7 @@ def initialize_node_state(self) -> None:
     self._latest_arm_target = None
     self._latest_mode_target = ""
     self._arm_request_in_flight = False
+    initialize_arm_rc_sequence_state(self)
     self._rc_override_subscribers = 0
     self._manual_control_subscribers = 0
     self._one_shot_timers = []

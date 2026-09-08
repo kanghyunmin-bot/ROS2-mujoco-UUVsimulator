@@ -11,6 +11,7 @@ from sim.physics.thruster_params import (
     ensure_thruster_params_file,
     load_thruster_params_file,
 )
+from sim.physics.thruster_inflow import thruster_inflow_profile_overrides
 
 
 def load_runtime_thruster_parameters(
@@ -40,6 +41,15 @@ def load_runtime_thruster_parameters(
         thruster_tau_up=tau_up,
         thruster_tau_down=tau_down,
     )
+    inflow_override = thruster_inflow_profile_overrides(sim_profile)
+    if inflow_override is not None:
+        values, status, provenance = inflow_override
+        global_params.update(values)
+        log(
+            "[thruster] local inflow correction: "
+            f"{'on' if bool(values['inflow_enabled']) else 'off'} "
+            f"(status={status}, provenance={provenance})"
+        )
     apply_thruster_direct_gain_overrides(
         sim_profile,
         direct_scale,

@@ -33,7 +33,7 @@ class Ros2Bridge:
         image_width: int = 1280,
         image_height: int = 720,
         sensor_hz: float = 50.0,
-        image_hz: float = 10.0,
+        image_hz: float = 30.0,
         enable_sitl: bool = False,
         sitl_ip: str = "127.0.0.1",
         sitl_port: int = 9002,
@@ -52,6 +52,8 @@ class Ros2Bridge:
         enable_ping360: bool = True,
         ping360_config_path: str = "",
         ping360_overrides: Optional[dict] = None,
+        strict_sitl_sensor_transport: bool | None = None,
+        unsafe_legacy_ground_truth_odometry_filtered: bool = False,
     ) -> None:
         init = dict(locals())
         init.pop("self")

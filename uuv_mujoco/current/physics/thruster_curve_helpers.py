@@ -17,7 +17,9 @@ def shape_thruster_command(command: float, deadzone: float, command_limit: float
     magnitude = min(abs(signed), command_limit)
     if magnitude <= deadzone:
         return 0.0
-    span = max(command_limit - deadzone, 1e-6)
+    # A command limit caps input; it must not stretch a partial command back
+    # to full thrust when the limit is reduced.
+    span = max(1.0 - deadzone, 1e-6)
     return sign * float(np.clip((magnitude - deadzone) / span, 0.0, 1.0))
 
 

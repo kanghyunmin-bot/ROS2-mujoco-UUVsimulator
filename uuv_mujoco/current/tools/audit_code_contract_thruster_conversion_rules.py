@@ -120,7 +120,9 @@ def immersion_contract_passes(immersion_py: Path) -> bool:
     return contains_all(
         immersion_py,
         [
-            "site_depth_m = float(runtime.water_surface_z - site_z)",
+            'surface_sampler = getattr(runtime, "surface_height_sampler", None)',
+            "surface_sampler(site_position.copy(), float(runtime.data.time))",
+            "site_depth_m = float(surface_height - site_position[2])",
             "submerged_fraction(",
             "runtime.thruster_air_force_scale",
             "runtime.thruster_immersion_half_height_m",

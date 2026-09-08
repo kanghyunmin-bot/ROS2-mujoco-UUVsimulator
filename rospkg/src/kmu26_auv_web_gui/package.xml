@@ -19,7 +19,7 @@
   <exec_depend>rosidl_runtime_py</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>
-  <exec_depend>dvl_msgs</exec_depend>
+  <exec_depend>auv_dvl_a50_msg</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
   <exec_depend>python3-websockets</exec_depend>
 

@@ -51,9 +51,11 @@ def _static_tf_node(
 
 def generate_launch_description() -> LaunchDescription:
     package_share = get_package_share_directory("hit25_auv_ros2")
-    dvl_default = _default_launch_file(
-        "dvl_a50", os.path.join("launch", "dvl_a50.launch.py")
-    )
+    dvl_default = os.path.join(package_share, "launch", "dvl_a50_driver.launch.py")
+    camera_default = _default_launch_file(
+        "auv_imx219_camera", os.path.join("launch", "dual_imx219.launch.py"))
+    camera_calibration_default = _default_launch_file(
+        "auv_imx219_camera", os.path.join("config", "calibration.example.yaml"))
     mavros_default = _default_launch_file("mavros", os.path.join("launch", "apm.launch"))
     mavros_sim_default = os.path.join(
         package_share, "launch", "mavros_apm_sim.launch.py")
@@ -77,6 +79,7 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("configure_mavros_imu_rate", default_value="true"),
         DeclareLaunchArgument("mavros_imu_rate_hz", default_value="50.0"),
         DeclareLaunchArgument("mavros_raw_imu_rate_hz", default_value="50.0"),
+        DeclareLaunchArgument("mavros_baro_rate_hz", default_value="10.0"),
         DeclareLaunchArgument("dronecan_python", default_value=dronecan_python_default),
         DeclareLaunchArgument("use_external_baro_bridge", default_value="false"),
         DeclareLaunchArgument(
@@ -86,21 +89,21 @@ def generate_launch_description() -> LaunchDescription:
         # Frames
         DeclareLaunchArgument("base_frame", default_value="base_link"),
         DeclareLaunchArgument("fcu_frame", default_value="fcu_link"),
-        DeclareLaunchArgument("dvl_frame", default_value="dvl"),
+        DeclareLaunchArgument("dvl_frame", default_value="dvl_link"),
         DeclareLaunchArgument("depth_frame", default_value="depth_link"),
         DeclareLaunchArgument("imu_frame", default_value="imu_link"),
         # base_link -> fcu_link (FCU/IMU) static TF
-        DeclareLaunchArgument("base_to_fcu_x", default_value="0.11"),
-        DeclareLaunchArgument("base_to_fcu_y", default_value="-0.00034"),
-        DeclareLaunchArgument("base_to_fcu_z", default_value="0.092"),
+        DeclareLaunchArgument("base_to_fcu_x", default_value="0.13135"),
+        DeclareLaunchArgument("base_to_fcu_y", default_value="0.0"),
+        DeclareLaunchArgument("base_to_fcu_z", default_value="0.08541"),
         DeclareLaunchArgument("base_to_fcu_roll", default_value="0.0"),
         DeclareLaunchArgument("base_to_fcu_pitch", default_value="0.0"),
         DeclareLaunchArgument("base_to_fcu_yaw", default_value="0.0"),
         # base_link -> DVL static TF
-        DeclareLaunchArgument("dvl_x", default_value="-0.03196"),
+        DeclareLaunchArgument("dvl_x", default_value="-0.00488"),
         DeclareLaunchArgument("dvl_y", default_value="0.0"),
-        DeclareLaunchArgument("dvl_z", default_value="-0.097"),
-        DeclareLaunchArgument("dvl_roll", default_value="0.0"),
+        DeclareLaunchArgument("dvl_z", default_value="-0.03910"),
+        DeclareLaunchArgument("dvl_roll", default_value="3.141592653589793"),
         DeclareLaunchArgument("dvl_pitch", default_value="0.0"),
         DeclareLaunchArgument("dvl_yaw", default_value="0.0"),
         # base_link -> depth static TF
@@ -119,6 +122,55 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("imu_yaw", default_value="0.0"),
         DeclareLaunchArgument("dvl_ip", default_value="192.168.194.95"),
         DeclareLaunchArgument("use_dvl", default_value="true"),
+        DeclareLaunchArgument("use_imx219", default_value="true"),
+        DeclareLaunchArgument("imx219_launch_file", default_value=camera_default),
+        DeclareLaunchArgument("imx219_timestamp_source", default_value="gstreamer_pts"),
+        DeclareLaunchArgument("imx219_max_capture_age_ms", default_value="2000"),
+        DeclareLaunchArgument(
+            "camera0_calibration_file",
+            default_value=camera_calibration_default,
+            description=(
+                "Physical camera0 CameraInfo YAML. Replace the example file with "
+                "the measured in-water calibration before localization or SLAM."
+            ),
+        ),
+        DeclareLaunchArgument(
+            "camera1_calibration_file",
+            default_value=camera_calibration_default,
+            description=(
+                "Physical camera1 CameraInfo YAML. Replace the example file with "
+                "the measured in-water calibration before localization or SLAM."
+            ),
+        ),
+        DeclareLaunchArgument(
+            "publish_imx219_static_tf",
+            default_value="false",
+            description=(
+                "Publish measured physical base_link-to-IMX219 optical transforms. "
+                "Keep false until both camera extrinsics below have been measured."
+            ),
+        ),
+        DeclareLaunchArgument(
+            "imx219_camera0_frame",
+            default_value="imx219_camera0_optical_frame",
+        ),
+        # The zero defaults are inactive placeholders, not calibrated extrinsics.
+        DeclareLaunchArgument("imx219_camera0_x", default_value="0.0"),
+        DeclareLaunchArgument("imx219_camera0_y", default_value="0.0"),
+        DeclareLaunchArgument("imx219_camera0_z", default_value="0.0"),
+        DeclareLaunchArgument("imx219_camera0_roll", default_value="0.0"),
+        DeclareLaunchArgument("imx219_camera0_pitch", default_value="0.0"),
+        DeclareLaunchArgument("imx219_camera0_yaw", default_value="0.0"),
+        DeclareLaunchArgument(
+            "imx219_camera1_frame",
+            default_value="imx219_camera1_optical_frame",
+        ),
+        DeclareLaunchArgument("imx219_camera1_x", default_value="0.0"),
+        DeclareLaunchArgument("imx219_camera1_y", default_value="0.0"),
+        DeclareLaunchArgument("imx219_camera1_z", default_value="0.0"),
+        DeclareLaunchArgument("imx219_camera1_roll", default_value="0.0"),
+        DeclareLaunchArgument("imx219_camera1_pitch", default_value="0.0"),
+        DeclareLaunchArgument("imx219_camera1_yaw", default_value="0.0"),
         DeclareLaunchArgument("use_joy2mavros", default_value="true"),
         DeclareLaunchArgument("use_battery_bridge", default_value="true"),
         DeclareLaunchArgument("use_odom2mavros", default_value="true"),
@@ -138,18 +190,10 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("dvl_twist_min_valid_beams", default_value="4"),
         DeclareLaunchArgument("dvl_twist_reacquire_good_samples", default_value="3"),
         DeclareLaunchArgument("dvl_twist_reacquire_duration", default_value="0.0"),
-        DeclareLaunchArgument(
-            "dvl_input_velocity_is_frd",
-            default_value="true",
-            description=(
-                "Convert physical A50 /dvl/data velocity from FRD "
-                "(forward/right/down) to ROS FLU before localization."
-            ),
-        ),
         DeclareLaunchArgument("use_dvl_position_odom", default_value="true"),
         DeclareLaunchArgument("dvl_position_odom_topic", default_value="/dvl/odometry"),
         DeclareLaunchArgument("dvl_position_frame", default_value="dvl_odom"),
-        DeclareLaunchArgument("dvl_position_child_frame", default_value="dvl"),
+        DeclareLaunchArgument("dvl_position_child_frame", default_value="dvl_link"),
         DeclareLaunchArgument("dvl_position_zero_on_start", default_value="false"),
         DeclareLaunchArgument("dvl_position_zero_orientation_on_start", default_value="false"),
         DeclareLaunchArgument("dvl_position_orientation_in_degrees", default_value="true"),
@@ -200,6 +244,27 @@ def generate_launch_description() -> LaunchDescription:
     gcs_url = LaunchConfiguration("gcs_url")
     dvl_ip = LaunchConfiguration("dvl_ip")
     use_dvl = LaunchConfiguration("use_dvl")
+    use_imx219 = LaunchConfiguration("use_imx219")
+    imx219_launch_file = LaunchConfiguration("imx219_launch_file")
+    imx219_timestamp_source = LaunchConfiguration("imx219_timestamp_source")
+    imx219_max_capture_age_ms = LaunchConfiguration("imx219_max_capture_age_ms")
+    camera0_calibration_file = LaunchConfiguration("camera0_calibration_file")
+    camera1_calibration_file = LaunchConfiguration("camera1_calibration_file")
+    publish_imx219_static_tf = LaunchConfiguration("publish_imx219_static_tf")
+    imx219_camera0_frame = LaunchConfiguration("imx219_camera0_frame")
+    imx219_camera0_x = LaunchConfiguration("imx219_camera0_x")
+    imx219_camera0_y = LaunchConfiguration("imx219_camera0_y")
+    imx219_camera0_z = LaunchConfiguration("imx219_camera0_z")
+    imx219_camera0_roll = LaunchConfiguration("imx219_camera0_roll")
+    imx219_camera0_pitch = LaunchConfiguration("imx219_camera0_pitch")
+    imx219_camera0_yaw = LaunchConfiguration("imx219_camera0_yaw")
+    imx219_camera1_frame = LaunchConfiguration("imx219_camera1_frame")
+    imx219_camera1_x = LaunchConfiguration("imx219_camera1_x")
+    imx219_camera1_y = LaunchConfiguration("imx219_camera1_y")
+    imx219_camera1_z = LaunchConfiguration("imx219_camera1_z")
+    imx219_camera1_roll = LaunchConfiguration("imx219_camera1_roll")
+    imx219_camera1_pitch = LaunchConfiguration("imx219_camera1_pitch")
+    imx219_camera1_yaw = LaunchConfiguration("imx219_camera1_yaw")
     use_joy2mavros = LaunchConfiguration("use_joy2mavros")
     use_battery_bridge = LaunchConfiguration("use_battery_bridge")
     use_odom2mavros = LaunchConfiguration("use_odom2mavros")
@@ -236,7 +301,6 @@ def generate_launch_description() -> LaunchDescription:
     dvl_position_max_speed = LaunchConfiguration("dvl_position_max_speed")
     dvl_position_reset_origin_on_jump = LaunchConfiguration(
         "dvl_position_reset_origin_on_jump")
-    dvl_input_velocity_is_frd = LaunchConfiguration("dvl_input_velocity_is_frd")
     pressure_topic = LaunchConfiguration("pressure_topic")
     pressure_input_mode = LaunchConfiguration("pressure_input_mode")
     fluid_density = LaunchConfiguration("fluid_density")
@@ -255,9 +319,8 @@ def generate_launch_description() -> LaunchDescription:
     configure_mavros_imu_rate = LaunchConfiguration("configure_mavros_imu_rate")
     mavros_imu_rate_hz = LaunchConfiguration("mavros_imu_rate_hz")
     mavros_raw_imu_rate_hz = LaunchConfiguration("mavros_raw_imu_rate_hz")
+    mavros_baro_rate_hz = LaunchConfiguration("mavros_baro_rate_hz")
     dronecan_python = LaunchConfiguration("dronecan_python")
-    use_external_baro_bridge = LaunchConfiguration("use_external_baro_bridge")
-    external_baro_connection_url = LaunchConfiguration("external_baro_connection_url")
     use_buoy_control = LaunchConfiguration("use_buoy_control")
     buoy_topic = LaunchConfiguration("buoy_topic")
     buoy_arrival_radius = LaunchConfiguration("buoy_arrival_radius")
@@ -302,6 +365,11 @@ def generate_launch_description() -> LaunchDescription:
 
     dvl_enabled = IfCondition(
         PythonExpression(["'", use_dvl, "' == 'true' and '", dvl_launch_file, "' != ''"]))
+    imx219_enabled = IfCondition(PythonExpression([
+        "'", use_imx219, "' == 'true' and '", imx219_launch_file,
+        "' != '' and '", use_sim_time,
+        "'.lower() not in ('true', '1', 'yes')",
+    ]))
     localization_enabled = IfCondition(PythonExpression(["'", use_localization, "' == 'true'"]))
     ekf_enabled = IfCondition(PythonExpression([
         "'", use_localization, "' == 'true' and '", use_ekf, "' == 'true'",
@@ -338,6 +406,20 @@ def generate_launch_description() -> LaunchDescription:
     static_tf_enabled = IfCondition(PythonExpression([
         "'", publish_static_tf, "' == 'true'",
     ]))
+    imx219_static_tf_enabled = IfCondition(PythonExpression([
+        "'", use_imx219, "'.lower() in ('true', '1', 'yes') and '",
+        imx219_launch_file, "' != '' and '", use_sim_time,
+        "'.lower() not in ('true', '1', 'yes') and '", publish_static_tf,
+        "'.lower() in ('true', '1', 'yes') and '", publish_imx219_static_tf,
+        "'.lower() in ('true', '1', 'yes')",
+    ]))
+    imx219_static_tf_warning = IfCondition(PythonExpression([
+        "'", use_imx219, "'.lower() in ('true', '1', 'yes') and '",
+        imx219_launch_file, "' != '' and '", use_sim_time,
+        "'.lower() not in ('true', '1', 'yes') and ('", publish_static_tf,
+        "'.lower() not in ('true', '1', 'yes') or '", publish_imx219_static_tf,
+        "'.lower() not in ('true', '1', 'yes'))",
+    ]))
     buoy_control_enabled = IfCondition(PythonExpression(["'", use_buoy_control, "' == 'true'"]))
 
     launch_actions = [
@@ -366,6 +448,22 @@ def generate_launch_description() -> LaunchDescription:
             ),
             msg="[rov_start] DVL launch file not found. Skipping DVL include.",
         ),
+        LogInfo(
+            condition=IfCondition(PythonExpression([
+                "'", use_imx219, "' == 'true' and '", imx219_launch_file, "' == ''",
+            ])),
+            msg="[rov_start] auv_imx219_camera launch file not found; skipping cameras.",
+        ),
+        LogInfo(
+            condition=imx219_static_tf_warning,
+            msg=(
+                "[rov_start] IMX219 cameras are active but their physical static TF is "
+                "disabled. Localization/SLAM must not consume these images until both "
+                "base_link-to-optical extrinsics are measured, supplied through the "
+                "imx219_camera{0,1}_{x,y,z,roll,pitch,yaw} arguments, and "
+                "publish_imx219_static_tf:=true is set."
+            ),
+        ),
         # 1) DVL
         IncludeLaunchDescription(
             AnyLaunchDescriptionSource(dvl_launch_file),
@@ -376,8 +474,23 @@ def generate_launch_description() -> LaunchDescription:
                 "configure_acoustic_on_startup": configure_dvl_acoustic_on_startup,
                 "startup_acoustic_enabled": dvl_startup_acoustic_enabled,
                 "request_config_on_startup": request_dvl_config_on_startup,
+                "use_sim_time": use_sim_time,
             }.items(),
             condition=dvl_enabled,
+        ),
+        # 1b) Physical dual IMX219. The simulator bridge owns these topics
+        # when use_sim_time is true, so never launch the CSI driver in sim.
+        IncludeLaunchDescription(
+            AnyLaunchDescriptionSource(imx219_launch_file),
+            launch_arguments={
+                "timestamp_source": imx219_timestamp_source,
+                "max_capture_age_ms": imx219_max_capture_age_ms,
+                "camera0_calibration_file": camera0_calibration_file,
+                "camera1_calibration_file": camera1_calibration_file,
+                "camera0_frame_id": imx219_camera0_frame,
+                "camera1_frame_id": imx219_camera1_frame,
+            }.items(),
+            condition=imx219_enabled,
         ),
         # 2) MAVROS
         IncludeLaunchDescription(
@@ -401,6 +514,8 @@ def generate_launch_description() -> LaunchDescription:
                         mavros_imu_rate_hz, value_type=float),
                     "raw_imu_rate_hz": ParameterValue(
                         mavros_raw_imu_rate_hz, value_type=float),
+                    "baro_rate_hz": ParameterValue(
+                        mavros_baro_rate_hz, value_type=float),
                     "use_sim_time": ParameterValue(use_sim_time, value_type=bool),
                 }
             ],
@@ -458,6 +573,32 @@ def generate_launch_description() -> LaunchDescription:
             imu_yaw,
             use_sim_time,
             condition=static_tf_enabled,
+        ),
+        _static_tf_node(
+            "imx219_camera0_static_tf",
+            base_frame,
+            imx219_camera0_frame,
+            imx219_camera0_x,
+            imx219_camera0_y,
+            imx219_camera0_z,
+            imx219_camera0_roll,
+            imx219_camera0_pitch,
+            imx219_camera0_yaw,
+            use_sim_time,
+            condition=imx219_static_tf_enabled,
+        ),
+        _static_tf_node(
+            "imx219_camera1_static_tf",
+            base_frame,
+            imx219_camera1_frame,
+            imx219_camera1_x,
+            imx219_camera1_y,
+            imx219_camera1_z,
+            imx219_camera1_roll,
+            imx219_camera1_pitch,
+            imx219_camera1_yaw,
+            use_sim_time,
+            condition=imx219_static_tf_enabled,
         ),
         # 4) AUV nodes in this package
         Node(
@@ -519,8 +660,6 @@ def generate_launch_description() -> LaunchDescription:
                         dvl_twist_reacquire_good_samples, value_type=int),
                     "reacquire_duration_s": ParameterValue(
                         dvl_twist_reacquire_duration, value_type=float),
-                    "input_velocity_is_frd": ParameterValue(
-                        dvl_input_velocity_is_frd, value_type=bool),
                     "use_sim_time": ParameterValue(use_sim_time, value_type=bool),
                 },
             ],

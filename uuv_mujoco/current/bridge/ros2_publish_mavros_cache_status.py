@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .ros2_standard_messages import build_battery_msg, build_pressure_msg, build_vfr_hud_msg
+from .ros2_imu_bar30_messages import build_delivered_pressure_msg
 
 
 def build_mavros_state_msg(bridge, stamp):
@@ -14,7 +15,24 @@ def build_vfr_hud_status_msg(bridge, stamp, state):
 
 
 def build_static_pressure_msg(bridge, stamp, state):
-    return build_pressure_msg(bridge.FluidPressure, stamp, state.static_pressure_pa)
+    if (
+        bool(getattr(bridge, "_bar30_sensor_model_enabled", False))
+        and bridge._static_pressure_source == "external"
+    ):
+        if state.bar30_sensor_delivery is None:
+            return None
+        return build_delivered_pressure_msg(
+            bridge,
+            stamp,
+            state.bar30_sensor_delivery,
+            frame_id="fcu_link",
+        )
+    return build_pressure_msg(
+        bridge.FluidPressure,
+        stamp,
+        state.static_pressure_pa,
+        frame_id="fcu_link",
+    )
 
 
 def build_atm_pressure_msg(bridge, stamp):

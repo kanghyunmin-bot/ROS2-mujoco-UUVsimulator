@@ -5,6 +5,18 @@ from __future__ import annotations
 import math
 
 
+def stamp_from_seconds_like(stamp, time_s: float):
+    """Return a ROS Time-shaped value for a reference-clock timestamp."""
+
+    if not math.isfinite(time_s) or time_s < 0.0:
+        raise ValueError(f"invalid sensor capture time: {time_s!r}")
+    total_nanoseconds = int(round(float(time_s) * 1_000_000_000.0))
+    capture_stamp = type(stamp)()
+    capture_stamp.sec = total_nanoseconds // 1_000_000_000
+    capture_stamp.nanosec = total_nanoseconds % 1_000_000_000
+    return capture_stamp
+
+
 def acquire_ros_stamp(self, sim_t: float):
     """Publish the authoritative MuJoCo clock and return the same ROS stamp.
 
@@ -35,4 +47,4 @@ def acquire_ros_stamp(self, sim_t: float):
         return None
 
 
-__all__ = ["acquire_ros_stamp"]
+__all__ = ["acquire_ros_stamp", "stamp_from_seconds_like"]

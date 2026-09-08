@@ -12,9 +12,8 @@ from .sim_stack_env_flags import env_bool
 def profile_defaults(env: Mapping[str, str], contract_loop_hz: str) -> dict[str, str]:
     defaults = {
         "UUV_RUNTIME_PROFILE": "balanced",
-        # ArduSub's real ATC tuning needs this closed-loop cadence.  A 30 Hz
-        # sensor / 40 Hz plant loop adds enough delay to drive roll/pitch into
-        # a saturated limit cycle; 100/100 Hz is the validated safe floor.
+        # These are external publication/actuator rates, not the FCU clock.
+        # FCU sensing and JSON exchange run on physics steps independently.
         "SITL_SENSOR_HZ_DEFAULT": "100",
         "SITL_THRUSTER_LOOP_HZ_DEFAULT": "100",
         "SITL_MAVLINK_SERVO_HZ_DEFAULT": "30",
@@ -134,6 +133,12 @@ def profile_defaults(env: Mapping[str, str], contract_loop_hz: str) -> dict[str,
                 "ROS2_UUV_SITL_POLL_THREAD_HZ": "200",
             }
         )
+    # Rendering profiles never select the FCU clock or JSON receiver cadence.
+    defaults.update({
+        "UUV_MUJOCO_TIMESTEP": str(1.0 / float(contract_loop_hz)),
+        "ROS2_UUV_SITL_POLL_THREAD_HZ": "200",
+        "SITL_SPEEDUP_DEFAULT": "1",
+    })
     return defaults
 
 

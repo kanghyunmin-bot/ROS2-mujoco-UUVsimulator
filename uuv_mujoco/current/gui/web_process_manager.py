@@ -51,6 +51,14 @@ from .sim_stack_launch_command import (
 from .sim_stack_launch_logs import open_gui_sim_stack_log
 from .sim_stack_launch_process import spawn_sim_stack_process
 from .sim_stack_launch_target import resolve_sim_stack_launch_target, sim_stack_start_script_error
+from .sim_launch_preset import (
+    COURSE_CURRENT_PRESET_ID,
+    build_sim_launch_preset_args,
+    default_sim_launch_preset_id,
+    resolve_sim_launch_preset,
+    sim_launch_presets_payload,
+    validate_sim_launch_preset,
+)
 from .test_tank_layout_model import (
     COURSE_MODE_TEST_TANK,
     TEST_TANK_HOMING_SUCCESS_RANGE_M,
@@ -81,6 +89,9 @@ class WebProcessManager:
         self._pinger_homing_status = "pinger homing: stopped"
         self._vision_status = "vision: stopped"
         self._mission_status = "mission: stopped"
+        self._sim_launch_preset_id = default_sim_launch_preset_id()
+        self._active_sim_launch_preset_id = ""
+        self._active_sim_scene = ""
         self._ros_pkg_fcu_url = ROS_PACKAGE_DEFAULT_FCU_URL
         self._camera_config = camera_config_from_owner(self)
         self._mission_status_path = Path(
@@ -111,6 +122,7 @@ class WebProcessManager:
             "mission_monitor": self.mission_monitor_payload(),
             "ros_pkg_fcu_url": self._ros_pkg_fcu_url,
             "camera_config": self.camera_config_payload(),
+            "simulation_config": self.simulation_config_payload(),
         }
 
     def mission_running(self) -> bool:
@@ -136,9 +148,20 @@ class WebProcessManager:
             self._terminate_named_process(attr_name, status_attr, label, push_event=False)
         self._clear_mission_status_file()
 
-    def start_sim_stack(self, *, purpose: str | None = None) -> dict[str, Any]:
+    def start_sim_stack(
+        self,
+        *,
+        purpose: str | None = None,
+        preset_id: str | None = None,
+    ) -> dict[str, Any]:
         try:
             start_purpose = normalize_sim_start_purpose(purpose)
+            selected_preset = resolve_sim_launch_preset(
+                COURSE_CURRENT_PRESET_ID
+                if start_purpose == PINGER_HOMING_SIM_PURPOSE
+                else preset_id or self._sim_launch_preset_id
+            )
+            validate_sim_launch_preset(selected_preset)
         except ValueError as exc:
             self._set_sim_stack_status(f"sim start failed: {exc}")
             return {"status": self._sim_stack_status}
@@ -155,15 +178,27 @@ class WebProcessManager:
             self._set_sim_stack_status(error)
             return {"status": self._sim_stack_status}
 
-        try:
-            course_runtime = prepare_active_course_runtime(
-                config_path=COURSE_LAYOUT_CONFIG_PATH,
-                competition_scene_path=COURSE_SCENE_PATH,
-                test_tank_scene_path=TEST_TANK_SCENE_PATH,
-            )
-        except Exception as exc:
-            self._set_sim_stack_status(f"sim start failed: course scene: {exc}")
-            return {"status": self._sim_stack_status}
+        course_runtime = None
+        if selected_preset.uses_active_course_scene:
+            try:
+                course_runtime = prepare_active_course_runtime(
+                    config_path=COURSE_LAYOUT_CONFIG_PATH,
+                    competition_scene_path=COURSE_SCENE_PATH,
+                    test_tank_scene_path=TEST_TANK_SCENE_PATH,
+                )
+            except Exception as exc:
+                self._set_sim_stack_status(f"sim start failed: course scene: {exc}")
+                return {"status": self._sim_stack_status}
+            runtime_mode = course_runtime.mode
+            scene_path = course_runtime.scene_path
+            pinger_site_name = course_runtime.pinger_site_name
+        else:
+            runtime_mode = "research_pool"
+            scene_path = selected_preset.scene_path
+            # The SLAM pool intentionally has no mission pinger target.  Keep
+            # the hydrophone surface alive but explicitly report a missing
+            # source instead of accidentally indexing a course-scene site.
+            pinger_site_name = "research_pool_pinger_unavailable"
 
         base_env = dict(os.environ)
         if start_purpose == PINGER_HOMING_SIM_PURPOSE:
@@ -171,12 +206,12 @@ class WebProcessManager:
             # are derived from UUV_EKF_CONTRACT by the environment builder.
             base_env.update(pinger_sim_environment())
         env = build_gui_sim_stack_env(base_env, backend=backend, sim_stack_dir=SIM_STACK_DIR)
-        env["ROS2_UUV_HYDROPHONE_PINGER_SITE"] = course_runtime.pinger_site_name
-        env["UUV_GUI_COURSE_MODE"] = course_runtime.mode
+        env["ROS2_UUV_HYDROPHONE_PINGER_SITE"] = pinger_site_name
+        env["UUV_GUI_COURSE_MODE"] = runtime_mode
         # Keep the bridge's normal acoustic interference profile. Pinger
         # validation must include thruster-correlated and pool noise instead
         # of silently switching to the old two-source clean-audio shortcut.
-        if course_runtime.mode == COURSE_MODE_TEST_TANK:
+        if runtime_mode == COURSE_MODE_TEST_TANK:
             env.update(
                 {
                     "ROS2_UUV_HYDROPHONE_NOISE_POOL_X_MIN_M": "-2.645",
@@ -185,6 +220,17 @@ class WebProcessManager:
                     "ROS2_UUV_HYDROPHONE_NOISE_POOL_Y_MAX_M": "1.270",
                     "ROS2_UUV_HYDROPHONE_NOISE_POOL_Z_MIN_M": "-1.220",
                     "ROS2_UUV_HYDROPHONE_NOISE_POOL_Z_MAX_M": "-0.200",
+                }
+            )
+        elif runtime_mode == "research_pool":
+            env.update(
+                {
+                    "ROS2_UUV_HYDROPHONE_NOISE_POOL_X_MIN_M": "-12.5",
+                    "ROS2_UUV_HYDROPHONE_NOISE_POOL_X_MAX_M": "12.5",
+                    "ROS2_UUV_HYDROPHONE_NOISE_POOL_Y_MIN_M": "-6.25",
+                    "ROS2_UUV_HYDROPHONE_NOISE_POOL_Y_MAX_M": "6.25",
+                    "ROS2_UUV_HYDROPHONE_NOISE_POOL_Z_MIN_M": "-3.0",
+                    "ROS2_UUV_HYDROPHONE_NOISE_POOL_Z_MAX_M": "-0.2",
                 }
             )
         if self._gui_external_mavros_controls_enabled():
@@ -198,9 +244,18 @@ class WebProcessManager:
         log_file = None
         try:
             log_path, log_file = open_gui_sim_stack_log()
-            launch_args = ["--scene", str(course_runtime.scene_path)]
+            env.setdefault(
+                "UUV_MJ_THRUSTER_DEBUG_CSV",
+                str(log_path.with_name(f"{log_path.stem}_thrusters.csv")),
+            )
             if start_purpose == PINGER_HOMING_SIM_PURPOSE:
+                launch_args = ["--scene", str(scene_path)]
                 launch_args.extend(pinger_sim_launch_args())
+            else:
+                launch_args = build_sim_launch_preset_args(
+                    selected_preset,
+                    scene_path=scene_path,
+                )
             cmd = build_sim_stack_launch_command(
                 self,
                 start_script=target.start_script,
@@ -220,10 +275,17 @@ class WebProcessManager:
 
         with self._lock:
             self._sim_process = proc
-            self._sim_stack_status = f"sim: starting {course_runtime.mode} ({log_path.name})"
+            if start_purpose != PINGER_HOMING_SIM_PURPOSE:
+                self._sim_launch_preset_id = selected_preset.preset_id
+            self._active_sim_launch_preset_id = selected_preset.preset_id
+            self._active_sim_scene = str(scene_path)
+            self._sim_stack_status = (
+                f"sim: starting {runtime_mode} · {selected_preset.label} ({log_path.name})"
+            )
         self.node.push_event(
             "sim stack start requested "
-            f"({target.backend}, {course_runtime.mode}, purpose={start_purpose}): {log_path.name}"
+            f"({target.backend}, {runtime_mode}, {selected_preset.profile}/"
+            f"{selected_preset.fluid_model}, purpose={start_purpose}): {log_path.name}"
         )
         self._start_process_watcher(
             proc=proc,
@@ -236,9 +298,25 @@ class WebProcessManager:
         return {
             "status": self._sim_stack_status,
             "log": str(log_path),
-            "course_mode": course_runtime.mode,
-            "scene": str(course_runtime.scene_path),
+            "course_mode": runtime_mode,
+            "scene": str(scene_path),
             "purpose": start_purpose,
+            "simulation_config": self.simulation_config_payload(),
+        }
+
+    def simulation_config_payload(self) -> dict[str, Any]:
+        """Return the selected atomic plant preset and the active launch."""
+
+        selected = resolve_sim_launch_preset(self._sim_launch_preset_id)
+        active_id = self._active_sim_launch_preset_id if _process_running(self._sim_process) else ""
+        return {
+            "selected_preset_id": selected.preset_id,
+            "selected_label": selected.label,
+            "selected_profile": selected.profile,
+            "selected_fluid_model": selected.fluid_model,
+            "active_preset_id": active_id,
+            "active_scene": self._active_sim_scene if active_id else "",
+            "presets": sim_launch_presets_payload(),
         }
 
     def stop_sim_stack(self) -> dict[str, Any]:

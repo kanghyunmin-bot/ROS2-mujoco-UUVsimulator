@@ -107,6 +107,8 @@ def main() -> int:
     assert len(scan.intensities) == 400
     assert scan.range_min == config.min_range_m
     assert scan.range_max == sample.settings.effective_range_m
+    assert scan.time_increment == 0.0
+    assert scan.scan_time == sample.settings.scan_period_s
 
     echo = build_ping360_echo_msg(AutoMsg, stamp, sample, config)
     assert echo.header.frame_id == "ping360_link"

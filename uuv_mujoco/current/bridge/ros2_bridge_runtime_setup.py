@@ -15,8 +15,14 @@ from .ros2_bridge_config import (
     configure_mavros_state_and_rates,
     configure_pressure_vertical_contract,
 )
+from .ros2_dvl_sensor_runtime import configure_dvl_sensor_runtime
+from .ros2_dvl_device_emulator_runtime import configure_dvl_device_emulator_runtime
+from .ros2_imu_bar30_sensor_runtime import configure_imu_bar30_sensor_runtime
 from .ros2_stereo_image import configure_stereo_image_runtime
 from .sitl_env import env_to_float, env_to_int
+from sim.contracts.ground_truth import (
+    resolve_unsafe_legacy_ground_truth_odometry_filtered,
+)
 
 
 def configure_bridge_runtime_state(
@@ -36,6 +42,8 @@ def configure_bridge_runtime_state(
     enable_ros: bool,
     enable_mavros_surface: bool,
     real_pkg_compat: bool,
+    strict_sitl_sensor_transport: bool | None,
+    unsafe_legacy_ground_truth_odometry_filtered: bool = False,
 ) -> None:
     """Initialize constructor state that is independent from ROS message types."""
 
@@ -47,8 +55,9 @@ def configure_bridge_runtime_state(
         image_width=image_width,
         image_height=image_height,
         image_hz=image_hz,
+        camera_calib_left=camera_calib_left,
+        camera_calib_right=camera_calib_right,
     )
-    del camera_calib_left, camera_calib_right
 
     bridge.command_callback = command_callback
     bridge.cmd_limit = float(cmd_limit)
@@ -64,6 +73,23 @@ def configure_bridge_runtime_state(
     bridge._enable_ros = bool(enable_ros)
     bridge._mavros_surface_enabled = bool(enable_mavros_surface)
     bridge._real_pkg_compat = bool(real_pkg_compat)
+    bridge._unsafe_legacy_ground_truth_odometry_filtered = (
+        resolve_unsafe_legacy_ground_truth_odometry_filtered(
+            requested=unsafe_legacy_ground_truth_odometry_filtered,
+            real_pkg_compat=bridge._real_pkg_compat,
+        )
+    )
+    strict_sensor_transport = bool(
+        bridge._enable_ros and bridge._real_pkg_compat and bridge.enable_sitl
+    )
+    if strict_sitl_sensor_transport is not None:
+        requested_strict_transport = bool(strict_sitl_sensor_transport)
+        if requested_strict_transport != strict_sensor_transport:
+            raise ValueError(
+                "strict SITL sensor transport must match ROS + SITL + "
+                "real-package compatibility activation"
+            )
+    bridge._strict_sitl_sensor_transport = strict_sensor_transport
     if bridge._real_pkg_compat and bridge._mavros_surface_enabled:
         raise ValueError("real package compatibility cannot enable the simulator MAVROS surface")
     bridge._ros_ok = False
@@ -126,6 +152,9 @@ def configure_bridge_contracts(bridge: Any) -> None:
     configure_mavros_state_and_rates(bridge)
     configure_pressure_vertical_contract(bridge)
     configure_dvl_and_frame_transforms(bridge)
+    configure_imu_bar30_sensor_runtime(bridge)
+    configure_dvl_sensor_runtime(bridge)
+    configure_dvl_device_emulator_runtime(bridge)
 
 
 __all__ = [

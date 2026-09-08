@@ -66,6 +66,7 @@ def bind_commanding(cls: type) -> None:
     cls._on_mode_response = node_commanding._on_mode_response
     cls.publish_rc_override = node_commanding.publish_rc_override
     cls.publish_manual_control = node_commanding.publish_manual_control
+    cls.publish_rc_neutral_then_release = node_commanding.publish_rc_neutral_then_release
     cls.publish_rc_release = node_commanding.publish_rc_release
     cls.publish_rc_channels = node_commanding.publish_rc_channels
     cls.publish_ping360_config = node_commanding.publish_ping360_config

@@ -37,6 +37,8 @@ def build_camera_frame_specs(
         ("stereo_left", "stereo_left_optical", zero, optical_quat),
         ("stereo_right", "stereo_right_optical", zero, optical_quat),
         ("stereo_left", "camera_color_optical_frame", zero, optical_quat),
+        ("stereo_left", "imx219_camera0_optical_frame", zero, optical_quat),
+        ("stereo_right", "imx219_camera1_optical_frame", zero, optical_quat),
     ]
 
 

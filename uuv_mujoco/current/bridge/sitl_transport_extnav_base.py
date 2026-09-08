@@ -9,9 +9,16 @@ from bridge.sitl_env import env_flag, env_to_float
 
 def initialize_extnav_base_state(transport: object) -> None:
     transport._sitl_bridge_extnav_disabled = env_flag("ROS2_UUV_SITL_BRIDGE_EXTNAV_DISABLE", False)
-    transport._sitl_extnav_enabled = False if transport._sitl_bridge_extnav_disabled else env_flag(
+    requested = env_flag(
         "ROS2_UUV_SITL_EXTNAV_ENABLE",
         env_flag("SITL_EKF3_EXTNAV", False),
+    )
+    truth_allowed = bool(getattr(transport, "_sitl_truth_extnav_allowed", True))
+    transport._sitl_truth_extnav_blocked = bool(requested and not truth_allowed)
+    transport._sitl_extnav_enabled = bool(
+        requested
+        and truth_allowed
+        and not transport._sitl_bridge_extnav_disabled
     )
     transport._sitl_extnav_rate_hz = float(np.clip(env_to_float("ROS2_UUV_SITL_EXTNAV_HZ", 10.0), 5.0, 50.0))
     transport._sitl_vpd_confidence = float(np.clip(env_to_float("ROS2_UUV_SITL_VPD_CONFIDENCE", 100.0), 0.0, 100.0))

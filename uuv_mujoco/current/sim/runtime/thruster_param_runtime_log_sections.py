@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
+from sim.physics.thruster_inflow import ThrusterInflowConfig
 from sim.runtime.thruster_param_runtime_yaw_logs import (
     log_yaw_dynamics_overrides,
     log_yaw_reverse_asymmetry_overrides,
@@ -23,6 +24,15 @@ def log_base_thruster_summary(*, global_params: dict[str, Any], log: Callable[[s
         f"gain_scale_all={params['gain_scale_all']:.3f}, "
         f"direct_gain_scale_all={params['direct_gain_scale_all']:.3f}"
     )
+    inflow = ThrusterInflowConfig.from_mapping(params)
+    if inflow.enabled:
+        log(
+            "[thruster] local axial inflow: on "
+            f"(reference={inflow.reference_speed_mps:.3f}m/s, "
+            f"gain={inflow.gain_per_advance_ratio:.3f}, "
+            f"multiplier=[{inflow.minimum_multiplier:.3f}, "
+            f"{inflow.maximum_multiplier:.3f}])"
+        )
 
 
 def log_direct_curve_overrides(

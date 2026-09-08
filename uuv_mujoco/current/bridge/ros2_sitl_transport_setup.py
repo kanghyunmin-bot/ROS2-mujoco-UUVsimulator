@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .sitl_env import env_to_float, env_to_int
+from .sitl_env import env_flag, env_to_float, env_to_int
 from .sitl_transport import SitlTransport
 
 
@@ -47,6 +47,10 @@ def create_sitl_transport_if_enabled(
         home_alt_m=bridge._sitl_home_alt_m,
         rangefinder_max_m=float(env_to_float("ROS2_UUV_SITL_RANGEFINDER_MAX_M", 30.0)),
         command_debug=bool(env_to_int("ROS2_UUV_SITL_CMD_DEBUG", 0)),
+        truth_extnav_allowed=(
+            not bridge._real_pkg_compat
+            or env_flag("ROS2_UUV_ALLOW_TRUTH_EXTNAV_IN_REAL_PKG_COMPAT", False)
+        ),
     )
 
 

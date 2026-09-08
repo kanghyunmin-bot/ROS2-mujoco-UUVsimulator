@@ -1,0 +1,5 @@
+<library path="auv_mavros_dvl_plugin">
+  <class name="vision_position_delta" type="mavros::plugin::PluginFactoryTemplate&lt;mavros::extra_plugins::VisionPositionDeltaPlugin&gt;" base_class_type="mavros::plugin::PluginFactory">
+    <description>Organization A50 DVL to MAVLink VISION_POSITION_DELTA adapter.</description>
+  </class>
+</library>

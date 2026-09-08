@@ -6,7 +6,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-from sim.physics.fluid_model import normalize_fluid_model
+from sim.physics.fluid_model import (
+    normalize_fluid_model,
+    validate_requested_fluid_model_profile,
+)
 from sim.physics.profile_runtime import select_runtime_profile
 from sim.physics.thruster_performance import select_thruster_performance_config
 from sim.runtime.run_mode import resolve_runtime_mode
@@ -30,7 +33,8 @@ def load_runner_profile_setup(
     env_flag: Callable[[str, bool], bool],
 ) -> RunnerProfileSetup:
     runtime_mode = resolve_runtime_mode(env_get, env_flag)
-    args.fluid_model = normalize_fluid_model(args.fluid_model)
+    requested_fluid_model = str(args.fluid_model)
+    args.fluid_model = normalize_fluid_model(requested_fluid_model)
 
     profile_selection = select_runtime_profile(args)
     if profile_selection.listed_profiles:
@@ -43,6 +47,15 @@ def load_runner_profile_setup(
             active_thruster_voltage=0.0,
             perf_cfg=None,
         )
+
+    try:
+        validate_requested_fluid_model_profile(
+            requested_fluid_model,
+            profile_selection.sim_profile,
+        )
+    except ValueError as exc:
+        print(f"[physics] {exc}", flush=True)
+        raise SystemExit(2) from exc
 
     perf_cfg = select_thruster_performance_config(
         args=args,

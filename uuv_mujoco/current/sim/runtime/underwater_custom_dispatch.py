@@ -17,6 +17,7 @@ def apply_or_clear_custom_hydrodynamics(
     rel_lin_vel_world: np.ndarray,
     nu_rel_body: np.ndarray,
     rel_acc_body: np.ndarray,
+    coefficient_scales,
     submerged: float,
 ) -> None:
     if runtime.use_custom_hydrodynamics:
@@ -27,6 +28,7 @@ def apply_or_clear_custom_hydrodynamics(
             rel_lin_vel_world=rel_lin_vel_world,
             nu_rel_body=nu_rel_body,
             rel_acc_body=rel_acc_body,
+            coefficient_scales=coefficient_scales,
             submerged=submerged,
         )
         return

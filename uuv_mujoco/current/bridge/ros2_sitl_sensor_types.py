@@ -48,6 +48,8 @@ class Ros2SensorSnapshot:
     dvl_altitude_m: float | None
     bar30_pressure_pa: float
     ros_depth_m: float
+    imu_sensor_deliveries: tuple[object, ...] = ()
+    bar30_sensor_deliveries: tuple[object, ...] = ()
 
 
 __all__ = [

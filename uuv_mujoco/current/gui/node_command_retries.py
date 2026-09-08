@@ -2,12 +2,21 @@
 
 from __future__ import annotations
 
+from .node_arm_rc_sequence import (
+    arm_command_request_current,
+    cancel_arm_rc_sequence,
+    current_arm_command_generation,
+    finish_arm_command_generation,
+)
 from .runtime import time
 
 
-def _arm_request_current(self, value: bool) -> bool:
-    latest_target = getattr(self, "_latest_arm_target", None)
-    return latest_target is None or bool(value) == bool(latest_target)
+def _arm_request_current(
+    self,
+    value: bool,
+    request_generation: int | None = None,
+) -> bool:
+    return arm_command_request_current(self, value, request_generation)
 
 
 def _mode_request_current(self, mode: str) -> bool:
@@ -15,16 +24,53 @@ def _mode_request_current(self, mode: str) -> bool:
     return not latest_target or str(mode).strip().upper() == latest_target
 
 
-def _retry_arm_request(self, value: bool, deadline: float, attempt: int) -> None:
-    if not _arm_request_current(self, value):
-        return
+def _retry_arm_request(
+    self,
+    value: bool,
+    deadline: float,
+    attempt: int,
+    *,
+    request_generation: int | None = None,
+) -> None:
+    if request_generation is None:
+        request_generation = current_arm_command_generation(self)
+    with self._arm_rc_sequence_lock:
+        if not _arm_request_current(self, value, request_generation):
+            return
+        _retry_current_arm_request(
+            self,
+            value,
+            deadline,
+            attempt,
+            int(request_generation),
+        )
+
+
+def _retry_current_arm_request(
+    self,
+    value: bool,
+    deadline: float,
+    attempt: int,
+    request_generation: int,
+) -> None:
     if time.monotonic() >= deadline:
+        finish_arm_command_generation(self, request_generation)
+        cancel_arm_rc_sequence(
+            self,
+            f"arm target timeout: armed={bool(value)}",
+            force_neutral=True,
+        )
         self._push_event(f"arm target timeout: armed={value}")
         return
     self._schedule_once(
         self._control_request_retry_s,
-        lambda: self._send_arm_request(value, deadline, attempt + 1)
-        if _arm_request_current(self, value)
+        lambda: self._send_arm_request(
+            value,
+            deadline,
+            attempt + 1,
+            request_generation=request_generation,
+        )
+        if _arm_request_current(self, value, request_generation)
         else None,
     )
 

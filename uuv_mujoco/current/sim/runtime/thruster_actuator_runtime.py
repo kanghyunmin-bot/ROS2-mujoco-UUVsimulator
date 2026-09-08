@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable
 
+import numpy as np
+
 from sim.runtime.thruster_actuator_forces import update_thruster_forces
 from sim.runtime.thruster_actuator_immersion import force_immersion_scale
 from sim.runtime.thruster_actuator_setup import build_thruster_actuator_kwargs
@@ -16,6 +18,7 @@ from sim.runtime.thruster_command_targets import apply_direct_command_targets
 class ThrusterActuatorRuntime:
     model: object
     data: object
+    mujoco_module: object
     actuator_ids: dict[str, int]
     ctrlrange: np.ndarray
     all_thruster_names: list[str]
@@ -44,8 +47,13 @@ class ThrusterActuatorRuntime:
     yaw_thrusters: list[str]
     spin_gain: float
     last_reaction_torque_world: np.ndarray
+    last_reaction_torque_body: np.ndarray
     last_force_body: np.ndarray
     last_torque_body: np.ndarray
+    current_velocity_sampler: Callable[[np.ndarray, float], np.ndarray] | None
+    surface_height_sampler: Callable[[np.ndarray, float], float] | None
+    last_inflow_multiplier: dict[str, float]
+    last_axial_advance_speed_mps: dict[str, float]
 
     @classmethod
     def create(cls, **kwargs) -> "ThrusterActuatorRuntime":
@@ -57,6 +65,22 @@ class ThrusterActuatorRuntime:
 
     def update_forces(self, dt: float, *, base_id: int) -> None:
         update_thruster_forces(self, dt, base_id=base_id)
+
+    def set_current_velocity_sampler(
+        self,
+        sampler: Callable[[np.ndarray, float], np.ndarray] | None,
+    ) -> None:
+        """Bind a local current sampler accepting world position and sim time."""
+
+        self.current_velocity_sampler = sampler
+
+    def set_surface_height_sampler(
+        self,
+        sampler: Callable[[np.ndarray, float], float] | None,
+    ) -> None:
+        """Bind the shared free-surface height sampler."""
+
+        self.surface_height_sampler = sampler
 
     def update_propeller_visuals(self, dt: float) -> None:
         update_propeller_visuals(self, dt)

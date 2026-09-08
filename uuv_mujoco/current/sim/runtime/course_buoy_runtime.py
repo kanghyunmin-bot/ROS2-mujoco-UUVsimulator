@@ -126,6 +126,8 @@ class CourseBuoyRuntime:
     score_zone_b: tuple[float, float, float]
     water_surface_z: float
     water_current_world: np.ndarray
+    water_velocity_sampler: Callable[[np.ndarray, float], np.ndarray] | None
+    surface_height_sampler: Callable[[np.ndarray, float], float] | None
     update_period_s: float
     track_csv_path: Path | None
     track_interval_s: float
@@ -154,6 +156,8 @@ class CourseBuoyRuntime:
         data: Any,
         water_surface_z: float,
         water_current_world: np.ndarray | None = None,
+        water_velocity_sampler: Callable[[np.ndarray, float], np.ndarray] | None = None,
+        surface_height_sampler: Callable[[np.ndarray, float], float] | None = None,
         env_float: Callable[[str, float], float],
         env_flag: Callable[[str, bool], bool],
         log: Callable[[str], None],
@@ -164,6 +168,8 @@ class CourseBuoyRuntime:
                 data=data,
                 water_surface_z=water_surface_z,
                 water_current_world=water_current_world,
+                water_velocity_sampler=water_velocity_sampler,
+                surface_height_sampler=surface_height_sampler,
                 log=log,
             )
 
@@ -368,6 +374,8 @@ class CourseBuoyRuntime:
             ),
             water_surface_z=float(water_surface_z),
             water_current_world=cls._normalized_water_current(water_current_world),
+            water_velocity_sampler=water_velocity_sampler,
+            surface_height_sampler=surface_height_sampler,
             update_period_s=cls._update_period_s(env_float),
             track_csv_path=cls._track_csv_path(env_flag("UUV_COURSE_BUOY_TRACK_CSV_ENABLE", True)),
             track_interval_s=float(env_float("UUV_COURSE_BUOY_TRACK_CSV_INTERVAL_S", 0.25)),
@@ -407,6 +415,8 @@ class CourseBuoyRuntime:
         data: Any,
         water_surface_z: float,
         water_current_world: np.ndarray | None = None,
+        water_velocity_sampler: Callable[[np.ndarray, float], np.ndarray] | None = None,
+        surface_height_sampler: Callable[[np.ndarray, float], float] | None = None,
         log: Callable[[str], None],
     ) -> "CourseBuoyRuntime":
         return cls(
@@ -464,6 +474,8 @@ class CourseBuoyRuntime:
             score_zone_b=(0.0, 0.0, 0.0),
             water_surface_z=float(water_surface_z),
             water_current_world=cls._normalized_water_current(water_current_world),
+            water_velocity_sampler=water_velocity_sampler,
+            surface_height_sampler=surface_height_sampler,
             update_period_s=0.0,
             track_csv_path=None,
             track_interval_s=0.25,
@@ -591,11 +603,15 @@ class CourseBuoyRuntime:
         if self.buoyancy_n <= 0.0:
             return wrench
 
-        center_z = float(self._buoy_center_world(buoy)[2])
+        center_world = self._buoy_center_world(buoy)
+        center_z = float(center_world[2])
         if not self._touches_float_waterline(buoy, center_z):
             return wrench
 
-        velocity_z = float(self._buoy_linear_velocity(buoy)[2])
+        velocity_z = float(
+            self._buoy_linear_velocity(buoy)[2]
+            - self._water_velocity_world(center_world)[2]
+        )
         target_z = self._surface_target_center_z(buoy)
         neutral_upthrust_n = self._body_weight_n(buoy)
         # Keep the tethered magnet load at the original reserve lift so the
@@ -628,7 +644,8 @@ class CourseBuoyRuntime:
 
     def _water_drag_wrench(self, buoy: CourseBuoy, *, vehicle_contact: bool, dt: float) -> np.ndarray:
         wrench = np.zeros(6, dtype=np.float64)
-        center_z = float(self._buoy_center_world(buoy)[2])
+        center_world = self._buoy_center_world(buoy)
+        center_z = float(center_world[2])
         if not self._touches_float_waterline(buoy, center_z):
             return wrench
 
@@ -636,7 +653,9 @@ class CourseBuoyRuntime:
         # world-frame water-relative velocity as the vehicle fluid contract.
         # Without this subtraction, a configured current moved the vehicle
         # but left free/captured course buoys in still water.
-        velocity = self._buoy_linear_velocity(buoy) - self.water_current_world
+        velocity = self._buoy_linear_velocity(buoy) - self._water_velocity_world(
+            center_world
+        )
         if vehicle_contact:
             velocity = velocity.copy()
             velocity[2] = 0.0
@@ -651,7 +670,11 @@ class CourseBuoyRuntime:
             # free float stick to the descending collector roof instead of
             # sliding naturally around it.
             immersion_fraction = self._clamp_scalar(
-                (self.water_surface_z + self.float_half_height_m - center_z)
+                (
+                    self._surface_height_world_m(center_world)
+                    + self.float_half_height_m
+                    - center_z
+                )
                 / max(2.0 * self.float_half_height_m, 1.0e-9),
                 0.0,
                 1.0,
@@ -1089,10 +1112,33 @@ class CourseBuoyRuntime:
         return force
 
     def _touches_float_waterline(self, buoy: CourseBuoy, center_z: float) -> bool:
-        return float(center_z) <= self.water_surface_z + self.float_half_height_m
+        center_world = self._buoy_center_world(buoy)
+        return float(center_z) <= (
+            self._surface_height_world_m(center_world) + self.float_half_height_m
+        )
 
     def _surface_target_center_z(self, buoy: CourseBuoy) -> float:
-        return float(buoy.cached_surface_target_center_z)
+        center_world = self._buoy_center_world(buoy)
+        surface_offset = float(buoy.cached_surface_target_center_z) - self.water_surface_z
+        return self._surface_height_world_m(center_world) + surface_offset
+
+    def _water_velocity_world(self, position_world: np.ndarray) -> np.ndarray:
+        sampler = getattr(self, "water_velocity_sampler", None)
+        if sampler is None:
+            return self.water_current_world.copy()
+        sample = sampler(position_world.copy(), float(getattr(self.data, "time", 0.0)))
+        return self._normalized_water_current(sample)
+
+    def _surface_height_world_m(self, position_world: np.ndarray) -> float:
+        sampler = getattr(self, "surface_height_sampler", None)
+        if sampler is None:
+            return float(self.water_surface_z)
+        value = float(
+            sampler(position_world.copy(), float(getattr(self.data, "time", 0.0)))
+        )
+        if not np.isfinite(value):
+            raise ValueError("course buoy surface sampler must return a finite height")
+        return value
 
     def _body_weight_n(self, buoy: CourseBuoy) -> float:
         return float(buoy.cached_body_weight_n)

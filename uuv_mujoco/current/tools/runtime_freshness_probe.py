@@ -11,7 +11,7 @@ from runtime_freshness_json_io import load_json
 from runtime_freshness_runtime_resolve import alias_text, resolve_runtime_dir, same_path_text
 
 
-DEFAULT_REMOTE_REF = "origin/uuv_sim"
+DEFAULT_REMOTE_REF = "origin/main"
 
 
 def default_workspace() -> Path:

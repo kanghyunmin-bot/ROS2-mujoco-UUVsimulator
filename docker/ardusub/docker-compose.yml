@@ -21,7 +21,7 @@ services:
       SITL_USE_REAL_PARAM_FILE: "1"
       SITL_REAL_PARAM_FILE: /workspace/real_robot.param
       SITL_EKF3_EXTNAV: ${SITL_EKF3_EXTNAV:-0}
-      SITL_AHRS_EKF_TYPE: ${SITL_AHRS_EKF_TYPE:-10}
+      SITL_AHRS_EKF_TYPE: ${SITL_AHRS_EKF_TYPE:-3}
       SITL_JSON_HOST: host.docker.internal
       SITL_JSON_SENSOR_PORT: "9003"
       SITL_JSON_SERVO_PORT: "9002"

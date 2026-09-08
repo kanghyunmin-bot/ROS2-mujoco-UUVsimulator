@@ -100,7 +100,12 @@ def _ros_publish_ok(paths: dict[str, Path]) -> bool:
             ),
             contains_all(
                 paths["ros2_publish_dvl_factories_py"],
-                ["state.dvl_vel_body_ros", "state.dvl_vel_dvl_frd", "state.dvl_altitude_m"],
+                [
+                    "state.dvl_sensor_delivery",
+                    "velocity_dvl_frd = _dvl_velocity_frd(bridge, state)",
+                    "state.dvl_vel_dvl_frd",
+                    "state.dvl_altitude_m",
+                ],
             ),
         )
     )

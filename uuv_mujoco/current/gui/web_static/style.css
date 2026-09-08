@@ -523,6 +523,15 @@ canvas {
   width: 100%;
 }
 
+.sim-preset-row {
+  margin: 0 0 6px;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.sim-preset-row select {
+  width: 100%;
+}
+
 .stereo-camera-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

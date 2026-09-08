@@ -2,9 +2,31 @@
 
 from __future__ import annotations
 
+import os
+
 import numpy as np
 
 from bridge.sitl_types import VerticalEstimate
+
+
+JSON_TIMING_MODE_ENV = "ROS2_UUV_SITL_JSON_TIMING_MODE"
+
+
+def _json_timing_flags() -> tuple[bool, bool]:
+    """Return ArduPilot's negative time-sync and lockstep payload flags."""
+
+    mode = os.getenv(JSON_TIMING_MODE_ENV, "async").strip().lower()
+    if mode == "async":
+        # Preserve the historical behavior for ordinary and diagnostic runs.
+        return True, True
+    if mode == "lockstep":
+        # ArduPilot blocks for each sensor update and advances its clock from
+        # the MuJoCo timestamp. Strict GUI starts select this mode for EKF3.
+        return False, False
+    raise ValueError(
+        f"unsupported {JSON_TIMING_MODE_ENV}={mode!r}; "
+        "expected 'async' or 'lockstep'"
+    )
 
 
 def _payload_from_state(
@@ -19,6 +41,7 @@ def _payload_from_state(
     yaw: float,
     rangefinder_distance_m: float | None,
 ) -> dict[str, object]:
+    no_time_sync, no_lockstep = _json_timing_flags()
     json_position = np.asarray(vertical_est.pos_ned, dtype=np.float64).copy()
     json_velocity = np.asarray(vertical_est.vel_ned, dtype=np.float64).copy()
     # ArduSub's JSON backend stores position.z as NED down. AP_Baro_SITL
@@ -37,12 +60,12 @@ def _payload_from_state(
         "velocity": [float(x) for x in json_velocity],
         "attitude": [float(roll), float(pitch), float(yaw)],
         "quaternion": [float(x) for x in quat],
-        "no_time_sync": True,
-        "no_lockstep": True,
+        "no_time_sync": no_time_sync,
+        "no_lockstep": no_lockstep,
     }
     if rangefinder_distance_m is not None and np.isfinite(float(rangefinder_distance_m)):
         payload["rng_1"] = float(rangefinder_distance_m)
     return payload
 
 
-__all__ = ["_payload_from_state"]
+__all__ = ["JSON_TIMING_MODE_ENV", "_payload_from_state"]

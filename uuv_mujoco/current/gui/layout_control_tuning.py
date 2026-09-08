@@ -23,7 +23,7 @@ def build_physics_section(owner, parent, *, row: int = 7) -> None:
     ).grid(row=0, column=0, sticky="ew", padx=(0, 6))
     owner.physics_toggle_button = ttk.Button(
         physics_row,
-        text="Open physics params",
+        text="Open current-profile params",
         style="Accent.TButton",
         command=owner._show_physics_window,
     )

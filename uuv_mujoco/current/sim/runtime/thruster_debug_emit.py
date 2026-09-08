@@ -38,6 +38,7 @@ def emit_thruster_debug_row(
     thr_state: dict[str, float],
     thruster_force_cmd: dict[str, float],
     thruster_direct_scale: dict[str, float],
+    thruster_diagnostics: dict | None = None,
 ) -> None:
     """Write the current force breakdown using the established sample contract."""
     # Keep the force breakdown contract identical to the historical writer:
@@ -64,6 +65,7 @@ def emit_thruster_debug_row(
         thr_state=thr_state,
         thruster_force_cmd=thruster_force_cmd,
         thruster_direct_scale=thruster_direct_scale,
+        thruster_diagnostics=thruster_diagnostics,
     )
     file.write(format_thruster_debug_values(values))
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 from typing import Any, Callable
 
 from sim.physics.model_setup import (
@@ -57,6 +58,11 @@ def load_model_runtime_setup(
         env_float=env_float,
         env_flag=env_flag,
     )
+    if bool(getattr(args, "sitl", False)):
+        loop_hz = float(env_float("SITL_SCHED_LOOP_RATE", 400.0))
+        if not math.isfinite(loop_hz) or loop_hz <= 0.0:
+            raise ValueError("SITL_SCHED_LOOP_RATE must be positive and finite")
+        _align_fcu_timestep(model, loop_hz)
     data = mujoco_module.MjData(model)
     scene_fluid_density, scene_fluid_viscosity = apply_fluid_option_scales(
         model,
@@ -173,3 +179,12 @@ def _model_has_course_buoys(model: Any, *, mujoco_module: Any) -> bool:
 
 
 __all__ = ["ModelRuntimeSetup", "load_model_runtime_setup"]
+
+
+def _align_fcu_timestep(model, loop_hz: float) -> None:
+    """Align physics to integer subdivisions of the FCU period."""
+    period = 1.0 / loop_hz
+    step = period / max(1, math.ceil(period / float(model.opt.timestep) - 1e-9))
+    if abs(float(model.opt.timestep) - step) > 1e-12:
+        print(f"[runtime] FCU clock aligned physics timestep: {model.opt.timestep:.6f}s -> {step:.6f}s", flush=True)
+    model.opt.timestep = step

@@ -1,0 +1,172 @@
+<mujoco model="research_pool_slam_ellipsoid">
+  <compiler angle="radian" meshdir="../assets/urdf_full/meshes_split/" />
+  <option density="1000" viscosity="0.001" integrator="Euler" />
+  <visual>
+    <headlight diffuse="0.82 0.88 0.92" ambient="0.22 0.28 0.32" specular="0.08 0.08 0.08" />
+    <quality shadowsize="2048" offsamples="2" />
+  </visual>
+  <default>
+    <site size="0.03" rgba="0 0 0 0" />
+  </default>
+  <asset>
+    <mesh name="base_link_part0" content_type="model/stl" file="base_link_part0.stl" />
+    <mesh name="base_link_part1" content_type="model/stl" file="base_link_part1.stl" />
+    <mesh name="base_link_part2" content_type="model/stl" file="base_link_part2.stl" />
+    <mesh name="base_link_part3" content_type="model/stl" file="base_link_part3.stl" />
+    <mesh name="base_link_part4" content_type="model/stl" file="base_link_part4.stl" />
+    <mesh name="VER_LF" content_type="model/stl" file="VER_LF.STL" />
+    <mesh name="VER_LR" content_type="model/stl" file="VER_LR.STL" />
+    <mesh name="VER_RF" content_type="model/stl" file="VER_RF.STL" />
+    <mesh name="VER_RR" content_type="model/stl" file="VER_RR.STL" />
+    <mesh name="YAW_LF" content_type="model/stl" file="YAW_LF.STL" />
+    <mesh name="YAW_LR" content_type="model/stl" file="YAW_LR.STL" />
+    <mesh name="YAW_RF" content_type="model/stl" file="YAW_RF.STL" />
+    <mesh name="YAW_RR" content_type="model/stl" file="YAW_RR.STL" />
+    <mesh name="t200_prop" content_type="model/stl" file="t200_prop.stl" scale="0.001 0.001 0.001" />
+    <texture name="pool_tile_texture" type="2d" builtin="checker" rgb1="0.56 0.72 0.78" rgb2="0.43 0.63 0.70" width="512" height="512" />
+    <material name="pool_tile" texture="pool_tile_texture" texrepeat="50 25" texuniform="true" specular="0.10" shininess="0.20" />
+    <material name="orange" rgba="0.95 0.45 0.05 1" />
+    <material name="frame_grey" rgba="0.55 0.55 0.55 1" />
+  </asset>
+  <worldbody>
+    <light name="pool_ceiling_light_a" pos="-7 0 5" dir="0 0 -1" diffuse="0.72 0.76 0.78" specular="0.12 0.12 0.12" />
+    <light name="pool_ceiling_light_b" pos="7 0 5" dir="0 0 -1" diffuse="0.72 0.76 0.78" specular="0.12 0.12 0.12" />
+    <camera name="course_overview" pos="0 0 19" xyaxes="1 0 0 0 1 0" fovy="58" />
+    <camera name="course_side" pos="0 -10 -1.6" xyaxes="1 0 0 0 0 1" fovy="52" />
+
+    <!-- Economical 25 m x 12.5 m x 3 m indoor research pool. -->
+    <geom name="pool_floor" type="box" pos="0 0 -3.05" size="12.5 6.25 0.05" material="pool_tile" />
+    <geom name="pool_wall_px" type="box" pos="12.55 0 -1.5" size="0.05 6.30 1.5" material="pool_tile" />
+    <geom name="pool_wall_nx" type="box" pos="-12.55 0 -1.5" size="0.05 6.30 1.5" material="pool_tile" />
+    <geom name="pool_wall_py" type="box" pos="0 6.30 -1.5" size="12.60 0.05 1.5" material="pool_tile" />
+    <geom name="pool_wall_ny" type="box" pos="0 -6.30 -1.5" size="12.60 0.05 1.5" material="pool_tile" />
+    <geom name="water_vis" type="box" pos="0 0 -1.5" size="12.5 6.25 1.5" rgba="0.04 0.36 0.56 0.08" contype="0" conaffinity="0" group="5" />
+    <geom name="water_surface" type="box" pos="0 0 0.004" size="12.5 6.25 0.004" rgba="0.38 0.78 0.92 0.12" contype="0" conaffinity="0" group="5" />
+
+    <!-- Three floor lane stripes and sparse cross marks give SLAM repeatable structure without dense geometry. -->
+    <geom name="pool_lane_left" type="box" pos="0 3.10 -2.994" size="12.35 0.035 0.004" rgba="0.03 0.13 0.32 1" contype="0" conaffinity="0" group="5" />
+    <geom name="pool_lane_center" type="box" pos="0 0 -2.994" size="12.35 0.035 0.004" rgba="0.03 0.13 0.32 1" contype="0" conaffinity="0" group="5" />
+    <geom name="pool_lane_right" type="box" pos="0 -3.10 -2.994" size="12.35 0.035 0.004" rgba="0.03 0.13 0.32 1" contype="0" conaffinity="0" group="5" />
+    <geom name="pool_cross_mark_a" type="box" pos="-6.0 0 -2.992" size="0.035 1.1 0.005" rgba="0.10 0.22 0.42 1" contype="0" conaffinity="0" group="5" />
+    <geom name="pool_cross_mark_b" type="box" pos="4.5 0 -2.992" size="0.035 0.7 0.005" rgba="0.10 0.22 0.42 1" contype="0" conaffinity="0" group="5" />
+
+    <!-- A small asymmetric landmark set: two wall panels, one column, and one low block. -->
+    <geom name="slam_landmark_red_panel" type="box" pos="-12.48 2.8 -1.35" size="0.025 0.60 0.50" rgba="0.86 0.12 0.08 1" />
+    <geom name="slam_landmark_yellow_panel" type="box" pos="5.0 6.23 -1.75" size="0.75 0.025 0.35" rgba="0.95 0.75 0.05 1" />
+    <geom name="slam_landmark_column" type="cylinder" pos="7.0 -3.7 -1.8" size="0.20 1.20" rgba="0.06 0.55 0.34 1" />
+    <geom name="slam_landmark_low_block" type="box" pos="-2.5 -4.1 -2.70" size="0.55 0.35 0.30" rgba="0.72 0.28 0.82 1" />
+    <geom name="slam_gate_left" type="capsule" fromto="9.0 2.1 -3.0 9.0 2.1 -1.3" size="0.045" rgba="0.94 0.94 0.90 1" />
+    <geom name="slam_gate_right" type="capsule" fromto="9.0 3.5 -3.0 9.0 3.5 -1.3" size="0.045" rgba="0.94 0.94 0.90 1" />
+    <geom name="slam_gate_top" type="capsule" fromto="9.0 2.1 -1.3 9.0 3.5 -1.3" size="0.045" rgba="0.12 0.32 0.75 1" />
+    <site name="course_buoy_pinger_white_1_acoustic_site" pos="9.0 2.8 -1.3" size="0.01" rgba="0.9 0.1 0.1 0" />
+
+    <body name="base_link" pos="-8.5 1.4 -1.2" quat="1 0 0 0">
+      <inertial pos="-0.0015 0 0.03" quat="1 0 0 0" mass="15" diaginertia="0.55 0.55 0.85" />
+      <joint name="world_joint" type="free" />
+      <geom name="fluid_center_enclosure" type="cylinder" fromto="-0.213 0 0.010 0.203 0 0.010" size="0.1105" rgba="0.15 0.90 1.00 0.01" contype="0" conaffinity="0" fluidshape="ellipsoid" fluidcoef="0.424 0.120 3.415 0.050 0.025" />
+      <geom name="fluid_port_lower_body" type="capsule" fromto="-0.3045 0.248 -0.082 0.2965 0.248 -0.082" size="0.0545" rgba="0.10 0.70 1.00 0.01" contype="0" conaffinity="0" fluidshape="ellipsoid" fluidcoef="0.356 0.103 2.683 0.050 0.025" />
+      <geom name="fluid_starboard_lower_body" type="capsule" fromto="-0.3045 -0.248 -0.082 0.2965 -0.248 -0.082" size="0.0545" rgba="0.10 0.70 1.00 0.01" contype="0" conaffinity="0" fluidshape="ellipsoid" fluidcoef="0.356 0.103 2.683 0.050 0.025" />
+      <geom type="mesh" mesh="base_link_part0" material="frame_grey" pos="-0.1807 0.1826 0.15" quat="0.7071068 -0.7071068 0 0" />
+      <geom type="mesh" mesh="base_link_part1" material="frame_grey" pos="-0.1807 0.1826 0.15" quat="0.7071068 -0.7071068 0 0" />
+      <geom type="mesh" mesh="base_link_part2" material="frame_grey" pos="-0.1807 0.1826 0.15" quat="0.7071068 -0.7071068 0 0" />
+      <geom type="mesh" mesh="base_link_part3" material="frame_grey" pos="-0.1807 0.1826 0.15" quat="0.7071068 -0.7071068 0 0" />
+      <geom type="mesh" mesh="base_link_part4" material="frame_grey" pos="-0.1807 0.1826 0.15" quat="0.7071068 -0.7071068 0 0" />
+      <geom pos="0.16 0.2345 -0.078408" quat="0.5 -0.5 -0.5 -0.5" type="mesh" mesh="VER_LF" material="orange" />
+      <geom pos="-0.16 0.2345 -0.078408" quat="0.5 -0.5 -0.5 -0.5" type="mesh" mesh="VER_LR" material="orange" />
+      <geom pos="0.16 -0.2345 -0.078408" quat="0.4999971 0.5000008 -0.4999992 0.5000029" type="mesh" mesh="VER_RF" material="orange" />
+      <geom pos="-0.16 -0.2345 -0.078408" quat="0.4999971 0.5000008 -0.4999992 0.5000029" type="mesh" mesh="VER_RR" material="orange" />
+      <geom pos="0.09015 0.183144 0.03" quat="0.9314351 0.0000014 -0.0000007 -0.3639076" type="mesh" mesh="YAW_LF" material="orange" />
+      <geom pos="-0.09015 0.183144 0.03" quat="0.9238792 0.0000014 0.0000007 0.3826842" type="mesh" mesh="YAW_LR" material="orange" />
+      <geom pos="0.09015 -0.183144 0.03" quat="0.9238792 0.0000014 0.0000007 0.3826842" type="mesh" mesh="YAW_RF" material="orange" />
+      <geom pos="-0.09015 -0.183144 0.03" quat="0.9234022 0.0000014 -0.0000007 -0.3838338" type="mesh" mesh="YAW_RR" material="orange" />
+
+      <site name="base_link_origin_site" pos="0 0 0" />
+      <site name="thr_ver_lf" pos="0.149 0.2346 -0.078406" />
+      <site name="thr_ver_lr" pos="-0.171 0.2346 -0.078406" />
+      <site name="thr_ver_rf" pos="0.149 -0.2344 -0.07841" />
+      <site name="thr_ver_rr" pos="-0.171 -0.2344 -0.07841" />
+      <site name="thr_yaw_lf" pos="0.08289 0.182892 0.03" />
+      <site name="thr_yaw_lr" pos="-0.09761 0.183255 0.03" />
+      <site name="thr_yaw_rf" pos="0.08304 -0.18353 0.03" />
+      <site name="thr_yaw_rr" pos="-0.097055 -0.1829 0.03" />
+      <site name="mass_center_enclosure" pos="-0.005 0 0.075" />
+      <site name="mass_port_lower_body" pos="0 0.208 -0.005" />
+      <site name="mass_starboard_lower_body" pos="0 -0.208 -0.005" />
+      <site name="buoy_ver_lf" pos="0.149 0.2346 0.040" />
+      <site name="buoy_ver_lr" pos="-0.171 0.2346 0.040" />
+      <site name="buoy_ver_rf" pos="0.149 -0.2344 0.040" />
+      <site name="buoy_ver_rr" pos="-0.171 -0.2344 0.040" />
+      <site name="cob_site" pos="0 0 0.032" />
+      <site name="imu_site" pos="0.13135 0 0.08541" />
+      <site name="bar30_site" pos="-0.17364 -0.03034 0.0536" />
+      <site name="dvl_site" pos="-0.00488 0 -0.03910" quat="0 1 0 0" />
+      <site name="ping360_site" pos="0 0 0.205" />
+      <site name="hydrophone_center_site" pos="0.215 0 -0.035" />
+      <site name="hydrophone_left_site" pos="0.215 0.060 -0.035" />
+      <site name="hydrophone_right_site" pos="0.215 -0.060 -0.035" />
+      <site name="cam_left_site" pos="0.1493 -0.0225 -0.02" />
+      <site name="cam_right_site" pos="0.1493 0.0225 -0.02" />
+      <camera name="stereo_left" pos="0.1493 -0.0225 -0.02" xyaxes="0 -1 0 0 0 1" fovy="70" />
+      <camera name="stereo_right" pos="0.1493 0.0225 -0.02" xyaxes="0 -1 0 0 0 1" fovy="70" />
+
+      <body name="prop_ver_lf" pos="0.16 0.2345 -0.078408" quat="0 -1 0 0">
+        <inertial pos="-0.035221 -0.040788 -0.015008" mass="0.001" diaginertia="0.000001 0.000001 0.000001" />
+        <joint name="prop_ver_lf_j" type="hinge" axis="0 0 1" damping="1.0" armature="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="0" />
+      </body>
+      <body name="prop_ver_lr" pos="-0.16 0.2345 -0.078408" quat="0 -1 0 0">
+        <inertial pos="-0.035221 -0.040788 -0.015008" mass="0.001" diaginertia="0.000001 0.000001 0.000001" />
+        <joint name="prop_ver_lr_j" type="hinge" axis="0 0 1" damping="1.0" armature="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="0" />
+      </body>
+      <body name="prop_ver_rf" pos="0.16 -0.2345 -0.078408" quat="0 -1 0 0">
+        <inertial pos="-0.035221 -0.040788 -0.015008" mass="0.001" diaginertia="0.000001 0.000001 0.000001" />
+        <joint name="prop_ver_rf_j" type="hinge" axis="0 0 1" damping="1.0" armature="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="0" />
+      </body>
+      <body name="prop_ver_rr" pos="-0.16 -0.2345 -0.078408" quat="0 -1 0 0">
+        <inertial pos="-0.035221 -0.040788 -0.015008" mass="0.001" diaginertia="0.000001 0.000001 0.000001" />
+        <joint name="prop_ver_rr_j" type="hinge" axis="0 0 1" damping="1.0" armature="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="0" />
+      </body>
+      <body name="prop_yaw_lf" pos="0.09015 0.183144 0.03" quat="0.2837635 -0.2837635 0.6476714 -0.6476714">
+        <inertial pos="-0.035221 -0.040788 -0.015008" mass="0.001" diaginertia="0.000001 0.000001 0.000001" />
+        <joint name="prop_yaw_lf_j" type="hinge" axis="0 0 1" damping="1.0" armature="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="0" />
+      </body>
+      <body name="prop_yaw_lr" pos="-0.09015 0.183144 0.03" quat="0.6532818 -0.6532818 0.2705974 -0.2705974">
+        <inertial pos="-0.035221 -0.040788 -0.015008" mass="0.001" diaginertia="0.000001 0.000001 0.000001" />
+        <joint name="prop_yaw_lr_j" type="hinge" axis="0 0 1" damping="1.0" armature="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="0" />
+      </body>
+      <body name="prop_yaw_rf" pos="0.09015 -0.183144 0.03" quat="0.6532818 -0.6532818 0.2705974 -0.2705974">
+        <inertial pos="-0.035221 -0.040788 -0.015008" mass="0.001" diaginertia="0.000001 0.000001 0.000001" />
+        <joint name="prop_yaw_rf_j" type="hinge" axis="0 0 1" damping="1.0" armature="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="0" />
+      </body>
+      <body name="prop_yaw_rr" pos="-0.09015 -0.1829 0.03" quat="0.2697839 -0.2697839 0.6536181 -0.6536181">
+        <inertial pos="-0.035221 -0.040788 -0.015008" mass="0.001" diaginertia="0.000001 0.000001 0.000001" />
+        <joint name="prop_yaw_rr_j" type="hinge" axis="0 0 1" damping="1.0" armature="0.01" />
+        <geom type="mesh" mesh="t200_prop" pos="-0.035221 -0.040788 -0.015008" rgba="0.1 0.1 0.1 1" contype="0" conaffinity="0" density="0" />
+      </body>
+    </body>
+  </worldbody>
+  <actuator>
+    <motor name="ver_lf" site="thr_ver_lf" gear="0 0 -1 0 0 0" ctrlrange="-1200 1200" />
+    <motor name="ver_lr" site="thr_ver_lr" gear="0 0 -1 0 0 0" ctrlrange="-1200 1200" />
+    <motor name="ver_rf" site="thr_ver_rf" gear="0 0 -1 0 0 0" ctrlrange="-1200 1200" />
+    <motor name="ver_rr" site="thr_ver_rr" gear="0 0 -1 0 0 0" ctrlrange="-1200 1200" />
+    <motor name="yaw_lf" site="thr_yaw_lf" gear="0.7071068 -0.7071068 0 0 0 0" ctrlrange="-1200 1200" />
+    <motor name="yaw_lr" site="thr_yaw_lr" gear="-0.7071068 -0.7071068 0 0 0 0" ctrlrange="-1200 1200" />
+    <motor name="yaw_rf" site="thr_yaw_rf" gear="0.7071068 0.7071068 0 0 0 0" ctrlrange="-1200 1200" />
+    <motor name="yaw_rr" site="thr_yaw_rr" gear="-0.7071068 0.7071068 0 0 0 0" ctrlrange="-1200 1200" />
+  </actuator>
+  <sensor>
+    <framequat name="imu_quat" objtype="site" objname="imu_site" />
+    <gyro name="imu_gyro" site="imu_site" noise="0" />
+    <accelerometer name="imu_acc" site="imu_site" noise="0" />
+    <velocimeter name="dvl_vel_body" site="dvl_site" noise="0" />
+    <rangefinder name="dvl_altitude" site="dvl_site" cutoff="30" />
+    <framepos name="depth_pos" objtype="site" objname="bar30_site" />
+  </sensor>
+</mujoco>

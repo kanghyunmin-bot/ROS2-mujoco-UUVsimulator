@@ -6,6 +6,12 @@ from typing import Callable, Optional
 
 import numpy as np
 
+from .ros2_dvl_sensor_runtime import reset_dvl_dead_reckoning
+from .ros2_dvl_device_emulator_runtime import (
+    reset_dvl_device_emulator_dead_reckoning,
+    reset_dvl_device_emulator_report_schedule,
+)
+
 
 def set_sitl_servo_handler(self, callback: Optional[Callable[[list[int]], None]]) -> None:
     if self._sitl_transport is not None:
@@ -49,6 +55,9 @@ def force_next_publish(self) -> None:
 def reset_odometry(self) -> None:
     self._odom_pos = np.zeros(3, dtype=np.float64)
     self._last_odom_time = -1.0
+    reset_dvl_device_emulator_dead_reckoning(self)
+    reset_dvl_dead_reckoning(self)
+    reset_dvl_device_emulator_report_schedule(self)
 
 
 __all__ = [

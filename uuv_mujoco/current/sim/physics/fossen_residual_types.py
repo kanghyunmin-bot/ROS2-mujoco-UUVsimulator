@@ -68,6 +68,8 @@ class ResidualHydroRuntime:
 class FossenResidualRuntime:
     active: bool
     added_mass_active: bool
+    requested_active: bool
+    requested_added_mass_active: bool
     linear: dict[str, float]
     forward_speed: dict[str, float]
     quadratic: dict[str, float]

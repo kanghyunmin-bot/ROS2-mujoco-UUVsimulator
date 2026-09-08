@@ -158,6 +158,11 @@ def build_steps(args: argparse.Namespace) -> list[tuple[str, list[str], float]]:
         ("gui_backend_selection", _python_script("check_gui_backend_selection.py"), args.timeout_s),
         ("gui_entry_contract", _python_script("check_gui_entry_contract.py"), args.timeout_s),
         ("gui_start_contract", _python_script("check_gui_start_contract.py"), args.timeout_s),
+        (
+            "gui_distributed_profile_contract",
+            _python_script("check_gui_distributed_profile_contract.py"),
+            args.timeout_s,
+        ),
         ("gui_readiness_contract", _python_script("check_gui_readiness_contract.py"), args.timeout_s),
         ("gui_file_persistence", _python_script("check_gui_file_persistence.py"), args.timeout_s),
         ("process_log_lifecycle", _python_script("check_process_log_lifecycle.py"), args.timeout_s),
@@ -194,6 +199,7 @@ def build_steps(args: argparse.Namespace) -> list[tuple[str, list[str], float]]:
         ),
         ("gui_pilot_toggle_contract", _python_script("check_gui_pilot_toggle_contract.py"), args.timeout_s),
         ("gui_pilot_auto_enable_contract", _python_script("check_gui_pilot_auto_enable_contract.py"), args.timeout_s),
+        ("gui_rc_release_sequence", _python_script("check_gui_rc_release_sequence.py"), args.timeout_s),
         ("dist_rc_override_path", _python_script("check_dist_rc_override_path.py"), args.timeout_s),
         ("manual_control_input_scaling", _python_script("check_manual_control_input_scaling.py"), args.timeout_s),
         ("axis_rc_health_contract", _python_script("check_axis_rc_health_contract.py"), args.timeout_s),
@@ -202,8 +208,104 @@ def build_steps(args: argparse.Namespace) -> list[tuple[str, list[str], float]]:
         ("ros2_replay_rcout", _python_script("check_ros2_replay_rcout.py"), args.timeout_s),
         ("initial_hold_pose", _python_script("check_initial_hold_pose.py"), args.timeout_s),
         ("real_start_measurements", _python_script("check_real_start_measurements.py"), args.timeout_s),
+        ("real_sim_sensor_contract", _python_script("check_real_sim_sensor_contract.py"), args.timeout_s),
+        (
+            "ground_truth_odometry_alias_policy",
+            _python_script("test_ground_truth_odometry_alias_policy.py"),
+            args.timeout_s,
+        ),
+        ("imx219_real_driver_contract", _python_script("check_imx219_real_driver_contract.py"), args.timeout_s),
+        ("truth_extnav_isolation", _python_script("check_truth_extnav_isolation.py"), args.timeout_s),
+        (
+            "dvl_frd_to_flu_contract",
+            [
+                sys.executable,
+                str(
+                    REPO_ROOT
+                    / "rospkg"
+                    / "src"
+                    / "kmu26_auv"
+                    / "test"
+                    / "test_dvl_frd_to_flu_contract.py"
+                ),
+            ],
+            args.timeout_s,
+        ),
+        (
+            "imx219_static_tf_contract",
+            [
+                sys.executable,
+                str(
+                    REPO_ROOT
+                    / "rospkg"
+                    / "src"
+                    / "kmu26_auv"
+                    / "test"
+                    / "test_imx219_static_tf_contract.py"
+                ),
+            ],
+            args.timeout_s,
+        ),
+        ("sensor_timing_transport", _python_script("test_sensor_timing_transport.py"), args.timeout_s),
+        (
+            "imu_bar30_sensor_models",
+            _python_script("test_imu_bar30_sensor_models.py"),
+            args.timeout_s,
+        ),
+        (
+            "imu_bar30_sensor_runtime",
+            _python_script("test_imu_bar30_sensor_runtime.py"),
+            args.timeout_s,
+        ),
+        (
+            "imu_bar30_publish_integration",
+            _python_script("test_imu_bar30_publish_integration.py"),
+            args.timeout_s,
+        ),
+        (
+            "strict_sitl_sensor_transport",
+            _python_script("test_strict_sitl_sensor_transport.py"),
+            args.timeout_s,
+        ),
+        (
+            "underwater_camera_sensor_model",
+            _runtime_python_script("test_underwater_camera_sensor_model.py"),
+            args.timeout_s,
+        ),
+        (
+            "camera_sensor_runtime",
+            _runtime_python_script("test_camera_sensor_runtime.py"),
+            args.timeout_s,
+        ),
+        (
+            "camera_publish_integration",
+            _runtime_python_script("test_camera_publish_integration.py"),
+            args.timeout_s,
+        ),
+        ("dvl_a50_sensor_model", _python_script("test_dvl_a50_sensor_model.py"), args.timeout_s),
+        ("dvl_sensor_runtime", _python_script("test_dvl_sensor_runtime.py"), args.timeout_s),
+        ("dvl_a50_tcp_emulator", _python_script("test_dvl_a50_tcp_emulator.py"), args.timeout_s),
+        (
+            "dvl_device_emulator_runtime",
+            _python_script("test_dvl_device_emulator_runtime.py"),
+            args.timeout_s,
+        ),
+        (
+            "dvl_publish_integration",
+            _runtime_python_script("test_dvl_publish_integration.py"),
+            args.timeout_s,
+        ),
+        (
+            "dvl_mujoco_geometry",
+            _runtime_python_script("test_dvl_mujoco_geometry.py"),
+            args.timeout_s,
+        ),
         ("ros2_dvl_messages", _python_script("check_ros2_dvl_messages.py"), args.timeout_s),
-        ("strict_real_pkg_surface", _python_script("check_strict_real_pkg_surface.py"), args.timeout_s),
+        (
+            "strict_real_pkg_surface",
+            _runtime_python_script("check_strict_real_pkg_surface.py"),
+            args.timeout_s,
+        ),
         ("static_context_publisher", _python_script("check_static_context_publisher.py"), args.timeout_s),
         ("physics_contract_geometry", _python_script("check_physics_contract_geometry.py"), args.timeout_s),
         (
@@ -226,18 +328,66 @@ def build_steps(args: argparse.Namespace) -> list[tuple[str, list[str], float]]:
         ),
         ("physics_runtime_hydrostatic", _python_script("check_physics_runtime_hydrostatic.py"), args.timeout_s),
         ("sim_profile_safety_contract", _python_script("check_sim_profile_safety_contract.py"), args.timeout_s),
-        ("underwater_flow_contract", _python_script("check_underwater_flow_contract.py"), args.timeout_s),
+        ("pool_hydrodynamics", _runtime_python_script("test_pool_hydrodynamics.py"), args.timeout_s),
+        (
+            "distributed_hydrodynamics",
+            _python_script("test_distributed_hydrodynamics.py"),
+            args.timeout_s,
+        ),
+        ("free_surface", _python_script("test_free_surface.py"), args.timeout_s),
+        (
+            "full_matrix_hydrodynamics",
+            _python_script("test_full_matrix_hydrodynamics.py"),
+            args.timeout_s,
+        ),
+        (
+            "thruster_inflow_physics",
+            _python_script("test_thruster_inflow_physics.py"),
+            args.timeout_s,
+        ),
+        (
+            "advanced_hydrodynamics_ownership",
+            _python_script("test_advanced_hydrodynamics_ownership.py"),
+            args.timeout_s,
+        ),
+        ("research_pool_scene", _runtime_python_script("check_research_pool_scene.py"), args.timeout_s),
+        ("research_pool_physics", _runtime_python_script("check_research_pool_physics.py"), args.timeout_s),
+        (
+            "distributed_pool_physics",
+            _runtime_python_script("check_distributed_pool_physics.py"),
+            args.timeout_s,
+        ),
+        (
+            "underwater_flow_contract",
+            _runtime_python_script("check_underwater_flow_contract.py"),
+            args.timeout_s,
+        ),
         ("vehicle_fluid_free_decay", _runtime_python_script("check_vehicle_fluid_free_decay.py"), args.timeout_s),
         ("thruster_param_loader", _python_script("check_thruster_param_loader.py"), args.timeout_s),
         ("thruster_performance_curves", _python_script("check_thruster_performance_curves.py"), args.timeout_s),
         ("odometry_publish_builders", _python_script("check_odometry_publish_builders.py"), args.timeout_s),
         ("ros2_ping360_messages", _python_script("check_ros2_ping360_messages.py"), args.timeout_s),
         ("hydrophone_audio_timing", _python_script("check_hydrophone_audio_timing.py"), args.timeout_s),
-        ("single_hydrophone_homing_math", _python_script("check_single_hydrophone_homing_math.py"), args.timeout_s),
+        (
+            "single_hydrophone_homing_math",
+            [
+                sys.executable,
+                str(
+                    REPO_ROOT
+                    / "rospkg"
+                    / "src"
+                    / "kmu26_pinger_homing"
+                    / "test"
+                    / "test_single_hydrophone_homing_math.py"
+                ),
+            ],
+            args.timeout_s,
+        ),
         ("homing_direction_viewer", _python_script("check_homing_direction_viewer.py"), args.timeout_s),
         ("vision_buoy_pipeline", _python_script("check_vision_buoy_pipeline.py"), args.timeout_s),
         ("yolo_buoy_overlay_contract", _python_script("check_yolo_buoy_overlay_contract.py"), args.timeout_s),
         ("rviz_mission_visualizer_contract", _python_script("check_rviz_mission_visualizer_contract.py"), args.timeout_s),
+        ("slam_trajectory_evaluation", _python_script("test_slam_trajectory_evaluation.py"), args.timeout_s),
         ("ros2_sitl_command_override", _python_script("check_ros2_sitl_command_override.py"), args.timeout_s),
         ("ping360_stl_io", _python_script("check_filter_ping360_stl_io.py"), args.timeout_s),
         (

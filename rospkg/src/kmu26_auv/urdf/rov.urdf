@@ -3,7 +3,7 @@
     <visual>
       <origin rpy="1.5708 0 0" xyz="-0.35 0.3 -0.15"/>
       <geometry>
-        <mesh filename="package://hit25_auv/meshes/rov_urdf.stl"
+        <mesh filename="package://hit25_auv_ros2/meshes/rov_urdf.stl"
                scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="grey">
@@ -15,7 +15,7 @@
       <!-- visual과 동일하게 맞춤 -->
       <origin rpy="1.5708 0 0" xyz="-0.35 0.3 -0.15"/>
       <geometry>
-        <mesh filename="package://hit25_auv/meshes/rov_urdf.stl"
+        <mesh filename="package://hit25_auv_ros2/meshes/rov_urdf.stl"
                scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>

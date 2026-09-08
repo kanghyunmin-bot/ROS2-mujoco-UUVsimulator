@@ -34,11 +34,15 @@ if ! declare -F resolve_kmu26_auv_dir >/dev/null 2>&1; then
       printf '%s\n' "${ros_workspace_dir}/kmu26_auv"
       return 0
     fi
+    if [[ -d "${ros_workspace_dir}/src/kmu26_auv" ]]; then
+      printf '%s\n' "${ros_workspace_dir}/src/kmu26_auv"
+      return 0
+    fi
     if [[ -d "${workspace_dir}/kmu26_auv" ]]; then
       printf '%s\n' "${workspace_dir}/kmu26_auv"
       return 0
     fi
-    printf '%s\n' "${ros_workspace_dir}/kmu26_auv"
+    printf '%s\n' "${ros_workspace_dir}/src/kmu26_auv"
   }
 fi
 if ! declare -F preferred_setup_script_names >/dev/null 2>&1; then
@@ -188,7 +192,9 @@ QGC_APP="${QGC_APP:-$(resolve_qgc_app)}"
 ARDUPILOT_DIR="${ARDUPILOT_DIR:-${WORKSPACE_DIR}/ardupilot}"
 ROS_DISTRO="${ROS_DISTRO:-humble}"
 ROS_WORKSPACE_DIR="${ROS_WORKSPACE_DIR:-$(resolve_ros_workspace_dir "${WORKSPACE_DIR}")}"
-KMU26_AUV_DIR="${KMU26_AUV_DIR:-$(resolve_kmu26_auv_dir "${WORKSPACE_DIR}" "${ROS_WORKSPACE_DIR}")}"
+if [[ -z "${KMU26_AUV_DIR:-}" || ! -d "${KMU26_AUV_DIR}" ]]; then
+  KMU26_AUV_DIR="$(resolve_kmu26_auv_dir "${WORKSPACE_DIR}" "${ROS_WORKSPACE_DIR}")"
+fi
 ROS_INSTALL_SETUP="${ROS_INSTALL_SETUP:-$(resolve_ros_install_setup "${WORKSPACE_DIR}" "${ROS_WORKSPACE_DIR}")}"
 ROS_ENV_SETUP="${ROS_ENV_SETUP:-$(resolve_ros_env_setup "${ROS_DISTRO}" 2>/dev/null || true)}"
 MJ311_ROOT="${MJ311_ROOT:-$(resolve_default_mj311_root)}"
@@ -471,13 +477,15 @@ install_python_deps() {
   [[ -x "$venv_python" ]] || die "virtualenv python not found: $venv_python"
   run_clean_env "$venv_python" -m pip install -U pip "setuptools<81" wheel
   run_clean_env "$venv_python" -m pip install \
-    numpy matplotlib rosbags python-pptx \
+    numpy matplotlib pyyaml rosbags python-pptx opencv-python-headless \
     mujoco pymavlink MAVProxy pexpect pillow future dronecan gnureadline \
     "empy==3.3.4"
   env -u PYTHONPATH -u PYTHONHOME "$venv_python" - <<'PY'
 import mujoco
 import numpy
 import matplotlib
+import cv2
+import yaml
 import rosbags
 import pptx
 import pymavlink
@@ -508,9 +516,25 @@ fi
 export WORKSPACE_DIR="$(cd "$(dirname "${_UUV_ENV_SOURCE}")" && pwd)"
 export ROS_WORKSPACE_DIR="${ROS_WORKSPACE_DIR:-${WORKSPACE_DIR}/rospkg}"
 export UUV_MUJOCO_DIR="${UUV_MUJOCO_DIR:-${WORKSPACE_DIR}/uuv_mujoco}"
-export ARDUPILOT_DIR="${ARDUPILOT_DIR:-${WORKSPACE_DIR}/ardupilot}"
-export KMU26_AUV_DIR="${KMU26_AUV_DIR:-${ROS_WORKSPACE_DIR}/kmu26_auv}"
+export ARDUPILOT_STABLE_DIR="${ARDUPILOT_STABLE_DIR:-${WORKSPACE_DIR}/ardupilot_sub_stable}"
+if [[ -d "${ARDUPILOT_STABLE_DIR}/ArduSub" ]]; then
+  export ARDUPILOT_DIR="${ARDUPILOT_DIR:-${ARDUPILOT_STABLE_DIR}}"
+else
+  export ARDUPILOT_DIR="${ARDUPILOT_DIR:-${WORKSPACE_DIR}/ardupilot}"
+fi
+if [[ -z "${KMU26_AUV_DIR:-}" || ! -d "${KMU26_AUV_DIR}" ]]; then
+  if [[ -d "${ROS_WORKSPACE_DIR}/src/kmu26_auv" ]]; then
+    export KMU26_AUV_DIR="${ROS_WORKSPACE_DIR}/src/kmu26_auv"
+  else
+    export KMU26_AUV_DIR="${ROS_WORKSPACE_DIR}/kmu26_auv"
+  fi
+fi
 export ROS_DISTRO="${ROS_DISTRO:-humble}"
+export UUV_SITL_BACKEND_DEFAULT="${UUV_SITL_BACKEND_DEFAULT:-native}"
+export UUV_SITL_BACKEND="${UUV_SITL_BACKEND:-${UUV_SITL_BACKEND_DEFAULT}}"
+export RMW_IMPLEMENTATION="${RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}"
+export ROS_LOCALHOST_ONLY="${ROS_LOCALHOST_ONLY:-0}"
+export ROS_DISABLE_DAEMON="${ROS_DISABLE_DAEMON:-1}"
 
 if [[ -z "${UUV_MUJOCO_RUNTIME_DIR:-}" ]]; then
   export UUV_MUJOCO_RUNTIME_DIR="${UUV_MUJOCO_DIR}/current"
@@ -557,13 +581,26 @@ if [[ -z "${MJ311_ROOT:-}" ]]; then
 fi
 
 export MJ311_PYTHON="${MJ311_PYTHON:-${MJ311_ROOT}/bin/python}"
-export MJ311_MJPYTHON="${MJ311_MJPYTHON:-${MJ311_ROOT}/bin/mjpython}"
+if [[ -z "${MJ311_MJPYTHON:-}" ]]; then
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    export MJ311_MJPYTHON="${MJ311_ROOT}/bin/mjpython"
+  else
+    export MJ311_MJPYTHON="${MJ311_PYTHON}"
+  fi
+fi
 
 if [[ -z "${QGC_APP:-}" ]]; then
   for _candidate in \
+    "${WORKSPACE_DIR}/dist/ubuntu22.04/QGroundControl.AppImage" \
+    "${WORKSPACE_DIR}/dist/ubuntu22.04/QGroundControl-x86_64.AppImage" \
     "${WORKSPACE_DIR}/QGroundControl.AppImage" \
     "${WORKSPACE_DIR}/QGroundControl-x86_64.AppImage" \
+    "$HOME/Downloads/QGroundControl.AppImage" \
+    "$HOME/Downloads/QGroundControl-x86_64.AppImage" \
     "$HOME/Applications/QGroundControl.AppImage" \
+    "$HOME/bin/QGroundControl.AppImage" \
+    "/opt/QGroundControl/QGroundControl.AppImage" \
+    "/usr/local/bin/QGroundControl.AppImage" \
     "${WORKSPACE_DIR}/QGroundControl.app" \
     "/Applications/QGroundControl.app" \
     "$HOME/Applications/QGroundControl.app"

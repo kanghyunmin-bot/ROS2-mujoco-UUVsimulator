@@ -23,8 +23,7 @@ def publish_rc_release_and_neutral(owner) -> None:
     owner._pilot_input_release_requested = False
     owner._rc_override_prev = False
     if GUI_PILOT_CONTROL_MODE == PILOT_CONTROL_RC_OVERRIDE:
-        owner.node.publish_rc_override(yaw=0.0, heave=0.0, forward=0.0, lateral=0.0)
-        owner.node.publish_rc_release()
+        owner.node.publish_rc_neutral_then_release()
         return
     owner.node.publish_manual_control(yaw=0.0, heave=0.0, forward=0.0, lateral=0.0)
     owner.node.publish_rc_release()

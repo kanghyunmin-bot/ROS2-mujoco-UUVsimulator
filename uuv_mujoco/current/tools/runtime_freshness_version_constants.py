@@ -3,11 +3,7 @@
 from __future__ import annotations
 
 
-DEFAULT_FRESHNESS_POLICY = (
-    "origin/uuv_sim is the source branch for this active runtime; origin/main and "
-    "origin/master are different layout branches and must not be merged blindly into "
-    "the dirty simulator workspace."
-)
+DEFAULT_FRESHNESS_POLICY = "origin/main is the latest source baseline; validate changes before publishing."
 
 PRIMARY_RUNNER = "uuv_mujoco/current/run_uuv_mujoco.py"
 COMPATIBILITY_RUNNER = "uuv_mujoco/current/run_urdf_full.py"

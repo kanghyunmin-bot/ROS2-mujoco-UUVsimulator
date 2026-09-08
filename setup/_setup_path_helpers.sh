@@ -56,11 +56,15 @@ resolve_kmu26_auv_dir() {
     printf '%s\n' "${ros_workspace_dir}/kmu26_auv"
     return 0
   fi
+  if [[ -d "${ros_workspace_dir}/src/kmu26_auv" ]]; then
+    printf '%s\n' "${ros_workspace_dir}/src/kmu26_auv"
+    return 0
+  fi
   if [[ -d "${workspace_dir}/kmu26_auv" ]]; then
     printf '%s\n' "${workspace_dir}/kmu26_auv"
     return 0
   fi
-  printf '%s\n' "${ros_workspace_dir}/kmu26_auv"
+  printf '%s\n' "${ros_workspace_dir}/src/kmu26_auv"
 }
 
 resolve_ros_install_setup() {

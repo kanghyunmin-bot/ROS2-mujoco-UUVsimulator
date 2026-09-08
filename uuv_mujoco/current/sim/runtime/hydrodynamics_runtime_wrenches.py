@@ -63,6 +63,10 @@ def build_hydrodynamic_wrench_runtime(
         fossen_residual=fossen_residual,
         fossen_residual_active=fossen_residual.active,
         fossen_residual_added_mass_active=fossen_residual.added_mass_active,
+        fossen_residual_requested_active=fossen_residual.requested_active,
+        fossen_residual_requested_added_mass_active=(
+            fossen_residual.requested_added_mass_active
+        ),
         fossen_residual_linear=fossen_residual.linear,
         fossen_residual_forward_speed=fossen_residual.forward_speed,
         fossen_residual_quadratic=fossen_residual.quadratic,

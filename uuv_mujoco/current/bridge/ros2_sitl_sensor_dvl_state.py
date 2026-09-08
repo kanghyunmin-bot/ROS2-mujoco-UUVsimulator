@@ -31,6 +31,35 @@ def _base_velocity_body_bmj(owner: Any, data: Any, base: BaseKinematicState) -> 
     return base.base_rot_enu.T @ base.base_vel_enu
 
 
+def _dvl_site_velocity_body_bmj(
+    owner: Any,
+    data: Any,
+    base: BaseKinematicState,
+    dvl_vel_sensor: Any,
+) -> np.ndarray:
+    """Return DVL-site velocity in base-body axes, including ``omega x r``."""
+
+    if dvl_vel_sensor is None:
+        return _base_velocity_body_bmj(owner, data, base)
+    velocity_dvl = np.asarray(dvl_vel_sensor, dtype=np.float64)
+    if velocity_dvl.shape != (3,) or not np.all(np.isfinite(velocity_dvl)):
+        return _base_velocity_body_bmj(owner, data, base)
+    if getattr(owner, "_base_id", -1) < 0 or getattr(owner, "_dvl_site_id", -1) < 0:
+        return _base_velocity_body_bmj(owner, data, base)
+    try:
+        rotation_world_body = np.asarray(
+            data.xmat[owner._base_id],
+            dtype=np.float64,
+        ).reshape(3, 3)
+        rotation_world_dvl = np.asarray(
+            data.site_xmat[owner._dvl_site_id],
+            dtype=np.float64,
+        ).reshape(3, 3)
+        return rotation_world_body.T @ rotation_world_dvl @ velocity_dvl
+    except Exception:
+        return _base_velocity_body_bmj(owner, data, base)
+
+
 def _filtered_velocity(owner: Any, vel_body_bmj: np.ndarray) -> np.ndarray:
     vel_body_bmj = np.nan_to_num(np.asarray(vel_body_bmj, dtype=np.float64), nan=0.0, posinf=0.0, neginf=0.0)
     alpha = float(owner._dvl_filter_alpha)
@@ -45,10 +74,10 @@ def _filtered_velocity(owner: Any, vel_body_bmj: np.ndarray) -> np.ndarray:
 
 
 def dvl_velocity_from_snapshot(owner: Any, data: Any, base: BaseKinematicState, dvl_vel_sensor: Any, gyro_bmj: Any) -> np.ndarray | None:
-    # Body velocity topics must describe base_link motion. MuJoCo site
-    # velocimeters are expressed at the sensor site and include lever-arm and
-    # site-frame effects, which makes manual axis checks look cross-coupled.
-    dvl_vel_body_bmj = _filtered_velocity(owner, _base_velocity_body_bmj(owner, data, base))
+    dvl_vel_body_bmj = _filtered_velocity(
+        owner,
+        _dvl_site_velocity_body_bmj(owner, data, base, dvl_vel_sensor),
+    )
     if os.environ.get("ROS2_UUV_DVL_DEBUG") == "1":
         now = time.monotonic()
         last = float(getattr(owner, "_dvl_contract_debug_last_wall", -10.0))

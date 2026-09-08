@@ -39,6 +39,12 @@ def log_extnav_startup_state(transport: object) -> None:
             "native VPD is owned by the external controller-parity probe",
             flush=True,
         )
+    elif bool(getattr(transport, "_sitl_truth_extnav_blocked", False)):
+        print(
+            "[sitl_transport] MuJoCo-truth ExternalNav blocked by real-package parity; "
+            "use the DVL driver and custom MAVROS VISION_POSITION_DELTA path",
+            flush=True,
+        )
 
 
 __all__ = [

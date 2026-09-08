@@ -61,7 +61,15 @@ def _sample_force(
     hyd = runtime.hydrodynamics
     volume_point_world = base_origin + base_rot @ sample.volume_pos
     force_point_world = base_origin + base_rot @ sample.force_pos
-    point_depth = runtime.water_surface_z - float(volume_point_world[2])
+    environment = getattr(hyd, "water_environment_runtime", None)
+    if environment is None:
+        surface_height = float(runtime.water_surface_z)
+    else:
+        surface_height = environment.surface_height_world_m(
+            volume_point_world,
+            float(runtime.data.time),
+        )
+    point_depth = surface_height - float(volume_point_world[2])
     submerged = submerged_fraction(point_depth, sample.half_height, hyd.buoyancy_model)
     buoyancy_submerged = submerged_fraction(
         point_depth * hyd.buoyancy_slope_scale,

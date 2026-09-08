@@ -26,6 +26,9 @@ def refresh_sim_stack_control_buttons(owner: Any, tk_module: Any) -> None:
     stop_button = getattr(owner, "sim_stack_stop_button", None)
     if stop_button is not None:
         stop_button.config(state=tk_module.NORMAL)
+    preset_combo = getattr(owner, "sim_launch_preset_combo", None)
+    if preset_combo is not None:
+        preset_combo.config(state=tk_module.DISABLED if running else "readonly")
 
 
 __all__ = ["refresh_sim_stack_control_buttons", "tracked_sim_stack_running"]

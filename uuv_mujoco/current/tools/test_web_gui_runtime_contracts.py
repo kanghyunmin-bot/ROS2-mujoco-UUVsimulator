@@ -88,6 +88,10 @@ class _Node:
         self.rc_actions.append("release")
         self.timeline.append("release")
 
+    def publish_rc_neutral_then_release(self) -> None:
+        self.publish_rc_override(yaw=0.0, heave=0.0, forward=0.0, lateral=0.0)
+        self.publish_rc_release()
+
     def request_initial_depth_release_when_armed(self, _reason: str) -> None:
         return None
 
@@ -163,6 +167,21 @@ class WebGuiRuntimeContractsTest(unittest.TestCase):
 
         self.assertEqual(node.rc_actions, ["neutral", "release"])
         self.assertEqual(node.rc_actions[-1], "release")
+
+    def test_pinger_auto_arm_fails_before_exclusive_rc_handoff(self) -> None:
+        controller, node, processes = self._controller()
+
+        result = controller.start_pinger_homing({"auto_arm": True})
+
+        self.assertFalse(result["running"])
+        self.assertEqual(
+            result["reason"],
+            "strict_rc3_prearm_requires_gui_rc_publisher",
+        )
+        self.assertFalse(processes.pinger_running)
+        self.assertNotIn("suspend_rc_publisher", node.timeline)
+        self.assertNotIn("arm:True", node.timeline)
+        self.assertTrue(any("arm from the GUI first" in event for event in node.events))
 
     def test_pinger_stop_disarms_only_gui_owned_auto_arm_after_rc_release(self) -> None:
         controller, node, _processes = self._controller()

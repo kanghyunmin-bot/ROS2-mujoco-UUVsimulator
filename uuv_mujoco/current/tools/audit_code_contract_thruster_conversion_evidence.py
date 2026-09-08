@@ -29,7 +29,10 @@ def conversion_evidence(
         evidence(force_model_py, "def force_from_shaped_command"),
         evidence(force_performance_py, "def pwm_to_force_from_performance"),
         evidence(force_polynomial_py, "scaled_polynomial_force"),
-        evidence(immersion_py, "site_depth_m = float(runtime.water_surface_z - site_z)"),
+        evidence(
+            immersion_py,
+            "site_depth_m = float(surface_height - site_position[2])",
+        ),
     ]
 
 

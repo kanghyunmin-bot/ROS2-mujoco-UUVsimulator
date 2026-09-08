@@ -494,6 +494,20 @@ ARDUSUB_FIRMWARE_VERSION="$(
   awk -F'"' '/#define[[:space:]]+THISFIRMWARE/ { print $2; exit }' \
     "${ARDUPILOT_DIR}/ArduSub/version.h" 2>/dev/null || true
 )"
+
+resolve_default_rc3_trim() {
+  local firmware_version="$1"
+  case "$firmware_version" in
+    "ArduSub V4.1.2")
+      printf '1100\n'
+      ;;
+    *)
+      printf '1500\n'
+      ;;
+  esac
+}
+
+SITL_DEFAULT_RC3_TRIM="$(resolve_default_rc3_trim "$ARDUSUB_FIRMWARE_VERSION")"
 SITL_PARAM_COMPAT_FILTER_EFFECTIVE=0
 case "${SITL_PARAM_COMPAT_FILTER:-auto}" in
   1|true|TRUE|yes|YES|on|ON|enable|enabled)
@@ -834,12 +848,14 @@ fi
 # real_robot.param has BRD_OPTIONS=1 because the physical Pixhawk watchdog is
 # valid hardware behavior. In SITL that same bit enables the SIGALRM watchdog;
 # a brief Docker/Mac scheduling stall during JSON startup causes watchdog_rst,
-# then ArduSub refuses to arm. Keep this disabled in simulation.
+# then ArduSub refuses to arm. Keep only that hardware watchdog disabled. The
+# real vehicle's Bar30, RC, and voltage arming checks remain enabled so a
+# simulated sensor/control fault cannot be hidden by ARMING_CHECK=0.
 append_param_if_not_overridden "BRD_OPTIONS" "${SITL_BRD_OPTIONS:-0}"
 append_param_if_not_overridden "BRD_SAFETYENABLE" "${SITL_BRD_SAFETYENABLE:-0}"
-append_param_if_not_overridden "BRD_SAFETYOPTION" "${SITL_BRD_SAFETYOPTION:-0}"
+append_param_if_not_overridden "BRD_SAFETYOPTION" "${SITL_BRD_SAFETYOPTION:-3}"
 append_param_if_not_overridden "BRD_SAFETY_MASK" "${SITL_BRD_SAFETY_MASK:-0}"
-append_param_if_not_overridden "ARMING_CHECK" "${SITL_ARMING_CHECK:-0}"
+append_param_if_not_overridden "ARMING_CHECK" "${SITL_ARMING_CHECK:-194}"
 
 # SITL scheduler contract:
 # The real ArduSub-4.1.2 vehicle dump runs the controller scheduler at 400Hz.
@@ -865,17 +881,22 @@ SITL_GCS_SYSID="${SITL_MAV_GCS_SYSID:-${SITL_SYSID_MYGCS:-${SITL_MAVLINK_SOURCE_
 append_param_if_not_overridden "MAV_GCS_SYSID" "$SITL_GCS_SYSID"
 append_param_if_not_overridden "MAV_GCS_SYSID_HI" "${SITL_MAV_GCS_SYSID_HI:-0}"
 append_param_if_not_overridden "SYSID_MYGCS" "$SITL_GCS_SYSID"
-append_param_if_not_overridden "FS_GCS_ENABLE" "${SITL_FS_GCS_ENABLE:-0}"
-append_param_if_not_overridden "FS_PILOT_INPUT" "${SITL_FS_PILOT_INPUT:-0}"
-append_param_if_not_overridden "FS_PILOT_TIMEOUT" "${SITL_FS_PILOT_TIMEOUT:-10.0}"
+# Preserve the physical vehicle's loss-of-control parameter contract. MAVProxy
+# supplies the GCS heartbeat, so the GCS action remains active in SITL. Exact
+# upstream ArduSub 4.1.2 compiles its pilot-input action out for HAL_BOARD_SITL;
+# keep the real value visible here without patching the pinned firmware or
+# falsely claiming that SITL exercises that one hardware action.
+append_param_if_not_overridden "FS_GCS_ENABLE" "${SITL_FS_GCS_ENABLE:-2}"
+append_param_if_not_overridden "FS_PILOT_INPUT" "${SITL_FS_PILOT_INPUT:-2}"
+append_param_if_not_overridden "FS_PILOT_TIMEOUT" "${SITL_FS_PILOT_TIMEOUT:-3.0}"
 # Closed-loop pilot-input contract:
 # - GUI and rosbag replay use /mavros/rc/override by default.
-# - RC3 command neutral is 1500, but ArduSub configures the throttle channel as
-#   a 0..1000 range channel.  Its MANUAL/STABILIZE path passes norm_input() to
-#   AP_Motors6DOF, whose bidirectional neutral is 0.5.  With RC3_MIN=1100 and
-#   RC3_MAX=1900, RC3_TRIM must therefore stay at the range minimum (1100):
-#   RC3=1500 -> norm_input()=0.5 -> zero vertical thrust.  ALT_HOLD uses the
-#   same range convention and also maps RC3=1500 to a zero climb target.
+# - RC3 command neutral is 1500, but the trim needed to produce motor throttle
+#   0.5 depends on the selected ArduSub implementation. Exact 4.1.2 passes
+#   norm_input() directly, so RC3_TRIM=1100 maps PWM 1500 to 0.5. Newer
+#   ArduSub passes (norm_input() + 1) / 2, so RC3_TRIM=1500 maps PWM 1500 to
+#   0.5. Resolve that default from THISFIRMWARE instead of applying one
+#   version's control math to the other.
 # - RC5 is forward and RC6 is lateral. ArduSub's Sub defaults also say 5/6, but
 #   AP_RCMapper's library defaults are 6/7; force the Sub live-control mapping
 #   above so RC override and QGC/manual-control telemetry reach the same axes.
@@ -885,6 +906,10 @@ append_param_if_not_overridden "FS_PILOT_TIMEOUT" "${SITL_FS_PILOT_TIMEOUT:-10.0
 #   dump's JS_GAIN_DEFAULT=0.1 is a replay/parity value; through
 #   MANUAL_CONTROL it shrinks a 30% yaw stick to about 12us and makes heave/yaw
 #   look delayed even when MAVLink transport is current.
+# Keep RC_OPTIONS bit 5 (ARMING_CHECK_THROTTLE) enabled. Exact 4.1.2 checks
+# range-channel control_in==0, so its safe sequence is RC3=1100 while arming,
+# followed immediately by the separate zero-thrust command RC3=1500. Newer
+# ArduSub checks RC3 against its centered trim and arms at RC3=1500.
 append_param_if_not_overridden "RC_OPTIONS" "${SITL_RC_OPTIONS:-32}"
 append_param_if_not_overridden "RC_OVERRIDE_TIME" "${SITL_RC_OVERRIDE_TIME:-3.0}"
 append_param_if_not_overridden "RC1_DZ" "${SITL_RC1_DZ:-30}"
@@ -893,7 +918,7 @@ append_param_if_not_overridden "THR_DZ" "${SITL_THR_DZ:-100}"
 append_param_if_not_overridden "RC3_MIN" "1100"
 append_param_if_not_overridden "RC3_MAX" "1900"
 append_param_if_not_overridden "RC3_DZ" "${SITL_RC3_DZ:-30}"
-append_param_if_not_overridden "RC3_TRIM" "${SITL_RC3_TRIM:-1100}"
+append_param_if_not_overridden "RC3_TRIM" "${SITL_RC3_TRIM:-$SITL_DEFAULT_RC3_TRIM}"
 append_param_if_not_overridden "JS_GAIN_DEFAULT" "${SITL_JS_GAIN_DEFAULT:-0.5}"
 append_param_if_not_overridden "JS_GAIN_MIN" "${SITL_JS_GAIN_MIN:-0.25}"
 append_param_if_not_overridden "JS_GAIN_MAX" "${SITL_JS_GAIN_MAX:-1.0}"
@@ -1101,11 +1126,10 @@ if [[ "$SITL_EKF3_EXTNAV_ENABLE" -eq 1 ]]; then
   # Real-robot-like estimator path. Keep vertical position on Baro/Bar30 while
   # using ExternalNav/DVL for velocity and yaw, matching the 4.1.2 hardware
   # parameter dump used for the robot.
-  # The MuJoCo JSON backend currently advertises no_time_sync/no_lockstep.
-  # ArduPilot's SIM_JSON contract selects AHRS type 10 for that asynchronous
-  # transport; forcing EKF3 makes attitude/velocity diverge under sub-realtime
-  # viewer load.  Keep EKF3 available only as an explicit experiment override.
-  append_param_if_not_overridden "AHRS_EKF_TYPE" "${SITL_AHRS_EKF_TYPE:-10}"
+  # Keep the controller on the real vehicle's EKF3 estimator. The JSON timing
+  # contract is responsible for lockstep/time synchronization; selecting the
+  # SITL truth AHRS (type 10) would conceal timing and sensor-model faults.
+  append_param_if_not_overridden "AHRS_EKF_TYPE" "${SITL_AHRS_EKF_TYPE:-3}"
   append_param_if_not_overridden "EK3_SRC1_POSXY" "6"
   append_param_if_not_overridden "EK3_SRC1_VELXY" "6"
   append_param_if_not_overridden "EK3_SRC1_POSZ" "${SITL_EKF3_EXTNAV_POSZ:-1}"
@@ -1133,9 +1157,10 @@ else
   append_param_if_not_overridden "EK3_SRC1_YAW" "0"
   append_param_if_not_overridden "EK3_SRC_OPTIONS" "1"
   append_param_if_not_overridden "VISO_TYPE" "0"
-  # Async JSON must use ArduPilot's direct simulated AHRS (type 10).  The
-  # physical robot parameter file remains EKF3 and is not modified here.
-  append_param_if_not_overridden "AHRS_EKF_TYPE" "${SITL_AHRS_EKF_TYPE:-10}"
+  # Bar30-only runs still use the same EKF3 estimator as the real vehicle.
+  # Async timing remains an explicit transport diagnostic, not an excuse to
+  # replace modeled sensor fusion with the perfect SITL truth AHRS.
+  append_param_if_not_overridden "AHRS_EKF_TYPE" "${SITL_AHRS_EKF_TYPE:-3}"
 fi
 append_param_if_not_overridden "COMPASS_ENABLE" "0"
 append_param_if_not_overridden "COMPASS_USE" "0"

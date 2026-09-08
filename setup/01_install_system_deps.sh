@@ -225,6 +225,7 @@ if [[ "$WITH_ROS2" -eq 1 ]]; then
     "ros-${ROS_DISTRO}-rqt-bag"
     "ros-${ROS_DISTRO}-rqt-image-view"
     "ros-${ROS_DISTRO}-image-transport"
+    "ros-${ROS_DISTRO}-compressed-image-transport"
     "ros-${ROS_DISTRO}-robot-state-publisher"
     "ros-${ROS_DISTRO}-xacro"
     "ros-${ROS_DISTRO}-dvl-msgs"

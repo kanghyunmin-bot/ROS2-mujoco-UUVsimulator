@@ -6,7 +6,7 @@ from typing import Callable, Optional
 
 
 def is_number(value) -> bool:
-    return isinstance(value, (int, float))
+    return not isinstance(value, bool) and isinstance(value, (int, float))
 
 
 def log_optional(log: Optional[Callable[[str], None]], message: str) -> None:

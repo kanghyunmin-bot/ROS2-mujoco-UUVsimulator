@@ -43,12 +43,21 @@ class FluidcoefImmersionRuntime:
         self.water_surface_z = float(water_surface_z)
         self.enabled = bool(enabled) and self.geom_ids.size > 0
         self.update_unscaled = update_unscaled
+        self.surface_height_sampler: Callable[[np.ndarray, float], float] | None = None
         self.unscaled = (
             np.asarray(model.geom_fluid[self.geom_ids, 1:6], dtype=np.float64).copy()
             if self.geom_ids.size
             else np.zeros((0, 5), dtype=np.float64)
         )
         self.last_fractions = np.ones(self.geom_ids.size, dtype=np.float64)
+
+    def set_surface_height_sampler(
+        self,
+        sampler: Callable[[np.ndarray, float], float] | None,
+    ) -> None:
+        """Bind the shared free-surface height sampler."""
+
+        self.surface_height_sampler = sampler
 
     def update(self, rel_lin_vel_body: np.ndarray, ang_vel_body: np.ndarray) -> None:
         if not self.enabled:
@@ -66,9 +75,24 @@ class FluidcoefImmersionRuntime:
     def _fractions(self) -> np.ndarray:
         fractions = np.empty(self.geom_ids.size, dtype=np.float64)
         for index, geom_id in enumerate(self.geom_ids):
-            center_z = float(self.data.geom_xpos[int(geom_id), 2])
+            position_world = np.asarray(
+                self.data.geom_xpos[int(geom_id)],
+                dtype=np.float64,
+            )
+            center_z = float(position_world[2])
             half_height = self._vertical_half_extent(int(geom_id))
-            depth = self.water_surface_z - center_z
+            if self.surface_height_sampler is None:
+                surface_height = self.water_surface_z
+            else:
+                surface_height = float(
+                    self.surface_height_sampler(
+                        position_world.copy(),
+                        float(self.data.time),
+                    )
+                )
+                if not np.isfinite(surface_height):
+                    raise ValueError("fluidcoef surface sampler must return a finite height")
+            depth = surface_height - center_z
             fractions[index] = submerged_fraction(depth, half_height, "ellipsoid")
         return fractions
 

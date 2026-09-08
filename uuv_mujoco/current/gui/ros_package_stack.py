@@ -17,8 +17,9 @@ def mavros_launch_command(fcu_url: str) -> str:
     """Launch the complete real-vehicle ROS surface used by strict simulation.
 
     The Web GUI is already running, so the included real stack must not start a
-    second GUI or desktop visualizers. Physical sensor drivers are disabled;
-    their raw surfaces are supplied by MuJoCo in strict compatibility mode.
+    second GUI or desktop visualizers. The DVL uses the physical A50 driver
+    against the MuJoCo TCP device emulator; simulator-owned camera and FCU
+    sensor boundaries remain selected by ``use_sim_time``.
     """
     launch_args = [
         "ros2",
@@ -30,7 +31,10 @@ def mavros_launch_command(fcu_url: str) -> str:
         # Select the simulation MAVROS wrapper (timesync NONE) and keep the
         # DVL/depth/EKF graph on the same clock as the simulated sensors.
         "use_sim_time:=true",
-        "use_dvl:=false",
+        "use_dvl:=true",
+        "dvl_ip:=127.0.0.1",
+        "configure_dvl_acoustic_on_startup:=true",
+        "request_dvl_config_on_startup:=true",
         "use_joy2mavros:=false",
         "use_battery_bridge:=false",
         "use_odom2mavros:=false",

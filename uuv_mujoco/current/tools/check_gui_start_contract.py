@@ -54,6 +54,8 @@ def check_default_gui_start_env() -> None:
     env = build_gui_sim_stack_env({}, backend="docker", sim_stack_dir=SIM_STACK_DIR)
     _assert_key(env, "UUV_RUN_MODE", "closed_loop")
     _assert_key(env, "UUV_EKF_CONTRACT", "althold_baro")
+    _assert_key(env, "SITL_AHRS_EKF_TYPE", "3")
+    _assert_key(env, "ROS2_UUV_SITL_JSON_TIMING_MODE", "lockstep")
     _assert_key(env, "SITL_EKF3_EXTNAV", "0")
     _assert_key(env, "ROS2_UUV_SITL_EXTNAV_ENABLE", "0")
     _assert_key(env, "ROS2_UUV_REQUIRE_EXTNAV_TX", "0")
@@ -77,7 +79,7 @@ def check_default_gui_start_env() -> None:
     _assert_key(env, "ROS2_UUV_SPIN_TIMEOUT_S", "0.001")
     _assert_key(env, "ROS2_UUV_SITL_MAVLINK_POLL_HZ", "40")
     _assert_key(env, "ROS2_UUV_SITL_COMMAND_POLL_HZ", "80")
-    _assert_key(env, "ROS2_UUV_SITL_POLL_THREAD_HZ", "40")
+    _assert_key(env, "ROS2_UUV_SITL_POLL_THREAD_HZ", "200")
     _assert_key(env, "ROS2_UUV_MAVROS_RC_OVERRIDE_FORWARD_HZ", "120")
     _assert_key(env, "SITL_SCHED_LOOP_RATE", "400")
     _assert_key(env, "SITL_MAVLINK_SERVO_HZ_DEFAULT", "30")
@@ -89,7 +91,7 @@ def check_default_gui_start_env() -> None:
     _assert_key(env, "SITL_THRUSTER_LOOP_HZ_DEFAULT", "100")
     _assert_key(env, "UUV_ROS2_SENSOR_HZ", "100")
     _assert_key(env, "UUV_THRUSTER_LOOP_HZ", "100")
-    _assert_key(env, "UUV_MUJOCO_TIMESTEP", "0.005")
+    _assert_key(env, "UUV_MUJOCO_TIMESTEP", "0.0025")
     _assert_key(env, "UUV_COURSE_BUOY_TIMESTEP_GUARD", "1")
     _assert_key(env, "UUV_COURSE_BUOY_UPDATE_HZ", "10")
     _assert_key(env, "UUV_COURSE_BUOY_TRACK_CSV_ENABLE", "0")
@@ -115,6 +117,8 @@ def check_native_gui_start_env() -> None:
     env = build_gui_sim_stack_env({}, backend="native", sim_stack_dir=SIM_STACK_DIR)
     _assert_key(env, "UUV_RUN_MODE", "closed_loop")
     _assert_key(env, "UUV_EKF_CONTRACT", "althold_baro")
+    _assert_key(env, "SITL_AHRS_EKF_TYPE", "3")
+    _assert_key(env, "ROS2_UUV_SITL_JSON_TIMING_MODE", "lockstep")
     _assert_key(env, "SITL_EKF3_EXTNAV", "0")
     _assert_key(env, "SITL_DIRECT_MAVLINK", "0")
     _assert_key(env, "SITL_QGC_OUTPUT_ENABLE", "1")
@@ -133,7 +137,7 @@ def check_native_gui_start_env() -> None:
     _assert_key(env, "ROS2_UUV_SPIN_TIMEOUT_S", "0.001")
     _assert_key(env, "ROS2_UUV_SITL_MAVLINK_POLL_HZ", "40")
     _assert_key(env, "ROS2_UUV_SITL_COMMAND_POLL_HZ", "80")
-    _assert_key(env, "ROS2_UUV_SITL_POLL_THREAD_HZ", "40")
+    _assert_key(env, "ROS2_UUV_SITL_POLL_THREAD_HZ", "200")
     _assert_key(env, "ROS2_UUV_MAVROS_RC_OVERRIDE_FORWARD_HZ", "120")
     _assert_key(env, "SITL_SCHED_LOOP_RATE", "400")
     _assert_key(env, "SITL_MAVLINK_SERVO_HZ_DEFAULT", "30")
@@ -145,7 +149,7 @@ def check_native_gui_start_env() -> None:
     _assert_key(env, "SITL_THRUSTER_LOOP_HZ_DEFAULT", "100")
     _assert_key(env, "UUV_ROS2_SENSOR_HZ", "100")
     _assert_key(env, "UUV_THRUSTER_LOOP_HZ", "100")
-    _assert_key(env, "UUV_MUJOCO_TIMESTEP", "0.005")
+    _assert_key(env, "UUV_MUJOCO_TIMESTEP", "0.0025")
     _assert_key(env, "UUV_COURSE_BUOY_TIMESTEP_GUARD", "1")
     _assert_key(env, "UUV_COURSE_BUOY_UPDATE_HZ", "10")
     _assert_key(env, "UUV_COURSE_BUOY_TRACK_CSV_ENABLE", "0")
@@ -179,12 +183,39 @@ def check_native_gui_env_precedence() -> None:
         {
             "SITL_USE_REAL_PARAM_FILE": "0",
             "ROS2_UUV_SITL_JSON_SERVO_FALLBACK": "0",
+            "ROS2_UUV_SITL_JSON_TIMING_MODE": "async",
         },
         backend="native",
         sim_stack_dir=SIM_STACK_DIR,
     )
     _assert_key(explicit_env, "SITL_USE_REAL_PARAM_FILE", "0")
     _assert_key(explicit_env, "ROS2_UUV_SITL_JSON_SERVO_FALLBACK", "0")
+    _assert_key(explicit_env, "ROS2_UUV_SITL_JSON_TIMING_MODE", "async")
+
+
+def check_gui_truth_ahrs_is_forbidden() -> None:
+    """Keep GUI starts on EKF3 instead of ArduPilot's perfect SITL AHRS."""
+
+    source = (ROOT / "gui" / "sim_stack_env_forced_ekf.py").read_text(
+        encoding="utf-8"
+    )
+    forbidden_default = '"SITL_AHRS_EKF_TYPE": "10"'
+    if forbidden_default in source:
+        raise AssertionError(
+            "GUI sensor contract must not select AHRS_EKF_TYPE=10 (SITL truth AHRS)"
+        )
+
+    for backend in ("docker", "native"):
+        for ekf_contract in ("althold_baro", "poshold_extnav"):
+            resolved = build_gui_sim_stack_env(
+                {
+                    "UUV_EKF_CONTRACT": ekf_contract,
+                    "UUV_GUI_USE_EXTERNAL_MAVROS": "1",
+                },
+                backend=backend,
+                sim_stack_dir=SIM_STACK_DIR,
+            )
+            _assert_key(resolved, "SITL_AHRS_EKF_TYPE", "3")
 
 
 def check_low_profile_closed_loop_cadence_floor() -> None:
@@ -231,10 +262,21 @@ def check_ardusub_rc_override_heave_trim() -> None:
     expected_gcs_legacy = 'append_param_if_not_overridden "SYSID_MYGCS" "$SITL_GCS_SYSID"'
     if expected_gcs_legacy not in text:
         raise AssertionError("startup must keep ArduSub 4.1 pilot authority compatibility")
-    expected = 'append_param_if_not_overridden "RC3_TRIM" "${SITL_RC3_TRIM:-1100}"'
+    expected = (
+        'append_param_if_not_overridden "RC3_TRIM" '
+        '"${SITL_RC3_TRIM:-$SITL_DEFAULT_RC3_TRIM}"'
+    )
     if expected not in text:
         raise AssertionError(
-            "ArduSub range-channel heave requires RC3_TRIM=RC3_MIN=1100 so RC3=1500 maps to 0.5/neutral"
+            "ArduSub RC3 trim must follow the selected firmware's throttle formula"
+        )
+    if 'SITL_DEFAULT_RC3_TRIM="$(resolve_default_rc3_trim "$ARDUSUB_FIRMWARE_VERSION")"' not in text:
+        raise AssertionError("startup must resolve RC3 trim from the selected ArduSub version")
+    expected = 'append_param_if_not_overridden "RC_OPTIONS" "${SITL_RC_OPTIONS:-32}"'
+    if expected not in text:
+        raise AssertionError(
+            "ArduSub startup must retain RC_OPTIONS bit 5; ArduSub 4.1.2 arms "
+            "at low RC3 before switching to the separate 1500 zero-thrust input"
         )
     if "SIM_BARO_RND|SIM_BARO_DRIFT|SIM_BARO_GLITCH|SIM_BARO_DELAY|SIM_BAR2_RND" not in text:
         raise AssertionError(
@@ -266,15 +308,20 @@ def check_ardusub_rc_override_heave_trim() -> None:
     expected = 'append_param_if_not_overridden "JS_GAIN_STEPS" "${SITL_JS_GAIN_STEPS:-1}"'
     if expected not in text:
         raise AssertionError("GUI/QGC MANUAL_CONTROL gain buttons must not shift live-control scale")
-    expected = 'append_param_if_not_overridden "ARMING_CHECK" "${SITL_ARMING_CHECK:-0}"'
+    expected = 'append_param_if_not_overridden "ARMING_CHECK" "${SITL_ARMING_CHECK:-194}"'
     if expected not in text:
-        raise AssertionError("Docker/QGC arm path must not inherit real-vehicle ARMING_CHECK prearm blocks")
-    expected = 'append_param_if_not_overridden "FS_GCS_ENABLE" "${SITL_FS_GCS_ENABLE:-0}"'
+        raise AssertionError(
+            "GUI/QGC arm path must retain the real Bar30, RC, and voltage prearm checks"
+        )
+    expected = 'append_param_if_not_overridden "FS_GCS_ENABLE" "${SITL_FS_GCS_ENABLE:-2}"'
     if expected not in text:
-        raise AssertionError("Docker/QGC arm path must disable real-vehicle GCS failsafe disarm")
-    expected = 'append_param_if_not_overridden "FS_PILOT_INPUT" "${SITL_FS_PILOT_INPUT:-0}"'
+        raise AssertionError("Docker/QGC arm path must retain real-vehicle GCS failsafe action")
+    expected = 'append_param_if_not_overridden "FS_PILOT_INPUT" "${SITL_FS_PILOT_INPUT:-2}"'
     if expected not in text:
-        raise AssertionError("Docker/QGC arm path must disable real-vehicle pilot-input failsafe disarm")
+        raise AssertionError("Docker/QGC arm path must retain real-vehicle pilot-input failsafe action")
+    expected = 'append_param_if_not_overridden "FS_PILOT_TIMEOUT" "${SITL_FS_PILOT_TIMEOUT:-3.0}"'
+    if expected not in text:
+        raise AssertionError("Docker/QGC pilot-input failsafe timeout must match the real vehicle")
     expected = 'append_param_if_not_overridden "BRD_SAFETYENABLE" "${SITL_BRD_SAFETYENABLE:-0}"'
     if expected not in text:
         raise AssertionError("Docker/QGC arm path must force the SITL safety switch off")
@@ -483,7 +530,10 @@ def check_start_uses_complete_real_ros_stack() -> None:
         "ros2 launch hit25_auv_ros2 rov_start.launch.py",
         "fcu_url:=udp://0.0.0.0:14551@",
         "use_sim_time:=true",
-        "use_dvl:=false",
+        "use_dvl:=true",
+        "dvl_ip:=127.0.0.1",
+        "configure_dvl_acoustic_on_startup:=true",
+        "request_dvl_config_on_startup:=true",
         "use_joy2mavros:=false",
         "use_battery_bridge:=false",
         "use_odom2mavros:=false",
@@ -540,6 +590,9 @@ class _Node:
 
     def publish_rc_release(self) -> None:
         self._calls.append("publish_rc_release")
+
+    def publish_rc_neutral_then_release(self) -> None:
+        self._calls.extend(["publish_rc_override", "publish_rc_release"])
 
     def publish_rc_override(self, **_kwargs: object) -> None:
         self._calls.append("publish_rc_override")
@@ -809,7 +862,8 @@ def check_pinger_gui_start_profile() -> None:
     _assert_key(resolved, "SITL_EKF3_EXTNAV", "0")
     _assert_key(resolved, "ROS2_UUV_SITL_EXTNAV_ENABLE", "0")
     _assert_key(resolved, "ROS2_UUV_REQUIRE_EXTNAV_TX", "0")
-    _assert_key(resolved, "SITL_AHRS_EKF_TYPE", "10")
+    _assert_key(resolved, "SITL_AHRS_EKF_TYPE", "3")
+    _assert_key(resolved, "ROS2_UUV_SITL_JSON_TIMING_MODE", "lockstep")
     _assert_key(resolved, "UUV_MUJOCO_TIMESTEP", "0.005")
     _assert_key(resolved, "UUV_COURSE_BUOYS_ENABLE", "1")
     _assert_key(resolved, "UUV_ROS2_SENSOR_HZ", "100")
@@ -1124,6 +1178,7 @@ def main() -> int:
     check_default_gui_start_env()
     check_native_gui_start_env()
     check_native_gui_env_precedence()
+    check_gui_truth_ahrs_is_forbidden()
     check_low_profile_closed_loop_cadence_floor()
     check_gui_default_backend_is_native()
     check_launcher_mavlink_source_matches_gcs()

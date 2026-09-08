@@ -16,9 +16,15 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from sim.runtime.course_buoy_runtime import CourseBuoyRuntime  # noqa: E402
+from sim.runtime.control_bridge_real_start_status import (  # noqa: E402
+    create_runtime_real_start_status,
+)
 from sim.physics.fluidcoef_immersion_runtime import FluidcoefImmersionRuntime  # noqa: E402
 from sim.runtime.underwater_hydrodynamics_extra import apply_empirical_pitch_lift_heave  # noqa: E402
-from sim.runtime.underwater_relative_acceleration import update_relative_acceleration  # noqa: E402
+from sim.runtime.underwater_relative_acceleration import (  # noqa: E402
+    reset_relative_acceleration_on_hold_transition,
+    update_relative_acceleration,
+)
 from sim.runtime.hydrodynamics_runtime_current import configure_mujoco_current  # noqa: E402
 
 
@@ -44,6 +50,60 @@ def _check_added_mass_seed_and_time_reset() -> None:
     runtime.data.time = 0.0
     reset_acceleration = update_relative_acceleration(runtime, next_sample * 2.0, 0.005)
     np.testing.assert_array_equal(reset_acceleration, np.zeros(6))
+
+
+def _check_initial_hold_release_resets_added_mass_history() -> None:
+    runtime = SimpleNamespace(
+        hydrodynamics=SimpleNamespace(fossen_residual_added_mass_active=True),
+        use_custom_hydrodynamics=True,
+        data=SimpleNamespace(time=2.0),
+        prev_rel_nu_body=np.zeros(6, dtype=np.float64),
+        prev_rel_nu_valid=True,
+        prev_rel_sample_time_s=1.995,
+        previous_initial_depth_hold_active=True,
+    )
+    runtime.prev_rel_nu_body[0] = 0.0
+    self_reset = reset_relative_acceleration_on_hold_transition(
+        runtime,
+        hold_active=False,
+    )
+    if not self_reset:
+        raise AssertionError("hold release did not reset added-mass history")
+    runtime.data.time = 2.005
+    acceleration = update_relative_acceleration(
+        runtime,
+        np.array([0.5, 0.0, 0.0, 0.0, 0.0, 0.0]),
+        0.005,
+    )
+    np.testing.assert_array_equal(acceleration, np.zeros(6))
+
+
+def _check_real_start_keeps_scene_density_after_fluid_owner_switch() -> None:
+    initial_state = SimpleNamespace(
+        real_start_required=True,
+        real_start_depth_tol_m=0.1,
+        real_start_attitude_tol_rad=0.1,
+        real_start_velocity_tol_mps=0.1,
+    )
+    status = create_runtime_real_start_status(
+        ros_bridge_runtime=SimpleNamespace(get=lambda: None),
+        env_float=lambda _name, default: float(default),
+        initial_runtime_state=initial_state,
+        initial_depth_hold={
+            "active": True,
+            "release_linear_velocity_body": np.zeros(3),
+            "release_angular_velocity_body": np.zeros(3),
+        },
+        water_surface_z=0.0,
+        scene_fluid_density=1000.0,
+        base_origin_world=lambda: np.array([0.0, 0.0, -1.0]),
+        bar30_depth_now_m=lambda: 1.0,
+        data=SimpleNamespace(qpos=np.array([0.0, 0.0, -1.0, 1.0, 0.0, 0.0, 0.0])),
+        model=SimpleNamespace(opt=SimpleNamespace(density=0.0)),
+        world_qpos_adr=0,
+    )
+    if status.model_density_fn() != 1000.0:
+        raise AssertionError("real-start BAR30 density followed disabled MuJoCo fluid")
 
 
 def _check_body_frame_yaw_rate_ownership() -> None:
@@ -239,6 +299,8 @@ def _check_actual_mjcf_fluid_geom_support() -> None:
 
 def main() -> int:
     _check_added_mass_seed_and_time_reset()
+    _check_initial_hold_release_resets_added_mass_history()
+    _check_real_start_keeps_scene_density_after_fluid_owner_switch()
     _check_body_frame_yaw_rate_ownership()
     _check_buoy_galilean_current_parity()
     _check_fluidcoef_waterline_continuity()

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import time
 
+from .node_arm_commands import _on_arm_state_observed
+
 
 _SEVERITY_NAMES = {
     0: "EMERGENCY",
@@ -36,6 +38,8 @@ def _on_state(self, msg: State) -> None:
             self._vehicle_connected_since_wall = now
         elif not bool(msg.connected):
             self._vehicle_connected_since_wall = -1.0
+
+    _on_arm_state_observed(self, bool(msg.armed))
 
     if msg.mode != self._last_mode_seen:
         self._push_event(f"mode -> {msg.mode}")

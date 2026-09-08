@@ -7,6 +7,9 @@ from typing import Any
 import numpy as np
 
 from sim.runtime.underwater_custom_dispatch import apply_or_clear_custom_hydrodynamics
+from sim.runtime.underwater_full_matrix_hydrodynamics import (
+    apply_full_matrix_hydrodynamics,
+)
 from sim.runtime.underwater_hydrodynamics_extra import apply_empirical_pitch_lift_heave
 from sim.runtime.underwater_relative_acceleration import update_relative_acceleration
 from sim.runtime.underwater_residual_dispatch import apply_enabled_residual_wrenches
@@ -22,6 +25,7 @@ def apply_hydrodynamic_wrenches(
     ang_vel_body: np.ndarray,
     nu_rel_body: np.ndarray,
     rel_acc_body: np.ndarray,
+    coefficient_scales,
     submerged: float,
     buoyancy_submerged: float,
 ) -> None:
@@ -30,6 +34,14 @@ def apply_hydrodynamic_wrenches(
         base_rot=base_rot,
         lin_vel_body=lin_vel_body,
         rel_lin_vel_world=rel_lin_vel_world,
+        nu_rel_body=nu_rel_body,
+        rel_acc_body=rel_acc_body,
+        coefficient_scales=coefficient_scales,
+        submerged=submerged,
+    )
+    apply_full_matrix_hydrodynamics(
+        runtime,
+        base_rot=base_rot,
         nu_rel_body=nu_rel_body,
         rel_acc_body=rel_acc_body,
         submerged=submerged,

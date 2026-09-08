@@ -46,6 +46,7 @@ GEOGRAPHICLIB_DATA_DIR = APP_ROOT / ".geographiclib"
 GEOGRAPHICLIB_GEOID_DIR = GEOGRAPHICLIB_DATA_DIR / "geoids"
 PHYSICS_PROFILE_PATH = SIM_STACK_DIR / "config" / "sim_profiles.json"
 COURSE_SCENE_PATH = SIM_STACK_DIR / "scenes" / "tank_current_scene.xml"
+RESEARCH_POOL_SCENE_PATH = SIM_STACK_DIR / "scenes" / "research_pool_slam_scene.xml"
 COURSE_LAYOUT_CONFIG_PATH = SIM_STACK_DIR / "config" / "course_layout.json"
 TEST_TANK_SCENE_PATH = SIM_STACK_DIR / "generated" / "test_tank_gui_scene.xml"
 
@@ -63,6 +64,7 @@ __all__ = [
     "PING360_RVIZ_CONFIG",
     "PROJECT_ROOT",
     "RC_REPLAY_TOPIC",
+    "RESEARCH_POOL_SCENE_PATH",
     "RESET_SIM_STACK_SCRIPT",
     "ROS2_RVIZ_COMPAT_CONFIG",
     "ROS_PACKAGE_DEFAULT_FCU_URL",

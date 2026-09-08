@@ -4,12 +4,27 @@ from __future__ import annotations
 
 
 def schedule_mavros_ros_jobs(self, jobs, add_rate_limited, sim_t: float, *, builders: dict[str, object]) -> None:
-    if not self._mavros_surface_enabled:
+    strict_sensor_transport = bool(
+        getattr(self, "_strict_sitl_sensor_transport", False)
+    )
+    if not self._mavros_surface_enabled and not strict_sensor_transport:
         return
-    _schedule_mavros_status_jobs(self, jobs, sim_t, builders=builders)
-    _schedule_mavros_sensor_jobs(self, jobs, add_rate_limited, builders=builders)
-    _schedule_mavros_local_position_jobs(self, add_rate_limited, builders=builders)
-    _schedule_mavros_rc_jobs(self, jobs, add_rate_limited)
+    if self._mavros_surface_enabled:
+        _schedule_mavros_status_jobs(self, jobs, sim_t, builders=builders)
+    _schedule_mavros_sensor_jobs(
+        self,
+        jobs,
+        add_rate_limited,
+        builders=builders,
+        sensor_only=strict_sensor_transport and not self._mavros_surface_enabled,
+    )
+    if self._mavros_surface_enabled:
+        _schedule_mavros_local_position_jobs(
+            self,
+            add_rate_limited,
+            builders=builders,
+        )
+        _schedule_mavros_rc_jobs(self, jobs, add_rate_limited)
 
 
 def _schedule_mavros_status_jobs(self, jobs, sim_t: float, *, builders: dict[str, object]) -> None:
@@ -19,32 +34,64 @@ def _schedule_mavros_status_jobs(self, jobs, sim_t: float, *, builders: dict[str
     jobs.add(self.pub_mavros_vfr_hud, "/mavros/vfr_hud", builders["mavros_vfr_hud"], on_demand=True)
 
 
-def _schedule_mavros_sensor_jobs(self, jobs, add_rate_limited, *, builders: dict[str, object]) -> None:
-    add_rate_limited(
-        self.pub_mavros_imu_data,
-        "/mavros/imu/data",
-        builders["mavros_imu"],
-        self._ros_rate_mavros_imu_data_hz,
-    )
-    add_rate_limited(
-        self.pub_mavros_imu_data_raw,
-        "/mavros/imu/data_raw",
-        builders["mavros_imu_raw"],
-        self._ros_rate_mavros_imu_raw_hz,
-    )
-    add_rate_limited(
-        self.pub_mavros_imu_static_pressure,
-        "/mavros/imu/static_pressure",
-        builders["mavros_static_pressure"],
-        self._ros_rate_mavros_static_pressure_hz,
-    )
-    add_rate_limited(
-        self.pub_mavros_imu_atm_pressure,
-        "/mavros/imu/atm_pressure",
-        builders["mavros_atm_pressure"],
-        self._ros_rate_mavros_atm_pressure_hz,
-    )
-    jobs.add(self.pub_mavros_battery, "/mavros/battery", builders["mavros_battery"], on_demand=True)
+def _schedule_mavros_sensor_jobs(
+    self,
+    jobs,
+    add_rate_limited,
+    *,
+    builders: dict[str, object],
+    sensor_only: bool = False,
+) -> None:
+    if bool(getattr(self, "_imu_sensor_model_enabled", False)):
+        if not sensor_only:
+            for message in builders["mavros_imu_batch"]():
+                jobs.add(self.pub_mavros_imu_data, "/mavros/imu/data", message)
+        for message in builders["mavros_imu_raw_batch"]():
+            jobs.add(self.pub_mavros_imu_data_raw, "/mavros/imu/data_raw", message)
+    else:
+        if not sensor_only:
+            add_rate_limited(
+                self.pub_mavros_imu_data,
+                "/mavros/imu/data",
+                builders["mavros_imu"],
+                self._ros_rate_mavros_imu_data_hz,
+            )
+        add_rate_limited(
+            self.pub_mavros_imu_data_raw,
+            "/mavros/imu/data_raw",
+            builders["mavros_imu_raw"],
+            self._ros_rate_mavros_imu_raw_hz,
+        )
+    if (
+        bool(getattr(self, "_bar30_sensor_model_enabled", False))
+        and self._static_pressure_source == "external"
+    ):
+        for message in builders["mavros_static_pressure_batch"]():
+            jobs.add(
+                self.pub_mavros_imu_static_pressure,
+                "/mavros/imu/static_pressure",
+                message,
+            )
+    else:
+        add_rate_limited(
+            self.pub_mavros_imu_static_pressure,
+            "/mavros/imu/static_pressure",
+            builders["mavros_static_pressure"],
+            self._ros_rate_mavros_static_pressure_hz,
+        )
+    if not sensor_only:
+        add_rate_limited(
+            self.pub_mavros_imu_atm_pressure,
+            "/mavros/imu/atm_pressure",
+            builders["mavros_atm_pressure"],
+            self._ros_rate_mavros_atm_pressure_hz,
+        )
+        jobs.add(
+            self.pub_mavros_battery,
+            "/mavros/battery",
+            builders["mavros_battery"],
+            on_demand=True,
+        )
 
 
 def _schedule_mavros_local_position_jobs(self, add_rate_limited, *, builders: dict[str, object]) -> None:

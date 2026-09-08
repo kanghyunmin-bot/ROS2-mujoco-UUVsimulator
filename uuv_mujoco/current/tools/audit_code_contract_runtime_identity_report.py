@@ -36,7 +36,7 @@ def active_runtime_identity_evidence(inputs: RuntimeIdentityInputs, result: dict
         ),
         Evidence(path=".", line=None, snippet=f"active git branch: {inputs.repo_branch or '<unknown>'}"),
         Evidence(path=".", line=None, snippet=f"active git HEAD: {inputs.repo_head or '<unknown>'}"),
-        Evidence(path=".", line=None, snippet=f"origin/uuv_sim HEAD: {inputs.origin_uuv_sim or '<unknown>'}"),
+        Evidence(path=".", line=None, snippet=f"origin/main HEAD: {inputs.origin_uuv_sim or '<unknown>'}"),
         Evidence(
             path=".",
             line=None,

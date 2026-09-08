@@ -10,11 +10,13 @@ from .ros2_bridge_shutdown_ros import (
 )
 from .ros2_bridge_shutdown_sitl import shutdown_sitl_transport
 from .ros2_bridge_shutdown_thread import stop_ros_spin_thread, stop_sitl_poll_thread
+from .ros2_dvl_device_emulator_runtime import close_dvl_device_emulator
 from .ros2_stereo_image import close_stereo_image_renderers
 
 
 __all__ = [
     "destroy_ros_node",
+    "close_dvl_device_emulator",
     "remove_executor_node",
     "shutdown_executor",
     "shutdown_ros_context",

@@ -1,0 +1,61 @@
+{
+  "schema": "uuv_mujoco.sensor_model.underwater_camera.v1",
+  "profile": "dual_imx219_underwater_uncalibrated_prior",
+  "calibration_status": "unvalidated_prior_not_measured_on_physical_imx219_pair",
+  "seed": 260826,
+  "enabled_by_default": false,
+  "evidence": {
+    "basis": "engineering prior only; replace with in-water checkerboard calibration, dark frames, flat fields, and synchronized frame-arrival measurements",
+    "warning": "coefficients in this file are not product specifications and must not be reported as measured IMX219 performance",
+    "runtime_boundary": "ideal MuJoCo rgb8 render to unchanged ROS sensor_msgs Image/CompressedImage topics"
+  },
+  "intrinsics": {
+    "width": 1280,
+    "height": 720,
+    "distortion_model": "plumb_bob",
+    "d": [0.0, 0.0, 0.0, 0.0, 0.0],
+    "k": [514.13374, 0.0, 639.5, 0.0, 514.13374, 359.5, 0.0, 0.0, 1.0],
+    "r": [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+    "p": [514.13374, 0.0, 639.5, 0.0, 0.0, 514.13374, 359.5, 0.0, 0.0, 0.0, 1.0, 0.0],
+    "basis": "matches the current MuJoCo 70 degree vertical-FOV pinhole at 1280x720; distortion intentionally remains zero until physical in-water calibration is supplied"
+  },
+  "underwater_optics": {
+    "optical_path_length_m": 1.5,
+    "attenuation_coefficients_rgb_per_m": [0.34, 0.14, 0.075],
+    "backscatter_coefficients_rgb_per_m": [0.08, 0.11, 0.14],
+    "veiling_light_rgb": [0.08, 0.30, 0.42],
+    "backscatter_strength": 0.22,
+    "blur_radius_px": 1,
+    "vignetting_strength": 0.08,
+    "basis": "low-cost homogeneous-water prior; no per-pixel range or volumetric light transport"
+  },
+  "electronics": {
+    "exposure_scale": 1.0,
+    "analog_gain": 1.0,
+    "black_level": 0.0039,
+    "shot_noise_electrons_per_unit": 12000.0,
+    "read_noise_electrons_rms": 2.0,
+    "quantization_bits": 8,
+    "basis": "uncalibrated prior; identify from physical dark/flat-field image sequences at pinned exposure and gain"
+  },
+  "timing": {
+    "device_clock_offset_s": 0.0,
+    "device_clock_drift_ppm": 0.0,
+    "processing_latency": {
+      "mean_s": 0.004,
+      "jitter_std_s": 0.001,
+      "max_s": 0.008
+    },
+    "transport_latency": {
+      "mean_s": 0.006,
+      "jitter_std_s": 0.002,
+      "max_s": 0.015
+    },
+    "dropout_probability": 0.0,
+    "queue": {
+      "capacity": 2,
+      "overflow_policy": "drop_oldest"
+    },
+    "basis": "uncalibrated bounded prior; replace with capture-to-host timestamp observations"
+  }
+}

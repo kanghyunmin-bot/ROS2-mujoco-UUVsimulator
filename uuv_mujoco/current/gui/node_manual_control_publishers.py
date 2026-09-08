@@ -14,6 +14,36 @@ def publish_manual_control(
     forward: float,
     lateral: float,
 ) -> None:
+    sequence_lock = getattr(self, "_arm_rc_sequence_lock", None)
+    if sequence_lock is not None:
+        with sequence_lock:
+            if bool(getattr(self, "_arm_rc3_low_active", False)):
+                return
+            _publish_manual_control_message(
+                self,
+                yaw=yaw,
+                heave=heave,
+                forward=forward,
+                lateral=lateral,
+            )
+        return
+    _publish_manual_control_message(
+        self,
+        yaw=yaw,
+        heave=heave,
+        forward=forward,
+        lateral=lateral,
+    )
+
+
+def _publish_manual_control_message(
+    self,
+    *,
+    yaw: float,
+    heave: float,
+    forward: float,
+    lateral: float,
+) -> None:
     if self._manual_control_pub is None:
         return
     msg = ManualControl()

@@ -12,18 +12,30 @@ from .ros2_bridge_sitl_poll import poll_sitl_servo_if_enabled
 
 def publish(self, data) -> None:
     sim_t = float(data.time)
-    if not publish_time_due(self, sim_t):
-        _debug_publish_stage(self, sim_t, "not_due")
-        return
-
-    _debug_publish_stage(self, sim_t, "due")
-    poll_sitl_servo_if_enabled(self)
-    snapshot = self._build_and_send_sitl_sensor_snapshot(data)
-    if snapshot is None:
-        _debug_publish_stage(self, sim_t, "snapshot_none")
-        return
+    if getattr(self, "enable_sitl", False):
+        last = getattr(self, "_fcu_last_pub_t", -1.0)
+        if sim_t < last:
+            self.last_pub_t = -1.0
+            last = -1.0
+        period = 1.0 / float(os.environ.get("SITL_SCHED_LOOP_RATE", "400"))
+        if last >= 0.0 and sim_t + 1e-9 < last + period:
+            return
+        self._fcu_last_pub_t = sim_t
+        poll_sitl_servo_if_enabled(self)
+        snapshot = self._build_and_send_sitl_sensor_snapshot(data)
+        if snapshot is None:
+            return
+        general_due = publish_time_due(self, sim_t)
+    else:
+        if not publish_time_due(self, sim_t):
+            return
+        poll_sitl_servo_if_enabled(self)
+        snapshot = self._build_and_send_sitl_sensor_snapshot(data)
+        if snapshot is None:
+            return
+        general_due = True
     try:
-        publish_ros_snapshot(self, data, sim_t, snapshot)
+        publish_ros_snapshot(self, data, sim_t, snapshot, general_due=general_due)
     except Exception as exc:
         # The JSON sensor feed above is part of the flight-control loop.  A
         # stale ROS message overlay or one optional topic must never tear that

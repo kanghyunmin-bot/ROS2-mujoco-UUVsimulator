@@ -37,7 +37,12 @@ def schedule_ros_publish_jobs(
         )
     schedule_mavros_ros_jobs(self, jobs, add_rate_limited, sim_t, builders=builders)
     schedule_odometry_ros_jobs(self, jobs, add_rate_limited, builders=builders)
-    schedule_real_dvl_compat_jobs(self, add_rate_limited, builders=builders)
+    schedule_real_dvl_compat_jobs(
+        self,
+        jobs,
+        add_rate_limited,
+        builders=builders,
+    )
     if not self._real_pkg_compat:
         jobs.add(self.pub_tf, "/tf", builders["tf"], on_demand=True)
 

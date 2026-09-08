@@ -33,7 +33,9 @@ def executable_path(raw: str | Path | None) -> Path | None:
         return None
     path = Path(text).expanduser()
     if path.is_file() and os.access(path, os.X_OK):
-        return path.resolve()
+        # Preserve virtualenv launcher symlinks. Resolving .venv/bin/python to
+        # /usr/bin/python discards Python's virtualenv prefix and site-packages.
+        return path.absolute()
     return None
 
 

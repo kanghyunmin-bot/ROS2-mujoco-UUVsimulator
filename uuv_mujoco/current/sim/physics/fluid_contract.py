@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 
@@ -45,10 +44,14 @@ def configure_fluid_model_contract(
         "Fossen/CFD terms, and final thruster force.",
         flush=True,
     )
-    if not any(token in Path(scene_path).name for token in ("current", "ellipsoid")):
+    # Validate the compiled model, not its filename.  Research scenes can carry
+    # ellipsoid fluid proxies without using either token in the XML path.
+    has_ellipsoid_proxy = any(float(fluid[0]) > 0.0 for fluid in model.geom_fluid)
+    if not has_ellipsoid_proxy:
         print(
-            "[physics] warning: current ellipsoid mode selected but the scene path "
-            "does not look like an ellipsoid proxy scene.",
+            "[physics] warning: current ellipsoid mode selected but the compiled scene "
+            "does not contain an active ellipsoid fluid proxy "
+            f"({scene_path}).",
             flush=True,
         )
     return False

@@ -98,14 +98,40 @@ class FakeOwner:
     def _request_initial_depth_release_when_armed(self, reason: str) -> None:
         self.initial_depth_releases.append(reason)
 
-    def _send_arm_request(self, value: bool, deadline=None, attempt: int = 1) -> None:
-        self.arm_requests.append((bool(value), deadline, int(attempt)))
+    def _send_arm_request(
+        self,
+        value: bool,
+        deadline=None,
+        attempt: int = 1,
+        *,
+        request_generation: int | None = None,
+    ) -> None:
+        self.arm_requests.append(
+            (bool(value), deadline, int(attempt), request_generation)
+        )
 
     def _send_mode_request(self, mode: str, deadline: float, attempt: int) -> None:
         self.mode_requests.append((str(mode), float(deadline), int(attempt)))
 
-    def _retry_arm_request(self, value: bool, deadline: float, attempt: int) -> None:
-        self.scheduled.append(("arm", bool(value), float(deadline), int(attempt)))
+    def _retry_arm_request(
+        self,
+        value: bool,
+        deadline: float,
+        attempt: int,
+        *,
+        request_generation: int | None = None,
+    ) -> None:
+        self.scheduled.append(
+            ("arm", bool(value), float(deadline), int(attempt), request_generation)
+        )
+
+    @staticmethod
+    def publish_rc_arm_low() -> bool:
+        return True
+
+    @staticmethod
+    def publish_rc_arm_neutral() -> bool:
+        return True
 
     def _retry_mode_request(self, mode: str, deadline: float, attempt: int) -> None:
         self.scheduled.append(("mode", str(mode), float(deadline), int(attempt)))

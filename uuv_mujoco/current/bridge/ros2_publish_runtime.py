@@ -8,19 +8,57 @@ import time
 from .ros2_bridge_runtime import PublishQueue
 from .ros2_publish_builders import build_ros_publish_builders
 from .ros2_publish_schedule import schedule_ros_publish_jobs
-from .ros2_publish_state import prepare_ros_publish_state
-from .ros2_sitl_sensor_feed import Ros2SensorSnapshot
+from .ros2_publish_state import RosPublishState
+from .ros2_publish_builder_core import build_core_publish_builders
+from .ros2_publish_builder_mavros import build_mavros_publish_builders
 
 
-def flush_ros_publish_jobs(self, data, stamp, snapshot: Ros2SensorSnapshot) -> bool:
-    state = prepare_ros_publish_state(self, data, snapshot)
+def flush_sensor_packet_jobs(self, stamp, state: RosPublishState) -> bool:
+    """Publish modeled IMU and pressure arrivals between telemetry ticks."""
+    if not state.imu_sensor_deliveries and not state.bar30_sensor_deliveries:
+        return True
+    jobs = PublishQueue(self._publisher_demand, state.sim_t)
+    builders = build_core_publish_builders(self, stamp, state)
+    builders.update(build_mavros_publish_builders(self, stamp, state))
+    entries = []
+    if not self._real_pkg_compat:
+        if self._imu_sensor_model_enabled:
+            entries.append((self.pub_imu, "/imu/data", "imu_batch"))
+        if self._bar30_sensor_model_enabled:
+            entries.extend((
+                (self.pub_depth, "/depth", "depth_batch"),
+                (self.pub_depth_pose, "/depth/pose", "depth_pose_batch"),
+                (self.pub_bar30_pressure, "/bar30/pressure_pa", "baro_batch"),
+            ))
+    if self._mavros_surface_enabled or getattr(self, "_strict_sitl_sensor_transport", False):
+        if self._imu_sensor_model_enabled:
+            if self._mavros_surface_enabled:
+                entries.append((self.pub_mavros_imu_data, "/mavros/imu/data", "mavros_imu_batch"))
+            entries.append((self.pub_mavros_imu_data_raw, "/mavros/imu/data_raw", "mavros_imu_raw_batch"))
+        if self._bar30_sensor_model_enabled and self._static_pressure_source == "external":
+            entries.append((self.pub_mavros_imu_static_pressure, "/mavros/imu/static_pressure",
+                            "mavros_static_pressure_batch"))
+    for publisher, label, key in entries:
+        for message in builders[key]():
+            jobs.add(publisher, label, message)
+    return jobs.flush(self._safe_publish)
+
+
+def flush_ros_publish_jobs(self, data, stamp, state: RosPublishState) -> bool:
     sim_t = state.sim_t
     dvl_altitude_m = state.dvl_altitude_m
     dvl_vel_body_ros = state.dvl_vel_body_ros
 
     jobs = PublishQueue(self._publisher_demand, sim_t)
 
-    def add_rate_limited(publisher, label: str, builder, hz: float, *, on_demand: bool = False) -> None:
+    def add_rate_limited(
+        publisher,
+        label: str,
+        builder,
+        hz: float,
+        *,
+        on_demand: bool = False,
+    ) -> None:
         # Real-robot contract topics must publish deterministically at their
         # configured rate. Subscriber discovery/demand caching can lag during
         # replay startup and silently drop due samples if these are gated.

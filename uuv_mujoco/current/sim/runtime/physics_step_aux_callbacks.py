@@ -54,6 +54,12 @@ def build_aux_step_callbacks(
         data=data,
         water_surface_z=water_surface_z,
         water_current_world=underwater_wrench_runtime.hydrodynamics.water_current_world,
+        water_velocity_sampler=(
+            underwater_wrench_runtime.hydrodynamics.water_environment_runtime.velocity_world
+        ),
+        surface_height_sampler=(
+            underwater_wrench_runtime.hydrodynamics.water_environment_runtime.surface_height_world_m
+        ),
         env_float=env_float,
         env_flag=env_flag,
         log=log,

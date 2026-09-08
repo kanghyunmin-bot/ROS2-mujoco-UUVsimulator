@@ -48,6 +48,7 @@ class SitlTransport(SitlTransportBindings):
         home_alt_m: float,
         rangefinder_max_m: float,
         command_debug: bool,
+        truth_extnav_allowed: bool = True,
     ) -> None:
         self.model = model
         self._base_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "base_link")
@@ -65,6 +66,10 @@ class SitlTransport(SitlTransportBindings):
         self._water_surface_z = env_to_float("UUV_WATER_SURFACE_Z", 0.0)
         self._sitl_rangefinder_max_m = float(rangefinder_max_m)
         self._sitl_cmd_debug = bool(command_debug)
+        # Strict real-package compatibility must exercise the physical
+        # DVL -> driver -> MAVROS path.  Synthetic ExternalNav is derived from
+        # MuJoCo truth and is therefore an explicit, non-parity diagnostic.
+        self._sitl_truth_extnav_allowed = bool(truth_extnav_allowed)
         initialize_sensor_replay_state(
             self,
             surface_pressure_pa=self._bar30_surface_pressure_pa,

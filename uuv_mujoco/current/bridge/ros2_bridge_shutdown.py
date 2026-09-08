@@ -8,6 +8,7 @@ from .ros2_bridge_shutdown_steps import (
     shutdown_executor,
     shutdown_ros_context,
     shutdown_sitl_transport,
+    close_dvl_device_emulator,
     close_stereo_image_renderers,
     stop_ros_spin_thread,
     stop_sitl_poll_thread,
@@ -16,6 +17,7 @@ from .ros2_bridge_shutdown_steps import (
 
 def shutdown(self) -> None:
     close_stereo_image_renderers(self)
+    close_dvl_device_emulator(self)
     stop_ros_spin_thread(self)
     stop_sitl_poll_thread(self)
     shutdown_sitl_transport(self)

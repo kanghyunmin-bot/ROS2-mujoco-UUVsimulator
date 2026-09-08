@@ -48,7 +48,7 @@ def collect_runtime_identity_inputs() -> RuntimeIdentityInputs:
         freshness_script=ACTIVE_RUNTIME_ALIAS / "tools" / "check_runtime_freshness.py",
         repo_branch=git_output(["rev-parse", "--abbrev-ref", "HEAD"], REPO_ROOT),
         repo_head=git_output(["rev-parse", "HEAD"], REPO_ROOT),
-        origin_uuv_sim=git_output(["rev-parse", "origin/uuv_sim"], REPO_ROOT),
+        origin_uuv_sim=git_output(["rev-parse", "origin/main"], REPO_ROOT),
         repo_runtime_dirty=runtime_dirty_paths(),
         alias_text=alias_text(),
         alias_status=alias_status(current_runner),

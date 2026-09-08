@@ -1,14 +1,19 @@
 /**:
   ros__parameters:
-    # Minimal MAVROS surface required by the MuJoCo/SITL GUI, pinger homing,
-    # and RC-driven mission controllers.  Real-vehicle launches continue to
-    # use MAVROS' complete ArduPilot plugin list.
+    # Base ROV command and sensor interfaces, including GUIDED commands
+    # and external vision poses used by the organization auv package.
     plugin_allowlist:
       - command
       - imu
       - local_position
       - manual_control
+      # The strict parity harness reads the live FCU cache through MAVROS'
+      # ROS 2 parameter API.  This is also part of the physical MAVROS surface.
+      - param
       - rc_io
+      - setpoint_raw
+      - vision_pose
+      - vision_position_delta
       - sys_status
       - sys_time
       - vfr_hud

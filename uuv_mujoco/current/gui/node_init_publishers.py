@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import threading
 
 from .runtime import (
@@ -51,6 +52,16 @@ def initialize_command_publishers_and_clients(self) -> None:
     except (TypeError, ValueError):
         rc_burst_count = 3
     self._rc_override_burst_count = max(1, min(6, rc_burst_count))
+    try:
+        rc_release_delay_s = float(os.environ.get("UUV_GUI_RC_RELEASE_DELAY_S", "0.15"))
+    except (TypeError, ValueError):
+        rc_release_delay_s = 0.15
+    if not math.isfinite(rc_release_delay_s):
+        rc_release_delay_s = 0.15
+    # Let the bridge forward the zero-stick frame before the MAVLink release
+    # markers can replace it in the ROS latest-frame cache.
+    self._rc_override_release_delay_s = max(0.05, min(0.50, rc_release_delay_s))
+    self._rc_override_publish_generation = 0
 
     if HAVE_STD_SRVS and self._initial_depth_hold_opt_in:
         self._initial_depth_release_client = self.create_client(

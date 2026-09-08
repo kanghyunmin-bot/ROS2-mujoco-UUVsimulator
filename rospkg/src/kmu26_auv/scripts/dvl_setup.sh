@@ -10,7 +10,7 @@ publish_command() {
   local parameter_value="${3:-}"
 
   echo "[dvl_setup] ${command} ${parameter_name} ${parameter_value}"
-  ros2 topic pub --once "${topic}" dvl_msgs/msg/ConfigCommand \
+  ros2 topic pub --once "${topic}" auv_dvl_a50_msg/msg/ConfigCommand \
     "{command: ${command}, parameter_name: '${parameter_name}', parameter_value: '${parameter_value}'}"
 }
 

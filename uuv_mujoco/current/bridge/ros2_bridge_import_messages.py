@@ -64,11 +64,23 @@ def load_optional_ros2_message_imports() -> dict[str, object | None]:
         RCOut = None
 
     try:
-        from dvl_msgs.msg import DVL as DVLMsg
-        from dvl_msgs.msg import DVLDR as DVLDRMsg
+        from auv_dvl_a50_msg.msg import DVL as DVLMsg
+        from auv_dvl_a50_msg.msg import DVLDR as DVLDRMsg
+
+        DVLPackage = "auv_dvl_a50_msg"
     except Exception:
-        DVLMsg = None
-        DVLDRMsg = None
+        try:
+            # Older local workspaces used the upstream package's historical
+            # name. Keep it as a compatibility fallback while preferring the
+            # package used by the physical KMU robot.
+            from dvl_msgs.msg import DVL as DVLMsg
+            from dvl_msgs.msg import DVLDR as DVLDRMsg
+
+            DVLPackage = "dvl_msgs"
+        except Exception:
+            DVLMsg = None
+            DVLDRMsg = None
+            DVLPackage = None
 
     try:
         from ping360_sonar_msgs.msg import SonarEcho
@@ -90,6 +102,7 @@ def load_optional_ros2_message_imports() -> dict[str, object | None]:
         "RCOut": RCOut,
         "DVLMsg": DVLMsg,
         "DVLDRMsg": DVLDRMsg,
+        "DVLPackage": DVLPackage,
         "SonarEcho": SonarEcho,
         "AudioData": AudioData,
         "AudioInfo": AudioInfo,

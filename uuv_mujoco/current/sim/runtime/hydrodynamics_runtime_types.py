@@ -60,6 +60,8 @@ class HydrodynamicWrenchRuntime:
     fossen_residual: Any
     fossen_residual_active: bool
     fossen_residual_added_mass_active: bool
+    fossen_residual_requested_active: bool
+    fossen_residual_requested_added_mass_active: bool
     fossen_residual_linear: Any
     fossen_residual_forward_speed: float
     fossen_residual_quadratic: Any
@@ -115,6 +117,8 @@ class HydrodynamicsRuntimeSetup:
     fossen_residual: Any
     fossen_residual_active: bool
     fossen_residual_added_mass_active: bool
+    fossen_residual_requested_active: bool
+    fossen_residual_requested_added_mass_active: bool
     fossen_residual_linear: Any
     fossen_residual_forward_speed: float
     fossen_residual_quadratic: Any
@@ -124,6 +128,13 @@ class HydrodynamicsRuntimeSetup:
     thruster_loop_dt: float
     thruster_scheduler: Any
     dynamic_fluidcoef_runtime: Any
+    current_field_runtime: Any
+    state_coefficient_scaler: Any
+    state_fluidcoef_runtime: Any
+    free_surface: Any
+    water_environment_runtime: Any
+    distributed_hydrodynamics: Any
+    full_matrix_hydrodynamics: Any
     update_dynamic_fluidcoef: Callable
 
 

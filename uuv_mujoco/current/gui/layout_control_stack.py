@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .config import INNER_PADDING
 from .runtime import tk, ttk
+from .sim_launch_preset import sim_launch_preset_labels
 
 
 def build_telemetry_toggle(owner, control_box) -> None:
@@ -23,8 +24,20 @@ def build_sim_stack_controls(owner, control_box) -> None:
     stack_row = ttk.LabelFrame(control_box, text="Simulation Stack", padding=INNER_PADDING)
     stack_row.grid(row=1, column=0, sticky="ew", pady=(0, 4))
     stack_row.columnconfigure(0, weight=1)
+    preset_row = ttk.Frame(stack_row)
+    preset_row.grid(row=0, column=0, sticky="ew", pady=(0, 4))
+    preset_row.columnconfigure(1, weight=1)
+    ttk.Label(preset_row, text="Environment / physics").grid(row=0, column=0, sticky="w")
+    owner.sim_launch_preset_combo = ttk.Combobox(
+        preset_row,
+        textvariable=owner.sim_launch_preset_var,
+        values=sim_launch_preset_labels(),
+        state="readonly",
+        width=39,
+    )
+    owner.sim_launch_preset_combo.grid(row=0, column=1, sticky="ew", padx=(8, 0))
     stack_buttons = ttk.Frame(stack_row)
-    stack_buttons.grid(row=0, column=0, sticky="ew")
+    stack_buttons.grid(row=1, column=0, sticky="ew")
     owner.sim_stack_start_button = ttk.Button(
         stack_buttons,
         text="Start SITL/MuJoCo",
@@ -46,5 +59,5 @@ def build_sim_stack_controls(owner, control_box) -> None:
         command=owner._toggle_ping360_window,
     ).pack(side=tk.LEFT, padx=(10, 0))
     ttk.Label(stack_row, textvariable=owner.sim_stack_status_var, anchor="w", style="Status.TLabel").grid(
-        row=1, column=0, sticky="ew", pady=(2, 0)
+        row=2, column=0, sticky="ew", pady=(2, 0)
     )

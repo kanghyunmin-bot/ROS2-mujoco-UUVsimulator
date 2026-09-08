@@ -41,7 +41,11 @@ def add_profile_args(
         "--thruster-voltage",
         type=float,
         default=None,
-        help="Select nearest thrust curve voltage from performance file (ex. 10,12,14,16,18,20). If omitted, use profile value.",
+        help="ESC bus voltage in V; interpolate measured T200 curves within 10--20 V. If omitted, use profile value.",
+    )
+    parser.add_argument(
+        "--thruster-voltage-trace", type=str, default=None,
+        help="CSV with sim_time,voltage_v measured at the ESC bus; starts at 0, interpolated with endpoints held",
     )
     parser.add_argument(
         "--buoyancy-scale",
@@ -52,13 +56,14 @@ def add_profile_args(
     parser.add_argument(
         "--disable-thruster-perf",
         action="store_true",
-        help="Force linear thruster mapping and ignore performance curve JSON",
+        help="Use configured polynomial/gain mapping and ignore the fixed-voltage performance curve JSON",
     )
     parser.add_argument(
         "--thruster-perf-direct",
         action="store_true",
+        default=True,
         help=(
-            "When the performance curve is active, map raw normalized PWM directly "
+            "Default when the performance curve is active: map raw normalized PWM directly "
             "to force and bypass profile command shaping/gain scaling."
         ),
     )
@@ -68,7 +73,7 @@ def add_profile_args(
         default="current",
         help=(
             "Hydrodynamic model selection. current/ellipsoid uses MuJoCo geom "
-            "fluidcoef; legacy/custom uses the Python 6DOF damping contract "
+            "fluidcoef; distributed/legacy/custom uses the Python-owned contract "
             "and disables MuJoCo built-in fluid to avoid double counting."
         ),
     )

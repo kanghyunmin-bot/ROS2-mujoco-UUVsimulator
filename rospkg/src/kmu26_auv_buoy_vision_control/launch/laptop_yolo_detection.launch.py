@@ -10,7 +10,7 @@ def generate_launch_description():
         [
             DeclareLaunchArgument(
                 "image_topic",
-                default_value="/camera/camera/color/image_raw/compressed",
+                default_value="/imx219/camera0/image_raw/compressed",
                 description="Compressed camera topic received from the AUV NUC.",
             ),
             DeclareLaunchArgument(

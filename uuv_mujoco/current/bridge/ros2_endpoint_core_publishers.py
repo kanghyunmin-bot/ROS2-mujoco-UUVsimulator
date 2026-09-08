@@ -35,7 +35,17 @@ def create_core_sensor_publishers(bridge, *, q10) -> None:
         bridge.pub_dvl_altitude = node.create_publisher(bridge.Range, "/dvl/altitude", q10)
         bridge.pub_dvl_odometry = node.create_publisher(bridge.Odometry, "/dvl/odometry", q10)
         bridge.pub_rovio_odometry = node.create_publisher(bridge.Odometry, "/rovio/odometry", q10)
-        bridge.pub_odometry_filtered = node.create_publisher(bridge.Odometry, "/odometry/filtered", q10)
+        bridge.pub_odometry_filtered = (
+            node.create_publisher(bridge.Odometry, "/odometry/filtered", q10)
+            if bool(
+                getattr(
+                    bridge,
+                    "_unsafe_legacy_ground_truth_odometry_filtered",
+                    False,
+                )
+            )
+            else None
+        )
     bridge.pub_sim_odometry = node.create_publisher(bridge.Odometry, "/sim/odom", q10)
     bridge.pub_battery = node.create_publisher(bridge.BatteryState, "/battery", q10)
     bridge.pub_mujoco_sim_time = node.create_publisher(bridge.Float32, "/mujoco/sim_time", q10)

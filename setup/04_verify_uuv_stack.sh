@@ -34,11 +34,15 @@ if ! declare -F resolve_kmu26_auv_dir >/dev/null 2>&1; then
       printf '%s\n' "${ros_workspace_dir}/kmu26_auv"
       return 0
     fi
+    if [[ -d "${ros_workspace_dir}/src/kmu26_auv" ]]; then
+      printf '%s\n' "${ros_workspace_dir}/src/kmu26_auv"
+      return 0
+    fi
     if [[ -d "${workspace_dir}/kmu26_auv" ]]; then
       printf '%s\n' "${workspace_dir}/kmu26_auv"
       return 0
     fi
-    printf '%s\n' "${ros_workspace_dir}/kmu26_auv"
+    printf '%s\n' "${ros_workspace_dir}/src/kmu26_auv"
   }
 fi
 if ! declare -F preferred_setup_script_names >/dev/null 2>&1; then
@@ -191,7 +195,9 @@ resolve_default_mj311_root() {
 UUV_MUJOCO_DIR="${UUV_MUJOCO_DIR:-${WORKSPACE_DIR}/uuv_mujoco}"
 ARDUPILOT_DIR="${ARDUPILOT_DIR:-${WORKSPACE_DIR}/ardupilot}"
 ROS_WORKSPACE_DIR="${ROS_WORKSPACE_DIR:-$(resolve_ros_workspace_dir "${WORKSPACE_DIR}")}"
-KMU26_AUV_DIR="${KMU26_AUV_DIR:-$(resolve_kmu26_auv_dir "${WORKSPACE_DIR}" "${ROS_WORKSPACE_DIR}")}"
+if [[ -z "${KMU26_AUV_DIR:-}" || ! -d "${KMU26_AUV_DIR}" ]]; then
+  KMU26_AUV_DIR="$(resolve_kmu26_auv_dir "${WORKSPACE_DIR}" "${ROS_WORKSPACE_DIR}")"
+fi
 ROS_INSTALL_SETUP="${ROS_INSTALL_SETUP:-$(resolve_ros_install_setup "${WORKSPACE_DIR}" "${ROS_WORKSPACE_DIR}")}"
 UUV_MUJOCO_RUNTIME_DIR="${UUV_MUJOCO_RUNTIME_DIR:-${UUV_MUJOCO_DIR}/current}"
 if [[ ! -d "${UUV_MUJOCO_RUNTIME_DIR}" ]]; then
@@ -476,8 +482,10 @@ if [[ -d "$KMU26_AUV_DIR" ]]; then
     else
       fail "colcon not found"
     fi
+  elif [[ -f "${ROS_INSTALL_SETUP}" ]] && bash -lc "source /opt/ros/${ROS_DISTRO}/setup.bash && source '${ROS_INSTALL_SETUP}' && ros2 pkg prefix hit25_auv_ros2 >/dev/null"; then
+    pass "kmu26_auv ROS2 workspace is already built"
   else
-    warn "kmu26_auv exists but build was not requested"
+    warn "kmu26_auv exists but no completed ROS2 build was found"
   fi
 else
   warn "kmu26_auv source directory missing: ${KMU26_AUV_DIR}"

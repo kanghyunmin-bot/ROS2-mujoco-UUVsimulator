@@ -1,0 +1,238 @@
+Panels:
+  - Class: rviz_common/Displays
+    Help Height: 0
+    Name: Displays
+    Property Tree Widget:
+      Expanded: ~
+      Splitter Ratio: 0.5
+    Tree Height: 287
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.2800000011920929
+      Cell Size: 1
+      Class: rviz_default_plugins/Grid
+      Color: 74; 92; 103
+      Enabled: true
+      Line Style:
+        Line Width: 0.019999999552965164
+        Value: Lines
+      Name: Pool Reference Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: -1.5
+      Plane: XY
+      Plane Cell Count: 20
+      Reference Frame: odom
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/RobotModel
+      Collision Enabled: false
+      Description File: ""
+      Description Source: Topic
+      Description Topic:
+        Depth: 1
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_description
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Mass Properties:
+        Inertia: false
+        Mass: false
+      Name: Robot 3D (EKF pose)
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: DVL A50 Beams
+      Namespaces:
+        dvl_beam_guides: true
+        dvl_beam_ranges: true
+        dvl_bottom_hits: true
+        dvl_status: true
+        dvl_velocity: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /dvl/markers
+      Value: true
+    - Angle Tolerance: 0.05000000074505806
+      Class: rviz_default_plugins/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0.20000000298023224
+          Color: 255; 121; 31
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 0.25
+          Value: false
+        Position:
+          Alpha: 0.07999999821186066
+          Color: 45; 224; 255
+          Scale: 0.07999999821186066
+          Value: false
+        Value: false
+      Enabled: true
+      Keep: 40
+      Name: EKF /odometry/filtered
+      Position Tolerance: 0.029999999329447746
+      Shape:
+        Alpha: 1
+        Axes Length: 0.20000000298023224
+        Axes Radius: 0.014999999664723873
+        Color: 255; 121; 31
+        Head Length: 0.07000000029802322
+        Head Radius: 0.03500000014901161
+        Shaft Length: 0.20000000298023224
+        Shaft Radius: 0.014999999664723873
+        Value: Arrow
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /odometry/filtered
+      Value: true
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz_default_plugins/Path
+      Color: 45; 224; 255
+      Enabled: true
+      Head Diameter: 0.15000000596046448
+      Head Length: 0.10000000149011612
+      Length: 0.20000000298023224
+      Line Style: Lines
+      Line Width: 0.02500000037252903
+      Name: EKF Filtered Odom Path
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 121; 31
+      Pose Style: None
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.05000000074505806
+      Shaft Length: 0.10000000149011612
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /localization/filtered_path
+      Value: true
+    - Class: rviz_default_plugins/TF
+      Enabled: false
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+      Marker Scale: 0.25
+      Name: TF Frames
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        {}
+      Update Interval: 0
+      Value: false
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Max Value: 255
+      Median window: 5
+      Min Value: 0
+      Name: Forward Camera
+      Normalize Range: false
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /imx219/camera0/image_raw
+      Value: true
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Max Value: 255
+      Median window: 1
+      Min Value: 0
+      Name: Ping360 Sonar
+      Normalize Range: false
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /ping360/scan_image
+      Value: true
+  Enabled: true
+  Global Options:
+    Background Color: 8; 13; 18
+    Fixed Frame: odom
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/Interact
+      Hide Inactive Objects: true
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+  Transformation:
+    Current:
+      Class: rviz_default_plugins/TF
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/ThirdPersonFollower
+      Distance: 3.5
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 0.7647968530654907
+      Target Frame: base_link
+      Value: Third Person Follower (rviz)
+      Yaw: 2.6999995708465576
+    Saved: ~
+Window Geometry:
+  Displays:
+    collapsed: false
+  Forward Camera:
+    collapsed: false
+  Height: 1000
+  Hide Left Dock: false
+  Hide Right Dock: true
+  Ping360 Sonar:
+    collapsed: false
+  QMainWindow State: 000000ff00000000fd0000000100000000000001da00000356fc0200000003fb0000001c0046006f00720077006100720064002000430061006d0065007200610100000069000000de0000004500fffffffb0000001a00500069006e006700330036003000200053006f006e006100720100000153000000dd0000004500fffffffb000000100044006900730070006c006100790073010000023c000001830000017800ffffff000005220000035600000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Width: 1800
+  X: 553
+  Y: 525

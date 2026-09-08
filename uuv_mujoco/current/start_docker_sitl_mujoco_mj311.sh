@@ -222,9 +222,11 @@ case "$UUV_EKF_CONTRACT" in
     exit 2
     ;;
 esac
-# MuJoCo's JSON stream is asynchronous (no_time_sync/no_lockstep), for which
-# ArduPilot's SIM_JSON backend requires the direct simulated AHRS path.
-export SITL_AHRS_EKF_TYPE="${SITL_AHRS_EKF_TYPE:-10}"
+# Keep the normal Docker launcher on the same EKF3 + lockstep sensor contract
+# as the GUI.  Asynchronous JSON remains an explicit diagnostic override; it
+# must not silently switch the flight controller to SITL truth attitude.
+export SITL_AHRS_EKF_TYPE="${SITL_AHRS_EKF_TYPE:-3}"
+export ROS2_UUV_SITL_JSON_TIMING_MODE="${ROS2_UUV_SITL_JSON_TIMING_MODE:-lockstep}"
 export SITL_JSON_HOST="${SITL_JSON_HOST:-host.docker.internal}"
 export SITL_JSON_SENSOR_PORT="${SITL_JSON_SENSOR_PORT:-9003}"
 export SITL_JSON_SERVO_PORT="${SITL_JSON_SERVO_PORT:-9002}"

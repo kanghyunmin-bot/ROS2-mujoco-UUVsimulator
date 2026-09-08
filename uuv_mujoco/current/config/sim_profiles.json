@@ -500,7 +500,7 @@
     "thruster_direct_gain_scales_note": "Raw T200-direct contract baseline. Plant replay and GUI closed-loop runs must not hide controller/actuator mismatch with per-thruster force multipliers; mounted actuator effectiveness belongs in measured geometry, hydrodynamics, or a separately gated calibration profile.",
     "thruster_force_max": 21.0,
     "thruster_voltage": 20.0,
-    "thruster_voltage_note": "Use the measured public 20V T200 curve for parity runs. The 2026-04-01 bag has no usable 6S thruster bus voltage topic; the 22.2V curve is synthetic extrapolation and is not used as the default plant contract.",
+    "thruster_voltage_note": "20V is the upper measured reference, not a measured vehicle bus voltage. Override with --thruster-voltage or --thruster-voltage-trace. T200 hardware confirmed by owner; actual ESC bus voltage remains unconfirmed. Synthetic 22.2V extrapolation is excluded from runtime.",
     "v30_lift_tail_balance_note": "mild tail lift reduction plus small hydrostatic recovery; keeps v29 per-thruster yaw-only moment and raw direct force unchanged.",
     "v31_positive_yawrate_heave_note": "Asymmetric body/lower-hull flow interaction: adds downward body-z force only during positive yaw-rate with sufficient forward speed; does not change sensor output, raw T200 force, or v29 yaw-only moment scales.",
     "v35_yaw_inertia_heave_note": "lower inertia plus stronger yaw-heave",
@@ -520,5 +520,540 @@
       "yaw_rr": 1.0
     },
     "yaw_torque_thruster_scales_note": "v55 candidate: v54 forward release seed plus lower inner pair yaw moment scale 2.4."
+  },
+  "research_pool": {
+    "extends": "current",
+    "current_field": {
+      "active": true,
+      "calibration_status": "uncalibrated_pool_prior",
+      "base_velocity_world_mps": [0.01, 0.0, 0.0],
+      "origin_world_m": [0.0, 0.0, -1.5],
+      "gradient_per_s": [
+        [0.0, 0.0015, 0.0],
+        [-0.0010, 0.0, 0.0005],
+        [0.0, 0.0, 0.0]
+      ],
+      "spatial_modes": [
+        {
+          "amplitude_mps": [0.010, 0.003, 0.0],
+          "wave_vector_rad_per_m": [0.0, 0.50, 0.0],
+          "phase_rad": 0.4
+        },
+        {
+          "amplitude_mps": [0.0, 0.008, 0.002],
+          "wave_vector_rad_per_m": [0.25, 0.0, 0.35],
+          "phase_rad": -0.7
+        }
+      ],
+      "turbulence": {
+        "active": true,
+        "seed": 260827,
+        "modes": [
+          {
+            "amplitude_mps": [0.006, 0.002, 0.001],
+            "frequency_hz": 0.03
+          },
+          {
+            "amplitude_mps": [0.002, 0.005, 0.001],
+            "frequency_hz": 0.07
+          },
+          {
+            "amplitude_mps": [0.001, 0.001, 0.002],
+            "frequency_hz": 0.11
+          }
+        ]
+      },
+      "max_speed_mps": 0.08,
+      "note": "Deterministic low-order indoor-pool prior. It is not CFD and has not been fitted to ADV/current-meter measurements."
+    },
+    "hydrodynamic_state_scaling": {
+      "active": true,
+      "calibration_status": "uncalibrated_pool_prior",
+      "reference_speed_mps": 0.5,
+      "speed_power": 1.5,
+      "reference_depth_m": 1.5,
+      "depth_scale_m": 1.5,
+      "basis_limit": 2.0,
+      "scale_min": 0.75,
+      "scale_max": 1.35,
+      "speed_gains": {
+        "added_mass_diag": [0.02, 0.02, 0.02, 0.01, 0.01, 0.01],
+        "linear_damping_diag": [0.03, 0.04, 0.04, 0.02, 0.02, 0.02],
+        "quadratic_damping_diag": [0.08, 0.10, 0.10, 0.05, 0.05, 0.05],
+        "mujoco_fluidcoef": [0.06, 0.08, 0.05, 0.03, 0.03]
+      },
+      "depth_gains": {
+        "added_mass_diag": [0.005, 0.005, 0.005, 0.0, 0.0, 0.0],
+        "linear_damping_diag": [0.01, 0.01, 0.01, 0.005, 0.005, 0.005],
+        "quadratic_damping_diag": [0.01, 0.015, 0.015, 0.005, 0.005, 0.005],
+        "mujoco_fluidcoef": [0.01, 0.01, 0.01, 0.005, 0.005]
+      },
+      "attitude_gains": {
+        "added_mass_diag": [0.01, 0.01, 0.02, 0.01, 0.01, 0.01],
+        "linear_damping_diag": [0.02, 0.03, 0.03, 0.01, 0.01, 0.01],
+        "quadratic_damping_diag": [0.03, 0.04, 0.04, 0.02, 0.02, 0.02],
+        "mujoco_fluidcoef": [0.03, 0.03, 0.02, 0.01, 0.01]
+      },
+      "note": "Identification seam only. Replace gains with tow/free-decay measurements; MuJoCo already resolves ellipsoid orientation, so attitude gains should remain small unless evidence supports them."
+    },
+    "profile_note": "Explicit research-pool robustness profile inheriting the accepted current plant. Current-field and state-scaling values are uncalibrated priors, not physical-fit evidence."
+  },
+  "research_pool_distributed": {
+    "extends": "research_pool",
+    "buoyancy_slope_scale": 1.0,
+    "cob_torque_scale": 1.0,
+    "cob_x_offset": 0.0,
+    "cob_z_offset": 0.0,
+    "added_mass_diag": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    "linear_damping_diag": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    "quadratic_damping_diag": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    "surface_heave_damping": 0.0,
+    "hydrostatic_restoring": {
+      "active": false
+    },
+    "hydrodynamic_state_scaling": {
+      "active": false
+    },
+    "fossen_residual_hydro": {
+      "active": false
+    },
+    "hydro_residual_wrench": {
+      "active": false
+    },
+    "cfd_dynamic_wrench": {
+      "active": false
+    },
+    "free_surface": {
+      "mode": "flat",
+      "reference_height_world_m": 0.0,
+      "calibration_status": "uncalibrated_pool_prior",
+      "provenance": "Scene waterline at world z=0; replace with measured pool level and wave records."
+    },
+    "thruster_inflow": {
+      "active": false,
+      "calibration_status": "uncalibrated_prior",
+      "provenance": "Disabled pending mounted tow/flow measurements: this uncalibrated correction could amplify braking thrust by 20 percent and cannot be identified from the simulated yaw log. Static measured T200 model remains active.",
+      "reference_speed_mps": 1.0,
+      "minimum_reference_speed_mps": 0.15,
+      "command_exponent": 0.5,
+      "gain_per_advance_ratio": 0.35,
+      "minimum_multiplier": 0.45,
+      "maximum_multiplier": 1.2
+    },
+    "hydrodynamic_matrices": {
+      "active": true,
+      "calibration_status": "uncalibrated_prior",
+      "provenance": "Diagonal ellipsoid engineering prior from the previous current profile; full off-diagonal identification remains open.",
+      "reference_point": "center_of_mass",
+      "max_force_n": 1200.0,
+      "max_torque_nm": 350.0,
+      "added_mass_6x6": [
+        [3.8105086982, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 8.0541713768, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 4.4170710024, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.1228853868, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.1165247430, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.1092618388]
+      ],
+      "linear_damping_6x6": [
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      ],
+      "quadratic_damping_6x6": [
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      ]
+    },
+    "distributed_hydrodynamics": {
+      "active": true,
+      "calibration_status": "uncalibrated_prior",
+      "coefficient_provenance": "Projected-area hull and open-frame engineering prior from current profile dimensions; identify Cd and patch areas with tow/free-decay data.",
+      "fluid_density_kg_m3": 1000.0,
+      "gravity_mps2": 9.81,
+      "normal_drag_coefficient": 0.9,
+      "skin_drag_coefficient": 0.008,
+      "max_relative_speed_mps": 4.0,
+      "max_patch_force_n": 500.0,
+      "max_total_force_n": 1200.0,
+      "max_total_torque_nm": 350.0,
+      "patches": [
+        {
+          "name": "center_buoy_lower",
+          "position_body_m": [-0.0052, 0.0, -0.012],
+          "normal_body": [0.0, 0.0, 1.0],
+          "area_m2": 0.0,
+          "volume_share_m3": 0.00075,
+          "half_height_m": 0.036,
+          "normal_drag_coefficient": 0.0,
+          "skin_drag_coefficient": 0.0
+        },
+        {
+          "name": "center_buoy_mid",
+          "position_body_m": [-0.0052, 0.0, 0.060],
+          "normal_body": [0.0, 0.0, 1.0],
+          "area_m2": 0.0,
+          "volume_share_m3": 0.001508,
+          "half_height_m": 0.036,
+          "normal_drag_coefficient": 0.0,
+          "skin_drag_coefficient": 0.0
+        },
+        {
+          "name": "center_buoy_upper",
+          "position_body_m": [-0.0052, 0.0, 0.132],
+          "normal_body": [0.0, 0.0, 1.0],
+          "area_m2": 0.0,
+          "volume_share_m3": 0.00075,
+          "half_height_m": 0.036,
+          "normal_drag_coefficient": 0.0,
+          "skin_drag_coefficient": 0.0
+        },
+        {
+          "name": "port_buoy_lower",
+          "position_body_m": [-0.0042, 0.248, 0.000],
+          "normal_body": [0.0, 0.0, 1.0],
+          "area_m2": 0.0,
+          "volume_share_m3": 0.00150,
+          "half_height_m": 0.020,
+          "normal_drag_coefficient": 0.0,
+          "skin_drag_coefficient": 0.0
+        },
+        {
+          "name": "port_buoy_mid",
+          "position_body_m": [-0.0042, 0.248, 0.040],
+          "normal_body": [0.0, 0.0, 1.0],
+          "area_m2": 0.0,
+          "volume_share_m3": 0.00300,
+          "half_height_m": 0.020,
+          "normal_drag_coefficient": 0.0,
+          "skin_drag_coefficient": 0.0
+        },
+        {
+          "name": "port_buoy_upper",
+          "position_body_m": [-0.0042, 0.248, 0.080],
+          "normal_body": [0.0, 0.0, 1.0],
+          "area_m2": 0.0,
+          "volume_share_m3": 0.00150,
+          "half_height_m": 0.020,
+          "normal_drag_coefficient": 0.0,
+          "skin_drag_coefficient": 0.0
+        },
+        {
+          "name": "starboard_buoy_lower",
+          "position_body_m": [-0.0042, -0.248, 0.000],
+          "normal_body": [0.0, 0.0, 1.0],
+          "area_m2": 0.0,
+          "volume_share_m3": 0.00150,
+          "half_height_m": 0.020,
+          "normal_drag_coefficient": 0.0,
+          "skin_drag_coefficient": 0.0
+        },
+        {
+          "name": "starboard_buoy_mid",
+          "position_body_m": [-0.0042, -0.248, 0.040],
+          "normal_body": [0.0, 0.0, 1.0],
+          "area_m2": 0.0,
+          "volume_share_m3": 0.00300,
+          "half_height_m": 0.020,
+          "normal_drag_coefficient": 0.0,
+          "skin_drag_coefficient": 0.0
+        },
+        {
+          "name": "starboard_buoy_upper",
+          "position_body_m": [-0.0042, -0.248, 0.080],
+          "normal_body": [0.0, 0.0, 1.0],
+          "area_m2": 0.0,
+          "volume_share_m3": 0.00150,
+          "half_height_m": 0.020,
+          "normal_drag_coefficient": 0.0,
+          "skin_drag_coefficient": 0.0
+        },
+        {
+          "name": "center_drag_x_front",
+          "position_body_m": [0.203, 0.0, 0.010],
+          "normal_body": [1.0, 0.0, 0.0],
+          "area_m2": 0.0192,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.054,
+          "quadrature_spans_body_m": [[0.0, 0.113, 0.0], [0.0, 0.0, 0.108]],
+          "normal_drag_coefficient": 0.85
+        },
+        {
+          "name": "center_drag_x_rear",
+          "position_body_m": [-0.213, 0.0, 0.010],
+          "normal_body": [-1.0, 0.0, 0.0],
+          "area_m2": 0.0192,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.054,
+          "quadrature_spans_body_m": [[0.0, 0.113, 0.0], [0.0, 0.0, 0.108]],
+          "normal_drag_coefficient": 0.85
+        },
+        {
+          "name": "center_drag_y_port",
+          "position_body_m": [-0.005, 0.113, 0.010],
+          "normal_body": [0.0, 1.0, 0.0],
+          "area_m2": 0.0468,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.054,
+          "quadrature_spans_body_m": [[0.208, 0.0, 0.0], [0.0, 0.0, 0.108]],
+          "normal_drag_coefficient": 0.95
+        },
+        {
+          "name": "center_drag_y_starboard",
+          "position_body_m": [-0.005, -0.113, 0.010],
+          "normal_body": [0.0, -1.0, 0.0],
+          "area_m2": 0.0468,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.054,
+          "quadrature_spans_body_m": [[0.208, 0.0, 0.0], [0.0, 0.0, 0.108]],
+          "normal_drag_coefficient": 0.95
+        },
+        {
+          "name": "center_drag_z_top",
+          "position_body_m": [-0.005, 0.0, 0.118],
+          "normal_body": [0.0, 0.0, 1.0],
+          "area_m2": 0.0470,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.005,
+          "quadrature_spans_body_m": [[0.208, 0.0, 0.0], [0.0, 0.113, 0.0]],
+          "normal_drag_coefficient": 1.0
+        },
+        {
+          "name": "center_drag_z_bottom",
+          "position_body_m": [-0.005, 0.0, -0.098],
+          "normal_body": [0.0, 0.0, -1.0],
+          "area_m2": 0.0470,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.005,
+          "quadrature_spans_body_m": [[0.208, 0.0, 0.0], [0.0, 0.113, 0.0]],
+          "normal_drag_coefficient": 1.0
+        },
+        {
+          "name": "port_drag_x_front",
+          "position_body_m": [0.351, 0.248, -0.082],
+          "normal_body": [1.0, 0.0, 0.0],
+          "area_m2": 0.0046,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.0305,
+          "quadrature_spans_body_m": [[0.0, 0.048, 0.0], [0.0, 0.0, 0.061]]
+        },
+        {
+          "name": "port_drag_x_rear",
+          "position_body_m": [-0.359, 0.248, -0.082],
+          "normal_body": [-1.0, 0.0, 0.0],
+          "area_m2": 0.0046,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.0305,
+          "quadrature_spans_body_m": [[0.0, 0.048, 0.0], [0.0, 0.0, 0.061]]
+        },
+        {
+          "name": "port_drag_y_outer",
+          "position_body_m": [-0.004, 0.296, -0.082],
+          "normal_body": [0.0, 1.0, 0.0],
+          "area_m2": 0.0433,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.0305,
+          "quadrature_spans_body_m": [[0.355, 0.0, 0.0], [0.0, 0.0, 0.061]]
+        },
+        {
+          "name": "port_drag_y_inner",
+          "position_body_m": [-0.004, 0.200, -0.082],
+          "normal_body": [0.0, -1.0, 0.0],
+          "area_m2": 0.0433,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.0305,
+          "quadrature_spans_body_m": [[0.355, 0.0, 0.0], [0.0, 0.0, 0.061]]
+        },
+        {
+          "name": "port_drag_z_top",
+          "position_body_m": [-0.004, 0.248, -0.021],
+          "normal_body": [0.0, 0.0, 1.0],
+          "area_m2": 0.0341,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.005,
+          "quadrature_spans_body_m": [[0.355, 0.0, 0.0], [0.0, 0.048, 0.0]]
+        },
+        {
+          "name": "port_drag_z_bottom",
+          "position_body_m": [-0.004, 0.248, -0.143],
+          "normal_body": [0.0, 0.0, -1.0],
+          "area_m2": 0.0341,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.005,
+          "quadrature_spans_body_m": [[0.355, 0.0, 0.0], [0.0, 0.048, 0.0]]
+        },
+        {
+          "name": "starboard_drag_x_front",
+          "position_body_m": [0.351, -0.248, -0.082],
+          "normal_body": [1.0, 0.0, 0.0],
+          "area_m2": 0.0046,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.0305,
+          "quadrature_spans_body_m": [[0.0, 0.048, 0.0], [0.0, 0.0, 0.061]]
+        },
+        {
+          "name": "starboard_drag_x_rear",
+          "position_body_m": [-0.359, -0.248, -0.082],
+          "normal_body": [-1.0, 0.0, 0.0],
+          "area_m2": 0.0046,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.0305,
+          "quadrature_spans_body_m": [[0.0, 0.048, 0.0], [0.0, 0.0, 0.061]]
+        },
+        {
+          "name": "starboard_drag_y_inner",
+          "position_body_m": [-0.004, -0.200, -0.082],
+          "normal_body": [0.0, 1.0, 0.0],
+          "area_m2": 0.0433,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.0305,
+          "quadrature_spans_body_m": [[0.355, 0.0, 0.0], [0.0, 0.0, 0.061]]
+        },
+        {
+          "name": "starboard_drag_y_outer",
+          "position_body_m": [-0.004, -0.296, -0.082],
+          "normal_body": [0.0, -1.0, 0.0],
+          "area_m2": 0.0433,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.0305,
+          "quadrature_spans_body_m": [[0.355, 0.0, 0.0], [0.0, 0.0, 0.061]]
+        },
+        {
+          "name": "starboard_drag_z_top",
+          "position_body_m": [-0.004, -0.248, -0.021],
+          "normal_body": [0.0, 0.0, 1.0],
+          "area_m2": 0.0341,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.005,
+          "quadrature_spans_body_m": [[0.355, 0.0, 0.0], [0.0, 0.048, 0.0]]
+        },
+        {
+          "name": "starboard_drag_z_bottom",
+          "position_body_m": [-0.004, -0.248, -0.143],
+          "normal_body": [0.0, 0.0, -1.0],
+          "area_m2": 0.0341,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.005,
+          "quadrature_spans_body_m": [[0.355, 0.0, 0.0], [0.0, 0.048, 0.0]]
+        },
+        {
+          "name": "frame_drag_x_front",
+          "position_body_m": [0.300, 0.0, 0.050],
+          "normal_body": [1.0, 0.0, 0.0],
+          "area_m2": 0.015,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.080,
+          "quadrature_spans_body_m": [[0.0, 0.300, 0.0], [0.0, 0.0, 0.160]],
+          "normal_drag_coefficient": 1.1,
+          "skin_drag_coefficient": 0.015
+        },
+        {
+          "name": "frame_drag_x_rear",
+          "position_body_m": [-0.300, 0.0, 0.050],
+          "normal_body": [-1.0, 0.0, 0.0],
+          "area_m2": 0.015,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.080,
+          "quadrature_spans_body_m": [[0.0, 0.300, 0.0], [0.0, 0.0, 0.160]],
+          "normal_drag_coefficient": 1.1,
+          "skin_drag_coefficient": 0.015
+        },
+        {
+          "name": "frame_drag_y_port",
+          "position_body_m": [0.0, 0.300, 0.050],
+          "normal_body": [0.0, 1.0, 0.0],
+          "area_m2": 0.025,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.080,
+          "quadrature_spans_body_m": [[0.300, 0.0, 0.0], [0.0, 0.0, 0.160]],
+          "normal_drag_coefficient": 1.1,
+          "skin_drag_coefficient": 0.015
+        },
+        {
+          "name": "frame_drag_y_starboard",
+          "position_body_m": [0.0, -0.300, 0.050],
+          "normal_body": [0.0, -1.0, 0.0],
+          "area_m2": 0.025,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.080,
+          "quadrature_spans_body_m": [[0.300, 0.0, 0.0], [0.0, 0.0, 0.160]],
+          "normal_drag_coefficient": 1.1,
+          "skin_drag_coefficient": 0.015
+        },
+        {
+          "name": "frame_drag_z_top",
+          "position_body_m": [0.0, 0.0, 0.200],
+          "normal_body": [0.0, 0.0, 1.0],
+          "area_m2": 0.030,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.010,
+          "quadrature_spans_body_m": [[0.300, 0.0, 0.0], [0.0, 0.300, 0.0]],
+          "normal_drag_coefficient": 1.1,
+          "skin_drag_coefficient": 0.015
+        },
+        {
+          "name": "frame_drag_z_bottom",
+          "position_body_m": [0.0, 0.0, -0.120],
+          "normal_body": [0.0, 0.0, -1.0],
+          "area_m2": 0.030,
+          "volume_share_m3": 0.0,
+          "half_height_m": 0.010,
+          "quadrature_spans_body_m": [[0.300, 0.0, 0.0], [0.0, 0.300, 0.0]],
+          "normal_drag_coefficient": 1.1,
+          "skin_drag_coefficient": 0.015
+        }
+      ]
+    },
+    "profile_note": "Opt-in Python-owned distributed pool physics. All drag, frame area, added-mass and inflow values remain uncalibrated priors until tow/free-decay/vehicle tests replace them."
+  },
+  "research_pool_distributed_hybrid": {
+    "extends": "research_pool_distributed",
+    "distributed_hydrodynamics_calibration": {
+      "calibration_status": "stonefish_ellipsoid_hybrid_prior",
+      "residual_linear_damping": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+      "residual_quadratic_damping": [0, 0, 0, 0, 0, 0],
+      "coefficient_provenance": "Patch scales/restoring: existing Stonefish/ellipsoid virtual prior. Residual linear damping is implemented but disabled: the former crossover-speed candidate was not measurement-backed and increased reverse yaw excursion in recorded final-SERVO replay.",
+      "buoyancy_position_offset_body_m": [0.0, 0.0, -0.0092608788],
+      "normal_drag_axis_scale": [3.1392846302, 1.8974781726, 2.0601653105],
+      "residual_restoring": {
+        "active": true,
+        "roll_stiffness_nm_per_rad": 41.5,
+        "pitch_stiffness_nm_per_rad": 110.0
+      }
+    },
+    "profile_note": "Distributed-only hybrid prior. Stonefish and MuJoCo ellipsoid models are offline coefficient sources and do not run with this profile."
+  },
+  "research_pool_distributed_waves": {
+    "extends": "research_pool_distributed",
+    "free_surface": {
+      "mode": "harmonic",
+      "reference_height_world_m": 0.0,
+      "calibration_status": "uncalibrated_pool_prior",
+      "provenance": "Small deterministic finite-depth indoor-pool ripple example; replace amplitudes, directions and spectra with measured surface records.",
+      "wave_kinematics": "finite_depth_gravity",
+      "water_depth_m": 3.0,
+      "gravity_mps2": 9.81,
+      "max_orbital_speed_mps": 0.25,
+      "harmonics": [
+        {
+          "amplitude_m": 0.012,
+          "wave_vector_rad_per_m": [1.2, 0.0],
+          "phase_rad": 0.0
+        },
+        {
+          "amplitude_m": 0.006,
+          "wave_vector_rad_per_m": [0.0, 2.0],
+          "phase_rad": 1.1
+        }
+      ]
+    },
+    "profile_note": "Same distributed pool plant plus deterministic bounded surface waves and shared orbital water velocity; uncalibrated robustness case only."
   }
 }

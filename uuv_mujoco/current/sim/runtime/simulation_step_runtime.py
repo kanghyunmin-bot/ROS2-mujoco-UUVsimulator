@@ -25,6 +25,14 @@ class SimulationStepRuntime(SimulationStepRuntimeState):
         spin_started = total_started
         self.spin_ros_once()
         record_step_phase(self, "ros_spin", time.perf_counter() - spin_started)
+        # Consume final PWM before applying targets. The telemetry thread's
+        # wall-clock rate must not add a delay to the physics command path.
+        if self.sitl_enabled:
+            bridge = self.get_ros_bridge()
+            transport = getattr(bridge, "_sitl_transport", None)
+            if transport is not None:
+                with bridge._sitl_transport_lock:
+                    transport._poll_servo_endpoint()
         thruster_due, thruster_dt = self.thruster_update_due()
         if self.raw_pwm_mode:
             result = self.run_raw_pwm_step(is_paused, publish_ros, thruster_due, thruster_dt)

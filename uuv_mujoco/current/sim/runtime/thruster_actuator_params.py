@@ -6,6 +6,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from sim.physics.thruster_inflow import ThrusterInflowConfig
+
 
 @dataclass(frozen=True)
 class ThrusterUpdateParams:
@@ -14,6 +16,7 @@ class ThrusterUpdateParams:
     global_tau_down: float
     command_limit: float
     reaction_torque_gain: float
+    inflow: ThrusterInflowConfig
 
 
 def global_thruster_update_params(runtime) -> ThrusterUpdateParams:
@@ -24,6 +27,7 @@ def global_thruster_update_params(runtime) -> ThrusterUpdateParams:
         global_tau_down=float(max(runtime.thruster_global["tau_down"], 1e-4)),
         command_limit=float(np.clip(runtime.thruster_global["command_limit"], deadzone + 1e-3, 1.0)),
         reaction_torque_gain=float(max(runtime.thruster_global["reaction_torque_gain"], 0.0)),
+        inflow=ThrusterInflowConfig.from_mapping(runtime.thruster_global),
     )
 
 

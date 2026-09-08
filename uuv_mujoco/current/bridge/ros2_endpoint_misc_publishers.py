@@ -3,21 +3,45 @@
 from __future__ import annotations
 
 
-def create_dvl_compat_publishers(bridge, *, q10) -> None:
+def create_dvl_compat_publishers(bridge, *, dvl_sensor_qos) -> None:
     node = bridge.node
-    bridge.pub_dvl_data = node.create_publisher(bridge.DVLMsg, "/dvl/data", q10) if bridge.DVLMsg else None
+    if bool(getattr(bridge, "_dvl_device_emulator_enabled", False)):
+        bridge.pub_dvl_data = None
+        bridge.pub_dvl_position = None
+        return
+    bridge.pub_dvl_data = (
+        node.create_publisher(bridge.DVLMsg, "/dvl/data", dvl_sensor_qos)
+        if bridge.DVLMsg
+        else None
+    )
     bridge.pub_dvl_position = (
-        node.create_publisher(bridge.DVLDRMsg, "/dvl/position", q10)
-        if bridge.DVLDRMsg and not bridge._real_pkg_compat
+        node.create_publisher(
+            bridge.DVLDRMsg,
+            "/dvl/position",
+            dvl_sensor_qos,
+        )
+        if bridge.DVLDRMsg
         else None
     )
 
 
 def create_tf_publishers(bridge, *, tf_qos, latched_qos) -> None:
     node = bridge.node
-    bridge.pub_tf = None if bridge._real_pkg_compat else node.create_publisher(bridge.TFMessage, "/tf", tf_qos)
-    bridge.pub_tf_static = node.create_publisher(bridge.TFMessage, "/tf_static", latched_qos)
-    bridge.pub_robot_description = node.create_publisher(bridge.String, "/robot_description", latched_qos)
+    bridge.pub_tf = (
+        None
+        if bridge._real_pkg_compat
+        else node.create_publisher(bridge.TFMessage, "/tf", tf_qos)
+    )
+    bridge.pub_tf_static = node.create_publisher(
+        bridge.TFMessage,
+        "/tf_static",
+        latched_qos,
+    )
+    bridge.pub_robot_description = node.create_publisher(
+        bridge.String,
+        "/robot_description",
+        latched_qos,
+    )
 
 
 __all__ = ["create_dvl_compat_publishers", "create_tf_publishers"]

@@ -12,7 +12,7 @@ from sim.runtime.thruster_debug_schedule import (
 
 
 def emit_thruster_debug_if_due(runtime: Any, **payload: Any) -> None:
-    """Write one debug sample when the runtime stream and 20 Hz slot are ready."""
+    """Write one debug sample when the runtime stream and 100 Hz slot are ready."""
     if runtime.file is None:
         return
     data = payload["data"]

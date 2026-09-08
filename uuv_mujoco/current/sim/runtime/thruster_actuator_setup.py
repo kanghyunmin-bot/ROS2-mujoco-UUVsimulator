@@ -45,6 +45,7 @@ def build_thruster_actuator_kwargs(
     return {
         "model": model,
         "data": data,
+        "mujoco_module": mujoco_module,
         "actuator_ids": actuator_ids,
         "ctrlrange": ctrlrange,
         "all_thruster_names": thruster_names,
@@ -78,8 +79,13 @@ def build_thruster_actuator_kwargs(
         "yaw_thrusters": list(yaw_thrusters),
         "spin_gain": float(spin_gain),
         "last_reaction_torque_world": np.zeros(3, dtype=np.float64),
+        "last_reaction_torque_body": np.zeros(3, dtype=np.float64),
         "last_force_body": np.zeros(3, dtype=np.float64),
         "last_torque_body": np.zeros(3, dtype=np.float64),
+        "current_velocity_sampler": None,
+        "surface_height_sampler": None,
+        "last_inflow_multiplier": {name: 1.0 for name in thruster_names},
+        "last_axial_advance_speed_mps": _zero_thruster_map(thruster_names),
     }
 
 

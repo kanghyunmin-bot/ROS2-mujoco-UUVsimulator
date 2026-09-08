@@ -104,7 +104,8 @@ timestep은 0.002초이며, course-buoy 장면에서는 timestep guard가 활성
 | --- | --- |
 | 관성/항법 | `/imu/data`, `/dvl/velocity`, `/dvl/odometry`, `/dvl/altitude` |
 | 심도 | `/depth`, `/depth/pose`, `/bar30/pressure_pa` |
-| 위치 | `/odometry/filtered`, `/mujoco/ground_truth/pose`, `/tf` |
+| 외부 위치 추정 | `/odometry/filtered` (`robot_localization` 소유; bridge 기본 미발행) |
+| 시뮬레이터 위치 oracle | `/mujoco/ground_truth/pose`, `/sim/odom` (평가/진단 전용, 추정·제어 입력 금지) |
 | 하이드로폰 | `/audio`, `/audio_info`, `/mujoco/hydrophone/status`, `/mujoco/hydrophone/direction` |
 | Ping360 | `/ping360/image`, `/ping360/scan`, `/ping360/echo`, `/ping360/status` |
 | 경기장 | `/mujoco/course_buoys/status`, `/collector/state` |
@@ -114,6 +115,11 @@ timestep은 0.002초이며, course-buoy 장면에서는 timestep guard가 활성
 `/mavros/setpoint_raw/local`, `/ping360/config`을 받는다. arm/mode/command
 서비스도 MAVROS 이름으로 제공한다. strict mode에서는 이 호환 발행자 대신 실제
 `mavros_node`와 실제 ROS 패키지가 해당 토픽을 소유한다.
+
+plain `--ros2`에서도 MuJoCo exact state는 표준 추정기 토픽
+`/odometry/filtered`를 소유하지 않는다. 기존 통합을 위한 unsafe legacy opt-in은
+`uuv_mujoco/current/docs/contracts/ROS2_BRIDGE_SURFACE.md`에만 별도로 명시하며,
+SLAM·제어·논문 지표에는 사용할 수 없다.
 
 ## 6. ROS 패키지 구성
 
@@ -152,4 +158,3 @@ PR에서 우선 실행할 저비용 검사는 루트 README의 “빠른 검증�
 - `rospkg/src`에 독립 Git 저장소가 중첩되어 있으며 일부는 수정 상태다.
 - 모델, 배포물, ArduPilot, 로그를 일반 Git object로 추가하면 저장소가 지나치게
   커지므로 `.gitignore`와 Git LFS 정책을 지켜야 한다.
-

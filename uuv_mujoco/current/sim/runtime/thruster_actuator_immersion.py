@@ -16,8 +16,17 @@ def force_immersion_scale(runtime: Any, thr_name: str) -> float:
     if sid < 0:
         return 1.0
 
-    site_z = float(runtime.data.site_xpos[sid, 2])
-    site_depth_m = float(runtime.water_surface_z - site_z)
+    site_position = np.asarray(runtime.data.site_xpos[sid], dtype=np.float64)
+    surface_sampler = getattr(runtime, "surface_height_sampler", None)
+    if surface_sampler is None:
+        surface_height = float(runtime.water_surface_z)
+    else:
+        surface_height = float(
+            surface_sampler(site_position.copy(), float(runtime.data.time))
+        )
+        if not np.isfinite(surface_height):
+            raise ValueError("thruster surface sampler must return a finite height")
+    site_depth_m = float(surface_height - site_position[2])
     water_fraction = submerged_fraction(
         site_depth_m,
         runtime.thruster_immersion_half_height_m,

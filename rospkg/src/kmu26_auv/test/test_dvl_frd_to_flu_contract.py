@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Guard the physical A50 FRD -> ROS FLU localization boundary."""
+"""Guard the physical A50 FRD frame against a double sign conversion."""
 
 from pathlib import Path
 
@@ -16,28 +16,19 @@ def require(fragment: str, text: str, label: str) -> None:
 
 def main() -> int:
     require(
-        'declare_parameter<bool>("input_velocity_is_frd", true)',
+        'declare_parameter<std::string>("output_frame_id", "dvl_link")',
         SOURCE,
-        "real-safe default",
+        "native A50 output frame",
     )
-    require(
-        "input_velocity_is_frd_ ? -msg->velocity.y : msg->velocity.y",
-        SOURCE,
-        "FRD right to FLU left conversion",
-    )
-    require(
-        "input_velocity_is_frd_ ? -msg->velocity.z : msg->velocity.z",
-        SOURCE,
-        "FRD down to FLU up conversion",
-    )
-    require("convert_covariance_frd_to_flu(cov)", SOURCE, "covariance conversion")
-    require('"dvl_input_velocity_is_frd"', LAUNCH, "launch argument")
-    require(
-        '"input_velocity_is_frd": ParameterValue(',
-        LAUNCH,
-        "launch forwarding",
-    )
-    print("PASS: physical A50 FRD velocity is converted once at the ROS localization boundary")
+    require("out.twist.twist.linear.y = msg->velocity.y", SOURCE, "native FRD y")
+    require("out.twist.twist.linear.z = msg->velocity.z", SOURCE, "native FRD z")
+    require('DeclareLaunchArgument("dvl_roll", default_value="3.141592653589793")',
+            LAUNCH, "single FLU/FRD static rotation")
+    if "input_velocity_is_frd" in SOURCE or "input_velocity_is_frd" in LAUNCH:
+        raise AssertionError("manual FRD/FLU sign conversion must not coexist with the X-pi TF")
+    if "convert_covariance_frd_to_flu" in SOURCE:
+        raise AssertionError("covariance must remain expressed in dvl_link")
+    print("PASS: A50 FRD remains in dvl_link and TF performs exactly one conversion")
     return 0
 
 

@@ -45,6 +45,16 @@ def ros_bridge_kwargs_from_args(
         "enable_ros": bool(args.ros2),
         "enable_mavros_surface": not args.ros2_real_pkg_compat,
         "real_pkg_compat": bool(args.ros2_real_pkg_compat),
+        "unsafe_legacy_ground_truth_odometry_filtered": bool(
+            getattr(args, "unsafe_legacy_ground_truth_odometry_filtered", False)
+        ),
+        # Strict SITL keeps external MAVROS for the FCU command/state/local
+        # position surface, but the bridge must own the three raw sensor
+        # topics so modeled capture/transport timing is not flattened into
+        # the 400 Hz JSON plant cadence.
+        "strict_sitl_sensor_transport": bool(
+            args.ros2 and args.sitl and args.ros2_real_pkg_compat
+        ),
         "enable_ping360": not args.no_ping360,
         "ping360_config_path": args.ping360_config,
         "ping360_overrides": ping360_overrides_from_args(args),

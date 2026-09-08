@@ -1,7 +1,7 @@
 {
   "global": {
     "command_limit": 1.0,
-    "deadzone": 0.002,
+    "deadzone": 0.0625,
     "direct_gain_scale_all": 1.0,
     "forward_poly": [
       0.0,
@@ -10,6 +10,15 @@
       11.8
     ],
     "gain_scale_all": 1.0,
+    "inflow_command_exponent": 0.5,
+    "inflow_enabled": false,
+    "inflow_gain_per_advance_ratio": 0.35,
+    "inflow_maximum_multiplier": 1.2,
+    "inflow_minimum_multiplier": 0.45,
+    "inflow_minimum_reference_speed_mps": 0.15,
+    "inflow_reference_speed_mps": 1.0,
+    "legacy_gain_note": "2026-09-07: retired 2.425 vertical / 3.3 horizontal speed-fit multipliers; they conflated hull drag with actuator thrust. Measured direct mode bypasses polynomial gain; fallback gains are unity.",
+    "dynamics_note": "tau_up=0.04s and tau_down=0.06s are uncalibrated effective-drive priors, not manufacturer measurements; reversal decelerates before reverse acceleration.",
     "last_gain_calibration_profile": "current",
     "last_gain_calibration_scene": "scenes/tank_current_scene.xml",
     "last_gain_calibration_time": "2026-02-25T22:22:46",
@@ -27,42 +36,42 @@
   "per_thruster": {
     "ver_lf": {
       "direct_gain_scale": 1.0,
-      "gain_scale": 2.425,
+      "gain_scale": 1.0,
       "speed_sample": 0.3
     },
     "ver_lr": {
       "direct_gain_scale": 1.0,
-      "gain_scale": 2.425,
+      "gain_scale": 1.0,
       "speed_sample": 0.3029
     },
     "ver_rf": {
       "direct_gain_scale": 1.0,
-      "gain_scale": 2.425,
+      "gain_scale": 1.0,
       "speed_sample": 0.2976
     },
     "ver_rr": {
       "direct_gain_scale": 1.0,
-      "gain_scale": 2.425,
+      "gain_scale": 1.0,
       "speed_sample": 0.3001
     },
     "yaw_lf": {
       "direct_gain_scale": 1.0,
-      "gain_scale": 3.3,
+      "gain_scale": 1.0,
       "speed_sample": 0.3204
     },
     "yaw_lr": {
       "direct_gain_scale": 1.0,
-      "gain_scale": 3.3,
+      "gain_scale": 1.0,
       "speed_sample": 0.3199
     },
     "yaw_rf": {
       "direct_gain_scale": 1.0,
-      "gain_scale": 3.3,
+      "gain_scale": 1.0,
       "speed_sample": 0.3265
     },
     "yaw_rr": {
       "direct_gain_scale": 1.0,
-      "gain_scale": 3.3,
+      "gain_scale": 1.0,
       "speed_sample": 0.3243
     }
   }

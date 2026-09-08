@@ -6,10 +6,10 @@ from collections import deque
 from dataclasses import dataclass, field
 
 import rclpy
-from dvl_msgs.msg import DVL
-from dvl_msgs.msg import CommandResponse
-from dvl_msgs.msg import ConfigCommand
-from dvl_msgs.msg import ConfigStatus
+from auv_dvl_a50_msg.msg import CommandResponse
+from auv_dvl_a50_msg.msg import ConfigCommand
+from auv_dvl_a50_msg.msg import ConfigStatus
+from auv_dvl_a50_msg.msg import DVL
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from geometry_msgs.msg import TwistWithCovarianceStamped
 from mavros_msgs.msg import OverrideRCIn

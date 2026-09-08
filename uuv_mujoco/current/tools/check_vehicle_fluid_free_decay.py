@@ -212,7 +212,12 @@ def _base_kinetic_energy(plant) -> float:
     data = plant.data
     dof_adr = int(plant.base_state.world_qvel_adr)
     full_mass = np.empty((int(model.nv), int(model.nv)), dtype=np.float64)
-    plant.mujoco.mj_fullM(model, full_mass, data.qM)
+    # Older MuJoCo Python bindings accepted the packed ``qM`` array; current
+    # bindings accept MjData directly. Support both without weakening the check.
+    if hasattr(data, "qM"):
+        plant.mujoco.mj_fullM(model, full_mass, data.qM)
+    else:
+        plant.mujoco.mj_fullM(model, data, full_mass)
     base_mass = full_mass[dof_adr : dof_adr + 6, dof_adr : dof_adr + 6]
     base_velocity = np.asarray(data.qvel[dof_adr : dof_adr + 6], dtype=np.float64)
     kinetic = 0.5 * float(base_velocity @ base_mass @ base_velocity)

@@ -17,6 +17,7 @@ def apply_custom_hydrodynamics(
     rel_lin_vel_world: np.ndarray,
     nu_rel_body: np.ndarray,
     rel_acc_body: np.ndarray,
+    coefficient_scales,
     submerged: float,
 ) -> None:
     hyd = runtime.hydrodynamics
@@ -31,9 +32,13 @@ def apply_custom_hydrodynamics(
         data.xfrc_applied[base_id, 0:3] += surface_force_world
 
     rel_flow_world = hyd.water_current_world - (base_rot @ lin_vel_body)
-    immersed_added_mass = hyd.added_mass_diag * submerged
-    immersed_linear_damping = hyd.linear_damping_diag * submerged
-    immersed_quadratic_damping = hyd.quadratic_damping_diag * submerged
+    immersed_added_mass = hyd.added_mass_diag * coefficient_scales.added_mass_diag * submerged
+    immersed_linear_damping = (
+        hyd.linear_damping_diag * coefficient_scales.linear_damping_diag * submerged
+    )
+    immersed_quadratic_damping = (
+        hyd.quadratic_damping_diag * coefficient_scales.quadratic_damping_diag * submerged
+    )
     immersed_linear_damping[2] *= hyd.heave_damping_scale
     immersed_quadratic_damping[2] *= hyd.heave_damping_scale
 

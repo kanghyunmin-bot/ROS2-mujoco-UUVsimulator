@@ -75,6 +75,11 @@ def check_fossen_residual_runtime() -> None:
     )
     assert_false(custom.active, "custom hydrodynamics disables Fossen residual")
     assert_false(custom.added_mass_active, "custom hydrodynamics disables added mass")
+    assert_true(custom.requested_active, "custom mode preserves the requested residual state")
+    assert_true(
+        custom.requested_added_mass_active,
+        "custom mode preserves the requested added-mass state for ownership validation",
+    )
 
 
 __all__ = ["check_fossen_residual_runtime", "check_residual_hydro_runtime"]

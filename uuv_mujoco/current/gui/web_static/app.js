@@ -25,6 +25,8 @@ const state = {
   stereoSeq: { left: 0 },
   cameraPollBusy: false,
   cameraPresetSignature: "",
+  simPresetSignature: "",
+  simPresetTouched: false,
   pingerStartPending: false,
   pilotDock: null,
 };
@@ -561,13 +563,14 @@ function renderStatus(payload) {
   setText("ping360ViewStatus", ui.ping360_view_status || "ping360 view: closed");
   setText("rcReplayStatus", tools.rc_replay_status || "replay: unloaded");
   setText("rcReplayTime", tools.rc_replay_time || "00:00.0 / 00:00.0");
-  setText("physicsStatus", tools.physics_status || "physics params: idle");
+  setText("physicsStatus", tools.physics_status || "physics params [current]: idle");
   setText("courseStatus", tools.buoy_layout_status || "course layout: idle");
   setText("physicsPath", `path: ${tools.physics_profile_path || "loading"}`);
   setText("coursePath", `path: ${tools.course_scene_path || "loading"}`);
   renderStep("attitude", () => drawAttitude(telemetry));
   renderStep("depth", () => drawDepth(telemetry));
   renderStep("camera config", () => renderCameraConfig(payload.camera_config || processes.camera_config || {}));
+  renderStep("simulation config", () => renderSimulationConfig(processes.simulation_config || {}, processes));
   renderStep("stereo camera", () => renderStereoCamera(payload.stereo_camera || {}));
   renderStep("mission monitor", () => renderMissionMonitor(payload.mission_monitor || processes.mission_monitor || {}));
 
@@ -597,6 +600,54 @@ function renderStatus(payload) {
 
   renderStep("rc feedback", () => renderRcFeedback(telemetry));
   renderStep("events", () => renderEvents(telemetry.events || []));
+}
+
+function renderSimulationConfig(config, processes) {
+  const select = $("simLaunchPreset");
+  if (!select) {
+    return;
+  }
+  const presets = Array.isArray(config.presets) ? config.presets : [];
+  const signature = presets
+    .map((preset) => `${preset.id}:${preset.profile}:${preset.fluid_model}:${preset.scene}`)
+    .join("|");
+  if (signature && signature !== state.simPresetSignature) {
+    select.replaceChildren();
+    for (const preset of presets) {
+      const option = document.createElement("option");
+      option.value = String(preset.id || "");
+      option.textContent = String(preset.label || preset.id || "unknown");
+      option.title = String(preset.description || "");
+      select.appendChild(option);
+    }
+    state.simPresetSignature = signature;
+  }
+  const selectedId = String(config.selected_preset_id || "course_current");
+  if (!state.simPresetTouched && selectedId && document.activeElement !== select) {
+    select.value = selectedId;
+  }
+  const selected = presets.find((preset) => String(preset.id) === select.value);
+  const label = String(selected?.label || config.selected_label || select.value || "n/a");
+  const profile = String(selected?.profile || config.selected_profile || "n/a");
+  const fluid = String(selected?.fluid_model || config.selected_fluid_model || "n/a");
+  const active = String(config.active_preset_id || "");
+  const activeText = active ? ` · active ${active}` : "";
+  setText("simLaunchPresetStatus", `plant: ${label} · ${profile}/${fluid}${activeText}`);
+  const running = Boolean(processes?.sim_running);
+  select.disabled = running;
+  $("stackStartBtn").disabled = running;
+  $("stackStartBtn").textContent = running ? "Stack Running" : "Start SITL/MuJoCo";
+}
+
+async function startSimStack() {
+  const presetId = $("simLaunchPreset").value;
+  setText("simStackStatus", "sim: start requested");
+  const body = await postCommand({ command: "stack_start", sim_preset: presetId });
+  state.simPresetTouched = false;
+  if (body.status) {
+    setText("simStackStatus", body.status);
+  }
+  await pollStatus();
 }
 
 function renderStereoCamera(camera) {
@@ -1791,7 +1842,12 @@ function bindControls() {
     }
   });
 
-  $("stackStartBtn").addEventListener("click", () => postCommand({ command: "stack_start" }).then(pollStatus).catch(console.error));
+  $("simLaunchPreset").addEventListener("change", () => {
+    state.simPresetTouched = true;
+    const label = $("simLaunchPreset").selectedOptions[0]?.textContent || "n/a";
+    setText("simLaunchPresetStatus", `plant: ${label} selected; press Start`);
+  });
+  $("stackStartBtn").addEventListener("click", () => startSimStack().catch(console.error));
   $("stackResetBtn").addEventListener("click", () => postCommand({ command: "stack_reset" }).then(pollStatus).catch(console.error));
   $("rosBuildBtn").addEventListener("click", () => postCommand({ command: "ros_build" }).then(pollStatus).catch(console.error));
   $("mavrosToggleBtn").addEventListener("click", () =>

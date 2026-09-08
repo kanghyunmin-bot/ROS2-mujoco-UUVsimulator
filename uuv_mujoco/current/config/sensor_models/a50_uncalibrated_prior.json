@@ -1,0 +1,91 @@
+{
+  "schema": "uuv_mujoco.sensor_model.a50.v1",
+  "profile": "water_linked_a50_uncalibrated_prior",
+  "calibration_status": "unvalidated_prior",
+  "enabled": true,
+  "seed": 2608,
+  "evidence": {
+    "official_product_url": "https://www.waterlinked.com/shop/dvl-a50-1248",
+    "official_protocol_url": "https://docs.waterlinked.com/dvl/dvl-json-protocol/",
+    "official_range_mode_url": "https://docs.waterlinked.com/dvl/range-mode/",
+    "official_geometry_and_range": {
+      "transducer_setup": "4-beam convex Janus array",
+      "beam_angle_deg": 22.5,
+      "half_power_beam_width_deg": 4.4,
+      "minimum_altitude_m": 0.05,
+      "maximum_altitude_m": 50.0
+    },
+    "bag_observed_rate": {
+      "target_rate_hz": 10.0,
+      "observed_rate_hz": 9.275646435125926,
+      "source": "document/docsource/bar30_z_check_20260504/bag_2026-04-01_20-08-11/summary.json",
+      "note": "The runtime target is rounded to 10 Hz from the local bag observation; it is not an A50 fixed-rate specification."
+    }
+  },
+  "a50_sensor_model": {
+    "beam_tilt_deg": 22.5,
+    "beam_azimuths_deg": [45.0, 135.0, 225.0, 315.0],
+    "min_range_m": 0.05,
+    "max_range_m": 50.0,
+    "range_attenuation_m": 25.0,
+    "min_incidence_cosine": 0.15,
+    "incidence_exponent": 1.5,
+    "min_quality": 0.01,
+    "noise_quality_floor": 0.02,
+    "velocity_bias_frd_mps": [0.0, 0.0, 0.0],
+    "beam_velocity_bias_mps": [0.0, 0.0, 0.0, 0.0],
+    "white_noise_std_mps": 0.002,
+    "velocity_noise_per_meter_mps": 0.0001,
+    "range_noise_std_m": 0.005,
+    "range_noise_fraction": 0.0005,
+    "beam_dropout_probabilities": [0.0, 0.0, 0.0, 0.0],
+    "min_valid_beams": 3,
+    "transmission_delay_us": 0
+  },
+  "timing": {
+    "capture": {
+      "rate_hz": 10.0,
+      "phase_s": 0.0,
+      "start_time_s": 0.0
+    },
+    "device_clock": {
+      "offset_s": 0.0,
+      "drift_ppm": 0.0,
+      "reference_time_s": 0.0,
+      "basis": "uncalibrated prior; identify offset and drift from paired device/host timestamps"
+    },
+    "processing_latency": {
+      "mean_s": 0.002,
+      "jitter_std_s": 0.001,
+      "min_s": 0.0,
+      "max_s": 0.006,
+      "basis": "engineering estimate for internal acoustic decode and processing; not a published A50 specification"
+    },
+    "transport_latency": {
+      "mean_s": 0.004,
+      "jitter_std_s": 0.002,
+      "min_s": 0.0,
+      "max_s": 0.013,
+      "basis": "official Water Linked TCP JSON measurement: approximately 4 ms mean, 2 ms standard deviation, 13 ms observed maximum"
+    }
+  },
+  "packet_transport": {
+    "dropout_probability": 0.0,
+    "queue": {
+      "capacity": 32,
+      "overflow_policy": "drop_oldest"
+    },
+    "basis": "uncalibrated host/network prior, separate from per-beam acoustic dropout"
+  },
+  "dead_reckoning": {
+    "report_rate_hz": 5.0,
+    "packet_dropout_probability": 0.0,
+    "attitude_source": "modeled_body_gyro",
+    "attitude_bias_std_deg": [0.05, 0.05, 0.1],
+    "attitude_random_walk_std_deg_sqrt_s": [0.005, 0.005, 0.01],
+    "attitude_white_noise_std_deg": [0.02, 0.02, 0.05],
+    "position_std_initial_m": 0.01,
+    "position_random_walk_std_m_sqrt_s": 0.002,
+    "basis": "independent 5 Hz report transport; attitude integrates the modeled body gyro and applies an independent A50 bias, random walk, and packet white-noise prior; all error priors must be replaced with statistics identified from synchronized A50 bags"
+  }
+}

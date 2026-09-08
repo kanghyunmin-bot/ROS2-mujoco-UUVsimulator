@@ -9,12 +9,21 @@ the vision mission:
 - `kmu26_vision_mission_fsm`: C++/YOLO buoy mission controller.
 - `kmu26_auv_hydrophone/audio_capture`: forked Phase and SNR estimators.
 - `hit25_auv_ros2`: physical MAVROS, pressure, DVL and localization drivers.
+- `auv_dvl_a50`: the physical Water Linked A50 TCP-to-ROS driver.
+- `auv_dvl_a50_msg`: the ROS interfaces used by that physical driver.
 - `kmu26_auv_web_gui`: the physical-vehicle Web GUI.
 
-`real_robot.repos` records the pinned upstream baselines. The active `src/`
-tree also contains the validated C++ NO_ODOM_PHASE, Phase peak-selection and
-GUI changes; do not overwrite it with a bare `vcs import` before those changes
-have been published.
+`src/` is the source baseline shipped by this repository, including local
+integration changes. Build this checked-in tree directly.
+`real_robot.repos` is a historical provenance record, not a current bootstrap
+manifest: some upstream repositories were renamed and its old URLs may no
+longer resolve. Do not import it over the shipped sources. Current base ROV
+references are recorded in [the interface contract](../docs/contracts/REAL_STACK_PARITY.md).
+
+The physical DVL driver, `hit25_auv_ros2` bridges, and Web GUI use
+`auv_dvl_a50_msg` on the public A50 topics. `dvl_msgs` remains pinned only for
+older packages that have not yet migrated; never subscribe both message types
+to the same `/dvl/data` topic.
 
 ## Resource-bounded build
 
@@ -33,6 +42,9 @@ MAVROS, MuJoCo or other user processes.
 - raw hydrophone PCM: `/audio`
 - IMU: `/mavros/imu/data`
 - Bar30 depth pose: `/depth/pose`
+- raw A50 velocity/beam report: `/dvl/data`
+- raw A50 dead-reckoning report: `/dvl/position`
+- frame-preserving DVL velocity: `/dvl/twist`
 - optional localization: `/odometry/filtered`
 - vehicle state: `/mavros/state`
 - exclusive command output: `/mavros/rc/override`

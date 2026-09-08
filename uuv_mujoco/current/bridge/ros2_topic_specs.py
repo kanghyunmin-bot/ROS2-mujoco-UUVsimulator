@@ -40,7 +40,7 @@ PUBLISHER_SPECS: tuple[PublisherSpec, ...] = (
     PublisherSpec("bar30_pressure", "Float32", "/bar30/pressure_pa", 1),
     PublisherSpec("dvl_odom", "Odometry", "/dvl/odometry", 1),
     PublisherSpec("rovio_odom", "Odometry", "/rovio/odometry", 1),
-    PublisherSpec("odometry_filtered", "Odometry", "/odometry/filtered", 1),
+    PublisherSpec("sim_odometry_oracle", "Odometry", "/sim/odom", 1),
     PublisherSpec("ground_truth", "PoseStamped", "/mujoco/ground_truth/pose", 1),
     PublisherSpec("course_buoy_status", "String", "/mujoco/course_buoys/status", 10),
     PublisherSpec("hydrophone_status", "String", "/mujoco/hydrophone/status", 10),
@@ -73,6 +73,16 @@ PUBLISHER_SPECS: tuple[PublisherSpec, ...] = (
 )
 
 
+UNSAFE_LEGACY_PUBLISHER_SPECS: tuple[PublisherSpec, ...] = (
+    PublisherSpec(
+        "odometry_filtered",
+        "Odometry",
+        "/odometry/filtered",
+        1,
+    ),
+)
+
+
 SUBSCRIBER_SPECS: tuple[SubscriberSpec, ...] = (
     SubscriberSpec("cmd", "TwistStamped", "/cmd_vel", "_on_cmd_vel_stamped", 1),
     SubscriberSpec("ping360_config", "String", "/ping360/config", "_on_ping360_config", 10),
@@ -100,7 +110,7 @@ CORE_BRIDGE_TOPICS: tuple[str, ...] = (
     "/depth",
     "/bar30/pressure_pa",
     "/rovio/odometry",
-    "/odometry/filtered",
+    "/sim/odom(simulation_only_ground_truth_oracle; forbidden estimator/control input)",
     "/mujoco/ground_truth/pose",
     "/mujoco/course_buoys/status",
     "/mujoco/hydrophone/status",
@@ -145,6 +155,7 @@ __all__ = [
     "SubscriberSpec",
     "ServiceSpec",
     "PUBLISHER_SPECS",
+    "UNSAFE_LEGACY_PUBLISHER_SPECS",
     "SUBSCRIBER_SPECS",
     "SERVICE_SPECS",
     "CORE_BRIDGE_TOPICS",

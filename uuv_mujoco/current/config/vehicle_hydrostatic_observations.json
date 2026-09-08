@@ -1,0 +1,29 @@
+{
+  "vehicle": "current 15 kg UUV",
+  "evidence_status": "user_reported_physical_trim",
+  "frame": "FLU body frame: x forward, y left, z up",
+  "water_density_kg_m3": 1000.0,
+  "measured_total_mass_kg": 15.0,
+  "observations": {
+    "trimmed_level_by_hand": true,
+    "trimmed_near_neutral_buoyancy_by_hand": true,
+    "central_and_side_structures_are_floodable": true,
+    "lead_and_xps_are_inside_left_and_right_structures": true,
+    "lead_is_toward_front": true,
+    "xps_is_toward_rear": true
+  },
+  "unknowns": {
+    "lead_mass_kg": null,
+    "lead_centres_body_m": null,
+    "xps_dimensions_m": null,
+    "xps_masses_kg": null,
+    "xps_centres_body_m": null,
+    "measured_roll_restoring_period_s": null,
+    "measured_pitch_restoring_period_s": null
+  },
+  "identification_limits": [
+    "Level trim constrains horizontal alignment of total weight and buoyancy but does not identify their vertical separation.",
+    "Near-neutral trim constrains total displaced volume but does not identify how it is distributed among components.",
+    "Floodable visual envelope volume must not be used as displaced volume."
+  ]
+}

@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 
-THRUSTER_DEBUG_SAMPLE_PERIOD_S = 0.05
+# Match the normal 100 Hz SITL actuator cadence.  The previous 20 Hz stream
+# could not preserve the JSON-servo reversals that occur between MAVLink
+# SERVO_OUTPUT_RAW telemetry packets.
+THRUSTER_DEBUG_SAMPLE_PERIOD_S = 0.01
 THRUSTER_DEBUG_TIME_EPSILON_S = 1e-9
 
 

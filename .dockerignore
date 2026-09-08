@@ -1,0 +1,13 @@
+**
+!.dockerignore
+!setup/
+!setup/01_install_system_deps.sh
+!ardupilot/
+!ardupilot/Tools/
+!ardupilot/Tools/environment_install/
+!ardupilot/Tools/environment_install/install-prereqs-ubuntu.sh
+!ardupilot/Tools/completion/
+!ardupilot/Tools/completion/**
+!docker/
+!docker/ubuntu-dev/
+!docker/ubuntu-dev/**

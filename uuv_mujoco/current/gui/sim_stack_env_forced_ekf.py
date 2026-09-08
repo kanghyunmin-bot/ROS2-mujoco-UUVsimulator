@@ -14,11 +14,16 @@ def ekf_sensor_contract(env: Mapping[str, str], *, ekf_contract: str) -> dict[st
         "SITL_EKF3_EXTNAV": "1" if poshold_extnav else "0",
         "SITL_EKF3_EXTNAV_POSZ": "1",
         "SITL_EKF3_EXTNAV_VELZ": "6" if poshold_extnav else "0",
-        # The native JSON transport is asynchronous/no-lockstep.  ArduPilot's
-        # direct simulated AHRS (10) remains stable when the viewer runs below
-        # real time; forcing EKF3 here caused attitude and DVL-world rotation
-        # to diverge under load.
-        "SITL_AHRS_EKF_TYPE": "10",
+        # Strict GUI runs must exercise the same EKF3 estimator class used by
+        # the vehicle.  AHRS type 10 reads perfect SITL pose/velocity and would
+        # leak MuJoCo truth into flight control and /mavros/imu/data.  Any
+        # asynchronous JSON stability issue must be fixed at the timing/
+        # transport boundary instead of selecting the truth AHRS backend.
+        "SITL_AHRS_EKF_TYPE": "3",
+        # Keep ArduPilot's clock on the MuJoCo sensor timestamp and block its
+        # scheduler until the next sensor payload. Explicit GUI env input may
+        # still select "async" for transport diagnostics.
+        "ROS2_UUV_SITL_JSON_TIMING_MODE": "lockstep",
         "ROS2_UUV_SITL_EXTNAV_ENABLE": "1" if poshold_extnav else "0",
         "ROS2_UUV_SITL_EXTNAV_HZ": env.get("ROS2_UUV_SITL_EXTNAV_HZ", "15"),
         "ROS2_UUV_REQUIRE_EXTNAV_TX": "1" if poshold_extnav else "0",

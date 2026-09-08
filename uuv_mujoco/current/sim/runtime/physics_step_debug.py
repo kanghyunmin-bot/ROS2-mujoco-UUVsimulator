@@ -45,6 +45,17 @@ def emit_thruster_debug(
         thr_state=thruster_actuator_runtime.state,
         thruster_force_cmd=thruster_actuator_runtime.force_cmd,
         thruster_direct_scale=thruster_param_runtime.direct_scale,
+        thruster_diagnostics={
+            "supply_voltage_v": thruster_actuator_runtime.perf_cfg.get("selected_voltage") or float("nan"),
+            "static_force_n": getattr(thruster_actuator_runtime, "last_static_force_n", {}),
+            "immersion_scale": getattr(thruster_actuator_runtime, "last_immersion_scale", {}),
+            "inflow_multiplier": thruster_actuator_runtime.last_inflow_multiplier,
+            "effective_gain": (
+                thruster_actuator_runtime.thruster_direct_scale
+                if thruster_actuator_runtime.perf_cfg.get("active") and thruster_actuator_runtime.perf_cfg.get("direct")
+                else thruster_actuator_runtime.thruster_scale
+            ),
+        },
     )
 
 

@@ -17,12 +17,19 @@ def schedule_odometry_ros_jobs(self, jobs, add_rate_limited, *, builders: dict[s
         )
     jobs.add(self.pub_rovio_odometry, "/rovio/odometry", builders["rovio_odom"], on_demand=True)
     jobs.add(self.pub_sim_odometry, "/sim/odom", builders["sim_odom"], on_demand=True)
-    add_rate_limited(
-        self.pub_odometry_filtered,
-        "/odometry/filtered",
-        builders["sim_odom"],
-        self._ros_rate_dvl_position_hz,
-    )
+    if bool(
+        getattr(
+            self,
+            "_unsafe_legacy_ground_truth_odometry_filtered",
+            False,
+        )
+    ):
+        add_rate_limited(
+            self.pub_odometry_filtered,
+            "/odometry/filtered",
+            builders["sim_odom"],
+            self._ros_rate_dvl_position_hz,
+        )
 
 
 __all__ = ["schedule_odometry_ros_jobs"]

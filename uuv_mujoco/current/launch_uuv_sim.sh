@@ -1,7 +1,7 @@
 #!/bin/bash
 # Launch MuJoCo UUV simulation
 # Usage:
-#   ./launch_uuv_sim.sh [--headless] [--sitl] [--images] [--no-ros2] [--ros2] [--ros2-real-pkg-compat] [--qgc-video] [--force-clean] [--scene <path>] [--tank-35x30x11] [--fluid-model <name>]
+#   ./launch_uuv_sim.sh [--headless] [--sitl] [--images] [--no-ros2] [--ros2] [--ros2-real-pkg-compat] [--qgc-video] [--force-clean] [--scene <path>] [--profile <name>] [--tank-35x30x11] [--fluid-model <name>]
 #   ./launch_uuv_sim.sh --sitl
 #   ./launch_uuv_sim.sh --sitl --ros2 --ros2-real-pkg-compat
 # Note:
@@ -362,11 +362,14 @@ case "$FLUID_MODEL" in
     ellipsoid|builtin-ellipsoid)
         FLUID_MODEL="current"
         ;;
+    distributed|patch)
+        FLUID_MODEL="distributed"
+        ;;
     current|legacy|custom)
         ;;
     *)
         echo "[error] unknown --fluid-model: ${FLUID_MODEL}" >&2
-        echo "        expected one of: current, ellipsoid, builtin-ellipsoid, legacy, custom" >&2
+        echo "        expected one of: current, ellipsoid, builtin-ellipsoid, distributed, legacy, custom" >&2
         exit 2
         ;;
 esac
@@ -942,6 +945,11 @@ echo "[launch] Starting MuJoCo UUV Simulation"
 echo "[launch] Scene: ${SCENE_LABEL}"
 echo "[launch] Fluid model: ${FLUID_MODEL}"
 echo "[launch] Python launcher: ${PY_LAUNCHER}"
+if [[ "$FLUID_MODEL" == "current" ]]; then
+    HYDRO_DESCRIPTION="MuJoCo ellipsoid fluidcoef"
+else
+    HYDRO_DESCRIPTION="Python-owned hydrodynamic wrenches"
+fi
 if [ "$ROS2_REQUESTED" = true ]; then
     echo "[launch] Source ROS2 environment for --ros2 topics."
     ROS_SETUP_FILE=""
@@ -975,7 +983,7 @@ if [ "$ROS2_REQUESTED" = true ]; then
         echo "            /mavros/setpoint_raw/local enabled only with ROS2_UUV_MAVROS_SETPOINT_ENABLE=1"
         echo "            /uuv_mujoco/rc/out_override enabled only with ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE=1"
         echo "    Run mode: ${UUV_RUN_MODE}"
-        echo "    Hydrodynamics: MuJoCo ellipsoid fluidcoef (current profile)"
+        echo "    Hydrodynamics: ${HYDRO_DESCRIPTION} (profile=${PROFILE:-runtime default})"
         echo "    RCOUT plant override: ${ROS2_UUV_ALLOW_RCOUT_PLANT_OVERRIDE}"
         echo "    Command MAVLink: ${ROS2_UUV_SITL_COMMAND_MAVLINK_ENDPOINT}"
         echo "    SITL scheduler: ${SITL_SCHED_LOOP_RATE} Hz"
@@ -1000,14 +1008,14 @@ if [ "$ROS2_REQUESTED" = true ]; then
     echo "            /ping360/image, /ping360/scan_image, /ping360/scan, /ping360/scan_echo, /ping360/echo"
     echo "    Debug:  /mujoco/ground_truth/pose, /mujoco/course_buoys/status"
     if [[ "$REAL_PKG_COMPAT" == true ]]; then
-        echo "    MAVROS: compat-only in simulator (/mavros/vfr_hud only; external MAVROS expected)"
+        echo "    MAVROS: external node owns commands/state/local position and /mavros/imu/data (FCU AHRS)"
+        echo "            bridge owns delivery-driven /mavros/imu/data_raw and /mavros/imu/static_pressure"
         if [[ -n "$SITL_ARG" ]]; then
             echo "            use hit25_auv_ros2 with fcu_url:=udp://0.0.0.0:14551@"
             echo "            (listen for the ArduSub/MAVProxy output and learn its UDP peer)"
         fi
     else
         echo "    MAVROS: full lightweight surface enabled"
-        echo "            /mavros/state, /mavros/imu/*, /mavros/local_position/*"
         echo "            /mavros/vision_pose/pose, /mavros/battery, /mavros/rc/*"
     fi
     if [ -n "$IMAGES" ]; then
@@ -1099,8 +1107,39 @@ if [[ -n "$SITL_ARG" ]]; then
     append_extra_arg_if_missing "--sitl-mavlink-servo-hz" --sitl-mavlink-servo-hz "${SITL_MAVLINK_SERVO_HZ_DEFAULT}" >/dev/null || true
     # Legacy polynomial/gain tuned mode used:
     # append_extra_arg_if_missing "--sitl-servo-scale" --sitl-servo-scale "0.58" >/dev/null || true
-    append_extra_arg_if_missing "--sitl-servo-scale" --sitl-servo-scale "${SITL_SERVO_SCALE_DEFAULT:-1.35}" >/dev/null || true
-    append_extra_arg_if_missing "--thruster-perf-direct" --thruster-perf-direct >/dev/null || true
+    append_extra_arg_if_missing "--sitl-servo-scale" --sitl-servo-scale "${SITL_SERVO_SCALE_DEFAULT:-1.0}" >/dev/null || true
+    # Final ArduSub PWM drives the measured T200/Basic ESC surface exactly once.
+    # Voltage is configurable and can follow a recorded ESC-bus voltage trace.
+    SITL_THRUSTER_FORCE_MODEL="${UUV_SITL_THRUSTER_FORCE_MODEL:-t200}"
+    if extra_arg_present "--disable-thruster-perf" && extra_arg_present "--thruster-perf-direct"; then
+        echo "[launch] ERROR: --disable-thruster-perf and --thruster-perf-direct are mutually exclusive." >&2
+        exit 2
+    fi
+    if extra_arg_present "--disable-thruster-perf"; then
+        SITL_THRUSTER_FORCE_MODEL="polynomial"
+    elif extra_arg_present "--thruster-perf-direct"; then
+        SITL_THRUSTER_FORCE_MODEL="t200"
+    fi
+    case "${SITL_THRUSTER_FORCE_MODEL}" in
+        polynomial)
+            append_extra_arg_if_missing "--disable-thruster-perf" --disable-thruster-perf >/dev/null || true
+            echo "[launch] SITL mode: using configured polynomial thruster model (fixed-voltage T200 curve disabled)."
+            ;;
+        t200)
+            append_extra_arg_if_missing "--thruster-perf-direct" --thruster-perf-direct >/dev/null || true
+            echo "[launch] SITL mode: measured T200/Basic ESC PWM model; bus voltage comes from profile/CLI or voltage trace."
+            ;;
+        *)
+            echo "[launch] ERROR: UUV_SITL_THRUSTER_FORCE_MODEL must be polynomial or t200 (got ${SITL_THRUSTER_FORCE_MODEL})." >&2
+            exit 2
+            ;;
+    esac
+    if [[ -n "${UUV_THRUSTER_BUS_VOLTAGE_V:-}" ]]; then
+        append_extra_arg_if_missing "--thruster-voltage" --thruster-voltage "${UUV_THRUSTER_BUS_VOLTAGE_V}" >/dev/null || true
+    fi
+    if [[ -n "${UUV_THRUSTER_VOLTAGE_TRACE:-}" ]]; then
+        append_extra_arg_if_missing "--thruster-voltage-trace" --thruster-voltage-trace "${UUV_THRUSTER_VOLTAGE_TRACE}" >/dev/null || true
+    fi
     # Lower input latency defaults for SITL command loops.
     : "${ROS2_UUV_CMD_DEADBAND:=0.0}"
     : "${ROS2_UUV_CMD_SLEW_RATE:=200.0}"
@@ -1111,11 +1150,6 @@ if [[ -n "$SITL_ARG" ]]; then
     : "${ROS2_UUV_SITL_MAVLINK_TIMEOUT_S:=1.5}"
     export ROS2_UUV_CMD_DEADBAND ROS2_UUV_CMD_SLEW_RATE ROS2_UUV_DVL_LPF_ALPHA ROS2_UUV_BAR30_NOISE_PA_STD ROS2_UUV_CMD_TIMEOUT_S ROS2_UUV_SPIN_TIMEOUT_S ROS2_UUV_SITL_MAVLINK_TIMEOUT_S
     echo "[launch] SITL mode: simple sensor path deadband=${ROS2_UUV_CMD_DEADBAND}, slew=${ROS2_UUV_CMD_SLEW_RATE}/s, dvl_alpha=${ROS2_UUV_DVL_LPF_ALPHA}, bar30_noise=${ROS2_UUV_BAR30_NOISE_PA_STD}Pa, timeout=${ROS2_UUV_CMD_TIMEOUT_S}s, spin_timeout=${ROS2_UUV_SPIN_TIMEOUT_S}s, mavlink_timeout=${ROS2_UUV_SITL_MAVLINK_TIMEOUT_S}s"
-    # Legacy polynomial/gain tuned mode disabled the T200 performance curve:
-    # if append_extra_arg_if_missing "--disable-thruster-perf" --disable-thruster-perf; then
-    #     echo "[launch] SITL mode: disabling thruster performance curve for simple model."
-    # fi
-    echo "[launch] SITL mode: using T200 thruster performance direct mode."
     if [[ "$QGC_VIDEO_AUTO" != "off" ]] && ! extra_arg_present "--qgc-video"; then
         EXTRA_ARGS+=("--qgc-video")
         echo "[launch] SITL mode: enabling direct QGC video stream."
@@ -1150,6 +1184,16 @@ case "$PROFILE" in
         replace_extra_arg_value --profile "$PROFILE"
         ;;
 esac
+
+if [[ "$FLUID_MODEL" == "distributed" ]]; then
+    case "$PROFILE" in
+        ""|current|legacy|research_pool)
+            echo "[error] --fluid-model distributed requires an explicit profile with distributed_hydrodynamics enabled." >&2
+            echo "        Recommended: --profile research_pool_distributed" >&2
+            exit 2
+            ;;
+    esac
+fi
 
 if [[ -n "$PROFILE" ]]; then
     echo "[launch] Simulation profile: $PROFILE"

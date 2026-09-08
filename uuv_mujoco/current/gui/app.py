@@ -33,6 +33,7 @@ from .physics_mixin import PhysicsMixin
 from .replay_mixin import RcReplayMixin
 from .ros_process_mixin import RosProcessMixin
 from .runtime import argparse, rclpy
+from .sim_launch_preset import default_sim_launch_preset_id, sim_launch_preset_ids
 from .sim_stack_process_mixin import SimStackProcessMixin
 
 
@@ -89,11 +90,18 @@ def parse_args() -> argparse.Namespace:
         default=os.environ.get("UUV_TK_ROS_NODE_NAME", "uuv_control_gui"),
         help="ROS node name for the Tk GUI",
     )
+    parser.add_argument(
+        "--sim-preset",
+        choices=sim_launch_preset_ids(),
+        default=default_sim_launch_preset_id(),
+        help="Initial validated scene/physics preset used by Start SITL/MuJoCo",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    os.environ["UUV_GUI_SIM_PRESET"] = args.sim_preset
     _gui_log(
         f"starting backend={args.backend} namespace={args.namespace} "
         f"node={args.node_name} title={args.title!r}"

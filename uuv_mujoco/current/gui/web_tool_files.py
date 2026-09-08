@@ -48,7 +48,7 @@ class WebToolFileManager:
 
     def __init__(self, node: Any) -> None:
         self.node = node
-        self.physics_status = "physics params: idle"
+        self.physics_status = "physics params [current]: idle"
         self.course_status = "course layout: idle"
 
     def status_payload(self) -> dict[str, Any]:

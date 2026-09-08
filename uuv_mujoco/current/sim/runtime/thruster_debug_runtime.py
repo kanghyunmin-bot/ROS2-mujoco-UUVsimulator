@@ -45,7 +45,7 @@ class ThrusterDebugRuntime:
         self.file = None
 
     def emit(self, **payload: object) -> None:
-        """Write one 20 Hz debug sample when enabled."""
+        """Write one 100 Hz debug sample when enabled."""
         emit_thruster_debug_if_due(self, **payload)
 
 

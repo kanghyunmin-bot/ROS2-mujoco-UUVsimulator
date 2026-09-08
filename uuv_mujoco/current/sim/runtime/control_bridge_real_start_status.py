@@ -13,6 +13,7 @@ def create_runtime_real_start_status(
     initial_runtime_state,
     initial_depth_hold: dict,
     water_surface_z: float,
+    scene_fluid_density: float,
     base_origin_world,
     bar30_depth_now_m,
     data,
@@ -32,7 +33,10 @@ def create_runtime_real_start_status(
         ),
         release_linear_velocity_body_fn=lambda: initial_depth_hold.get("release_linear_velocity_body"),
         release_angular_velocity_body_fn=lambda: initial_depth_hold.get("release_angular_velocity_body"),
-        model_density_fn=lambda: float(model.opt.density),
+        # The fluid ownership contract intentionally zeros model.opt.density
+        # for Python-owned hydrodynamics. BAR30 parity must retain the scene's
+        # immutable water density instead of observing that solver switch.
+        model_density_fn=lambda: float(scene_fluid_density),
         depth_tolerance_m=initial_runtime_state.real_start_depth_tol_m,
         attitude_tolerance_rad=initial_runtime_state.real_start_attitude_tol_rad,
         velocity_tolerance_mps=initial_runtime_state.real_start_velocity_tol_mps,

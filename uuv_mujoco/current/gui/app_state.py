@@ -76,6 +76,7 @@ def initialize_widget_refs(self) -> None:
     self.rviz_toggle_button = None
     self.sim_stack_start_button = None
     self.sim_stack_stop_button = None
+    self.sim_launch_preset_combo = None
     self.command_ready_label = None
     self.physics_window = None
     self.physics_canvas = None

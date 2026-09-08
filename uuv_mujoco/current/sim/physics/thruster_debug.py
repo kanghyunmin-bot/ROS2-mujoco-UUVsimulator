@@ -7,6 +7,7 @@ from collections.abc import Iterable
 
 def build_thruster_debug_header(thruster_names: Iterable[str]) -> list[str]:
     """Return the CSV header used by the MuJoCo thruster debug stream."""
+    thruster_names = list(thruster_names)
     header = [
         "wall_mono_s",
         "sim_time",
@@ -62,4 +63,9 @@ def build_thruster_debug_header(thruster_names: Iterable[str]) -> list[str]:
                 f"{thr_name}_direct_gain",
             ]
         )
+    header.append("thruster_supply_voltage_v")
+    for name in thruster_names:
+        header.extend(f"{name}_{suffix}" for suffix in (
+            "static_force_n", "immersion_scale", "inflow_multiplier", "effective_gain",
+        ))
     return header

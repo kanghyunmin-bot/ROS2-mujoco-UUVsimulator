@@ -25,6 +25,9 @@ def log_thruster_runtime_summary(
     log: Callable[[str], None],
 ) -> None:
     log_base_thruster_summary(global_params=global_params, log=log)
+    if perf_cfg.get("active") and perf_cfg.get("direct"):
+        log("[thruster] measured PWM mode: Basic ESC deadband +/-25us; curve supplies forward/reverse asymmetry; legacy polynomial gains ignored")
+    log("[thruster] tau_up/tau_down are uncalibrated effective-drive response priors; reversal brakes through zero before accelerating")
     log_direct_curve_overrides(
         perf_cfg=perf_cfg,
         direct_scale=direct_scale,

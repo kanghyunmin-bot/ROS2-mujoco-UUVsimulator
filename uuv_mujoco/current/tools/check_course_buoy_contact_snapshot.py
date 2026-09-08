@@ -14,7 +14,7 @@ CURRENT_DIR = Path(__file__).resolve().parents[1]
 if str(CURRENT_DIR) not in sys.path:
     sys.path.insert(0, str(CURRENT_DIR))
 
-from sim.runtime.course_buoy_runtime import CourseBuoyRuntime  # noqa: E402
+from sim.runtime.course_buoy_runtime import CourseBuoy, CourseBuoyRuntime  # noqa: E402
 
 
 def main() -> int:
@@ -57,7 +57,60 @@ def main() -> int:
     if runtime._contacted_buoy_body_ids(runtime._release_probe_geom_id_set) != rake_contacted:
         raise AssertionError("one-pass rake result differs from compatibility oracle")
 
-    print("course_buoy_contact_snapshot=PASS ncon=4 scans=1 force_calls=2 peak=10.0N")
+    environment_runtime = object.__new__(CourseBuoyRuntime)
+    environment_runtime.data = SimpleNamespace(
+        time=0.75,
+        site_xpos=np.array([[2.0, -1.0, -0.2]], dtype=np.float64),
+    )
+    environment_runtime.water_surface_z = 0.0
+    environment_runtime.water_current_world = np.array([0.1, 0.0, 0.0])
+    environment_runtime.float_half_height_m = 0.1
+    environment_runtime.water_velocity_sampler = (
+        lambda position, time_s: np.array(
+            [position[0] + time_s, position[1], position[2]],
+            dtype=np.float64,
+        )
+    )
+    environment_runtime.surface_height_sampler = (
+        lambda position, time_s: 0.2 * position[0] + 0.1 * time_s
+    )
+    buoy = CourseBuoy(
+        name="fixture",
+        body_id=0,
+        attach_site_id=-1,
+        magnet_site_id=-1,
+        cob_site_id=0,
+        eq_id=-1,
+        collector_eq_id=-1,
+        flex_line_bottom_eq_id=-1,
+        flex_line_top_eq_id=-1,
+        free_qposadr=-1,
+        free_dofadr=-1,
+        geom_ids=frozenset(),
+        geom_collision_bits=(),
+        flex_line_geom_collision_bits=(),
+        projection_geom_ids=(),
+        has_magnet=False,
+        cached_surface_target_center_z=0.03,
+    )
+    position = environment_runtime._buoy_center_world(buoy)
+    np.testing.assert_allclose(
+        environment_runtime._water_velocity_world(position),
+        [2.75, -1.0, -0.2],
+        atol=1.0e-12,
+    )
+    expected_surface = 0.2 * 2.0 + 0.1 * 0.75
+    if not np.isclose(
+        environment_runtime._surface_target_center_z(buoy),
+        expected_surface + 0.03,
+        atol=1.0e-12,
+    ):
+        raise AssertionError("course buoy did not follow the shared local free surface")
+
+    print(
+        "course_buoy_contact_snapshot=PASS ncon=4 scans=1 force_calls=2 "
+        "peak=10.0N shared_environment=on"
+    )
     return 0
 
 

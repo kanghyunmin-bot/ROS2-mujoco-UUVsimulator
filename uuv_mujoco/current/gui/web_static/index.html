@@ -19,7 +19,7 @@
           <span id="ping360Pill" class="status-pill">ping360: no status</span>
         </div>
         <div class="header-actions" aria-label="Quick actions">
-          <button id="quickPhysicsOpenBtn" type="button">Open Physics Params</button>
+          <button id="quickPhysicsOpenBtn" type="button">Open Current Params</button>
           <button id="quickCourseOpenBtn" type="button">Open XY Course</button>
           <button id="quickCenterBtn" type="button">Center Sticks</button>
         </div>
@@ -87,6 +87,17 @@
 
             <fieldset class="group">
               <legend>Simulation Stack</legend>
+              <label class="entry-row sim-preset-row">
+                <span>Environment / physics</span>
+                <select id="simLaunchPreset">
+                  <option value="course_current">Course / test tank · ellipsoid</option>
+                  <option value="research_pool_current">Research pool · ellipsoid baseline</option>
+                  <option value="research_pool_distributed">Research pool · distributed physics</option>
+                  <option value="research_pool_distributed_hybrid">Research pool · hybrid damping prior</option>
+                  <option value="research_pool_distributed_waves">Research pool · distributed + waves</option>
+                </select>
+              </label>
+              <div id="simLaunchPresetStatus" class="status-line">plant: course / test tank · ellipsoid</div>
               <div class="button-row">
                 <button id="stackStartBtn" type="button">Start SITL/MuJoCo</button>
                 <button id="stackResetBtn" type="button" class="danger">Stop/Reset</button>
@@ -231,11 +242,11 @@
                 <legend>Tuning / Layout</legend>
                 <div class="tool-action-row">
                   <div class="tool-action-main">
-                    <strong>Sim Param Tuning</strong>
-                    <div id="physicsStatus" class="status-line">physics params: idle</div>
+                    <strong>Current-profile Param Tuning</strong>
+                    <div id="physicsStatus" class="status-line">physics params [current]: idle</div>
                     <div id="physicsPath" class="path-text">path: loading</div>
                   </div>
-                  <button id="physicsOpenBtn" type="button">Open Physics Params</button>
+                  <button id="physicsOpenBtn" type="button">Open Current Params</button>
                 </div>
                 <div class="tool-action-row">
                   <div class="tool-action-main">
@@ -527,13 +538,13 @@
     <div id="physicsDialog" class="dialog hidden" role="dialog" aria-modal="true" aria-labelledby="physicsDialogTitle">
       <div class="dialog-card physics-dialog">
         <div class="panel-heading">
-          <h2 id="physicsDialogTitle">Physics Params</h2>
+          <h2 id="physicsDialogTitle">Current-profile Physics Params</h2>
           <button id="physicsCloseBtn" type="button">Close</button>
         </div>
         <fieldset class="group">
           <legend>Profile</legend>
           <div id="physicsDialogPath" class="status-line">path: n/a</div>
-          <div id="physicsDialogStatus" class="status-line">physics params: idle</div>
+          <div id="physicsDialogStatus" class="status-line">physics params [current]: idle</div>
         </fieldset>
         <div class="physics-table" role="table" aria-label="Physics parameters">
           <div class="physics-row physics-head" role="row">
@@ -630,6 +641,6 @@
       </div>
     </div>
 
-  <script src="/app.js?v=20260719-gamepad-input"></script>
+  <script src="/app.js?v=20260901-sim-physics-preset"></script>
   </body>
 </html>

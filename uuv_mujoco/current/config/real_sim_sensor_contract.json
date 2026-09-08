@@ -1,0 +1,584 @@
+{
+  "schema_version": 1,
+  "contract_id": "kmu_auv_real_sim_sensor_contract_v1",
+  "audit_date": "2026-08-27",
+  "description": "Hardware-independent ROS and device boundary shared by the real AUV and MuJoCo simulation.",
+  "provenance": {
+    "organization": "https://github.com/2026-kmu-underwater-robot",
+    "core_repository": "https://github.com/2026-kmu-underwater-robot/auv",
+    "core_commit": "756d1a412c9a4804ae9384b6ded18245969bddec",
+    "dvl_repository": "https://github.com/2026-kmu-underwater-robot/auv_dvl_a50",
+    "dvl_commit": "21574163bb822f8ed1b98763cd8805d777556b8e",
+    "dvl_message_repository": "https://github.com/2026-kmu-underwater-robot/auv_dvl_a50_msg",
+    "dvl_message_commit": "5389084512b6556bd7e557060b2fb7e6412b53c0",
+    "imx219_repository": "https://github.com/2026-kmu-underwater-robot/auv_imx219_camera",
+    "imx219_commit": "a6b5b9455f082c201496326bfdaee2791f4a4d90",
+    "imx219_capture_timestamp_overlay": "local_uncommitted_gstreamer_pts_mapping_pending_upstream_commit",
+    "mavros_repository": "https://github.com/2026-kmu-underwater-robot/auv_mavros",
+    "dvl_a50_datasheet": "https://waterlinked.com/datasheets/dvl-a50",
+    "dvl_a50_product_documentation": "https://docs.waterlinked.com/dvl/dvl-a50/",
+    "dvl_a50_tcp_json_api": "https://docs.waterlinked.com/dvl/dvl-json-protocol/",
+    "dvl_integration_documentation": "https://docs.waterlinked.com/dvl/integration/",
+    "dvl_range_mode_documentation": "https://docs.waterlinked.com/dvl/range-mode/",
+    "local_bag_rate_summary": "document/docsource/bar30_z_check_20260504/bag_2026-04-01_20-08-11/summary.json"
+  },
+  "time_contract": {
+    "clock_topic": "/clock",
+    "simulation_uses_ros_time": true,
+    "a50_device_mode_driver_use_sim_time": true,
+    "authoritative_clock_survives_optional_ros_topic_failure": true,
+    "header_stamp_policy": {
+      "native_sim_sensor_topics": "capture_time",
+      "mavros_imu_data_strict_sim": "external_ardusub_mavros_ahrs_message_time",
+      "mavros_imu_data_raw_strict_sim": "modeled_capture_time",
+      "mavros_imu_static_pressure_strict_sim": "modeled_capture_time",
+      "imx219_physical_driver_topics": "gstreamer_pts_mapped_to_ros_clock_with_strictly_monotonic_frame_period_fallback",
+      "imx219_sim_alias_topics": "mujoco_render_snapshot_capture_time",
+      "a50_physical_driver_topics": "host_receive_time_from_driver_Node_now",
+      "a50_direct_ros_diagnostic_mode": "host_receive_time_matching_physical_driver"
+    },
+    "dvl_slam_measurement_time_source": "time_of_validity_after_device_host_clock_alignment",
+    "arrival_time_must_not_replace_dvl_payload_capture_fields": true,
+    "dvl_time_of_validity_meaning": "device_measurement_time",
+    "dvl_time_of_transmission_meaning": "device_transmission_time"
+  },
+  "frames": {
+    "world": [
+      "world",
+      "map",
+      "odom",
+      "dvl_odom"
+    ],
+    "vehicle": [
+      "base_link",
+      "fcu_link",
+      "imu_link",
+      "depth_link",
+      "dvl",
+      "dvl_link",
+      "camera_color_optical_frame",
+      "imx219_camera0_optical_frame",
+      "imx219_camera1_optical_frame",
+      "hydrophone_link",
+      "ping360_link"
+    ],
+    "static_transforms": [
+      {
+        "parent": "base_link",
+        "child": "fcu_link",
+        "translation_m": [0.13135, 0.0, 0.08541],
+        "rotation_rpy_rad": [0.0, 0.0, 0.0],
+        "status": "public_real_default"
+      },
+      {
+        "parent": "fcu_link",
+        "child": "imu_link",
+        "translation_m": [0.0, 0.0, 0.0],
+        "rotation_rpy_rad": [0.0, 0.0, 0.0],
+        "status": "public_real_default"
+      },
+      {
+        "parent": "base_link",
+        "child": "dvl_link",
+        "translation_m": [-0.00488, 0.0, -0.0391],
+        "rotation_rpy_rad": [3.141592653589793, 0.0, 0.0],
+        "status": "public_real_default"
+      },
+      {
+        "parent": "base_link",
+        "child": "depth_link",
+        "translation_m": [-0.17364, -0.03034, 0.0536],
+        "rotation_rpy_rad": [0.0, 0.0, 0.0],
+        "status": "public_real_default"
+      },
+      {
+        "parent": "base_link",
+        "child": "imx219_camera0_optical_frame",
+        "translation_m": null,
+        "rotation_rpy_rad": null,
+        "status": "requires_measured_physical_extrinsic",
+        "enabled_by_default": false,
+        "launch_guard": "publish_static_tf && publish_imx219_static_tf && use_imx219 && !use_sim_time",
+        "launch_arguments": [
+          "imx219_camera0_x",
+          "imx219_camera0_y",
+          "imx219_camera0_z",
+          "imx219_camera0_roll",
+          "imx219_camera0_pitch",
+          "imx219_camera0_yaw"
+        ]
+      },
+      {
+        "parent": "base_link",
+        "child": "imx219_camera1_optical_frame",
+        "translation_m": null,
+        "rotation_rpy_rad": null,
+        "status": "requires_measured_physical_extrinsic",
+        "enabled_by_default": false,
+        "launch_guard": "publish_static_tf && publish_imx219_static_tf && use_imx219 && !use_sim_time",
+        "launch_arguments": [
+          "imx219_camera1_x",
+          "imx219_camera1_y",
+          "imx219_camera1_z",
+          "imx219_camera1_roll",
+          "imx219_camera1_pitch",
+          "imx219_camera1_yaw"
+        ]
+      }
+    ]
+  },
+  "device_boundaries": {
+    "fcu": {
+      "transport": "serial_mavlink",
+      "real_default": "/dev/ttyACM0:57600",
+      "sim_provider": "ArduSub_SITL",
+      "sim_plant_transport": "mandatory_400_hz_json_sample_hold_for_fcu_controller_only",
+      "strict_sim_raw_topic_provider": "mujoco_bridge_delivery_driven_sensor_model",
+      "strict_sim_public_raw_topics": [
+        "/mavros/imu/data_raw",
+        "/mavros/imu/static_pressure"
+      ],
+      "strict_sim_ahrs_topic_provider": "external_ardusub_mavros",
+      "strict_sim_public_ahrs_topics": [
+        "/mavros/imu/data"
+      ],
+      "strict_sim_mavros_passthrough_namespace": "/uuv_mujoco/mavros_fcu_passthrough",
+      "hardware_model": null,
+      "status": "model_unresolved"
+    },
+    "dvl": {
+      "model": "Water Linked A50",
+      "transport": "tcp_newline_json",
+      "real_default_host": "192.168.194.95",
+      "real_default_port": 16171,
+      "sim_provider": "A50_protocol_emulator",
+      "driver_package": "auv_dvl_a50",
+      "message_package": "auv_dvl_a50_msg",
+      "sim_modes": {
+        "direct_ros": "bridge publishes DVL messages for diagnostics and legacy use",
+        "tcp_driver": "bridge emulates the A50 TCP device and the unmodified physical driver owns ROS topics"
+      },
+      "default_sim_mode": {
+        "strict_real_pkg_compat": "tcp_driver",
+        "non_strict": "direct_ros"
+      },
+      "recommended_sim_to_real_mode": "tcp_driver",
+      "tcp_driver_enable_environment": "ROS2_UUV_DVL_DEVICE_EMULATOR_ENABLE=1",
+      "strict_direct_ros_opt_out_allowed": false,
+      "official_operating_specification": {
+        "transducer_beam_angle_deg": 22.5,
+        "minimum_altitude_m": 0.05,
+        "maximum_altitude_m": 50.0,
+        "adaptive_ping_rate_range_hz": [4.0, 15.0],
+        "source": "https://waterlinked.com/datasheets/dvl-a50"
+      },
+      "official_tcp_report_contract": {
+        "velocity_report_rate": "adaptive_to_altitude_and_configuration",
+        "dead_reckoning_expected_rate_hz": 5.0,
+        "network_latency_ms": {
+          "mean": 4.0,
+          "standard_deviation": 2.0,
+          "observed_maximum": 13.0,
+          "hard_realtime_guarantee": false
+        },
+        "source": "https://docs.waterlinked.com/dvl/dvl-json-protocol/"
+      },
+      "local_rate_observation": {
+        "bag": "bag_2026-04-01_20-08-11",
+        "dvl_data_hz": 9.275646435125926,
+        "dvl_position_hz": 4.413036175468005,
+        "dvl_twist_hz": 8.946948401873865,
+        "source": "document/docsource/bar30_z_check_20260504/bag_2026-04-01_20-08-11/summary.json"
+      },
+      "noise_parameter_policy": {
+        "classification": "pre_bag_calibration_prior",
+        "is_official_manufacturer_specification": false,
+        "must_be_fitted_and_validated_with_real_bag_data": true,
+        "note": "Any simulated bias, white-noise, random-walk, dropout, or correlation parameter is a modeling prior until it is fitted and validated against real sensor data."
+      }
+    },
+    "hydrophone": {
+      "transport": "alsa",
+      "real_default": "hw:AMS22,0",
+      "sample_rate_hz": 96000,
+      "channels": 2,
+      "sample_format": "S32LE"
+    },
+    "dronecan_battery": {
+      "transport": "socketcan",
+      "real_default": "can1",
+      "target_node_id": 125,
+      "sim_provider": "vcan_DroneCAN_emulator"
+    },
+    "realsense": {
+      "hardware_model": null,
+      "serial_number": null,
+      "status": "model_and_serial_unresolved"
+    },
+    "imx219": {
+      "hardware_model": "dual Raspberry Pi Camera Module v2 IMX219",
+      "driver_package": "auv_imx219_camera",
+      "transport": "dual_csi_gstreamer_image_transport",
+      "default_resolution": [1280, 720],
+      "default_rate_hz": 30.0,
+      "raw_encoding": "bgr8",
+      "compressed_format": "bgr8; jpeg compressed bgr8",
+      "compressed_jpeg_quality": 95,
+      "timestamp_source": "gstreamer_pts",
+      "timestamp_fallback": "last_stamp_plus_frame_period_capped_by_ros_publish_time_with_throttled_warning_and_correction_count",
+      "calibration_status": "physical_pair_measurement_required",
+      "physical_calibration_launch_arguments": [
+        "camera0_calibration_file",
+        "camera1_calibration_file"
+      ],
+      "physical_calibration_policy": "supply_measured_in_water_camera_info_yaml_before_localization_or_slam_use",
+      "physical_static_tf_enabled_by_default": false,
+      "physical_static_tf_enable_argument": "publish_imx219_static_tf",
+      "physical_extrinsic_policy": "measure_both_base_link_to_optical_transforms_and_supply_all_xyz_rpy_launch_arguments_before_localization_or_slam_use"
+    },
+    "ping360": {
+      "hardware_driver_package": null,
+      "status": "physical_driver_unresolved"
+    }
+  },
+  "endpoints": [
+    {
+      "id": "imu",
+      "topic": "/mavros/imu/data",
+      "type": "sensor_msgs/msg/Imu",
+      "frame": "fcu_link",
+      "nominal_rate_hz": 50.0,
+      "rate_basis": "configured_mavlink_message_interval",
+      "qos_profile": "mavros_sensor",
+      "timestamp": "external_ardusub_mavros_ahrs_message_time",
+      "layer": "fcu_ahrs",
+      "sim_owner": "external_ardusub_mavros",
+      "orientation_source": "ardusub_ahrs",
+      "required_for_slam_mvp": true
+    },
+    {
+      "id": "imu_raw",
+      "topic": "/mavros/imu/data_raw",
+      "type": "sensor_msgs/msg/Imu",
+      "frame": "fcu_link",
+      "nominal_rate_hz": 50.0,
+      "rate_basis": "configured_mavlink_message_interval",
+      "qos_profile": "mavros_sensor",
+      "timestamp": "capture_time",
+      "layer": "raw_sensor",
+      "sim_owner": "uuv_mujoco_delivery_bridge",
+      "measurement_source": "modeled_accelerometer_and_gyroscope",
+      "orientation_semantics": {
+        "value_wxyz": [1.0, 0.0, 0.0, 0.0],
+        "covariance": [-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        "meaning": "orientation_not_provided"
+      },
+      "required_for_slam_mvp": false
+    },
+    {
+      "id": "static_pressure",
+      "topic": "/mavros/imu/static_pressure",
+      "type": "sensor_msgs/msg/FluidPressure",
+      "frame": "fcu_link",
+      "nominal_rate_hz": 10.0,
+      "rate_basis": "configured_mavlink_message_interval",
+      "qos_profile": "mavros_sensor",
+      "timestamp": "capture_time",
+      "layer": "raw_sensor",
+      "sim_owner": "uuv_mujoco_delivery_bridge",
+      "required_for_slam_mvp": true
+    },
+    {
+      "id": "dvl_velocity_report",
+      "topic": "/dvl/data",
+      "type": "auv_dvl_a50_msg/msg/DVL",
+      "frame": "dvl_link",
+      "nominal_rate_hz": 10.0,
+      "rate_basis": "pool_nominal_with_a50_adaptive_velocity_reports",
+      "supported_rate_range_hz": [4.0, 15.0],
+      "rate_range_basis": "official_a50_datasheet_adaptive_ping_range",
+      "observed_rate_hz": 9.275646435125926,
+      "rate_source": "https://waterlinked.com/datasheets/dvl-a50",
+      "observed_rate_source": "document/docsource/bar30_z_check_20260504/bag_2026-04-01_20-08-11/summary.json",
+      "qos_profile": "sensor_data_best_effort",
+      "timestamp": "driver_receive_time; device capture is time_of_validity",
+      "layer": "raw_sensor",
+      "required_for_slam_mvp": true
+    },
+    {
+      "id": "dvl_dead_reckoning",
+      "topic": "/dvl/position",
+      "type": "auv_dvl_a50_msg/msg/DVLDR",
+      "frame": "dvl_link",
+      "nominal_rate_hz": 5.0,
+      "rate_basis": "official_expected_dead_reckoning_report_rate",
+      "supported_rate_range_hz": [5.0, 5.0],
+      "rate_range_basis": "official_tcp_document_expected_value_not_a_hard_range",
+      "observed_rate_hz": 4.413036175468005,
+      "rate_source": "https://docs.waterlinked.com/dvl/dvl-json-protocol/",
+      "observed_rate_source": "document/docsource/bar30_z_check_20260504/bag_2026-04-01_20-08-11/summary.json",
+      "qos_profile": "sensor_data_best_effort",
+      "timestamp": "driver_receive_time; device report time is message.time",
+      "layer": "raw_sensor",
+      "required_for_slam_mvp": true
+    },
+    {
+      "id": "dvl_twist",
+      "topic": "/dvl/twist",
+      "type": "geometry_msgs/msg/TwistWithCovarianceStamped",
+      "frame": "dvl_link",
+      "nominal_rate_hz": 10.0,
+      "rate_basis": "source_driven_from_dvl_data",
+      "supported_rate_range_hz": [4.0, 15.0],
+      "rate_range_basis": "inherits_official_a50_velocity_report_range",
+      "observed_rate_hz": 8.946948401873865,
+      "rate_source": "https://waterlinked.com/datasheets/dvl-a50",
+      "observed_rate_source": "document/docsource/bar30_z_check_20260504/bag_2026-04-01_20-08-11/summary.json",
+      "qos_profile": "keep_last_10_reliable",
+      "timestamp": "preserve_source_driver_receive_time",
+      "layer": "derived_measurement",
+      "required_for_slam_mvp": true
+    },
+    {
+      "id": "dvl_odometry",
+      "topic": "/dvl/odometry",
+      "type": "nav_msgs/msg/Odometry",
+      "frame": "dvl_odom",
+      "child_frame": "dvl_link",
+      "nominal_rate_hz": 5.0,
+      "rate_basis": "source_driven_from_dvl_position",
+      "supported_rate_range_hz": [5.0, 5.0],
+      "rate_range_basis": "inherits_official_dead_reckoning_expected_value",
+      "observed_rate_hz": null,
+      "rate_source": "https://docs.waterlinked.com/dvl/dvl-json-protocol/",
+      "observed_rate_source": "not_recorded_in_bag_2026-04-01_20-08-11; upstream /dvl/position was 4.413036175468005 Hz",
+      "qos_profile": "keep_last_10_reliable",
+      "timestamp": "preserve_source_driver_receive_time",
+      "layer": "derived_measurement",
+      "required_for_slam_mvp": false
+    },
+    {
+      "id": "depth_pose",
+      "topic": "/depth/pose",
+      "type": "geometry_msgs/msg/PoseWithCovarianceStamped",
+      "frame": "odom",
+      "nominal_rate_hz": 10.0,
+      "rate_basis": "source_driven_from_static_pressure",
+      "qos_profile": "keep_last_10_reliable",
+      "timestamp": "preserve_source_capture_time",
+      "layer": "derived_measurement",
+      "required_for_slam_mvp": true
+    },
+    {
+      "id": "realsense_color",
+      "topic": "/camera/camera/color/image_raw",
+      "type": "sensor_msgs/msg/Image",
+      "frame": "camera_color_optical_frame",
+      "nominal_rate_hz": null,
+      "rate_basis": "unresolved_until_camera_profile_is_pinned",
+      "qos_profile": "sensor_data",
+      "timestamp": "capture_time",
+      "layer": "raw_sensor",
+      "required_for_slam_mvp": false
+    },
+    {
+      "id": "realsense_color_info",
+      "topic": "/camera/camera/color/camera_info",
+      "type": "sensor_msgs/msg/CameraInfo",
+      "frame": "camera_color_optical_frame",
+      "nominal_rate_hz": null,
+      "rate_basis": "match_realsense_color",
+      "qos_profile": "sensor_data",
+      "timestamp": "capture_time",
+      "layer": "calibration",
+      "required_for_slam_mvp": false
+    },
+    {
+      "id": "imx219_camera0",
+      "topic": "/imx219/camera0/image_raw",
+      "type": "sensor_msgs/msg/Image",
+      "frame": "imx219_camera0_optical_frame",
+      "nominal_rate_hz": 30.0,
+      "rate_basis": "dual_imx219_launch_default",
+      "qos_profile": "sensor_data",
+      "timestamp": "capture_time",
+      "layer": "raw_sensor",
+      "required_for_slam_mvp": true
+    },
+    {
+      "id": "imx219_camera0_info",
+      "topic": "/imx219/camera0/camera_info",
+      "type": "sensor_msgs/msg/CameraInfo",
+      "frame": "imx219_camera0_optical_frame",
+      "nominal_rate_hz": 30.0,
+      "rate_basis": "match_imx219_camera0",
+      "qos_profile": "sensor_data",
+      "timestamp": "capture_time",
+      "layer": "calibration",
+      "required_for_slam_mvp": true
+    },
+    {
+      "id": "imx219_camera0_compressed",
+      "topic": "/imx219/camera0/image_raw/compressed",
+      "type": "sensor_msgs/msg/CompressedImage",
+      "frame": "imx219_camera0_optical_frame",
+      "nominal_rate_hz": 30.0,
+      "rate_basis": "image_transport_on_demand_matches_imx219_camera0",
+      "qos_profile": "sensor_data",
+      "timestamp": "capture_time",
+      "layer": "raw_sensor_compressed_transport",
+      "required_for_slam_mvp": true
+    },
+    {
+      "id": "imx219_camera1",
+      "topic": "/imx219/camera1/image_raw",
+      "type": "sensor_msgs/msg/Image",
+      "frame": "imx219_camera1_optical_frame",
+      "nominal_rate_hz": 30.0,
+      "rate_basis": "dual_imx219_launch_default",
+      "qos_profile": "sensor_data",
+      "timestamp": "capture_time",
+      "layer": "raw_sensor",
+      "required_for_slam_mvp": true
+    },
+    {
+      "id": "imx219_camera1_info",
+      "topic": "/imx219/camera1/camera_info",
+      "type": "sensor_msgs/msg/CameraInfo",
+      "frame": "imx219_camera1_optical_frame",
+      "nominal_rate_hz": 30.0,
+      "rate_basis": "match_imx219_camera1",
+      "qos_profile": "sensor_data",
+      "timestamp": "capture_time",
+      "layer": "calibration",
+      "required_for_slam_mvp": true
+    },
+    {
+      "id": "imx219_camera1_compressed",
+      "topic": "/imx219/camera1/image_raw/compressed",
+      "type": "sensor_msgs/msg/CompressedImage",
+      "frame": "imx219_camera1_optical_frame",
+      "nominal_rate_hz": 30.0,
+      "rate_basis": "image_transport_on_demand_matches_imx219_camera1",
+      "qos_profile": "sensor_data",
+      "timestamp": "capture_time",
+      "layer": "raw_sensor_compressed_transport",
+      "required_for_slam_mvp": true
+    },
+    {
+      "id": "hydrophone_audio",
+      "topic": "/audio",
+      "type": "audio_common_msgs/msg/AudioData",
+      "frame": null,
+      "nominal_rate_hz": null,
+      "rate_basis": "buffer_size_dependent",
+      "sample_rate_hz": 96000,
+      "qos_profile": "keep_last_10_reliable",
+      "timestamp": "none_message_has_no_header",
+      "layer": "raw_sensor",
+      "required_for_slam_mvp": false
+    },
+    {
+      "id": "hydrophone_audio_stamped",
+      "topic": "/audio_stamped",
+      "type": "audio_common_msgs/msg/AudioDataStamped",
+      "frame": "hydrophone_link",
+      "nominal_rate_hz": null,
+      "rate_basis": "buffer_size_dependent",
+      "sample_rate_hz": 96000,
+      "qos_profile": "keep_last_10_reliable",
+      "timestamp": "capture_time",
+      "layer": "raw_sensor",
+      "required_for_slam_mvp": false
+    },
+    {
+      "id": "hydrophone_audio_info",
+      "topic": "/audio_info",
+      "type": "audio_common_msgs/msg/AudioInfo",
+      "frame": null,
+      "nominal_rate_hz": 0.2,
+      "rate_basis": "capture_node_5_s_timer",
+      "qos_profile": "keep_last_1_transient_local",
+      "timestamp": "none_message_has_no_header",
+      "layer": "metadata",
+      "required_for_slam_mvp": false
+    },
+    {
+      "id": "ping360_echo",
+      "topic": "/ping360/scan_echo",
+      "type": "ping360_sonar_msgs/msg/SonarEcho",
+      "frame": "ping360_link",
+      "nominal_rate_hz": null,
+      "rate_basis": "physical_driver_unresolved",
+      "qos_profile": "keep_last_10_reliable",
+      "timestamp": "capture_time",
+      "layer": "raw_sensor",
+      "required_for_slam_mvp": false
+    },
+    {
+      "id": "battery",
+      "topic": "/battery",
+      "type": "sensor_msgs/msg/BatteryState",
+      "frame": null,
+      "nominal_rate_hz": null,
+      "rate_basis": "dronecan_event_driven",
+      "qos_profile": "keep_last_10_reliable",
+      "timestamp": "driver_receive_time",
+      "layer": "raw_sensor",
+      "required_for_slam_mvp": false
+    },
+    {
+      "id": "mavros_battery",
+      "topic": "/mavros/battery",
+      "type": "sensor_msgs/msg/BatteryState",
+      "frame": null,
+      "nominal_rate_hz": null,
+      "rate_basis": "dronecan_event_driven",
+      "qos_profile": "keep_last_10_reliable",
+      "timestamp": "driver_receive_time",
+      "layer": "raw_sensor",
+      "required_for_slam_mvp": false
+    },
+    {
+      "id": "ground_truth_pose",
+      "topic": "/mujoco/ground_truth/pose",
+      "type": "geometry_msgs/msg/PoseStamped",
+      "frame": "world",
+      "nominal_rate_hz": null,
+      "rate_basis": "simulation_step_or_bridge_rate",
+      "qos_profile": "keep_last_10_reliable",
+      "timestamp": "simulation_state_time",
+      "layer": "evaluation_only",
+      "required_for_slam_mvp": false
+    }
+  ],
+  "safety_invariants": {
+    "ground_truth_layers_allowed_consumers": [
+      "evaluation",
+      "recording"
+    ],
+    "forbidden_ground_truth_consumers": [
+      "sensor_model",
+      "state_estimation",
+      "slam",
+      "mavros",
+      "controller"
+    ],
+    "simulation_only_ground_truth_oracles": {
+      "/mujoco/ground_truth/pose": "evaluation_and_recording_only",
+      "/sim/odom": "simulation_only_ground_truth_oracle_for_diagnostics_and_tests; forbidden_as_estimator_slam_mavros_or_control_input"
+    },
+    "standard_estimator_topic_ownership": {
+      "/odometry/filtered": {
+        "bridge_default_publisher": false,
+        "required_owner": "external_estimator",
+        "unsafe_legacy_cli_opt_in": "--unsafe-legacy-ground-truth-odometry-filtered",
+        "unsafe_legacy_environment_opt_in": "ROS2_UUV_UNSAFE_LEGACY_GROUND_TRUTH_ODOMETRY_FILTERED=1",
+        "unsafe_legacy_payload": "exact_mujoco_state_not_an_estimate",
+        "strict_real_pkg_compat_policy": "forbidden"
+      }
+    },
+    "real_and_sim_swap_boundary": "raw_sensor_or_device_protocol",
+    "derived_measurement_nodes_must_be_shared": true
+  }
+}
