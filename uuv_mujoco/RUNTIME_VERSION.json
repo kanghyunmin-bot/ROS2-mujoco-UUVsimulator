@@ -1,16 +1,14 @@
 {
   "schema": 1,
-  "updated_at": "2026-09-08",
+  "updated_at": "2026-09-12",
   "active_runtime": "uuv_mujoco/current",
   "backing_directory": "uuv_mujoco/v2.2",
-  "status": "pre-vla-baseline",
-  "freshness_status": "release",
-  "active_runtime_label": "2026.09.08-pre-vla",
+  "status": "source-snapshot",
+  "freshness_status": "source",
+  "active_runtime_label": "2026.09.12-source",
   "source_branch": "main",
   "source_remote": "https://github.com/kanghyunmin-bot/ROS2-mujoco-UUVsimulator.git",
-  "source_head": "",
-  "origin_uuv_sim_head": "",
-  "freshness_policy": "origin/main is the latest source baseline; validate changes before publishing.",
+  "freshness_policy": "Use a Git commit SHA for reproducibility; no release tag created.",
   "primary_runner": "uuv_mujoco/current/run_uuv_mujoco.py",
   "compatibility_runner": "uuv_mujoco/current/run_urdf_full.py",
   "root_launchers": {
@@ -20,5 +18,6 @@
     "reset": "uuv_mujoco/reset_sim.sh"
   },
   "source_audit_check": "active_runtime_alias_current",
-  "note": "v2.2 is a compatibility directory name. New launch, GUI, setup, and validation paths must resolve through uuv_mujoco/current."
+  "note": "v2.2 is a compatibility directory name. New launch, GUI, setup, and validation paths must resolve through uuv_mujoco/current.",
+  "source_revision": "main"
 }

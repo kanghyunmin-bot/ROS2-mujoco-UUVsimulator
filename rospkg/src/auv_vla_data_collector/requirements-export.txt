@@ -1,0 +1,4 @@
+# Keep NumPy compatible with ROS Humble OpenCV and pyarrow 14 wheels.
+numpy==1.26.4
+pandas==2.2.3
+pyarrow==14.0.1

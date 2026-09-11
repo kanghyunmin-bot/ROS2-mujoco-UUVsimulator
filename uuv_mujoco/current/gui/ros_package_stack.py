@@ -46,7 +46,7 @@ def mavros_launch_command(fcu_url: str) -> str:
         # in the same surface-relative frame used by tank_max_depth_m.
         "surface_pressure_pa:=101640.0",
         "depth_zero_at_start:=false",
-        "depth_offset_m:=-0.0536",
+        "depth_offset_m:=0.03286",
         "use_web_gui:=false",
         "use_rviz:=false",
         "use_mission_rviz_visualizer:=false",

@@ -45,6 +45,8 @@ def apply_distributed_hydrodynamics(
         surface_height_world_m=environment.surface_height_world_m,
         wrench_reference_position_body_m=base_rot.T @ (com - base_origin),
         time_s=float(runtime.data.time),
+        current_batch_sampler=getattr(environment, "velocity_world_batch", None),
+        surface_batch_sampler=getattr(environment, "surface_height_world_m_batch", None),
     )
 
     # The distributed core and its safety limiter use the same inertial-centre

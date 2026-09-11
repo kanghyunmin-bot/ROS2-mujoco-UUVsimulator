@@ -243,8 +243,8 @@ def main() -> int:
     )
 
     qpos = int(runtime.state.world_qpos_adr)
-    data.qpos[qpos] += 8.0
-    data.qpos[qpos + 1] -= 2.5
+    data.qpos[qpos] += 3.0
+    data.qpos[qpos + 1] -= 1.0
     mujoco.mj_forward(model, data)
     moved_position = data.xipos[int(runtime.state.base_id)].copy()
     underwater.prev_rel_nu_valid = False

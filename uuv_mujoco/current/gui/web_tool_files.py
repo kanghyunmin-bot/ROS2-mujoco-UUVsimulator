@@ -26,6 +26,8 @@ from .config import (
     PHYSICS_PROFILE_PATH,
     TEST_TANK_SCENE_PATH,
 )
+from .config_paths import RESEARCH_POOL_SCENE_PATH
+from . import research_pool_layout
 from .file_persistence import atomic_write_text, backup_file
 from .physics_param_format import _current_physics_profile, _format_physics_value, _get_nested_value, _set_nested_value
 from .physics_param_status import _physics_current_mode_status, _physics_param_inactive_in_current
@@ -50,15 +52,17 @@ class WebToolFileManager:
         self.node = node
         self.physics_status = "physics params [current]: idle"
         self.course_status = "course layout: idle"
+        self.course_editor_mode = None
 
     def status_payload(self) -> dict[str, Any]:
         config = load_course_layout_config(COURSE_LAYOUT_CONFIG_PATH)
-        mode = normalize_course_mode(config.get("active_mode"))
+        mode = self.course_editor_mode or normalize_course_mode(config.get("active_mode"))
         return {
             "physics_status": self.physics_status,
             "buoy_layout_status": self.course_status,
             "physics_profile_path": str(PHYSICS_PROFILE_PATH),
-            "course_scene_path": str(TEST_TANK_SCENE_PATH if mode == COURSE_MODE_TEST_TANK else COURSE_SCENE_PATH),
+            "course_scene_path": str(RESEARCH_POOL_SCENE_PATH if mode == research_pool_layout.MODE else
+                                     TEST_TANK_SCENE_PATH if mode == COURSE_MODE_TEST_TANK else COURSE_SCENE_PATH),
             "course_layout_mode": mode,
         }
 
@@ -121,6 +125,12 @@ class WebToolFileManager:
         return loaded
 
     def load_course_layout(self, mode: str | None = None) -> dict[str, Any]:
+        self.course_editor_mode = mode
+        if mode == research_pool_layout.MODE:
+            payload = research_pool_layout.load_layout(RESEARCH_POOL_SCENE_PATH)
+            payload["mode_options"] = _course_mode_options()
+            self.course_status = payload["status"]
+            return payload
         config = load_course_layout_config(COURSE_LAYOUT_CONFIG_PATH)
         active_mode = normalize_course_mode(config.get("active_mode"))
         selected_mode = normalize_course_mode(mode, default=active_mode) if mode else active_mode
@@ -195,6 +205,14 @@ class WebToolFileManager:
     ) -> dict[str, Any]:
         if not isinstance(positions, dict):
             raise ValueError("positions must be an object")
+        if mode == research_pool_layout.MODE:
+            backup = research_pool_layout.save_layout(RESEARCH_POOL_SCENE_PATH, positions, robot_xy)
+            payload = self.load_course_layout(mode)
+            payload.update(backup_path=str(backup), reset=bool(reset),
+                           status="리서치 풀 저장 완료 · 재시작 후 반영" if not reset else "리서치 풀 저장 완료 · 재시작 중")
+            self.course_status = payload["status"]
+            self.node.push_event(self.course_status)
+            return payload
         config = load_course_layout_config(COURSE_LAYOUT_CONFIG_PATH)
         active_mode = normalize_course_mode(config.get("active_mode"))
         selected_mode = normalize_course_mode(mode, default=active_mode) if mode else active_mode
@@ -380,6 +398,7 @@ def _parse_xy_unclamped(value: Any, *, label: str) -> tuple[float, float]:
 
 def _course_mode_options() -> list[dict[str, str]]:
     return [
+        {"id": research_pool_layout.MODE, "label": "리서치 풀"},
         {"id": COURSE_MODE_TEST_TANK, "label": "Test tank"},
         {"id": COURSE_MODE_COMPETITION, "label": "Competition course"},
     ]

@@ -1,0 +1,25 @@
+vla_data_collector:
+  ros__parameters:
+    use_sim_time: true
+    dataset_root: ~/vla_data/staging
+    ego_image_topic: /imx219/camera0/image_raw/compressed
+    buoy_release_image_topic: /imx219/camera1/image_raw/compressed
+    dvl_data_topic: /dvl/data
+    dvl_twist_topic: /dvl/twist
+    dvl_input_frame: dvl_link
+    dvl_convention: FRD
+    body_frame: base_link
+    imu_topic: /mavros/imu/data
+    depth_topic: /depth/pose
+    depth_pose_z_is_positive_up: true
+    action_channels: [5, 6, 3, 4]
+    neutral_pwm: 1500
+    pwm_span: 300
+vla_policy:
+  ros__parameters:
+    dry_run: true
+    server_url: http://127.0.0.1:8000
+    expected_mode: STABILIZE
+    max_action_age_sec: 0.3
+    command_limit: 0.3
+    command_slew_per_sec: 0.5

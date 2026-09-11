@@ -139,3 +139,36 @@ ctest --output-on-failure -j1
 
 Ground truth is never an input to the deployable pinger controller. It is used
 only as a MuJoCo test oracle.
+
+## VLA simulation data collection
+
+The merged organization collector is included at `src/auv_vla_data_collector`.
+Its ROS package name is `kmu26_auv_vla_data_collector`; see its `UPSTREAM.md` for
+the pinned source. Build and source this workspace:
+
+```bash
+source /opt/ros/humble/setup.bash
+colcon build --base-paths src --packages-select kmu26_auv_vla_data_collector
+source install/setup.bash
+ros2 launch kmu26_auv_vla_data_collector collector.launch.py use_sim_time:=true
+```
+
+Use strict real-package simulation with external MAVROS and the A50 device
+emulator, as described in `docs/contracts/REAL_STACK_PARITY.md`. Enable both
+IMX219-compatible rendered cameras at 30 Hz while collecting at 10 Hz. Reducing
+camera publication to 10 Hz can push modeled capture age beyond the collector's
+0.25 s freshness budget. Keep the physical sensor latency model enabled.
+The current second rendered camera is a stereo view, not validated release-camera
+placement; integration recordings are not task demonstrations for fine-tuning.
+
+Before recording, publish an English instruction on `/vla/task_description`
+(`std_msgs/msg/String`) and provide fresh explicit RC commands on all four axes.
+Start with `/vla_data_collector/start_episode` (`std_srvs/srv/Trigger`), stop with
+`/vla_data_collector/stop_episode` (`std_srvs/srv/SetBool`, task success in `data`).
+Default staging output is `~/vla_data/staging`. Use a custom collector YAML to
+choose another location. Set `use_sim_time:=false` on the physical vehicle.
+
+Conversion runs separately using `requirements-export.txt` and system ffmpeg:
+`ros2 run kmu26_auv_vla_data_collector export_lerobot STAGING OUTPUT`.
+Do not mix stationary connection checks with training demonstrations. Actual VLA
+training and closed-loop policy execution remain separate steps.

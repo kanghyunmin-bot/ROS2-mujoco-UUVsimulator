@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dependency-light contract check for the SLAM research-pool scene."""
+"""Dependency-light contract check for the editable research-pool scene."""
 
 from __future__ import annotations
 
@@ -30,25 +30,31 @@ def main() -> int:
 
     floor = geoms.get("pool_floor")
     _require(floor is not None, "pool_floor is missing")
-    _require(_numbers(floor.get("size")) == (12.5, 6.25, 0.05), "pool must be 25m x 12.5m")
-    _require(_numbers(floor.get("pos"))[2] == -3.05, "pool collision floor must define 3m depth")
+    _require(_numbers(floor.get("size")) == (5.0, 2.5, 0.05), "pool must be 10m x 5m")
+    _require(_numbers(floor.get("pos"))[2] == -5.05, "pool collision floor must define 5m depth")
     water = geoms.get("water_vis")
     _require(water is not None and water.get("group") == "5", "water visual must be non-physics group 5")
     _require(water.get("contype") == "0" and water.get("conaffinity") == "0", "water visual must not collide")
 
-    for name in (
-        "pool_lane_left",
-        "pool_lane_center",
-        "pool_lane_right",
-        "slam_landmark_red_panel",
-        "slam_landmark_yellow_panel",
-        "slam_landmark_column",
-        "slam_landmark_low_block",
-        "slam_gate_top",
-    ):
-        _require(name in geoms, f"missing economical SLAM feature: {name}")
-    _require(not any(name.startswith("course_buoy_") for name in bodies), "research pool must not load competition buoys")
-    _require(len(geoms) <= 50, f"research pool geometry budget exceeded: {len(geoms)}")
+    _require(not any(name.startswith(("slam_", "pool_lane_", "pool_cross_")) for name in geoms),
+             "research pool must be clear of old obstacles and course marks")
+    floats = [name for name in bodies if name.startswith("course_buoy_") and name.endswith("_float")]
+    _require(len(floats) == 3, "research pool must contain three submerged buoys")
+    for name in floats:
+        prefix = name.removesuffix("_float")
+        xyz = _numbers(bodies[name].get("pos"))
+        anchor = _numbers(bodies[prefix + "_magnet_base"].get("pos"))
+        weld = root.find(f'.//weld[@name="{prefix}_magnet_weld"]')
+        _require(-4.3 <= xyz[2] <= -.4, "buoy must be submerged")
+        _require(anchor == (xyz[0], xyz[1], -5), "anchor must follow buoy on the floor")
+        _require(weld is not None and weld.get("body1") == prefix + "_rope_magnet_tip"
+                 and abs(_numbers(weld.get("relpose"))[2] - .215) < 1e-6,
+                 "mooring weld must match buoy depth")
+    _require(root.find('.//texture[@name="pool_tile_texture"]').get("mark") == "edge",
+             "pool must have tile grout")
+    generated = [name for name in geoms if name.startswith(("cad_collision_", "body_2026_visual_")) or "_rope_geom_" in name]
+    _require(len(geoms) - len(generated) <= 150, "pool environment geometry budget exceeded")
+    _require(len(geoms) <= 1200, f"CAD/rope geometry budget exceeded: {len(geoms)}")
 
     _require("base_link" in bodies, "base_link vehicle is missing")
     for name in ("fluid_center_enclosure", "fluid_port_lower_body", "fluid_starboard_lower_body"):
@@ -64,7 +70,6 @@ def main() -> int:
         "hydrophone_center_site",
         "hydrophone_left_site",
         "hydrophone_right_site",
-        "course_buoy_pinger_white_1_acoustic_site",
     ):
         _require(name in sites, f"missing runtime site {name}")
 
@@ -100,7 +105,7 @@ def main() -> int:
     volume_m3 = sum(float(item["volume_share_m3"]) for item in patches)
     _require(abs(volume_m3 - 0.015008) <= 1.0e-12, "patch volume must match the 15.008 kg neutral plant")
     _require(distributed["free_surface"]["mode"] == "flat", "distributed baseline must use a flat surface")
-    _require(distributed["thruster_inflow"]["active"] is True, "distributed profile must enable local inflow")
+    _require(distributed["thruster_inflow"]["active"] is False, "uncalibrated inflow correction must remain disabled")
     _require(
         distributed["hydrodynamic_matrices"]["active"] is True,
         "distributed profile must enable the added-mass matrix",
@@ -127,7 +132,7 @@ def main() -> int:
 
     print(
         "research_pool_scene=PASS "
-        f"geoms={len(geoms)} dimensions=25.0x12.5x3.0m "
+        f"geoms={len(geoms)} dimensions=10.0x5.0x5.0m "
         "calibration=uncalibrated_pool_prior"
     )
     return 0

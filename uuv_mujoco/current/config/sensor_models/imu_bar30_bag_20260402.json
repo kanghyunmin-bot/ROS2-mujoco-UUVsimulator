@@ -1,0 +1,287 @@
+{
+  "schema": "uuv_mujoco.sensor_model.imu_bar30.v1",
+  "profile": "bag_20260402_pressure_observation_envelope",
+  "calibration_status": "unvalidated_prior",
+  "evidence": {
+    "hardware_resolution": {
+      "fcu_imu": {
+        "model": null,
+        "status": "unresolved_in_real_robot_repository",
+        "basis": "The repository exposes MAVROS IMU topics but does not pin the flight-controller IMU part number. Noise values below are engineering priors, not manufacturer specifications."
+      },
+      "pressure_sensor": {
+        "model": "Blue Robotics Bar30 / TE Connectivity MS5837-30BA",
+        "official_product_url": "https://bluerobotics.com/store/sensors-cameras/sensors/bar-depth-pressure-sensor/",
+        "official_pressure_range_bar": 30.0,
+        "official_depth_resolution_mm": 2.0,
+        "official_temperature_accuracy_c": 4.0,
+        "repository_name_basis": "The real stack consistently identifies the device as Bar30; verify the installed serial hardware before treating the model identity as measured vehicle inventory."
+      }
+    },
+    "local_bag": {
+      "source": "document/docsource/bar30_z_check_20260504/bag_2026-04-01_20-08-11/summary.json",
+      "observed_imu_data_rate_hz": 19.989081686670552,
+      "observed_imu_raw_rate_hz": 1.9997564216560926,
+      "observed_static_pressure_rate_hz": 1.9997564216560926,
+      "configured_real_stack_targets_hz": {
+        "imu_data": 50.0,
+        "imu_raw": 50.0,
+        "static_pressure": 10.0
+      },
+      "note": "Runtime targets follow the current real launch contract. The older bag rates document one deployment and do not identify sensor noise during a stationary interval."
+    },
+    "calibration_required": [
+      "Pin the FCU and every active IMU part number and full-scale/filter configuration.",
+      "Fit gyro and accelerometer Allan deviation from a long stationary bag with raw timestamps.",
+      "Fit cross-axis/scale matrices on a rate table and six-position static fixture.",
+      "Fit Bar30 zero offset, thermal coefficient, drift, and pressure residuals against a reference gauge.",
+      "Validate latency and dropout from synchronized capture and host-receive timestamps."
+    ],
+    "bag_20260402_fit": {
+      "source_zip_sha256": "195aca87161fb180bc7c7ee0574523f7840399e439f7b1d245313d8d2faf2d52",
+      "numeric_npz_sha256": "690005e395930eaa086bb8c834867bd1d521935f0dbc3a552bf70b674411bd0b",
+      "fit_window_seconds": [
+        90.0,
+        115.0
+      ],
+      "held_out_window_seconds": [
+        115.0,
+        140.0
+      ],
+      "fit_n": 50,
+      "held_out_n": 50,
+      "fit_difference_scatter_pa": 24.70436697505415,
+      "held_out_difference_scatter_pa": 24.255045104847902,
+      "fitted_white_noise_std_pa": 24.02025008830701,
+      "limitations": [
+        "One session; adjacent held-out window is not independent hardware validation.",
+        "Residual water motion, vibration and frontend filtering remain confounded with noise.",
+        "2 Hz models this recorded output deployment, not current desired 10 Hz operation.",
+        "IMU, DVL, camera, clocks, mass, drag and buoyancy were not fitted.",
+        "Do not use this sparse-output profile as a fix for VLA freshness failures."
+      ],
+      "simulation_check": {
+        "seeds": 100,
+        "samples_per_seed": 50,
+        "same_effective_rate_hz": 2.0,
+        "baseline_scatter_median_pa": 9.574271077563381,
+        "tuned_scatter_median_pa": 24.19446984141075,
+        "baseline_abs_error_pa": 14.68077402728452,
+        "tuned_abs_error_pa": 0.06057526343715125,
+        "tuned_p05_p95_pa": [
+          19.134535628876527,
+          29.858790317142546
+        ]
+      }
+    }
+  },
+  "imu": {
+    "enabled": true,
+    "seed": 2611,
+    "model": {
+      "nominal_rate_hz": 400.0,
+      "gyro_scale_cross_axis_matrix": [
+        1.0002,
+        0.0008,
+        -0.0004,
+        -0.0006,
+        0.9998,
+        0.0007,
+        0.0003,
+        -0.0005,
+        1.0001
+      ],
+      "accel_scale_cross_axis_matrix": [
+        1.001,
+        0.001,
+        -0.0005,
+        -0.0008,
+        0.999,
+        0.0009,
+        0.0004,
+        -0.0007,
+        1.0005
+      ],
+      "gyro_constant_bias_rad_s": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "gyro_turn_on_bias_std_rad_s": [
+        0.002,
+        0.002,
+        0.003
+      ],
+      "gyro_bias_instability_std_rad_s": [
+        0.0005,
+        0.0005,
+        0.0008
+      ],
+      "gyro_bias_correlation_time_s": 300.0,
+      "gyro_random_walk_rad_s_per_sqrt_s": [
+        2e-05,
+        2e-05,
+        3e-05
+      ],
+      "gyro_white_noise_density_rad_s_sqrt_hz": [
+        0.00035,
+        0.00035,
+        0.0005
+      ],
+      "gyro_saturation_rad_s": [
+        34.9066,
+        34.9066,
+        34.9066
+      ],
+      "gyro_quantization_rad_s": [
+        0.001,
+        0.001,
+        0.001
+      ],
+      "accel_constant_bias_mps2": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "accel_turn_on_bias_std_mps2": [
+        0.03,
+        0.03,
+        0.04
+      ],
+      "accel_bias_instability_std_mps2": [
+        0.01,
+        0.01,
+        0.015
+      ],
+      "accel_bias_correlation_time_s": 300.0,
+      "accel_random_walk_mps2_per_sqrt_s": [
+        0.0005,
+        0.0005,
+        0.0007
+      ],
+      "accel_white_noise_density_mps2_sqrt_hz": [
+        0.012,
+        0.012,
+        0.016
+      ],
+      "accel_saturation_mps2": [
+        156.9064,
+        156.9064,
+        156.9064
+      ],
+      "accel_quantization_mps2": [
+        0.001,
+        0.001,
+        0.001
+      ],
+      "attitude_turn_on_bias_std_rad": [
+        0.003,
+        0.003,
+        0.006
+      ],
+      "attitude_white_noise_std_rad": [
+        0.001,
+        0.001,
+        0.002
+      ],
+      "basis": "Generic tactical-consumer MEMS engineering prior. White noise is specified as amplitude spectral density and converted using an ideal Nyquist bandwidth; all terms require hardware calibration."
+    },
+    "timing": {
+      "capture": {
+        "rate_hz": 400.0,
+        "phase_s": 0.0,
+        "start_time_s": 0.0
+      },
+      "device_clock": {
+        "offset_s": 0.0,
+        "drift_ppm": 0.0,
+        "reference_time_s": 0.0,
+        "basis": "Uncalibrated FCU-to-simulation clock prior."
+      },
+      "processing_latency": {
+        "mean_s": 0.0005,
+        "jitter_std_s": 0.0002,
+        "min_s": 0.0,
+        "max_s": 0.0015,
+        "basis": "Uncalibrated FCU sensor-read and estimator scheduling prior."
+      },
+      "transport_latency": {
+        "mean_s": 0.002,
+        "jitter_std_s": 0.001,
+        "min_s": 0.0,
+        "max_s": 0.008,
+        "basis": "Uncalibrated MAVLink/MAVROS delivery prior."
+      }
+    },
+    "packet_transport": {
+      "dropout_probability": 0.0,
+      "queue": {
+        "capacity": 64,
+        "overflow_policy": "drop_oldest"
+      },
+      "basis": "Host-facing packet dropout only; it does not remove the measurement already captured by the FCU."
+    },
+    "ros_output_rate_hz": 50.0,
+    "fcu_rate_basis": "400 Hz simulation control-cadence prior, validated for numerical closed-loop stability, not a measured hardware IMU rate. ROS export rate is independent."
+  },
+  "bar30": {
+    "enabled": true,
+    "seed": 2630,
+    "ambient_temperature_c": 20.0,
+    "model": {
+      "nominal_rate_hz": 2.0,
+      "reference_pressure_pa": 101325.0,
+      "pressure_scale_factor": 1.0,
+      "constant_offset_pa": 0.0,
+      "turn_on_offset_std_pa": 50.0,
+      "bias_instability_std_pa": 25.0,
+      "bias_correlation_time_s": 600.0,
+      "random_walk_pa_per_sqrt_s": 0.5,
+      "white_noise_std_pa": 24.02025008830701,
+      "reference_temperature_c": 20.0,
+      "default_temperature_c": 20.0,
+      "temperature_coefficient_pa_per_c": 4.0,
+      "temperature_time_constant_s": 30.0,
+      "min_pressure_pa": 0.0,
+      "max_pressure_pa": 3000000.0,
+      "quantization_pa": 20.0,
+      "basis": "Bag 2026-04-02 low-motion 90-115 s adjacent pressure differences; 2 Hz observed output envelope, not independently measured ADC capture rate. Only white scatter and effective schedule fitted; all other terms retain priors."
+    },
+    "timing": {
+      "capture": {
+        "rate_hz": 2.0,
+        "phase_s": 0.0,
+        "start_time_s": 0.0
+      },
+      "device_clock": {
+        "offset_s": 0.0,
+        "drift_ppm": 0.0,
+        "reference_time_s": 0.0,
+        "basis": "Uncalibrated FCU-to-simulation clock prior."
+      },
+      "processing_latency": {
+        "mean_s": 0.01,
+        "jitter_std_s": 0.002,
+        "min_s": 0.0,
+        "max_s": 0.02,
+        "basis": "Uncalibrated pressure conversion/filtering prior."
+      },
+      "transport_latency": {
+        "mean_s": 0.003,
+        "jitter_std_s": 0.001,
+        "min_s": 0.0,
+        "max_s": 0.01,
+        "basis": "Uncalibrated MAVLink/MAVROS delivery prior."
+      }
+    },
+    "packet_transport": {
+      "dropout_probability": 0.0,
+      "queue": {
+        "capacity": 32,
+        "overflow_policy": "drop_oldest"
+      },
+      "basis": "Independent host-facing pressure packet transport prior."
+    }
+  },
+  "calibration_scope": "partial_empirical_observation_envelope_not_hardware_calibration"
+}

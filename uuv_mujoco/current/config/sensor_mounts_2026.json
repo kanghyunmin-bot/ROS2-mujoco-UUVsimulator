@@ -1,0 +1,55 @@
+{
+  "units": "metres, robot base_link FLU",
+  "site_positions": {
+    "imu_site": [
+      0.13135,
+      0,
+      0.08541
+    ],
+    "bar30_site": [
+      -0.17364,
+      -0.03034,
+      -0.03286
+    ],
+    "dvl_site": [
+      -0.00488,
+      0,
+      -0.15861
+    ],
+    "ping360_site": [
+      0.01018,
+      0,
+      0.17592
+    ],
+    "cam_left_site": [
+      0.247,
+      0.0,
+      0.037
+    ],
+    "cam_right_site": [
+      0.247,
+      -0.044,
+      -0.033
+    ]
+  },
+  "hand_camera_forward": [
+    0.6333058688606243,
+    -0.7002406354881701,
+    -0.32952500493560943
+  ],
+  "hand_camera_target": [
+    0.37,
+    -0.18,
+    -0.097
+  ],
+  "hand_site_quat_wxyz": [
+    0.901141391988082,
+    0.06780210967288826,
+    0.15273981073232828,
+    -0.40002201912787294
+  ],
+  "source": "2026 full assembly STL, org auv rov_start.launch.py and operator camera annotations",
+  "camera_calibration": "CAD placement estimate, not measured optical extrinsics",
+  "dvl_reference": "0.5 mm below lowest CAD acoustic head face (component 331)",
+  "front_window": "CAD panel 339 visually transparent, solid collision retained"
+}

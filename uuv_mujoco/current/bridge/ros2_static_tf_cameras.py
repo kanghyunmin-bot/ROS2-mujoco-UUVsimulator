@@ -24,7 +24,7 @@ def build_camera_frame_specs(
         cam_left_site_id,
         fallback_pos=np.array([0.1493, -0.0225, -0.02], dtype=np.float64),
     )
-    cam_right_pos, _ = site_local_pose(
+    cam_right_pos, cam_right_quat = site_local_pose(
         model,
         cam_right_site_id,
         fallback_pos=np.array([0.1493, 0.0225, -0.02], dtype=np.float64),
@@ -33,7 +33,7 @@ def build_camera_frame_specs(
     return [
         ("base_link", "camera_link", camera_link_pos, ident),
         ("camera_link", "stereo_left", cam_left_pos - camera_link_pos, ident),
-        ("camera_link", "stereo_right", cam_right_pos - camera_link_pos, ident),
+        ("camera_link", "stereo_right", cam_right_pos - camera_link_pos, cam_right_quat),
         ("stereo_left", "stereo_left_optical", zero, optical_quat),
         ("stereo_right", "stereo_right_optical", zero, optical_quat),
         ("stereo_left", "camera_color_optical_frame", zero, optical_quat),

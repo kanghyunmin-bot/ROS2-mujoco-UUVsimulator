@@ -1038,7 +1038,7 @@
       "calibration_status": "uncalibrated_pool_prior",
       "provenance": "Small deterministic finite-depth indoor-pool ripple example; replace amplitudes, directions and spectra with measured surface records.",
       "wave_kinematics": "finite_depth_gravity",
-      "water_depth_m": 3.0,
+      "water_depth_m": 5.0,
       "gravity_mps2": 9.81,
       "max_orbital_speed_mps": 0.25,
       "harmonics": [

@@ -207,6 +207,55 @@ class DeterministicCurrentField:
             velocity = velocity * (cfg.max_speed_mps / speed)
         return np.asarray(velocity, dtype=np.float64)
 
+    def velocity_world_batch(
+        self, positions_world_m: np.ndarray, time_s: float
+    ) -> np.ndarray:
+        """Return water velocities [m/s] at world positions [m], shape (N, 3).
+
+        Uses the same field, harmonics and per-point speed limit as
+        :meth:`velocity_world`, sharing time-dependent work across all points.
+        """
+        positions = np.asarray(positions_world_m, dtype=np.float64)
+        if positions.ndim != 2 or positions.shape[1] != 3:
+            raise ValueError("positions_world_m must have shape (N, 3)")
+        if not np.all(np.isfinite(positions)) or np.any(
+            np.abs(positions) > _MAX_QUERY_POSITION_M
+        ):
+            raise ValueError("positions_world_m must be finite and within safe bounds")
+        time_value = float(time_s)
+        if not math.isfinite(time_value) or abs(time_value) > _MAX_QUERY_TIME_S:
+            raise ValueError(
+                f"time_s must be finite and within +/-{_MAX_QUERY_TIME_S:g}"
+            )
+        cfg = self.config
+        if not cfg.active:
+            return np.broadcast_to(cfg.base_velocity_world_mps, positions.shape).copy()
+        offset = positions - cfg.origin_world_m
+        velocity = cfg.base_velocity_world_mps + offset @ cfg.gradient_per_s.T
+        for mode in cfg.spatial_modes:
+            phase = np.fmod(
+                offset @ mode.wave_vector_rad_per_m + mode.phase_rad, _TWO_PI
+            )
+            velocity += np.sin(phase)[:, None] * mode.amplitude_mps
+        for mode in cfg.temporal_modes:
+            phase = math.remainder(
+                _TWO_PI * mode.frequency_hz * time_value + mode.phase_rad, _TWO_PI
+            )
+            velocity += mode.amplitude_mps * math.sin(phase)
+        if not np.all(np.isfinite(velocity)):
+            raise FloatingPointError("current field produced a non-finite velocity")
+        maximum = np.max(np.abs(velocity), axis=1)
+        normalized = np.divide(
+            velocity,
+            maximum[:, None],
+            out=np.zeros_like(velocity),
+            where=maximum[:, None] != 0.0,
+        )
+        speed = maximum * np.linalg.norm(normalized, axis=1)
+        limited = speed > cfg.max_speed_mps
+        velocity[limited] *= (cfg.max_speed_mps / speed[limited])[:, None]
+        return velocity
+
 
 def _inactive_config(fallback: np.ndarray) -> CurrentFieldConfig:
     return CurrentFieldConfig(

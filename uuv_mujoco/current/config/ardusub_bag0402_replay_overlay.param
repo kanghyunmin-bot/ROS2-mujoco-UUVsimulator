@@ -1,0 +1,8 @@
+# SIMULATION REPLAY ONLY. July 18 tlog snapshot, not verified April 2 settings.
+# Apply after launcher sim-only defaults. Transport/sensor calibration unchanged.
+ATC_RAT_PIT_D 0.009
+ATC_RAT_RLL_D 0.009
+PSC_ACCZ_P 0.5
+JS_GAIN_DEFAULT 0.100000001
+JS_GAIN_MAX 2
+JS_GAIN_STEPS 4

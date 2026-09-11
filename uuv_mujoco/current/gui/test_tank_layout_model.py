@@ -180,7 +180,9 @@ def generate_test_tank_scene(
 
     _remove_competition_layout(worldbody, root)
     _resize_pool(worldbody)
-    _append_test_tank_tile_wall_panels(worldbody)
+    from .test_tank_appearance import apply_tank_appearance
+
+    apply_tank_appearance(root, half_x=TEST_TANK_X_HALF_M, half_y=TEST_TANK_Y_HALF_M, depth=TEST_TANK_DEPTH_M)
     positions = test_tank_positions(config)
     robot = _named_child(root, "body", "base_link")
     if robot is None:

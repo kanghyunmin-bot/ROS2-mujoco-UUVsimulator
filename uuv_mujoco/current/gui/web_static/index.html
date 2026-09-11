@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>UUV Control GUI</title>
-    <link rel="stylesheet" href="/style.css?v=20260701-joystick-drag">
+    <link rel="stylesheet" href="/style.css?v=20260908-hand-camera">
   </head>
   <body>
     <header class="app-header">
@@ -20,7 +20,7 @@
         </div>
         <div class="header-actions" aria-label="Quick actions">
           <button id="quickPhysicsOpenBtn" type="button">Open Current Params</button>
-          <button id="quickCourseOpenBtn" type="button">Open XY Course</button>
+          <button id="quickCourseOpenBtn" type="button">맵 · 위치 편집</button>
           <button id="quickCenterBtn" type="button">Center Sticks</button>
         </div>
       </div>
@@ -254,7 +254,7 @@
                     <div id="courseStatus" class="status-line">course layout: idle</div>
                     <div id="coursePath" class="path-text">path: loading</div>
                   </div>
-                  <button id="courseOpenBtn" type="button">Open XY Course</button>
+                  <button id="courseOpenBtn" type="button">맵 · 위치 편집</button>
                 </div>
               </fieldset>
 
@@ -290,8 +290,12 @@
                 <div id="stereoCameraConfigStatus" class="status-line">profile: 1280x720 @ 30Hz</div>
                 <div class="stereo-camera-grid">
                   <div id="stereoLeftView" class="stereo-view no-signal">
-                    <img id="stereoLeftImage" alt="stereo camera">
-                    <span>camera</span>
+                    <img id="stereoLeftImage" alt="정면 카메라">
+                    <span>정면 · RGB</span>
+                  </div>
+                  <div id="stereoRightView" class="stereo-view no-signal">
+                    <img id="stereoRightImage" alt="손 카메라">
+                    <span>손 · IMX219 camera1</span>
                   </div>
                 </div>
               </fieldset>
@@ -568,7 +572,7 @@
     <div id="courseDialog" class="dialog hidden" role="dialog" aria-modal="true" aria-labelledby="courseDialogTitle">
       <div class="dialog-card course-dialog">
         <div class="panel-heading">
-          <h2 id="courseDialogTitle">XY Course Layout</h2>
+          <h2 id="courseDialogTitle">수영장 · 로봇 · 부표 위치</h2>
           <button id="courseCloseBtn" type="button">Close</button>
         </div>
         <fieldset class="group">
@@ -577,6 +581,7 @@
             <label>
               <span>Mode</span>
               <select id="courseModeSelect">
+                <option value="research_pool">리서치 풀 · 10 × 5 × 5 m</option>
                 <option value="test_tank">Test tank</option>
                 <option value="competition">Competition course</option>
               </select>
@@ -586,6 +591,7 @@
           <div id="courseDialogPath" class="status-line">path: n/a</div>
           <div id="courseDialogStatus" class="status-line">course layout: idle</div>
         </fieldset>
+        <p class="muted">평면도에서 로봇·부표를 드래그하거나 X·Y와 수심을 입력하세요. 수심은 수면에서 아래쪽으로 잰 거리입니다. 저장 후 재시작하면 반영됩니다.</p>
         <div class="course-editor">
           <canvas id="courseCanvas" width="700" height="600"></canvas>
           <aside class="course-side">
@@ -597,26 +603,26 @@
                     <th>Layer</th>
                     <th>X</th>
                     <th>Y</th>
-                    <th>Z</th>
+                    <th id="courseDepthHeading">Z</th>
                   </tr>
                 </thead>
                 <tbody id="courseRows"></tbody>
               </table>
             </div>
             <fieldset class="group selected-xy">
-              <legend>Selected XY</legend>
+              <legend>선택한 물체 위치 (m)</legend>
               <label><span>X</span><input id="courseXInput" type="number" step="0.001"></label>
               <label><span>Y</span><input id="courseYInput" type="number" step="0.001"></label>
-              <label><span>Z fixed</span><input id="courseZInput" type="text" readonly></label>
+              <label><span id="courseZLabel">수심</span><input id="courseZInput" type="number" step="0.05" min="0.4" readonly></label>
               <label><span>Height</span><input id="courseLayerInput" type="text" readonly></label>
-              <button id="courseUpdateSelectedBtn" type="button">Update Selected</button>
+              <button id="courseUpdateSelectedBtn" type="button">위치 반영</button>
             </fieldset>
           </aside>
         </div>
         <div class="button-row dialog-actions">
           <button id="courseReloadBtn" type="button">Reload</button>
-          <button id="courseSaveBtn" type="button" class="success">Save Layout</button>
-          <button id="courseSaveResetBtn" type="button" class="danger">Save + Restart Sim</button>
+          <button id="courseSaveBtn" type="button" class="success">배치 저장</button>
+          <button id="courseSaveResetBtn" type="button" class="danger">저장 후 시뮬레이션 재시작</button>
           <button id="courseRawBtn" type="button">Raw XML</button>
         </div>
       </div>
@@ -641,6 +647,6 @@
       </div>
     </div>
 
-  <script src="/app.js?v=20260901-sim-physics-preset"></script>
+  <script src="/app.js?v=20260908-hand-camera"></script>
   </body>
 </html>

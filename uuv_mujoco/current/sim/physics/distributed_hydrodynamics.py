@@ -260,6 +260,8 @@ class DistributedHullHydrodynamics:
         surface_height_world_m: SurfaceSample,
         wrench_reference_position_body_m: np.ndarray | None = None,
         time_s: float = 0.0,
+        current_batch_sampler: Callable[[np.ndarray, float], np.ndarray] | None = None,
+        surface_batch_sampler: Callable[[np.ndarray, float], np.ndarray] | None = None,
     ) -> DistributedHydrodynamicsResult:
         """Return bounded distributed buoyancy and drag loads.
 
@@ -268,6 +270,10 @@ class DistributedHullHydrodynamics:
         A current array may contain one shared vector or one vector per patch.
         Surface height accepts the same shared/per-patch convention; a callable
         returns a scalar world-Z height for each patch position.
+        Optional batch samplers receive all patch positions [m], shape (N, 3),
+        and time [s], returning currents [m/s], shape (N, 3), or heights [m],
+        shape (N,). They must represent the same field as the scalar samplers;
+        residual damping still queries the scalar current at its reference point.
         Wrench outputs and aggregate safety limits are evaluated about
         ``wrench_reference_position_body_m``. The default is the body origin.
         """
@@ -299,9 +305,15 @@ class DistributedHullHydrodynamics:
         wrench_offsets_world = positions_world - wrench_reference_world[None, :]
         normals_world = cfg.normals_body @ rotation.T
         _require_finite("transformed patch geometry", positions_world, normals_world)
-        currents = _sample_currents(current_world_mps, positions_world, sample_time)
+        currents = _sample_currents(
+            (current_world_mps if current_batch_sampler is None else
+             current_batch_sampler(positions_world.copy(), sample_time)),
+            positions_world,
+            sample_time,
+        )
         surface_heights = _sample_surface_heights(
-            surface_height_world_m,
+            (surface_height_world_m if surface_batch_sampler is None else
+             surface_batch_sampler(positions_world.copy(), sample_time)),
             positions_world,
             sample_time,
         )

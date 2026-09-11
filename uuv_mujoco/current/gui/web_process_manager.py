@@ -225,11 +225,11 @@ class WebProcessManager:
         elif runtime_mode == "research_pool":
             env.update(
                 {
-                    "ROS2_UUV_HYDROPHONE_NOISE_POOL_X_MIN_M": "-12.5",
-                    "ROS2_UUV_HYDROPHONE_NOISE_POOL_X_MAX_M": "12.5",
-                    "ROS2_UUV_HYDROPHONE_NOISE_POOL_Y_MIN_M": "-6.25",
-                    "ROS2_UUV_HYDROPHONE_NOISE_POOL_Y_MAX_M": "6.25",
-                    "ROS2_UUV_HYDROPHONE_NOISE_POOL_Z_MIN_M": "-3.0",
+                    "ROS2_UUV_HYDROPHONE_NOISE_POOL_X_MIN_M": "-5.0",
+                    "ROS2_UUV_HYDROPHONE_NOISE_POOL_X_MAX_M": "5.0",
+                    "ROS2_UUV_HYDROPHONE_NOISE_POOL_Y_MIN_M": "-2.5",
+                    "ROS2_UUV_HYDROPHONE_NOISE_POOL_Y_MAX_M": "2.5",
+                    "ROS2_UUV_HYDROPHONE_NOISE_POOL_Z_MIN_M": "-5.0",
                     "ROS2_UUV_HYDROPHONE_NOISE_POOL_Z_MAX_M": "-0.2",
                 }
             )
@@ -350,7 +350,7 @@ class WebProcessManager:
             status_attr="_sim_stack_status",
         )
 
-    def restart_sim_stack(self) -> dict[str, Any]:
+    def restart_sim_stack(self, preset_id: str | None = None) -> dict[str, Any]:
         self._clear_stereo_camera_frames()
         self._terminate_named_process("_mission_process", "_mission_status", "mission", push_event=False)
         self._terminate_named_process(
@@ -370,7 +370,7 @@ class WebProcessManager:
             with self._lock:
                 if self._sim_process is proc:
                     self._sim_process = None
-        return self.start_sim_stack()
+        return self.start_sim_stack(preset_id=preset_id) if preset_id else self.start_sim_stack()
 
     def camera_config_payload(self) -> dict[str, Any]:
         config = normalize_camera_config(self._camera_config)

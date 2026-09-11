@@ -8,7 +8,10 @@ from typing import Callable
 import numpy as np
 
 from sim.physics.fluid_geom_common import ArrayParser, fluid_geom_mask, fluid_geom_name
-from sim.physics.fluid_geom_size_runtime import apply_extra_geom_size_scale, apply_profile_geom_size_scales
+from sim.physics.fluid_geom_size_runtime import (
+    apply_extra_geom_size_scale,
+    apply_profile_geom_size_scales,
+)
 from sim.physics.fluidcoef_scale_runtime import (
     apply_extra_fluidcoef_scale,
     apply_global_fluidcoef_scale,
@@ -28,8 +31,23 @@ def apply_fluid_geom_runtime_scales(
 
     fluidcoef_scale = to_float_array(sim_profile.get("mujoco_fluidcoef_scale"))
     fluid_mask = fluid_geom_mask(model)
+    # Vehicle tuning must not resize or retune articulated environment ropes.
+    # Keep the generic fallback for small standalone models without base_link.
+    if hasattr(model, "body") and hasattr(model, "body_parentid"):
+        root = next(
+            (i for i in range(model.nbody) if model.body(i).name == "base_link"), -1
+        )
+        if root >= 0:
+            bodies = {root}
+            for body in range(root + 1, model.nbody):
+                if int(model.body_parentid[body]) in bodies:
+                    bodies.add(body)
+            fluid_mask &= np.isin(model.geom_bodyid, list(bodies))
     fluid_geom_ids = np.flatnonzero(fluid_mask)
-    fluid_geom_names = {int(geom_id): fluid_geom_name(model, mujoco_module, int(geom_id)) for geom_id in fluid_geom_ids}
+    fluid_geom_names = {
+        int(geom_id): fluid_geom_name(model, mujoco_module, int(geom_id))
+        for geom_id in fluid_geom_ids
+    }
     fluidcoef_static_geom_scales: dict[str, np.ndarray] = {}
 
     apply_profile_geom_size_scales(

@@ -813,7 +813,12 @@ class WebGuiController:
     ) -> dict[str, Any]:
         result = self.tools.save_course_layout(positions, mode=mode, robot_xy=robot_xy, reset=reset)
         if reset:
-            result["process"] = self.processes.restart_sim_stack()
+            if mode == "research_pool":
+                selected = self.processes.simulation_config_payload()["selected_preset_id"]
+                preset = selected if selected.startswith("research_pool_") else "research_pool_current"
+                result["process"] = self.processes.restart_sim_stack(preset_id=preset)
+            else:
+                result["process"] = self.processes.restart_sim_stack()
         return result
 
     def _ui_texts(
@@ -1282,7 +1287,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--right-image-topic",
-        default=os.environ.get("UUV_GUI_STEREO_RIGHT_TOPIC", "/stereo/right/image_raw"),
+        default=os.environ.get("UUV_GUI_STEREO_RIGHT_TOPIC", "/imx219/camera1/image_raw/compressed"),
         help="Optional right camera topic kept for stereo compatibility",
     )
     parser.add_argument(

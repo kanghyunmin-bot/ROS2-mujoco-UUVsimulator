@@ -1,8 +1,13 @@
-FROM khm/underwater-humble:dev
+FROM osrf/ros:humble-desktop
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 USER root
+
+RUN apt-get update && apt-get install --no-install-recommends -y sudo python3-pip python3-venv git && \
+    useradd --create-home --shell /bin/bash --uid 1000 robot && \
+    echo "robot ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/robot && \
+    chmod 0440 /etc/sudoers.d/robot
 
 COPY setup/01_install_system_deps.sh /tmp/uuv-setup/01_install_system_deps.sh
 COPY ardupilot/Tools/environment_install/install-prereqs-ubuntu.sh /tmp/ardupilot/Tools/environment_install/install-prereqs-ubuntu.sh
@@ -28,7 +33,7 @@ ENV USER=robot \
 
 # ROS 2 Humble and its visualization packages are already supplied by the
 # verified base image. Avoid registering a second ROS apt source/key here.
-RUN /tmp/uuv-setup/01_install_system_deps.sh --noninteractive
+RUN /tmp/uuv-setup/01_install_system_deps.sh --noninteractive --with-ros2
 
 RUN cd /tmp/ardupilot && \
     Tools/environment_install/install-prereqs-ubuntu.sh -y

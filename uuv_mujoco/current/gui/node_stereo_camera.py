@@ -28,11 +28,11 @@ class StereoCameraFrame:
 
 
 SIDES = ("left", "right")
-SUBSCRIBED_SIDES = ("left",)
+SUBSCRIBED_SIDES = ("left", "right")
 VISION_SOURCE = "vision"
 DEFAULT_TOPICS = {
     "left": "/camera/camera/color/image_raw/compressed",
-    "right": "/stereo/right/image_raw",
+    "right": "/imx219/camera1/image_raw/compressed",
     VISION_SOURCE: "/vision/buoy/image_annotated/compressed",
 }
 DEFAULT_JPEG_QUALITY = 82
@@ -162,13 +162,13 @@ def on_stereo_camera_image(owner: Any, side: str, msg: Any) -> None:
     if side not in SIDES or not bool(getattr(owner, "_stereo_camera_enabled", True)):
         return
     if _is_compressed_image_msg(msg) and bool(getattr(owner, "_stereo_camera_fast_display", True)):
-        _on_compressed_stereo_camera_image(owner, side, msg)
+        _on_compressed_stereo_camera_image(owner, side, msg, process_detector=side == "left")
         return
     status: dict[str, Any] | None = None
     try:
         rgb = _msg_to_rgb_array(msg)
         detector = getattr(owner, "_stereo_camera_buoy_detector", None)
-        if detector is not None:
+        if side == "left" and detector is not None:
             rgb, status = detector.process_rgb(rgb)
         jpeg = _rgb_array_to_jpeg(rgb, quality=int(owner._stereo_camera_jpeg_quality))
     except Exception as exc:

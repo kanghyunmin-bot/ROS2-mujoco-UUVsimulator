@@ -132,6 +132,8 @@ class CourseBuoyRuntime:
     track_csv_path: Path | None
     track_interval_s: float
     log: Callable[[str], None]
+    magnet_force_release: bool = False
+    shape_drag: bool = False
     _last_track_time_s: float = -1.0
     _track_header_written: bool = False
     _next_update_time_s: float = -1.0
@@ -189,6 +191,17 @@ class CourseBuoyRuntime:
                 ("mission_port_rake_", "mission_starboard_rake_")
             )
         )
+        # Research pools can release on hull contact without adding a rake.
+        # Scene-local opt-in preserves the competition scene's probe contract.
+        body_contact_release = False
+        if int(getattr(model, "nnumeric", 0)):
+            numeric_id = mujoco_module.mj_name2id(
+                model, mujoco_module.mjtObj.mjOBJ_NUMERIC, "buoy_body_contact_release"
+            )
+            if numeric_id >= 0:
+                body_contact_release = bool(model.numeric_data[model.numeric_adr[numeric_id]])
+        if env_flag("UUV_COURSE_BUOY_BODY_CONTACT_RELEASE", body_contact_release):
+            vehicle_release_probe_geom_ids = tuple(sorted(vehicle_geom_ids))
         vehicle_root_body_id = int(mujoco_module.mj_name2id(model, obj_body, "base_link"))
         collector_body_id = int(mujoco_module.mj_name2id(model, obj_body, "front_open_buoy_collector"))
         buoys: list[CourseBuoy] = []
@@ -386,6 +399,18 @@ class CourseBuoyRuntime:
             for buoy in runtime.buoys
             for geom_id in buoy.geom_ids
         }
+        def scene_numeric(name: str, default: float) -> float:
+            index = mujoco_module.mj_name2id(model, mujoco_module.mjtObj.mjOBJ_NUMERIC, name)
+            return default if index < 0 else float(model.numeric_data[model.numeric_adr[index]])
+
+        runtime.magnet_force_release = bool(scene_numeric("buoy_magnet_force_release", 0))
+        runtime.shape_drag = bool(scene_numeric("buoy_shape_drag", 0))
+        if runtime.magnet_force_release:
+            runtime.break_force_n = float(env_float(
+                "UUV_COURSE_BUOY_MAGNET_BREAK_N", scene_numeric("buoy_magnet_break_n", 15)))
+            runtime.contact_break_hold_s = float(env_float(
+                "UUV_COURSE_BUOY_CONTACT_BREAK_HOLD_S", scene_numeric("buoy_magnet_break_hold_s", 0.001)))
+            runtime.proximity_release_enable = False
         runtime._release_probe_geom_id_set = frozenset(runtime.vehicle_release_probe_geom_ids)
         # Category 4 is a runtime-only NETTED gate.  An MjModel may be reused
         # by acceptance tests or a soft runtime restart after a previous
@@ -573,6 +598,9 @@ class CourseBuoyRuntime:
                 "net_score_release_time_s": float(buoy.net_score_release_time_s),
                 "release_time_s": float(buoy.release_time_s),
                 "runtime_time_s": now_s,
+                "magnet_load_n": self._magnet_constraint_force_n(buoy) if self.magnet_force_release else 0.0,
+                "magnet_break_n": self.break_force_n,
+                "magnet_force_release": self.magnet_force_release,
             }
             rows[buoy.name] = row
             rows[f"{buoy.name}_float"] = row
@@ -656,7 +684,7 @@ class CourseBuoyRuntime:
         velocity = self._buoy_linear_velocity(buoy) - self._water_velocity_world(
             center_world
         )
-        if vehicle_contact:
+        if vehicle_contact and not self.shape_drag:
             velocity = velocity.copy()
             velocity[2] = 0.0
         speed = float(np.linalg.norm(velocity))
@@ -672,16 +700,26 @@ class CourseBuoyRuntime:
             immersion_fraction = self._clamp_scalar(
                 (
                     self._surface_height_world_m(center_world)
-                    + self.float_half_height_m
+                    + self._float_vertical_radius_m(buoy)
                     - center_z
                 )
-                / max(2.0 * self.float_half_height_m, 1.0e-9),
+                / max(2.0 * self._float_vertical_radius_m(buoy), 1.0e-9),
                 0.0,
                 1.0,
             )
+            area_scale = 1.0
+            if self.shape_drag:
+                geom_id = next((i for i in buoy.geom_ids
+                                if (self.model.geom(i).name or "").endswith("_float_geom")), -1)
+                if geom_id >= 0:
+                    radii = self.model.geom_size[geom_id]
+                    direction = self.data.geom_xmat[geom_id].reshape(3, 3).T @ (velocity / speed)
+                    # Orthographic projected ellipsoid area / upright frontal area.
+                    area_scale = float(radii[2] * np.linalg.norm(direction / radii))
             drag_force -= (
                 self.water_quadratic_drag_nspm2
                 * immersion_fraction
+                * area_scale
                 * speed
                 * velocity
             )
@@ -1111,15 +1149,26 @@ class CourseBuoyRuntime:
             return force * (limit / max(norm, 1.0e-9))
         return force
 
+    def _float_vertical_radius_m(self, buoy: CourseBuoy) -> float:
+        """Return the tilted ellipsoid's vertical half-extent [m]."""
+        if self.shape_drag:
+            for geom_id in buoy.geom_ids:
+                if (self.model.geom(geom_id).name or "").endswith("_float_geom"):
+                    vertical = self.data.geom_xmat[geom_id].reshape(3, 3)[2]
+                    return float(np.linalg.norm(vertical * self.model.geom_size[geom_id]))
+        return self.float_half_height_m
+
     def _touches_float_waterline(self, buoy: CourseBuoy, center_z: float) -> bool:
         center_world = self._buoy_center_world(buoy)
         return float(center_z) <= (
-            self._surface_height_world_m(center_world) + self.float_half_height_m
+            self._surface_height_world_m(center_world) + self._float_vertical_radius_m(buoy)
         )
 
     def _surface_target_center_z(self, buoy: CourseBuoy) -> float:
         center_world = self._buoy_center_world(buoy)
         surface_offset = float(buoy.cached_surface_target_center_z) - self.water_surface_z
+        if self.shape_drag:
+            surface_offset *= self._float_vertical_radius_m(buoy) / self.float_half_height_m
         return self._surface_height_world_m(center_world) + surface_offset
 
     def _water_velocity_world(self, position_world: np.ndarray) -> np.ndarray:
@@ -1629,6 +1678,14 @@ class CourseBuoyRuntime:
         vehicle_contact: bool,
         contact_force_n: float | None = None,
     ) -> None:
+        if self.magnet_force_release:
+            force_n = self._magnet_constraint_force_n(buoy)
+            if force_n < self.break_force_n:
+                self._reset_contact_break_sample(buoy)
+            elif self._contact_break_sustained(buoy, force_n):
+                self._detach(buoy, reason="magnet_load", force_n=force_n)
+                self._reset_contact_break_sample(buoy)
+            return
         contact_force_n = (
             self._contact_force_norm(buoy, vehicle_geom_ids=self._release_probe_geom_id_set)
             if contact_force_n is None and vehicle_contact
@@ -1651,6 +1708,16 @@ class CourseBuoyRuntime:
         # Physical rake contact owns this release path. The generic 15 N break
         # force remains available for non-rake loads only.
         self._release_if_break_force_exceeded(buoy, include_contact=False)
+
+    def _magnet_constraint_force_n(self, buoy: CourseBuoy) -> float:
+        """Return the resultant translational weld reaction [N], excluding torque rows."""
+        if buoy.eq_id < 0 or not self.data.eq_active[buoy.eq_id]:
+            return 0.0
+        equality = int(self.mujoco_module.mjtConstraint.mjCNSTR_EQUALITY)
+        rows = np.flatnonzero((self.data.efc_type == equality) & (self.data.efc_id == buoy.eq_id))
+        if len(rows) < 3:
+            return 0.0
+        return float(np.linalg.norm(self.data.efc_force[rows[:3]]))
 
     def _release_if_break_force_exceeded(self, buoy: CourseBuoy, *, include_contact: bool) -> None:
         force_n, reason = self._release_force_sample(buoy, include_contact=include_contact)
@@ -1752,7 +1819,8 @@ class CourseBuoyRuntime:
         # for even a few physics steps lets the released buoy tunnel through a
         # rake, collector net, or hull. Only the released flex line is muted.
         self._restore_buoy_collisions(buoy)
-        self._suppress_flex_line_collisions(buoy)
+        if not self.magnet_force_release:
+            self._suppress_flex_line_collisions(buoy)
         if buoy.eq_id >= 0 and hasattr(self.data, "eq_active"):
             self.data.eq_active[buoy.eq_id] = 0
         if buoy.flex_line_top_eq_id >= 0 and hasattr(self.data, "eq_active"):

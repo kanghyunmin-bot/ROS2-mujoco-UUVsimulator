@@ -147,6 +147,17 @@ def _apply_timestep_override(
     requested_timestep = float(env_float("UUV_MUJOCO_TIMESTEP", current_timestep))
     if requested_timestep <= 0.0:
         return
+    # Thin CAD rake fingers must resolve contact before a light buoy jig can
+    # cross them. Scene-local limits also apply to larger GUI/env step requests.
+    if int(getattr(model, "nnumeric", 0)):
+        limit_id = mujoco_module.mj_name2id(
+            model, mujoco_module.mjtObj.mjOBJ_NUMERIC, "buoy_contact_max_timestep"
+        )
+        if limit_id >= 0:
+            limit = float(model.numeric_data[model.numeric_adr[limit_id]])
+            if limit > 0 and requested_timestep > limit:
+                print(f"[runtime] CAD buoy contact timestep: {requested_timestep:.6f}s capped={limit:.6f}s", flush=True)
+                requested_timestep = limit
     guard_course_buoy_contacts = env_flag("UUV_COURSE_BUOY_TIMESTEP_GUARD", True)
     if guard_course_buoy_contacts and requested_timestep > 0.005 and _model_has_course_buoys(
         model,

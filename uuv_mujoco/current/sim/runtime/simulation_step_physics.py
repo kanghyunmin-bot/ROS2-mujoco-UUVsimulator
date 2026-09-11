@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 
 from .simulation_step_timing import record_step_phase
+from .physics_step_guard import step_with_reset_guard
 
 
 def apply_common_step_physics(
@@ -35,7 +36,7 @@ def apply_common_step_physics(
 
     if not is_paused:
         started = time.perf_counter()
-        owner.mujoco.mj_step(owner.model, owner.data)
+        step_with_reset_guard(owner.mujoco, owner.model, owner.data)
         record_step_phase(owner, "mj_step", time.perf_counter() - started)
         owner.apply_initial_depth_hold()
 

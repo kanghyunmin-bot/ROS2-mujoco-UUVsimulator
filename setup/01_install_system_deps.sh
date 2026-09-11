@@ -118,6 +118,13 @@ apt_install_available() {
 ensure_ros_apt_repo() {
   local distro_codename arch keyring repo_file repo_line
 
+  # Official ROS images may use deb822 .sources with an embedded signing key.
+  # A second .list with another Signed-By value makes every apt command fail.
+  if grep -RqsE "packages\.ros\.org/ros2/ubuntu" /etc/apt/sources.list.d; then
+    log "using existing ROS apt repository and signing configuration"
+    return 0
+  fi
+
   distro_codename="$(. /etc/os-release && printf '%s' "${UBUNTU_CODENAME:-}")"
   [[ -n "$distro_codename" ]] || {
     log "warning: could not determine Ubuntu codename; skipping ROS apt repo setup"

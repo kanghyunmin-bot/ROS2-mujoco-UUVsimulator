@@ -1,157 +1,80 @@
-# KMU26 UUV MuJoCo + ArduSub Simulator
+# KMU26 Underwater ROV Simulator
 
-**최신 소스 기준: `main` · `2026.09.08-pre-vla`**
+**MuJoCo · ArduSub SITL · ROS 2 Humble · VLA data collection**
 
-VLA 적용 전 기본 ROV 시뮬레이터 기준선이다. FCU 갱신 주기, 센서 전달,
-기본 MAVROS 제어 입력과 DVL→FCU 경로를 정리했다.
-[변경 내용·검증 범위](docs/releases/2026.09.08-pre-vla.md)를 먼저 확인한다.
-이 버전은 소스 기준선이며 이전 ZIP/DEB 설치 파일을 새로 빌드한 릴리스가 아니다.
+10 × 5 × 5 m 연구용 수영장, 전방·손 카메라, DVL·IMU·수심 센서와 부표·자석·줄 접촉을 통합한 ROV 연구 환경입니다. 웹 GUI에서 조종하고 시연을 기록해 LeRobot/U0 학습 입력으로 내보낼 수 있습니다.
 
-Ubuntu 22.04, ROS 2 Humble, MuJoCo and ArduSub SITL을 결합한 수중 로봇
-시뮬레이션 작업공간이다. 활성 시뮬레이터는 `uuv_mujoco/current`이며, 웹/Tk
-GUI, MAVROS 호환 제어면, 카메라·DVL·압력·하이드로폰·Ping360 센서, 부표 수집
-물리를 한 스택에서 제공한다.
+**최신 소스: `main` · 2026.09.12** · [변경 사항](docs/versions/2026.09.12.md) · [설치 안내](README_FIRST.md)
 
-> 현재 폴더는 배포 산출물과 실험 로그가 함께 있던 개발 작업공간에서 정리한
-> 소스 트리다. Git에는 소스와 문서만 올리고 ArduPilot, QGroundControl, 빌드
-> 결과와 로그는 포함하지 않는다.
+![Research pool](docs/assets/research-pool-20260912.png)
 
-<p align="center">
-  <img src="docs/assets/simulator-overview.png" width="100%" alt="MuJoCo top view and YOLO buoy tracking view">
-</p>
+## 최신 장면과 영상
 
-왼쪽은 MuJoCo 수조 전체 시점, 오른쪽은 AUV 전방 카메라와 CPU 기반 YOLO 부표
-추적 화면이다.
+![Research pool scene preview](docs/assets/research-pool-20260912.gif)
 
-## 동작 화면
+[MP4 장면 미리보기](docs/assets/research-pool-20260912.mp4). 실제 MuJoCo 렌더러로 촬영한 카메라 회전 영상입니다. 정책 실행이나 실물 전이 성공 영상이 아닙니다.
 
-<p align="center">
-  <img src="docs/assets/simulator-demo.gif" width="800" alt="UUV simulator and YOLO buoy tracking demo">
-</p>
+| 전방 카메라 | 손 카메라 |
+|---|---|
+| ![Front camera](docs/assets/front-camera-20260912.png) | ![Hand camera](docs/assets/hand-camera-20260912.png) |
 
-실제 시뮬레이션에서 AUV가 이동하는 동안 카메라 영상, 부표 검출 결과와 top-view
-상태가 함께 갱신되는 모습이다.
+## 구현 및 검증 범위
 
-## 빠른 실행
+- **환경:** 연구 수영장과 테스트 수조, 실물 bag을 참고한 파란 라이너 재질, 편집 가능한 부표·ROV 위치.
+- **물리:** 분산 부력·항력·물살, 15 N 자석 분리, 충돌을 유지한 6관절 줄. 접힌 줄의 발산 재현 시험과 안정화 수정 포함.
+- **제어:** ArduSub SITL → PWM → 추진기, MAVROS RC override, 웹 스틱·브라우저 게임패드 지원.
+- **VLA:** 상태 23차원, 행동 4차원 `[surge, sway, heave, yaw]`, 전방·손 카메라, 출처·종료 이유·시각 기록. 정책의 RC 단일 발행자 검사.
+- **파이프라인:** 시뮬레이션 시간 10 Hz 정지 수집 50행 → LeRobot → 실제 U0 전처리와 완전한 16행동 청크 35개 전달 확인.
+- **실물 로그 활용:** 단일 수조 주행 bag으로 제한적인 수평 응답 보정. 별도 opt-in 프로파일이며 기본 모델의 실측 인증이 아닙니다.
 
-이미 설치가 끝난 작업공간에서는 다음이 기본 실행 경로다.
+**학습된 우리 ROV용 VLA 체크포인트·작업 성공·실물 전이는 검증하지 않았습니다.** 정지 연결 데이터를 유효한 작업 시연으로 사용하지 않습니다. CAD 장착값·유체 계수·센서 광학은 추가 실측이 필요합니다.
+
+## 설치와 실행
+
+지원 기준은 **Linux x86_64, Ubuntu 22.04 / ROS 2 Humble**입니다. Ubuntu 24.04 호스트에서는 22.04 개발 컨테이너를 권장합니다. Windows/macOS 네이티브, ARM, GPU 종류 전체에 대한 호환성은 보장하지 않습니다.
+
+```bash
+git lfs install
+git clone --recurse-submodules https://github.com/kanghyunmin-bot/ROS2-mujoco-UUVsimulator.git
+cd ROS2-mujoco-UUVsimulator
+git checkout main
+git submodule update --init --recursive
+git lfs pull
+```
+
+ROS 2 Humble이 설치된 Ubuntu 22.04에서는:
 
 ```bash
 source /opt/ros/humble/setup.bash
+./setup/install_uuv_mujoco.sh --with-ros2 --noninteractive
 source ./.uuv_mujoco_env.sh
-./run_control_gui.sh --web \
-  --sim-preset research_pool_distributed \
-  --host 127.0.0.1 \
-  --port 8878
+./run_control_gui.sh --web --sim-preset research_pool_distributed --host 127.0.0.1 --port 8878
 ```
 
-브라우저에서 <http://127.0.0.1:8878/>을 열고 GUI에서 시뮬레이션 스택을
-시작한다. 환경 선택 메뉴에서 기존 타원체 물리, 분산 물리, 파랑 포함 분산
-물리를 바꿀 수 있다. Tk GUI도 같은 프리셋을 사용하며
-`./run_control_gui.sh --tk --sim-preset research_pool_distributed`로 실행한다.
+<http://127.0.0.1:8878/>에서 **Start SITL/MuJoCo → READY 확인 → Arm** 순서로 시작합니다. 웹 GUI의 기본 카메라 4 Hz 프로파일은 모니터링용이며, 10 Hz VLA 수집에서는 원본 프레임의 유효 비율을 확인해 더 높은 발행률을 선택해야 합니다.
 
-GUI 없이 SITL과 MuJoCo를 직접 실행하려면:
+Docker 설치·GPU 설정은 [개발 컨테이너 안내](docker/ubuntu-dev/README.md)를 참고하세요. 활성 코드는 `uuv_mujoco/current`입니다. `.uuv_mujoco_env.sh`와 시스템 장치 권한은 각 PC에서 설정해야 합니다. GitHub 자동 소스 ZIP에는 submodule 및 Git LFS 실파일이 완전하게 포함되지 않을 수 있으므로 위 clone 절차를 사용하세요.
+
+## 데이터 수집과 검증
+
+| 목적 | 문서 |
+|---|---|
+| 수집기 설정·실행 | [VLA collector](rospkg/src/auv_vla_data_collector/README.md) |
+| 정책 어댑터 | [VLA policy](rospkg/src/kmu26_auv_vla_policy/README.md) |
+| 실물/시뮬 계약 | [Real stack parity](docs/contracts/REAL_STACK_PARITY.md) |
+| 최신 파이프라인 검사 | [Offline hardening](docs/contracts/OFFLINE_HARDENING_20260912.md) |
+| 실물 로그 보정의 범위 | [Horizontal response](docs/contracts/HORIZONTAL_RESPONSE_CALIBRATION_20260912.md) |
+| 줄 안정화와 재현 절차 | [Rope stability](docs/gui/ROPE_STABILITY_20260912.md) |
+| 센서 장착 가정 | [CAD sensor mounts](docs/gui/CAD_SENSOR_MOUNTS.md) |
+
+`/mujoco/ground_truth/pose` 등 시뮬레이션 정답 토픽은 진단용이며 VLA 실물 입력으로 사용하지 않습니다. RC 명령은 추력이나 결과 움직임과 다른 값입니다. 녹화 세션 단위로 학습·검증 데이터를 분리하세요.
 
 ```bash
-cd uuv_mujoco/current
-./start_sitl_mujoco_mj311.sh -- --headless
+# MuJoCo·NumPy가 설치된 Python 환경에서, ROS 없이 수행 가능
+python uuv_mujoco/current/tools/check_research_pool_scene.py
+python uuv_mujoco/current/tools/check_research_pool_magnet_rope.py
+python uuv_mujoco/current/tools/check_rope_fluid_ownership.py
+python -m pytest -q uuv_mujoco/current/tools/test_hydrodynamic_batch_sampling.py
 ```
 
-ROS 2 브리지 없이 물리 런타임만 확인하려면 `--no-ros2`를 추가한다. 실제
-MAVROS/차량 패키지와 동일한 통합면은 `--ros2-real-pkg-compat` 모드를 사용한다.
-
-## 시스템 구성
-
-```text
-Web/Tk GUI
-    |
-    +-- process manager ---- ArduSub SITL
-    |                            |  JSON sensor/servo UDP
-    |                            v
-    +---------------------- MuJoCo runtime
-                                 |
-                                 +-- ROS 2 sensor/ground-truth bridge
-                                 +-- camera / DVL / depth / hydrophone / Ping360
-                                 +-- course buoy / cable / collector physics
-
-Controller or operator
-    -> /mavros/rc/override
-    -> MAVROS or compatibility bridge
-    -> ArduSub
-    -> thruster PWM
-    -> MuJoCo
-```
-
-기본 폐루프 런타임은 100 Hz 센서/추력 루프와 0.005초 MuJoCo timestep을
-사용한다. 웹 GUI의 기본 카메라 프로필은 CPU 여유를 위해 640x360 @ 4 Hz이며,
-720p 프로필은 GUI에서 선택할 수 있다.
-
-상세한 프로세스, 포트, 토픽 소유권과 부표 수집 상태 머신은
-[시뮬레이터 아키텍처](docs/SIM_ARCHITECTURE.md)에 정리되어 있다.
-수영장 SLAM 장면과 선택형 분포 유체물리의 범위·실행법·보정 절차는
-[Research Pool 수중 물리 가이드](uuv_mujoco/current/docs/architecture/RESEARCH_POOL_HYDRODYNAMICS.md)를 참고한다.
-
-## 주요 디렉터리
-
-| 경로 | 역할 |
-| --- | --- |
-| `uuv_mujoco/current/` | 활성 MuJoCo 런타임, 브리지, GUI, 장면과 검증 도구 |
-| `uuv_mujoco/current/sim/` | 물리, 런타임, 전송 계층과 계약 모듈 |
-| `uuv_mujoco/current/bridge/` | ROS 2, MAVLink, 센서 및 영상 브리지 |
-| `uuv_mujoco/current/scenes/` | 수조와 경기장 MuJoCo XML |
-| `uuv_mujoco/current/tools/` | 정적·동적 계약 검사와 재현 도구 |
-| `rospkg/src/` | 실제 차량과 공유하는 ROS 2 패키지 소스 |
-| `docs/contracts/` | 실제 스택과 시뮬레이터의 인터페이스 계약 |
-| `dist2/ubuntu22.04/` | Ubuntu 배포 패키징 스크립트 |
-
-## 핵심 ROS 인터페이스
-
-- 상태/제어: `/mavros/state`, `/mavros/rc/in`, `/mavros/rc/override`
-- raw/derived 항법 센서: `/imu/data`, `/dvl/odometry`, `/depth/pose`
-- 외부 추정기 출력: `/odometry/filtered` (`robot_localization` 소유;
-  MuJoCo bridge는 기본 미발행)
-- 카메라: `/camera/camera/color/image_raw/compressed`
-- 음향: `/audio`, `/audio_info`, `/mujoco/hydrophone/direction`
-- 소나: `/ping360/scan`, `/ping360/image`, `/ping360/config`
-- 임무/평가: `/collector/state`, `/mujoco/course_buoys/status`,
-  `/mujoco/ground_truth/pose`
-
-`/mujoco/ground_truth/pose`와 `/sim/odom`은 검증/진단 전용 ground-truth
-oracle이며 실제 차량용 추정기나 제어기의 입력으로 사용하지 않는다.
-RC를 내는 임무 노드는 동시에 실행하지 않고 mux의 단일 소유권 계약을 지켜야 한다.
-
-## ROS 패키지 빌드
-
-```bash
-cd rospkg
-./build_safe.sh --cmake-args -DBUILD_TESTING=OFF
-source install/setup.bash
-```
-
-`build_safe.sh`는 메모리 부족을 피하기 위해 컴파일 병렬도를 제한한다.
-
-## 빠른 검증
-
-```bash
-python3 uuv_mujoco/current/tools/check_gui_start_contract.py
-python3 uuv_mujoco/current/tools/check_sim_runtime_smooth_contract.py
-python3 uuv_mujoco/current/tools/check_competition_course_scene.py
-python3 uuv_mujoco/current/tools/check_buoy_collector_capture.py
-python3 uuv_mujoco/current/tools/check_dist_rc_override_path.py
-```
-
-실행 중인 외부 MAVROS 경로까지 검사하려면:
-
-```bash
-python3 uuv_mujoco/current/tools/check_external_fsm_mavros_contract.py
-```
-
-## Git에 게시하기 전에
-
-대용량 YOLO 모델은 Git LFS 대상으로 지정되어 있다. 또한 `rospkg/src` 아래에는
-여러 upstream 저장소의 `.git` 메타데이터와 로컬 수정이 남아 있으므로, 최초
-저장소 생성 전에 monorepo 또는 submodule 방식을 결정해야 한다. 안전한 게시
-순서와 현재 주의사항은 [Git 게시 가이드](docs/GIT_PUBLISHING.md)를 따른다.
-
-배포 ZIP/DEB 사용자를 위한 설치 안내는 [README_FIRST.md](README_FIRST.md),
-실제 차량 ROS 패키지 설명은 [rospkg/README.md](rospkg/README.md)를 참고한다.
+실물 bag, 개인 실험 산출물, 학습 가중치는 이번 소스 갱신에 포함하지 않습니다. 문서의 `outputs/` 경로는 로컬 검사 기록을 가리키며, 공개 배포의 검증 요약은 [버전 기록](docs/versions/2026.09.12.md)에 제공합니다. 이전 YOLO 시연은 `docs/assets/simulator-demo.gif`에 보존합니다.

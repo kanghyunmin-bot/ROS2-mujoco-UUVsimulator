@@ -22,7 +22,7 @@ const state = {
   courseDragging: false,
   stereoCameraEnabled: true,
   stereoCameraVisionEnabled: true,
-  stereoSeq: { left: 0 },
+  stereoSeq: { left: 0, right: 0 },
   cameraPollBusy: false,
   cameraPresetSignature: "",
   simPresetSignature: "",
@@ -666,10 +666,12 @@ function renderStereoCamera(camera) {
   }
   if (!enabled) {
     updateStereoView("left", { available: false, seq: 0 });
+    updateStereoView("right", { available: false, seq: 0 });
     setText("stereoCameraStatus", "camera: off");
     return;
   }
   updateStereoView("left", frame);
+  updateStereoView("right", camera.right || {});
   const errorText = camera.error ? ` | ${camera.error}` : "";
   const source = camera.display_source === "vision" ? "vision" : "raw";
   const fallback = camera.vision_fallback ? " (waiting for overlay)" : "";
@@ -791,8 +793,8 @@ function stereoStatusText(frame) {
 }
 
 function updateStereoView(side, frame) {
-  const image = $("stereoLeftImage");
-  const view = $("stereoLeftView");
+  const image = $(side === "right" ? "stereoRightImage" : "stereoLeftImage");
+  const view = $(side === "right" ? "stereoRightView" : "stereoLeftView");
   if (!image || !view) {
     return;
   }
@@ -818,7 +820,7 @@ function setStereoCameraExpanded(expanded) {
   }
   panel.classList.toggle("expanded", Boolean(expanded));
   document.body.classList.toggle("camera-expanded", Boolean(expanded));
-  setPilotControlDocked(Boolean(expanded));
+  setPilotControlDocked(Boolean(expanded) && window.innerWidth >= 900);
   button.textContent = expanded ? "Close" : "Expand";
 }
 
@@ -1336,8 +1338,7 @@ async function applyPhysicsParams(restart = false) {
 async function openCourseDialog() {
   $("courseDialog").classList.remove("hidden");
   setText("courseDialogStatus", "course layout: loading");
-  await postCommand({ command: "course_layout" });
-  await loadCourseLayout();
+  await loadCourseLayout($("simLaunchPreset").value.startsWith("research_pool_") ? "research_pool" : "");
   await pollStatus();
 }
 
@@ -1409,6 +1410,8 @@ function renderCourseMode() {
     ? `${fixed(length, 2)} x ${fixed(width, 2)} x ${fixed(depth, 2)} m`
     : `${fixed(length, 2)} x ${fixed(width, 2)} m`;
   setText("courseTankDimensions", dimensions);
+  setText("courseDepthHeading", layout.mode === "research_pool" ? "수심 ↓" : "Z");
+  $("courseRawBtn").hidden = layout.mode === "research_pool";
 }
 
 function renderCourseRows() {
@@ -1422,7 +1425,7 @@ function renderCourseRows() {
       target.layer || "",
       fixed(target.x, 2),
       fixed(target.y, 2),
-      fixed(target.z, 2),
+      fixed(state.courseLayout?.mode === "research_pool" ? -target.z : target.z, 2),
     ]) {
       const cell = document.createElement("td");
       cell.textContent = text;
@@ -1437,7 +1440,12 @@ function renderCourseSelection() {
   const target = courseTargetById(state.selectedCourseTarget);
   $("courseXInput").value = target ? fixed(target.x, 3) : "";
   $("courseYInput").value = target ? fixed(target.y, 3) : "";
-  $("courseZInput").value = target ? fixed(target.z, 3) : "";
+  const research = state.courseLayout?.mode === "research_pool";
+  $("courseZInput").readOnly = !research;
+  $("courseZInput").value = target ? fixed(research ? -target.z : target.z, 3) : "";
+  $("courseZInput").min = research ? "0.4" : "-100";
+  $("courseZInput").max = research ? String(state.courseLayout.tank.depth_m - (target?.kind === "robot" ? .45 : .7)) : "100";
+  setText("courseZLabel", research ? "수심 ↓" : "Z (고정)");
   $("courseLayerInput").value = target ? target.layer || "" : "";
 }
 
@@ -1453,6 +1461,15 @@ function updateSelectedCourseFromInputs() {
     setText("courseDialogStatus", "course layout: invalid X/Y number");
     return false;
   }
+  if (state.courseLayout?.mode === "research_pool") {
+    const depth = Number($("courseZInput").value);
+    const maximum = state.courseLayout.tank.depth_m - (target.kind === "robot" ? .45 : .7);
+    if (!Number.isFinite(depth) || depth < .4 || depth > maximum) {
+      setText("courseDialogStatus", `수심은 0.4 ~ ${maximum} m 범위로 입력하세요.`);
+      return false;
+    }
+    target.z = -depth;
+  }
   setCourseTargetPosition(target.id, x, y);
   renderCourseLayout();
   return true;
@@ -1464,8 +1481,9 @@ function setCourseTargetPosition(id, x, y) {
     return;
   }
   const tank = state.courseLayout.tank;
-  target.x = clamp(x, -Number(tank.x_half_m || 17.5), Number(tank.x_half_m || 17.5));
-  target.y = clamp(y, -Number(tank.y_half_m || 15.0), Number(tank.y_half_m || 15.0));
+  const margin = state.courseLayout.mode === "research_pool" ? (target.kind === "robot" ? .45 : .25) : 0;
+  target.x = clamp(x, -Number(tank.x_half_m || 17.5) + margin, Number(tank.x_half_m || 17.5) - margin);
+  target.y = clamp(y, -Number(tank.y_half_m || 15.0) + margin, Number(tank.y_half_m || 15.0) - margin);
 }
 
 function courseMetrics() {
@@ -1735,14 +1753,14 @@ function courseSavePayload() {
   const positions = {};
   if (state.courseLayout) {
     state.courseLayout.items.forEach((item) => {
-      positions[item.id] = { x: item.x, y: item.y };
+      positions[item.id] = { x: item.x, y: item.y, ...(state.courseLayout.mode === "research_pool" ? { z: item.z } : {}) };
     });
   }
   const robot = state.courseLayout?.robot;
   return {
     mode: state.courseLayout?.mode || "competition",
     positions,
-    robot_xy: robot ? { x: robot.x, y: robot.y } : null,
+    robot_xy: robot ? { x: robot.x, y: robot.y, ...(state.courseLayout.mode === "research_pool" ? { z: robot.z } : {}) } : null,
   };
 }
 
@@ -1752,7 +1770,13 @@ async function saveCourseLayout(reset = false) {
     return;
   }
   setText("courseDialogStatus", reset ? "course layout: saving + reset" : "course layout: saving");
-  const body = await postCommand({ command: "course_save", ...payload, reset });
+  let body;
+  try {
+    body = await postCommand({ command: "course_save", ...payload, reset });
+  } catch (error) {
+    setText("courseDialogStatus", `저장 실패: ${error.message}`);
+    return;
+  }
   state.courseLayout = normalizeCourseLayout(body);
   setText("courseDialogPath", `path: ${body.path || "n/a"}`);
   setText("courseDialogStatus", body.status || "course layout: saved");

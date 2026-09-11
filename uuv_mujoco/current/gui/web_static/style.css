@@ -534,7 +534,7 @@ canvas {
 
 .stereo-camera-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -597,11 +597,13 @@ canvas {
 
 .stereo-camera-group.expanded .stereo-camera-grid {
   min-height: 0;
+  overflow: auto;
 }
 
 .stereo-camera-group.expanded .stereo-view {
   width: 100%;
-  height: min(78vh, calc(100vh - 122px));
+  height: auto;
+  max-height: 70vh;
   aspect-ratio: auto;
 }
 
@@ -1222,4 +1224,33 @@ canvas {
   .pilot-group.camera-pilot-docked .stick-pad {
     width: min(136px, 100%);
   }
+}
+
+/* Keep both camera feeds usable in the narrow desktop side panel. */
+.stereo-camera-group.expanded {
+  display: block;
+  overflow: auto;
+  z-index: 30;
+}
+.stereo-camera-group.expanded .stereo-camera-grid { overflow: visible; }
+.stereo-camera-group.expanded .stereo-view { aspect-ratio: 16 / 9; height: auto; }
+.stereo-camera-group.expanded .stereo-camera-toolbar { flex-wrap: wrap; }
+@media (max-width: 600px) {
+  .stereo-camera-group.expanded { inset: 8px; }
+  .stereo-camera-group.expanded .stereo-camera-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.stereo-camera-heading { flex-wrap: wrap; }
+.stereo-camera-heading .status-line { flex: 1 0 100%; }
+.stereo-camera-group.expanded .camera-config-row { display: flex; flex-wrap: wrap; margin: 8px 0; }
+.stereo-camera-group.expanded .camera-profile-row { display: flex; flex: 1 1 180px; }
+.stereo-camera-group.expanded .camera-config-row { align-items: center; }
+.stereo-camera-group.expanded .camera-config-row button { height: 32px; align-self: center; }
+.stereo-camera-group.expanded .camera-profile-row { height: 32px; flex-direction: row; align-items: center; }
+.stereo-camera-group.expanded .camera-profile-row select { height: 32px; }
+
+/* Competition controls retained in the DOM for existing status bindings. */
+#pingerHomingPanel,
+#missionMonitorPanel {
+  display: none !important;
 }

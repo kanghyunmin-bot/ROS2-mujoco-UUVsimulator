@@ -1,0 +1,4 @@
+# Install in the ROS Humble Python environment, not the GPU training environment.
+numpy>=1.23.5,<2
+requests>=2.32,<3
+json-numpy>=2,<3

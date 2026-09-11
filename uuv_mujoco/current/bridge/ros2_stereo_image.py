@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 import threading
 from array import array
+from dataclasses import replace
+from pathlib import Path
 from typing import Any
 
 import mujoco
@@ -156,6 +158,34 @@ def _configure_underwater_camera_sensor_model(
     }
     for camera_name in CAMERA_NAMES:
         calibration = bridge._camera_calibrations.get(camera_name, profile.calibration)
+        # The bundled optical prior is not a measured calibration. Derive its
+        # pinhole from the actual render, including the hand camera's wider FOV
+        # and non-16:9 collection resolutions. Explicit calibrations are retained.
+        if (
+            camera_name not in bridge._camera_calibrations
+            and Path(configured_path or DEFAULT_CAMERA_PROFILE_PATH).resolve()
+            == Path(DEFAULT_CAMERA_PROFILE_PATH).resolve()
+            and isinstance(getattr(bridge, "model", None), mujoco.MjModel)
+        ):
+            camera_id = mujoco.mj_name2id(
+                bridge.model, mujoco.mjtObj.mjOBJ_CAMERA, camera_name
+            )
+            if camera_id >= 0:
+                width, height = bridge._stereo_image_width, bridge._stereo_image_height
+                f = (
+                    0.5
+                    * height
+                    / np.tan(np.deg2rad(float(bridge.model.cam_fovy[camera_id])) / 2)
+                )
+                cx, cy = (width - 1) / 2, (height - 1) / 2
+                calibration = replace(
+                    calibration,
+                    width=width,
+                    height=height,
+                    k=(f, 0.0, cx, 0.0, f, cy, 0.0, 0.0, 1.0),
+                    p=(f, 0.0, cx, 0.0, 0.0, f, cy, 0.0, 0.0, 0.0, 1.0, 0.0),
+                    source=f"MuJoCo render {camera_name}; uncalibrated optical prior",
+                )
         bridge._camera_calibrations[camera_name] = calibration
         bridge._camera_sensor_runtimes[camera_name] = CameraSensorRuntime(
             profile,

@@ -1,9 +1,9 @@
 # Ubuntu GPU development container
 
 This environment keeps the repository's Ubuntu 22.04 / ROS 2 Humble stack
-separate from the Ubuntu 24.04 host. It reuses the locally verified
-`khm/underwater-humble:dev` base image and adds the repository's system and
-ArduPilot SITL dependencies.
+separate from the Ubuntu 24.04 host. It builds from public `osrf/ros:humble-desktop` and adds a `robot` development
+user, ROS extras, and ArduPilot SITL dependencies. No private/local base image
+is needed. Initialize the ArduPilot submodule before building.
 
 Run from the repository root:
 
