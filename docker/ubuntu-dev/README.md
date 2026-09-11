@@ -24,3 +24,11 @@ Start the complete simulator with a viewer:
 The project Python environment is stored in `/workspace/.venv`. ArduSub build
 outputs and ccache use named Docker volumes, so rebuilding the container does
 not discard them. The repository itself is bind-mounted at `/workspace`.
+
+## Verification (2026-09-12)
+
+The image was built successfully from public `osrf/ros:humble-desktop` on an
+x86_64 Ubuntu 24.04 host. A fresh container passed ROS Humble `rclpy`, MAVROS
+messages, NumPy, and OpenCV imports as user `robot`. Python project setup,
+SITL compilation, ROS workspace build, and GPU/display configuration remain
+separate steps above; this check is not a full fresh-machine GUI acceptance test.
