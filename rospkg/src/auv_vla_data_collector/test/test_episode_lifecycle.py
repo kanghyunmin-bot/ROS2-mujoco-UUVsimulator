@@ -88,3 +88,71 @@ def test_gap_ends_episode_without_compressing_time(node):
     node._record_sample()
     assert not node._active
     assert len(node._states) == 1
+
+
+def test_recorder_status_tracks_save_and_discard(node):
+    import json
+    from std_srvs.srv import SetBool
+    def status():
+        return json.loads(node._on_get_status(Trigger.Request(), Trigger.Response()).message)
+    assert status()['ready'] and not status()['active']
+    assert node._on_start_episode(Trigger.Request(), Trigger.Response()).success
+    node._record_sample()
+    assert status()['active'] and status()['frames'] == 1
+    assert node._on_stop_episode(SetBool.Request(data=True), SetBool.Response()).success
+    assert status()['last_result']['success'] is True
+    assert status()['last_result']['termination_reason'] == 'operator_stop'
+    node._on_start_episode(Trigger.Request(), Trigger.Response())
+    node._on_discard_episode(Trigger.Request(), Trigger.Response())
+    assert status()['last_result']['termination_reason'] == 'discarded'
+
+
+def test_recorder_status_exposes_automatic_interruption(node):
+    import json
+    node._on_start_episode(Trigger.Request(), Trigger.Response())
+    node._record_sample()
+    node._interrupt_episode('clock_stalled')
+    status = json.loads(node._on_get_status(Trigger.Request(), Trigger.Response()).message)
+    assert not status['active']
+    assert status['last_result']['success'] is False
+    assert status['last_result']['termination_reason'] == 'clock_stalled'
+
+
+def test_web_recorder_real_ros_services(node):
+    import sys
+    import time
+    from pathlib import Path
+    from rclpy.executors import SingleThreadedExecutor
+    from rclpy.node import Node
+    sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'uuv_mujoco/current'))
+    from gui.web_recorder import WebRecorder
+    for timer in node.timers:
+        timer.cancel()
+    gui = Node('recorder_test_gui')
+    manager = WebRecorder(gui, None)
+    manager.session = node._session_id = 'test_session'
+    executor = SingleThreadedExecutor()
+    executor.add_node(gui)
+    executor.add_node(node)
+    def wait_for(predicate):
+        deadline = time.monotonic() + 5
+        while not predicate() and time.monotonic() < deadline:
+            executor.spin_once(timeout_sec=0.05)
+        assert predicate(), manager.payload()
+    try:
+        wait_for(lambda: manager.payload()['ready'])
+        manager.command('start')
+        wait_for(lambda: manager.payload().get('active') and manager.payload()['online'])
+        # The fixture is deliberately a wiring check, not a task demonstration.
+        node._record_sample()
+        manager.command('success')
+        wait_for(lambda: manager.payload().get('last_result', {}).get('success') is True)
+        assert manager.payload()['active'] is False
+        with pytest.raises(ValueError):
+            manager.command('success')
+    finally:
+        manager.shutdown()
+        executor.remove_node(gui)
+        executor.remove_node(node)
+        gui.destroy_node()
+        executor.shutdown()

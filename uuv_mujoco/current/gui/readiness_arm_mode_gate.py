@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Optional
 
 from .models import TelemetrySnapshot
+from sim.startup_alignment import startup_wait_reason
 from .readiness_command_link import sitl_mavlink_command_alive
 from .readiness_feedback_gate import (
     FRESH_FEEDBACK_MAX_AGE_S,
@@ -33,6 +34,9 @@ def arm_mode_gate_reason(
     """Return a blocking reason for GUI arm/mode commands, or empty string."""
     if request_is_always_allowed(arm_value=arm_value, mode=mode):
         return ""
+    alignment_reason = startup_wait_reason(snap.sitl_mavlink_status)
+    if alignment_reason:
+        return alignment_reason
 
     command_alive = sitl_mavlink_command_alive(backend, snap)
     vehicle_reason = vehicle_state_feedback_reason(snap)

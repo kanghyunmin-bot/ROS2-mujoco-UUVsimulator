@@ -5,9 +5,13 @@ from __future__ import annotations
 import time
 
 from .sitl_arm_mode_service_state import ARM_OPPOSITE_COMMAND_GRACE_S
+from sim.startup_alignment import ALIGNMENT_WAIT, alignment_required, transport_aligned
 
 
 def queue_arm_command_impl(transport, arm: bool) -> bool:
+    if arm and alignment_required() and not transport_aligned(transport):
+        print(f"[sitl_transport] arm rejected: {ALIGNMENT_WAIT}", flush=True)
+        return False
     now_wall = time.monotonic()
     target_arm = bool(arm)
     recent_opposite_command = _recent_opposite_arm_command(transport, target_arm, now_wall)

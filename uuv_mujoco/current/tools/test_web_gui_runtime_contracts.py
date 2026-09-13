@@ -152,7 +152,9 @@ class _ControllerProcesses:
 class WebGuiRuntimeContractsTest(unittest.TestCase):
     def _controller(self) -> tuple[WebGuiController, _Node, _ControllerProcesses]:
         node = _Node()
-        controller = WebGuiController(node)
+        with patch("gui.web_app.WebRecorder") as recorder:
+            recorder.return_value.payload.return_value = {}
+            controller = WebGuiController(node)
         processes = _ControllerProcesses()
         controller.processes = processes
         controller.replay = _EmptyStatus()

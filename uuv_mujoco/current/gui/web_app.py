@@ -43,6 +43,7 @@ from .runtime import rclpy
 from .web_process_manager import WebProcessManager
 from .web_rc_replay import WebRcReplayManager
 from .web_tool_files import WebToolFileManager
+from .web_recorder import WebRecorder
 from .sim_launch_preset import default_sim_launch_preset_id, sim_launch_preset_ids
 
 
@@ -105,6 +106,7 @@ class WebGuiController:
         self.processes = WebProcessManager(node)
         self.replay = WebRcReplayManager(node, self.release_rc)
         self.tools = WebToolFileManager(node)
+        self.recorder = WebRecorder(node, self.processes)
 
     def start(self) -> None:
         self._spin_thread = threading.Thread(target=self._spin_loop, name="uuv-web-rclpy", daemon=True)
@@ -140,6 +142,7 @@ class WebGuiController:
             self._pinger_was_running or self.processes.pinger_homing_running()
         )
         self.replay.stop()
+        self.recorder.shutdown()
         # Stop the exclusive pinger RC source first, but keep MAVROS and the
         # rclpy spin loop alive until the release/disarm queue is drained.
         # WebProcessManager.stop_all() also stops MAVROS, so calling it here
@@ -370,6 +373,7 @@ class WebGuiController:
         tool_payload.update(self.tools.status_payload())
         return {
             "telemetry": _telemetry_payload(snap),
+            "recorder": self.recorder.payload(),
             "backend": {
                 "label": self.node.backend_label(),
                 "mapping": self.node.rc_mapping_summary(),
@@ -1021,6 +1025,10 @@ class UuvWebHandler(BaseHTTPRequestHandler):
 
     def _handle_command(self, payload: dict[str, Any]) -> dict[str, Any]:
         command = str(payload.get("command", "rc" if self.path.startswith("/api/rc") else "")).strip().lower()
+        if command == "recorder_prepare":
+            return self.controller.recorder.prepare(payload.get("task", ""), payload.get("mode", "STABILIZE"))
+        if command == "recorder_action":
+            return self.controller.recorder.command(payload.get("action", ""))
         if command == "arm":
             value = bool(payload.get("value", True))
             self.controller.enqueue_arm_command(value)
@@ -1115,10 +1123,7 @@ class UuvWebHandler(BaseHTTPRequestHandler):
         if command == "pinger_homing_stop":
             return {"command": "pinger_homing_stop", **self.controller.stop_pinger_homing()}
         if command == "gt_mission_start":
-            values = payload.get("values", payload)
-            if not isinstance(values, dict):
-                raise ValueError("mission values must be an object")
-            return {"command": "gt_mission_start", **self.controller.start_ground_truth_mission(values)}
+            raise ValueError("Mission FSM is not available in this GUI")
         if command == "gt_mission_stop":
             return {"command": "gt_mission_stop", **self.controller.stop_ground_truth_mission()}
         if command == "rc_replay_load":

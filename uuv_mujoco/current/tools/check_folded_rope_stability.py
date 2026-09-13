@@ -21,14 +21,16 @@ a = p.parse_args()
 scene = CURRENT / "scenes/research_pool_slam_scene.xml"
 xml = scene.read_text()
 if a.without_fix:
-    xml = xml.replace('armature="0.00001"', 'armature="0.000001"')
+    xml = xml.replace('armature="0.00002"', 'armature="0.000001"')
 with tempfile.NamedTemporaryFile(mode="w", suffix=".xml", dir=scene.parent) as f:
     f.write(xml)
     f.flush()
     m = mujoco.MjModel.from_xml_path(f.name)
 d = mujoco.MjData(m)
 with np.load(a.snapshot) as z:
-    m.opt.timestep = float(z["timestep"])
+    m.opt.timestep = float(z["timestep"]) if a.without_fix else min(
+        m.opt.timestep, float(z["timestep"])
+    )
     d.qpos[:] = z["qpos"]
     d.qvel[:] = z["qvel"] * 1e-5
     d.eq_active[:] = z["eq_active"]

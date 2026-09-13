@@ -10,6 +10,7 @@ CURRENT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(CURRENT))
 from sim.physics.fluid_contract import configure_fluid_model_contract
 from tools.check_buoy_physics_contract import runtime_for
+from sim.runtime.model_runtime_setup import _align_fcu_timestep, _apply_timestep_override
 
 
 def main():
@@ -18,7 +19,12 @@ def main():
             model = mujoco.MjModel.from_xml_path(
                 str(CURRENT / "scenes/research_pool_slam_scene.xml")
             )
-            model.opt.timestep = 1 / 1200  # GUI's 400 Hz FCU, three physics substeps.
+            _apply_timestep_override(
+                model, mujoco_module=mujoco,
+                env_float=lambda name, default: .0025 if name == "UUV_MUJOCO_TIMESTEP" else default,
+                env_flag=lambda name, default: default,
+            )
+            _align_fcu_timestep(model, 400.)
             configure_fluid_model_contract(
                 model=model,
                 fluid_model=fluid,
@@ -41,7 +47,7 @@ def main():
                 for i in range(model.ngeom)
                 if (model.geom(i).name or "").startswith(buoy.name + "_rope_geom_")
             }
-            for _ in range(1800):
+            for _ in range(round(1.5 / model.opt.timestep)):
                 data.qpos[:7] = origin
                 data.qpos[2] += 0.5 * min(data.time, 1.1)
                 data.qvel[:6] = [0, 0, 0.5 if data.time < 1.1 else 0, 0, 0, 0]

@@ -23,6 +23,7 @@ class InitialDepthHoldState(InitialHoldMappingMixin, InitialHoldActionMixin):
     pose_qpos: np.ndarray | None = None
     release_sim_time: float | None = None
     pending_release_reason: str | None = None
+    startup_alignment_required: bool = False
 
     @classmethod
     def create(

@@ -24,7 +24,8 @@ def build_mooring_rope(root: ET.Element, prefix: str, length_m: float) -> None:
             base.remove(child)
     # Six links retain bending and solid capsule contacts at low solver cost.
     # Numerical rotational inertia floor [kg m^2], not a measured rope inertia.
-    # 1e-6 reproduced folded-rope divergence; 1e-5 retains sag/contact.
+    # 1e-5 still diverged during a 20 N attached-rope impact on MuJoCo 3.12.
+    # 2e-5 is a numerical prior; retain sag/contact and recheck after edits.
     count = 6
     step = length_m / count
     parent = base
@@ -42,7 +43,7 @@ def build_mooring_rope(root: ET.Element, prefix: str, length_m: float) -> None:
             name=f"{prefix}_rope_joint_{index:02}",
             type="ball",
             damping="0.0003",
-            armature="0.00001",
+            armature="0.00002",
         )
         ET.SubElement(
             link,

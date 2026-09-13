@@ -185,6 +185,7 @@ class VlaDataCollector(Node):
 
         self._active = False
         self._episode_index = -1
+        self._last_result = {}
         self._episode_task = ""
         self._recording_dir: Optional[Path] = None
         self._states: list[np.ndarray] = []
@@ -241,6 +242,7 @@ class VlaDataCollector(Node):
         self.create_service(Trigger, "~/start_episode", self._on_start_episode)
         self.create_service(SetBool, "~/stop_episode", self._on_stop_episode)
         self.create_service(Trigger, "~/discard_episode", self._on_discard_episode)
+        self.create_service(Trigger, "~/get_status", self._on_get_status)
         self.create_timer(1.0 / self._rate_hz, self._record_sample)
 
         self._dataset_root.mkdir(parents=True, exist_ok=True)
@@ -524,6 +526,35 @@ class VlaDataCollector(Node):
                 continue
         return max(indices, default=-1) + 1
 
+    def _on_get_status(self, request: Trigger.Request, response: Trigger.Response) -> Trigger.Response:
+        """Expose recorder state without changing control or episode ownership."""
+        del request
+        with self._lock:
+            now = self._now()
+            missing = self._missing_start_inputs(now)
+            if not self._task_description:
+                missing.append("task instruction")
+            if self.get_parameter("use_sim_time").value and (
+                now <= 0 or time.monotonic() - self._clock_wall > 1.0
+            ):
+                missing.append("simulation clock")
+            warnings = [name for name, value in (
+                ("DVL velocity", self._dvl_twist), ("DVL validity/altitude", self._dvl_data)
+            ) if not self._is_fresh(value, now, self._max_sensor_age)]
+            response.success = True
+            response.message = json.dumps({
+                "active": self._active, "ready": not missing,
+                "missing": missing, "warnings": warnings,
+                "frames": len(self._states) if self._active else 0,
+                "duration_s": (self._ros_timestamps[-1] - self._ros_timestamps[0])
+                    if self._active and self._ros_timestamps else 0.0,
+                "episode_index": self._episode_index, "task": self._task_description,
+                "session_id": self._session_id, "dataset_root": str(self._dataset_root),
+                "expected_mode": self._expected_mode, "pwm_span": self._pwm_span,
+                "last_result": getattr(self, "_last_result", {}),
+            }, allow_nan=False)
+            return response
+
     def _on_start_episode(
         self, request: Trigger.Request, response: Trigger.Response
     ) -> Trigger.Response:
@@ -612,6 +643,7 @@ class VlaDataCollector(Node):
             self._active = False
             self._recording_dir = None
             shutil.rmtree(target)
+            self._last_result = {"termination_reason": "discarded", "episode_index": self._episode_index}
             response.success = True
             response.message = f"Discarded episode {self._episode_index}"
             self.get_logger().warning(response.message)
@@ -877,6 +909,8 @@ class VlaDataCollector(Node):
         )
         final_path = self._dataset_root / f"episode_{self._episode_index:06d}"
         os.replace(recording_dir, final_path)
+        self._last_result = {"path": str(final_path), "success": success,
+                             "termination_reason": termination_reason, "frames": frame_count}
         self._active = False
         self._recording_dir = None
         self.get_logger().info(

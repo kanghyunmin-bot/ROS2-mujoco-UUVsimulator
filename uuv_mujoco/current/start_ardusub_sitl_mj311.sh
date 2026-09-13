@@ -855,6 +855,9 @@ append_param_if_not_overridden "BRD_OPTIONS" "${SITL_BRD_OPTIONS:-0}"
 append_param_if_not_overridden "BRD_SAFETYENABLE" "${SITL_BRD_SAFETYENABLE:-0}"
 append_param_if_not_overridden "BRD_SAFETYOPTION" "${SITL_BRD_SAFETYOPTION:-3}"
 append_param_if_not_overridden "BRD_SAFETY_MASK" "${SITL_BRD_SAFETY_MASK:-0}"
+# Startup alignment is gated by fresh EKF telemetry in the simulator/GUI.
+# Do not add the INS calibration bit: the JSON virtual IMU has no physical
+# six-position calibration and ArduSub would reject it even after alignment.
 append_param_if_not_overridden "ARMING_CHECK" "${SITL_ARMING_CHECK:-194}"
 
 # SITL scheduler contract:

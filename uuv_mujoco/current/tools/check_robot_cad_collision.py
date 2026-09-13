@@ -89,7 +89,7 @@ def main():
         "hand missed buoy"
     )
     runtime.apply(model.opt.timestep)
-    assert not buoy.detached, "first contact bypassed 15 N magnetic load threshold"
+    assert not buoy.detached, "first contact bypassed magnetic load threshold"
     print("PASS CAD hand physically contacts buoy; touching alone does not release")
 
 

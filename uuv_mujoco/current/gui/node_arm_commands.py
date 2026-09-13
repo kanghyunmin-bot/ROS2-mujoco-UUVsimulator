@@ -182,6 +182,11 @@ def _send_current_arm_request(
 
 def arm(self, value: bool) -> None:
     requested = bool(value)
+    if requested:
+        alignment_reason = self._arm_mode_gate_reason(arm_value=True)
+        if alignment_reason:
+            self._push_event(f"arm blocked: {alignment_reason}; 정렬 후 ARM을 다시 눌러주세요")
+            return
     current_arm_command_generation(self)
     with self._arm_rc_sequence_lock:
         if (

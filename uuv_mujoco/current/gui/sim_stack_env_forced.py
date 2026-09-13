@@ -59,6 +59,7 @@ def apply_real_start_contract(
     elif run_mode == "closed_loop":
         forced["UUV_REAL_START_STATE"] = "0"
         forced["UUV_YAW_TORQUE_SCALE"] = "1.0"
+        forced["UUV_STARTUP_ALIGNMENT_HOLD"] = env.get("UUV_STARTUP_ALIGNMENT_HOLD", "1")
 
 
 def apply_run_mode_contract(forced: dict[str, str], *, run_mode: str) -> None:

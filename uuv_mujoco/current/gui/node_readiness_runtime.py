@@ -10,9 +10,14 @@ from .node_backend_runtime import effective_backend, service_ready
 from .node_readiness_inputs import build_command_readiness_inputs
 from .readiness_contract import sitl_extnav_ready, sitl_mavlink_command_alive
 from sim.runtime.readiness import command_readiness_label
+from sim.runtime.readiness_label_types import NOT_READY_STYLE
+from sim.startup_alignment import startup_wait_reason
 
 
 def control_readiness(owner: Any, snap: TelemetrySnapshot) -> tuple[str, str]:
+    alignment_reason = startup_wait_reason(snap.sitl_mavlink_status)
+    if alignment_reason:
+        return alignment_reason, NOT_READY_STYLE
     arm_ready = service_ready(owner._arm_client) > 0
     mode_ready = service_ready(owner._mode_client) > 0
     rc_ready = owner._manual_control_subscribers > 0 or owner._rc_override_subscribers > 0

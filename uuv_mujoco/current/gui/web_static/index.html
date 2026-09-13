@@ -1,16 +1,17 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>UUV Control GUI</title>
-    <link rel="stylesheet" href="/style.css?v=20260908-hand-camera">
+    <title>UUV · Control Station</title>
+    <link rel="stylesheet" href="/style.css?v=20260914-industrial">
+  <link rel="stylesheet" href="/studio.css?v=20260914-industrial">
   </head>
   <body>
     <header class="app-header">
       <div class="title-stack">
-        <h1>UUV Control GUI</h1>
-        <p>MuJoCo, ROS2, MAVROS, RViz, Ping360</p>
+        <h1>UUV <span> / CONTROL STATION</span></h1>
+        <p>SIMULATION / TELEOPERATION / DEMONSTRATION</p>
       </div>
       <div class="header-right">
         <div class="header-pills">
@@ -259,7 +260,7 @@
               </fieldset>
 
               <fieldset id="stereoCameraPanel" class="group stereo-camera-group">
-                <legend>Stereo Camera</legend>
+                <legend>01 / 전방 · 손 카메라</legend>
                 <div class="panel-heading stereo-camera-heading">
                   <div id="stereoCameraStatus" class="status-line">camera: waiting for ROS image</div>
                   <label class="check-row stereo-camera-toggle">
@@ -372,141 +373,11 @@
                   <button id="pingerHomingStopBtn" type="button" class="danger">Stop pinger</button>
                 </div>
               </fieldset>
-
-              <fieldset id="missionFsmPanel" class="group mission-fsm-group">
-                <legend>Mission FSM</legend>
-                <div class="mission-status-row">
-                  <div>
-                    <strong>Sensor-driven C++ mission</strong>
-                    <div id="missionFsmStatus" class="status-line">mission: stopped</div>
-                  </div>
-                  <label class="check-row">
-                    <input id="missionDryRun" type="checkbox">
-                    <span>Dry run</span>
-                  </label>
-                </div>
-                <div class="mission-grid">
-                  <label class="entry-row">
-                    <span>Course</span>
-                    <select id="missionCourse">
-                      <option value="a">A</option>
-                      <option value="b">B</option>
-                      <option value="all" selected>Full + pinger</option>
-                    </select>
-                  </label>
-                  <label class="entry-row">
-                    <span>Own</span>
-                    <select id="missionOwnCourse">
-                      <option value="a">A side</option>
-                      <option value="b">B side</option>
-                    </select>
-                  </label>
-                  <label class="entry-row">
-                    <span>Targets</span>
-                    <input id="missionMaxTargets" type="number" min="0" max="64" step="1" value="0">
-                  </label>
-                  <label class="entry-row">
-                    <span>Rate</span>
-                    <input id="missionRateHz" type="number" min="0.5" max="60" step="0.5" value="30">
-                  </label>
-                  <label class="entry-row">
-                    <span>Transport</span>
-                    <select id="missionTransport">
-                      <option value="command_override">direct sim</option>
-                      <option value="rc_override" selected>RC override</option>
-                      <option value="auto">auto</option>
-                    </select>
-                  </label>
-                </div>
-                <div class="button-row">
-                  <label class="check-row">
-                    <input id="missionNoPinger" type="checkbox">
-                    <span>No pinger</span>
-                  </label>
-                  <label class="check-row">
-                    <input id="missionNearestFirst" type="checkbox" checked>
-                    <span>Nearest first</span>
-                  </label>
-                  <button id="missionStartBtn" type="button" class="success">Start mission</button>
-                  <button id="missionStopBtn" type="button" class="danger">Stop mission</button>
-                </div>
-              </fieldset>
             </div>
           </section>
         </div>
       </section>
     </main>
-
-    <section id="missionMonitorPanel" class="panel mission-monitor-panel">
-      <div class="panel-heading">
-        <h2>Mission Check</h2>
-        <div id="missionMonitorProcess" class="status-line">mission: stopped</div>
-      </div>
-      <div class="mission-monitor-grid">
-        <div class="mission-card">
-          <span>FSM</span>
-          <strong id="missionMonitorState">n/a</strong>
-        </div>
-        <div class="mission-card">
-          <span>Mission Time</span>
-          <strong id="missionMonitorElapsed">n/a</strong>
-        </div>
-        <div class="mission-card">
-          <span>Robot State</span>
-          <strong id="missionMonitorRobotState">n/a</strong>
-        </div>
-        <div class="mission-card">
-          <span>Mode</span>
-          <strong id="missionMonitorMode">n/a</strong>
-        </div>
-        <div class="mission-card wide">
-          <span>Target</span>
-          <strong id="missionMonitorTarget">n/a</strong>
-        </div>
-        <div class="mission-card">
-          <span>Capture state</span>
-          <strong id="missionMonitorCapture">n/a</strong>
-        </div>
-        <div class="mission-card">
-          <span>Collector weld</span>
-          <strong id="missionMonitorCollectorEq">n/a</strong>
-        </div>
-        <div class="mission-card">
-          <span>Counts</span>
-          <strong id="missionMonitorCounts">n/a</strong>
-        </div>
-        <div class="mission-card">
-          <span>p_intake</span>
-          <strong id="missionMonitorIntake">n/a</strong>
-        </div>
-        <div class="mission-card">
-          <span>cmd</span>
-          <strong id="missionMonitorCommand">n/a</strong>
-        </div>
-        <div class="mission-card">
-          <span>Robot</span>
-          <strong id="missionMonitorRobot">n/a</strong>
-        </div>
-      </div>
-      <div class="mission-buoy-table-wrap">
-        <table class="mission-buoy-table">
-          <thead>
-            <tr>
-              <th>Buoy</th>
-              <th>Course</th>
-              <th>Class</th>
-              <th>State</th>
-              <th>XYZ</th>
-              <th>Release</th>
-              <th>Flags</th>
-            </tr>
-          </thead>
-          <tbody id="missionBuoyRows">
-            <tr><td colspan="6">no mission data</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
 
     <div id="ping360Dialog" class="dialog hidden" role="dialog" aria-modal="true" aria-labelledby="ping360Title">
       <div class="dialog-card">
@@ -647,6 +518,10 @@
       </div>
     </div>
 
-  <script src="/app.js?v=20260908-hand-camera"></script>
+  <script src="/windows.js?v=20260914-industrial"></script>
+  <script src="/recorder.js?v=20260914-industrial"></script>
+  <script src="/studio.js?v=20260914-industrial"></script>
+  <script src="/sensors.js?v=20260914-industrial"></script>
+  <script src="/app.js?v=20260914-industrial"></script>
   </body>
 </html>

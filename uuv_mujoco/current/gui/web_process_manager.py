@@ -119,7 +119,7 @@ class WebProcessManager:
             "pinger_homing_status": self._pinger_homing_status,
             "vision_status": self._vision_status,
             "mission_status": self._mission_status,
-            "mission_monitor": self.mission_monitor_payload(),
+            "mission_monitor": {},  # Mission FSM removed from the operator surface.
             "ros_pkg_fcu_url": self._ros_pkg_fcu_url,
             "camera_config": self.camera_config_payload(),
             "simulation_config": self.simulation_config_payload(),

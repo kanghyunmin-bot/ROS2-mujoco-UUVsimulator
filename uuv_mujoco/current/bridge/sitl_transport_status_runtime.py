@@ -5,12 +5,13 @@ from __future__ import annotations
 import time
 
 from bridge.sitl_status import build_mavlink_telemetry_status
+from sim.startup_alignment import alignment_required, estimator_aligned
 
 
 def mavlink_telemetry_status(self) -> dict[str, object]:
     """Latest passive ArduPilot MAVLink telemetry observed by the SITL link."""
     now_wall = time.monotonic()
-    return build_mavlink_telemetry_status(
+    status = build_mavlink_telemetry_status(
         base_status=self._mavlink_telemetry_observer.status_snapshot(now_wall),
         now_wall=now_wall,
         command_endpoint=str(self._sitl_cmd_mavlink_endpoint),
@@ -42,6 +43,9 @@ def mavlink_telemetry_status(self) -> dict[str, object]:
         extnav_grace_s=float(self._sitl_extnav_grace_s),
         extnav_fault=str(self._sitl_extnav_fault),
     )
+    status["startup_alignment_required"] = alignment_required()
+    status["startup_alignment_ready"] = estimator_aligned(status)
+    return status
 
 
 @property

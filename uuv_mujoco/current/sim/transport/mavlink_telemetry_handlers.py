@@ -51,6 +51,12 @@ def handle_target_mavlink_telemetry(
     now_wall: float,
 ) -> None:
     if msg_type == "ATTITUDE":
+        previous_boot = status_data.get("att_time_boot_ms")
+        boot = data.get("time_boot_ms")
+        if isinstance(previous_boot, (int, float)) and isinstance(boot, (int, float)) and boot < previous_boot - 1000:
+            # Do not reuse a previous SITL boot's healthy estimator report.
+            status_data.pop("ekf_flags", None)
+            status_data.pop("ekf_wall_s", None)
         store_fields(status_data, "att", data, now_wall, ATTITUDE_FIELDS)
     elif msg_type == "LOCAL_POSITION_NED":
         store_fields(status_data, "lpos", data, now_wall, LOCAL_POSITION_FIELDS)

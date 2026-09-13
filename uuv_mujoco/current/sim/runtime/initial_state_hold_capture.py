@@ -28,6 +28,10 @@ def capture_configured_initial_depth_hold(
             base_state=base_state,
             depth_m=float(args.initial_depth_m),
         )
+    elif initial_depth_hold.get("startup_alignment_required", False):
+        _capture_initial_depth_hold_pose(
+            initial_depth_hold=initial_depth_hold, data=data, base_state=base_state,
+        )
 
 
 def _capture_initial_depth_hold_pose(

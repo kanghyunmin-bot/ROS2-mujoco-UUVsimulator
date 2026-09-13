@@ -44,12 +44,13 @@ const CLIENT_ID = `web-${Date.now().toString(36)}-${Math.random().toString(36).s
 const $ = (id) => document.getElementById(id);
 
 function fixed(value, digits = 2) {
-  const number = Number(value);
+  const number = value === null || value === undefined || value === "" ? NaN : Number(value);
   return Number.isFinite(number) ? number.toFixed(digits) : "n/a";
 }
 
 function telemetryNumber(telemetry, ...keys) {
   for (const key of keys) {
+    if (telemetry[key] === null || telemetry[key] === undefined || telemetry[key] === "") continue;
     const value = Number(telemetry[key]);
     if (Number.isFinite(value)) {
       return value;
@@ -136,7 +137,7 @@ async function postRc(payload) {
 
 function setText(id, value) {
   const el = $(id);
-  if (el) {
+  if (el && el.textContent !== String(value ?? "")) {
     el.textContent = value ?? "";
   }
 }
@@ -517,9 +518,13 @@ function setToggle(targetId, buttonId, openText, closeText) {
   const button = $(buttonId);
   target.classList.toggle("hidden");
   button.textContent = target.classList.contains("hidden") ? openText : closeText;
+  button.setAttribute("aria-expanded", String(!target.classList.contains("hidden")));
+  button.setAttribute("aria-controls", targetId);
 }
 
 function renderStatus(payload) {
+  if (window.renderRecorder) window.renderRecorder(payload.recorder || {});
+  if (window.renderStationSensors) window.renderStationSensors(payload);
   const telemetry = payload.telemetry || {};
   const ui = payload.ui || {};
   const processes = payload.processes || {};
@@ -538,7 +543,7 @@ function renderStatus(payload) {
   setText("rosPkgPill", ui.ros_pkg_status || "mavros: stopped");
   setText("ping360Pill", ui.ping360_summary || "ping360: no status");
   setText("vehicleSummary", ui.vehicle_summary || "vehicle: disconnected");
-  setText("motionSummary", ui.motion_summary || "motion: n/a");
+  setText("motionSummary", Number.isFinite(telemetryNumber(telemetry, "imu_age_s")) ? (ui.motion_summary || "motion: n/a") : "IMU 미수신 · 자세 정보 없음");
   setText("controlSummaryLeft", ui.control_summary || "control: idle");
   setText("statusText", ui.status || "disconnected");
   setText("modeText", ui.mode || "mode: UNKNOWN");
@@ -557,7 +562,6 @@ function renderStatus(payload) {
   setText("simStackStatus", ui.sim_stack_status || "sim: stopped");
   setText("rosPkgStatus", ui.ros_pkg_status || "mavros: stopped");
   setText("rvizStatus", ui.rviz_status || "rviz: stopped");
-  setText("missionFsmStatus", ui.mission_status || processes.mission_status || "mission: stopped");
   setText("pingerHomingStatus", ui.pinger_homing_status || processes.pinger_homing_status || "pinger homing: stopped");
   setText("ping360Summary", ui.ping360_summary || "ping360: no status");
   setText("ping360ViewStatus", ui.ping360_view_status || "ping360 view: closed");
@@ -572,7 +576,6 @@ function renderStatus(payload) {
   renderStep("camera config", () => renderCameraConfig(payload.camera_config || processes.camera_config || {}));
   renderStep("simulation config", () => renderSimulationConfig(processes.simulation_config || {}, processes));
   renderStep("stereo camera", () => renderStereoCamera(payload.stereo_camera || {}));
-  renderStep("mission monitor", () => renderMissionMonitor(payload.mission_monitor || processes.mission_monitor || {}));
 
   setValue("rcReplayPath", tools.rc_replay_path || "");
   setValue("rcReplayRate", tools.rc_replay_rate || "1.0");
@@ -818,10 +821,25 @@ function setStereoCameraExpanded(expanded) {
   if (!panel || !button) {
     return;
   }
+  if (Boolean(expanded) === panel.classList.contains("expanded")) return;
+  if (expanded) {
+    state.cameraDock = {parent: panel.parentElement, next: panel.nextElementSibling};
+    $("cameraWindowBody").append(panel);
+  }
   panel.classList.toggle("expanded", Boolean(expanded));
   document.body.classList.toggle("camera-expanded", Boolean(expanded));
   setPilotControlDocked(Boolean(expanded) && window.innerWidth >= 900);
-  button.textContent = expanded ? "Close" : "Expand";
+  if (expanded && state.pilotDock) $("cameraWindowBody").append($("pilotControlGroup"));
+  button.textContent = expanded ? "확대 닫기 · Esc" : "Expand";
+  if (expanded) {
+    window.StationWindows.open("cameraDialog", button);
+  } else {
+    const dock = state.cameraDock;
+    if (dock?.next?.parentElement === dock.parent) dock.parent.insertBefore(panel, dock.next);
+    else if (dock?.parent) dock.parent.append(panel);
+    state.cameraDock = null;
+    window.StationWindows.close("cameraDialog");
+  }
 }
 
 function setPilotControlDocked(docked) {
@@ -861,6 +879,7 @@ function toggleStereoCameraZoom() {
 }
 
 function renderRcFeedback(telemetry) {
+  if (!$("rcFeedbackBars").closest("details")?.open) return;
   const rcIn = Array.isArray(telemetry.rc_in) ? telemetry.rc_in : [];
   const rcOut = Array.isArray(telemetry.rc_out) ? telemetry.rc_out : [];
   const hasRcIn = rcIn.some((value) => Number(value) > 0);
@@ -881,6 +900,10 @@ function renderRcFeedback(telemetry) {
 
 function renderEvents(events) {
   const list = $("eventList");
+  if (!list.closest("details")?.open) return;
+  const key = JSON.stringify(events.slice(0, 16));
+  if (list.dataset.renderKey === key) return;
+  list.dataset.renderKey = key;
   list.replaceChildren();
   events.slice(0, 16).forEach((text) => {
     const item = document.createElement("li");
@@ -889,121 +912,16 @@ function renderEvents(events) {
   });
 }
 
-function renderMissionMonitor(mission) {
-  const processText = mission.process_status || "mission: stopped";
-  const age = Number(mission.status_age_s);
-  const ageText = Number.isFinite(age) && mission.available ? `, age ${fixed(age, 1)}s` : "";
-  setText("missionMonitorProcess", `${processText}${ageText}`);
-  if (!mission.available) {
-    setText("missionMonitorState", mission.running ? "WAIT_DATA" : "stopped");
-    setText("missionMonitorElapsed", "n/a");
-    setText("missionMonitorRobotState", "n/a");
-    setText("missionMonitorMode", "n/a");
-    setText("missionMonitorTarget", "n/a");
-    setText("missionMonitorCapture", "n/a");
-    setText("missionMonitorCollectorEq", "n/a");
-    setText("missionMonitorCounts", "n/a");
-    setText("missionMonitorIntake", "n/a");
-    setText("missionMonitorCommand", "n/a");
-    setText("missionMonitorRobot", "n/a");
-    renderMissionBuoys([]);
-    return;
-  }
-  const displayState = mission.waiting_for_pose ? "WAIT_POSE" : mission.waiting_for_arm ? "WAIT_ARM" : mission.state || "n/a";
-  setText("missionMonitorState", displayState);
-  const elapsed = Number(mission.mission_elapsed_s);
-  setText("missionMonitorElapsed", Number.isFinite(elapsed) ? `${fixed(elapsed, 1)}s` : "n/a");
-  setText("missionMonitorRobotState", mission.robot_state_label || mission.robot_state || "n/a");
-  const armedText = mission.armed === true ? "armed" : mission.armed === false ? "disarmed" : "arm n/a";
-  setText("missionMonitorMode", `${mission.mode || "n/a"} | ${armedText}`);
-  const targetClass = mission.target_class || mission.target_label || "";
-  const target = mission.target_id || mission.collector_target_id
-    ? `${targetClass} ${mission.target_id || mission.collector_target_id} ${mission.target_state || ""}`.trim()
-    : targetClass || "none";
-  setText("missionMonitorTarget", target);
-  setText("missionMonitorCapture", mission.capture_state || (mission.capture_flag ? "CAPTURED" : "FREE"));
-  setText("missionMonitorCollectorEq", mission.collector_eq_active === true ? "active" : "inactive");
-  setText(
-    "missionMonitorCounts",
-    `rem ${mission.remaining_attached ?? 0} | detach ${mission.detached_count ?? mission.processed_count ?? 0} | net ${
-      mission.netted_count ?? mission.collected_count ?? 0
-    } | release ${mission.released_count ?? mission.scored_count ?? 0} | fail ${mission.failed_count ?? 0}`
-  );
-  const p = Array.isArray(mission.detection?.p_intake) ? mission.detection.p_intake : null;
-  const source = mission.detection?.coordinate_source || "";
-  setText(
-    "missionMonitorIntake",
-    p ? `${fixed(p[0], 2)}, ${fixed(p[1], 2)}, ${fixed(p[2], 2)}${source ? ` (${source})` : ""}` : "n/a"
-  );
-  const cmd = mission.command || {};
-  setText(
-    "missionMonitorCommand",
-    `${fixed(cmd.forward)} ${fixed(cmd.sway)} ${fixed(cmd.heave)} ${fixed(cmd.yaw)}${cmd.phase ? ` ${cmd.phase}` : ""}`
-  );
-  const robot = mission.robot || {};
-  if ((!Array.isArray(robot.xyz) || robot.xyz.length < 3) && Array.isArray(mission.robot_xyz)) {
-    [robot.x, robot.y, robot.z] = mission.robot_xyz;
-    robot.depth_m = -Number(robot.z);
-  }
-  const depth = Number(robot.depth_m);
-  const yaw = Number(robot.yaw_rad);
-  const x = Number(robot.x);
-  const y = Number(robot.y);
-  const z = Number(robot.z);
-  const xyzText = [x, y, z].every(Number.isFinite)
-    ? `${fixed(x, 2)}, ${fixed(y, 2)}, ${fixed(z, 2)}`
-    : "xyz n/a";
-  setText(
-    "missionMonitorRobot",
-    `${xyzText} | depth ${Number.isFinite(depth) ? `${fixed(depth, 2)}m` : "n/a"} | yaw ${Number.isFinite(yaw) ? fixed(yaw, 2) : "n/a"}`
-  );
-  renderMissionBuoys(Array.isArray(mission.buoys) ? mission.buoys : [], mission.target_id || "");
-}
-
-function renderMissionBuoys(buoys, targetId = "") {
-  const body = $("missionBuoyRows");
-  body.replaceChildren();
-  if (!buoys.length) {
-    const row = document.createElement("tr");
-    row.innerHTML = '<td colspan="7">no mission data</td>';
-    body.appendChild(row);
-    return;
-  }
-  buoys.forEach((buoy) => {
-    const row = document.createElement("tr");
-    if (buoy.id === targetId) {
-      row.className = "current-target";
-    }
-    const xyz = Array.isArray(buoy.target_xyz) ? buoy.target_xyz : Array.isArray(buoy.xyz) ? buoy.xyz : [];
-    const source = buoy.coordinate_source || "";
-    const flags = [
-      source,
-      buoy.physical_detached ? "detached" : "",
-      buoy.eq_active === false ? "eq off" : "",
-      buoy.processed ? "processed" : "",
-      buoy.failed ? "failed" : "",
-    ].filter(Boolean).join(", ");
-    const stateClass = String(buoy.state || "").toLowerCase();
-    const cells = [
-      buoy.id || "",
-      buoy.course || "",
-      buoy.class_name || "",
-      `<span class="mission-state ${stateClass}">${buoy.state || ""}</span>`,
-      xyz.length >= 3 ? `${fixed(xyz[0], 1)}, ${fixed(xyz[1], 1)}, ${fixed(xyz[2], 1)}` : "n/a",
-      `${fixed(buoy.release_force_threshold_n, 1)}N`,
-      flags || "-",
-    ];
-    cells.forEach((value, index) => {
-      const cell = document.createElement("td");
-      if (index === 3) {
-        cell.innerHTML = value;
-      } else {
-        cell.textContent = value;
-      }
-      row.appendChild(cell);
-    });
-    body.appendChild(row);
-  });
+function drawSensorUnavailable(canvas, label) {
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#08131d";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#86a4b7";
+  ctx.font = "13px monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(label, canvas.width / 2, canvas.height / 2);
+  ctx.textAlign = "start";
 }
 
 function drawAttitude(telemetry) {
@@ -1011,6 +929,11 @@ function drawAttitude(telemetry) {
   const ctx = canvas.getContext("2d");
   const w = canvas.width;
   const h = canvas.height;
+  if (!Number.isFinite(telemetryNumber(telemetry, "imu_age_s"))) {
+    drawSensorUnavailable(canvas, "IMU / NO DATA");
+    setText("attitudeText", "roll=— pitch=— yaw=—");
+    return;
+  }
   const roll = telemetryNumber(telemetry, "roll_deg", "roll");
   const pitch = telemetryNumber(telemetry, "pitch_deg", "pitch");
   const yaw = telemetryNumber(telemetry, "yaw_deg", "yaw");
@@ -1018,23 +941,23 @@ function drawAttitude(telemetry) {
   const displayPitch = Number.isFinite(pitch) ? pitch : 0;
   const displayYaw = Number.isFinite(yaw) ? yaw : 0;
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = "#0f172a";
+  ctx.fillStyle = "#08131d";
   ctx.fillRect(0, 0, w, h);
   ctx.save();
   ctx.translate(w / 2, h / 2 + clamp(displayPitch / 45, -1, 1) * 38);
   ctx.rotate((displayRoll * Math.PI) / 180);
-  ctx.fillStyle = "#1d4ed8";
+  ctx.fillStyle = "#183344";
   ctx.fillRect(-w, -h, w * 2, h);
-  ctx.fillStyle = "#7c4a22";
+  ctx.fillStyle = "#1c262c";
   ctx.fillRect(-w, 0, w * 2, h);
-  ctx.strokeStyle = "#e5e7eb";
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = "#9abbce";
+  ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(-w, 0);
   ctx.lineTo(w, 0);
   ctx.stroke();
   ctx.restore();
-  ctx.strokeStyle = "#f8fafc";
+  ctx.strokeStyle = "#c9e5f5";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(w / 2 - 42, h / 2);
@@ -1044,10 +967,10 @@ function drawAttitude(telemetry) {
   ctx.moveTo(w / 2, h / 2 - 8);
   ctx.lineTo(w / 2, h / 2 + 8);
   ctx.stroke();
-  ctx.fillStyle = "#f8fafc";
+  ctx.fillStyle = "#c9e5f5";
   ctx.font = "13px system-ui";
   ctx.fillText(`yaw ${fixed(displayYaw, 2)}`, 12, 22);
-  setText("attitudeText", `roll=${fixed(displayRoll, 2)} pitch=${fixed(displayPitch, 2)} yaw=${fixed(displayYaw, 2)}`);
+  setText("attitudeText", `roll=${fixed(displayRoll, 2)} pitch=${fixed(displayPitch, 2)} yaw=${fixed(displayYaw, 2)}${telemetry.imu_age_s > 2 ? " · STALE" : ""}`);
 }
 
 function drawDepth(telemetry) {
@@ -1056,10 +979,15 @@ function drawDepth(telemetry) {
   const w = canvas.width;
   const h = canvas.height;
   const depth = telemetryNumber(telemetry, "depth_m", "depth");
+  if (!Number.isFinite(depth)) {
+    drawSensorUnavailable(canvas, "DEPTH / NO DATA");
+    setText("depthText", "depth: — m");
+    return;
+  }
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = "#081018";
+  ctx.fillStyle = "#08131d";
   ctx.fillRect(0, 0, w, h);
-  ctx.strokeStyle = "#1f8a70";
+  ctx.strokeStyle = "#2b495d";
   ctx.lineWidth = 1;
   for (let i = 0; i <= 5; i += 1) {
     const y = 12 + (i / 5) * (h - 24);
@@ -1070,17 +998,17 @@ function drawDepth(telemetry) {
   }
   const depthRatio = Number.isFinite(depth) ? clamp(depth / 20, 0, 1) : 0;
   const markerY = 12 + depthRatio * (h - 24);
-  ctx.fillStyle = "#eab308";
+  ctx.fillStyle = "#8acde9";
   ctx.beginPath();
   ctx.moveTo(28, markerY);
   ctx.lineTo(40, markerY - 7);
   ctx.lineTo(40, markerY + 7);
   ctx.closePath();
   ctx.fill();
-  ctx.fillStyle = "#e5e7eb";
+  ctx.fillStyle = "#9abbce";
   ctx.font = "13px system-ui";
   ctx.fillText(Number.isFinite(depth) ? `${fixed(depth, 3)} m` : "n/a", 48, markerY + 4);
-  setText("depthText", Number.isFinite(depth) ? `depth: ${fixed(depth, 3)} m` : "depth: n/a");
+  setText("depthText", Number.isFinite(depth) ? `depth: ${fixed(depth, 3)} m${telemetry.depth_age_s > 2 ? " · STALE" : ""}` : "depth: n/a");
 }
 
 async function pollStatus() {
@@ -1186,23 +1114,6 @@ function replayPayload() {
   };
 }
 
-function missionPayload() {
-  const course = $("missionCourse").value;
-  const ownCourse = $("missionOwnCourse").value === "b" ? "b" : "a";
-  const rawMaxTargets = Number($("missionMaxTargets").value) || 0;
-  return {
-    course,
-    own_course: course === "all" ? ownCourse : course,
-    max_targets: course === "all" && rawMaxTargets <= 1 ? 0 : rawMaxTargets,
-    rate_hz: Number($("missionRateHz").value) || 30,
-    transport: $("missionTransport").value,
-    no_pinger: course === "all" ? false : $("missionNoPinger").checked,
-    nearest_first: course === "all" ? true : $("missionNearestFirst").checked,
-    dry_run: $("missionDryRun").checked,
-    mission_log: "auto",
-  };
-}
-
 function pingerHomingPayload() {
   const numericValue = (id, fallback) => {
     const value = Number($(id).value);
@@ -1244,24 +1155,8 @@ function applyPingerHomingAlgorithmDefaults() {
   );
 }
 
-function applyMissionCourseDefaults() {
-  const course = $("missionCourse").value;
-  const allCourse = course === "all";
-  $("missionOwnCourse").disabled = !allCourse;
-  if (!allCourse) {
-    $("missionOwnCourse").value = course;
-  }
-  if (allCourse) {
-    if ((Number($("missionMaxTargets").value) || 0) <= 1) {
-      $("missionMaxTargets").value = "0";
-    }
-    $("missionNoPinger").checked = false;
-    $("missionNearestFirst").checked = true;
-  }
-}
-
 async function openPhysicsDialog() {
-  $("physicsDialog").classList.remove("hidden");
+  window.StationWindows.open("physicsDialog");
   setText("physicsDialogStatus", "physics params: loading");
   await postCommand({ command: "physics_params" });
   await loadPhysicsParams();
@@ -1289,6 +1184,7 @@ function renderPhysicsRows() {
 
     const input = document.createElement("input");
     input.className = "physics-value";
+    input.setAttribute("aria-label", row.label || row.key);
     input.dataset.key = row.key;
     input.value = row.value ?? "";
     input.disabled = Boolean(row.inactive);
@@ -1336,7 +1232,7 @@ async function applyPhysicsParams(restart = false) {
 }
 
 async function openCourseDialog() {
-  $("courseDialog").classList.remove("hidden");
+  window.StationWindows.open("courseDialog");
   setText("courseDialogStatus", "course layout: loading");
   await loadCourseLayout($("simLaunchPreset").value.startsWith("research_pool_") ? "research_pool" : "");
   await pollStatus();
@@ -1537,7 +1433,7 @@ function renderCourseCanvas() {
   const ctx = canvas.getContext("2d");
   const metrics = courseMetrics();
   ctx.clearRect(0, 0, metrics.width, metrics.height);
-  ctx.fillStyle = "#dff8ff";
+  ctx.fillStyle = "#0b1823";
   ctx.strokeStyle = "#0f172a";
   ctx.lineWidth = 2;
   ctx.fillRect(metrics.left, metrics.top, metrics.right - metrics.left, metrics.bottom - metrics.top);
@@ -1552,8 +1448,8 @@ function renderCourseCanvas() {
 function drawCourseGrid(ctx, metrics) {
   ctx.font = "11px system-ui";
   ctx.textBaseline = "top";
-  ctx.strokeStyle = "#b7dce8";
-  ctx.fillStyle = "#475569";
+  ctx.strokeStyle = "#294354";
+  ctx.fillStyle = "#91aabb";
   ctx.lineWidth = 1;
   const xStep = courseGridStep(metrics.xHalf * 2);
   const yStep = courseGridStep(metrics.yHalf * 2);
@@ -1596,7 +1492,7 @@ function formatGridValue(value) {
 }
 
 function drawCourseMarks(ctx, metrics) {
-  ctx.fillStyle = "#0f172a";
+  ctx.fillStyle = "#bdd5e4";
   ctx.font = "bold 14px system-ui";
   ctx.textAlign = "center";
   ctx.fillText("A course", (metrics.left + metrics.right) / 4, metrics.top + 16);
@@ -1625,28 +1521,28 @@ function drawCourseTarget(ctx, target, metrics) {
   }
   const radius = COURSE_POINT_RADIUS + (selected ? 2 : 0);
   ctx.fillStyle = target.color_hex || "#64748b";
-  ctx.strokeStyle = selected ? "#2563eb" : "#020617";
+  ctx.strokeStyle = selected ? "#9ed8f4" : "#68879c";
   ctx.lineWidth = target.fixed_underwater ? 2 : 1;
   ctx.beginPath();
   ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
   if (target.fixed_underwater) {
-    ctx.strokeStyle = "#475569";
+    ctx.strokeStyle = "#91aabb";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.arc(point.x, point.y, radius + 4, 0, Math.PI * 2);
     ctx.stroke();
   }
-  ctx.fillStyle = "#0f172a";
+  ctx.fillStyle = "#bdd5e4";
   ctx.font = selected ? "bold 11px system-ui" : "11px system-ui";
   ctx.fillText(target.label || target.id, point.x + radius + 5, point.y + 4);
 }
 
 function drawPingerTarget(ctx, target, point, selected) {
   const radius = COURSE_POINT_RADIUS + (selected ? 3 : 1);
-  ctx.strokeStyle = selected ? "#2563eb" : target.color_hex || "#dc2626";
-  ctx.fillStyle = "#ffffff";
+  ctx.strokeStyle = selected ? "#9ed8f4" : target.color_hex || "#dc2626";
+  ctx.fillStyle = "#0b1823";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
@@ -1663,15 +1559,15 @@ function drawPingerTarget(ctx, target, point, selected) {
   ctx.beginPath();
   ctx.arc(point.x, point.y, radius + 9, -0.8, 0.8);
   ctx.stroke();
-  ctx.fillStyle = "#0f172a";
+  ctx.fillStyle = "#bdd5e4";
   ctx.font = selected ? "bold 11px system-ui" : "11px system-ui";
   ctx.fillText(target.label || "Pinger", point.x + radius + 12, point.y + 4);
 }
 
 function drawRobotTarget(ctx, target, point, selected) {
   const radius = COURSE_POINT_RADIUS + 8 + (selected ? 3 : 0);
-  ctx.fillStyle = target.color_hex || "#2563eb";
-  ctx.strokeStyle = selected ? "#f97316" : "#0f172a";
+  ctx.fillStyle = target.color_hex || "#9ed8f4";
+  ctx.strokeStyle = selected ? "#f97316" : "#bdd5e4";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(point.x + radius, point.y);
@@ -1682,12 +1578,12 @@ function drawRobotTarget(ctx, target, point, selected) {
   ctx.fill();
   ctx.stroke();
   ctx.setLineDash([4, 3]);
-  ctx.strokeStyle = "#1d4ed8";
+  ctx.strokeStyle = "#8acde9";
   ctx.beginPath();
   ctx.arc(point.x, point.y, radius + 4, 0, Math.PI * 2);
   ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = "#0f172a";
+  ctx.fillStyle = "#bdd5e4";
   ctx.font = "bold 12px system-ui";
   ctx.fillText(target.label || "ROBOT", point.x + radius + 7, point.y + 4);
 }
@@ -1829,8 +1725,9 @@ function bindControls() {
   $("telemetryToggle").addEventListener("click", () => {
     document.body.classList.toggle("telemetry-hidden");
     $("telemetryToggle").textContent = document.body.classList.contains("telemetry-hidden")
-      ? "Show telemetry"
-      : "Hide telemetry";
+      ? "상태 패널 펼치기"
+      : "상태 패널 접기";
+    $("telemetryToggle").setAttribute("aria-expanded", String(!document.body.classList.contains("telemetry-hidden")));
   });
   $("vehicleDetailsToggle").addEventListener("click", () =>
     setToggle("vehicleDetails", "vehicleDetailsToggle", "Details >", "Details <")
@@ -1860,6 +1757,7 @@ function bindControls() {
   $("stereoCameraApplyBtn").addEventListener("click", () => applyCameraConfig(true).catch(console.error));
   $("stereoCameraSaveBtn").addEventListener("click", () => applyCameraConfig(false).catch(console.error));
   $("stereoCameraZoomBtn").addEventListener("click", toggleStereoCameraZoom);
+  $("cameraDialog").addEventListener("station-window-closed", () => setStereoCameraExpanded(false));
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       setStereoCameraExpanded(false);
@@ -1884,17 +1782,6 @@ function bindControls() {
     setText("pingerHomingStatus", "pinger homing: stopping");
     postCommand({ command: "pinger_homing_stop" }).then(pollStatus).catch(console.error);
   });
-  $("missionStartBtn").addEventListener("click", () => {
-    applyMissionCourseDefaults();
-    setText("missionFsmStatus", "mission: starting");
-    postCommand({ command: "gt_mission_start", values: missionPayload() }).then(pollStatus).catch(console.error);
-  });
-  $("missionCourse").addEventListener("change", applyMissionCourseDefaults);
-  $("missionStopBtn").addEventListener("click", () => {
-    setText("missionFsmStatus", "mission: stopping");
-    postCommand({ command: "gt_mission_stop" }).then(pollStatus).catch(console.error);
-  });
-
   $("rcReplayBrowseBtn").addEventListener("click", () => {
     $("rcReplayPath").focus();
     $("rcReplayPath").select();
@@ -1915,28 +1802,28 @@ function bindControls() {
     postCommand({ command: "rc_replay_seek", time_s: Number(event.target.value) || 0 }).then(pollStatus).catch(console.error)
   );
 
-  $("physicsOpenBtn").addEventListener("click", () => openPhysicsDialog().catch(console.error));
-  $("courseOpenBtn").addEventListener("click", () => openCourseDialog().catch(console.error));
-  $("quickPhysicsOpenBtn").addEventListener("click", () => openPhysicsDialog().catch(console.error));
-  $("quickCourseOpenBtn").addEventListener("click", () => openCourseDialog().catch(console.error));
-  $("physicsCloseBtn").addEventListener("click", () => $("physicsDialog").classList.add("hidden"));
+  $("physicsOpenBtn").addEventListener("click", () => openPhysicsDialog().catch(error => setText("physicsDialogStatus", `불러오기 실패: ${error.message}`)));
+  $("courseOpenBtn").addEventListener("click", () => openCourseDialog().catch(error => setText("courseDialogStatus", `불러오기 실패: ${error.message}`)));
+  $("quickPhysicsOpenBtn").addEventListener("click", () => openPhysicsDialog().catch(error => setText("physicsDialogStatus", `불러오기 실패: ${error.message}`)));
+  $("quickCourseOpenBtn").addEventListener("click", () => openCourseDialog().catch(error => setText("courseDialogStatus", `불러오기 실패: ${error.message}`)));
+  $("physicsCloseBtn").addEventListener("click", () => window.StationWindows.close("physicsDialog"));
   $("physicsReloadBtn").addEventListener("click", () => loadPhysicsParams().catch(console.error));
   $("physicsApplyBtn").addEventListener("click", () => applyPhysicsParams(false).catch(console.error));
   $("physicsApplyRestartBtn").addEventListener("click", () => applyPhysicsParams(true).catch(console.error));
   $("physicsRawBtn").addEventListener("click", () => openToolEditor("physics").catch(console.error));
-  $("courseCloseBtn").addEventListener("click", () => $("courseDialog").classList.add("hidden"));
+  $("courseCloseBtn").addEventListener("click", () => window.StationWindows.close("courseDialog"));
   $("courseReloadBtn").addEventListener("click", () => loadCourseLayout($("courseModeSelect").value).catch(console.error));
   $("courseModeSelect").addEventListener("change", (event) => loadCourseLayout(event.target.value).catch(console.error));
   $("courseUpdateSelectedBtn").addEventListener("click", updateSelectedCourseFromInputs);
   $("courseSaveBtn").addEventListener("click", () => saveCourseLayout(false).catch(console.error));
   $("courseSaveResetBtn").addEventListener("click", () => saveCourseLayout(true).catch(console.error));
   $("courseRawBtn").addEventListener("click", () => openToolEditor("course").catch(console.error));
-  $("toolEditorCloseBtn").addEventListener("click", () => $("toolEditorDialog").classList.add("hidden"));
+  $("toolEditorCloseBtn").addEventListener("click", () => window.StationWindows.close("toolEditorDialog"));
   $("toolEditorReloadBtn").addEventListener("click", () => loadToolFile(state.toolKind).catch(console.error));
   $("toolEditorSaveBtn").addEventListener("click", () => saveToolFile().catch(console.error));
 
-  $("ping360PanelBtn").addEventListener("click", () => $("ping360Dialog").classList.remove("hidden"));
-  $("ping360CloseBtn").addEventListener("click", () => $("ping360Dialog").classList.add("hidden"));
+  $("ping360PanelBtn").addEventListener("click", () => window.StationWindows.open("ping360Dialog"));
+  $("ping360CloseBtn").addEventListener("click", () => window.StationWindows.close("ping360Dialog"));
   $("pingEnableBtn").addEventListener("click", () =>
     postCommand({ command: "ping360_enabled", enabled: $("pingEnabled").checked }).then(pollStatus).catch(console.error)
   );
@@ -1964,7 +1851,7 @@ function pingConfigPayload() {
 
 async function openToolEditor(kind) {
   state.toolKind = kind;
-  $("toolEditorDialog").classList.remove("hidden");
+  window.StationWindows.open("toolEditorDialog");
   $("toolEditorTitle").textContent = kind === "physics" ? "Physics Params" : "XY Course Layout";
   setText("toolEditorStatus", "loading");
   await postCommand({ command: kind === "physics" ? "physics_params" : "course_layout" });

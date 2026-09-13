@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 from typing import Any
+from sim.startup_alignment import bridge_aligned
 
 
 def release_initial_depth_hold_runtime(runtime: Any, reason: str, *, ros_bridge=None) -> bool:
     if not runtime.state["active"]:
         return False
+    if runtime.state.get("startup_alignment_required", False):
+        armed = getattr(ros_bridge, "sitl_vehicle_armed", None)
+        if not bridge_aligned(ros_bridge) or not callable(armed) or not armed():
+            return False
     runtime.state.mark_released(float(runtime.data.time))
     runtime.reset_release_state()
     runtime.apply_release_velocity_state()

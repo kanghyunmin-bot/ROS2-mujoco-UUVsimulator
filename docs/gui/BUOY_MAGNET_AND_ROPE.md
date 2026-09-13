@@ -1,6 +1,6 @@
 # Research-pool buoy, magnet and rope physics
 
-## Current behavior (2026-09-10)
+## Current behavior (2026-09-12)
 
 All three colored ellipsoid shells, PVC stems, upper/lower jigs, both magnet
 halves and anchor fittings have active colliders. Thin equator paint bands are
@@ -8,16 +8,16 @@ visual only. The vehicle uses the original CAD compound colliders and eight
 thruster assembly colliders; this follow-up did not alter their geometry.
 
 The magnetic connection releases at a resultant translational weld load of
-15 N after a 1 ms confirmation interval (rounded up to physics steps). This
+20 N after a 1 ms confirmation interval (rounded up to physics steps). This
 replaces the previous 40 ms delay: a CAD vehicle moving into an attached rope
 reproduced numerical divergence while the overloaded magnet was held too long.
-Gentle contact and a sustained additional 10 N pull still hold; 20 N releases
-within 10 ms. Rotational weld rows are not counted as force. The 15 N value is an
+Gentle contact and a sustained additional 18 N pull still hold; 25 N releases
+within 10 ms. Rotational weld rows are not counted as force. The 20 N value is an
 operator-selected assumption, not a measured shear/peel model. There is no
 attraction across a gap or automatic reattachment.
 
-The scene uses a maximum 1 ms physics step and the `implicit` integrator. The
-400 Hz FCU launcher subdivides this to 0.8333 ms. Full implicit integration handles
+The scene uses a maximum 0.5 ms physics step and the `implicit` integrator. The
+400 Hz FCU launcher uses five 0.5 ms physics steps per control period. Full implicit integration handles
 the coupled rotational dynamics of the ball-jointed rope. `implicitfast` still
 failed one of the attached-rope impact fixtures, so it was not retained.
 
@@ -25,7 +25,7 @@ Each rope now uses six ball-jointed capsule links (18 links across three buoys),
 down from 24 per rope at the default depth. The diameter remains 6 mm and the
 length follows the GUI depth. Quadratic drag, lift and fluid added-mass coefficients
 on rope capsules are zero; only small native viscous resistance and joint damping
-remain. This deliberately approximates water response to reduce solver cost.
+remain. Each ball joint also has `2e-5 kg m²` numerical armature; it is not a measured rope inertia. This deliberately approximates water response to reduce solver cost.
 Global water properties remain enabled for environment stability, while the custom
 vehicle contract suppresses duplicate native vehicle loads. Vehicle fluid tuning
 cannot resize or retune rope capsules.
@@ -37,7 +37,7 @@ bending and tension, but cannot reproduce tight wraps, knots or fine curvature.
 This is a non-stretching rope approximation, not a braid/elastic-breakage model.
 
 Normal contact uses `solimp=.999 .9999 .0005 .5 2`, `condim=3`; general solids use
-`solref=.004 1`, priority 2 and sliding friction 0.30. Rakes use `.002 1`, priority
+`solref=.004 1`, priority 2 and sliding friction 0.30. Rakes use `.001 1`, priority
 3 and friction 0.35. These wet-friction values are assumptions. The integrator,
 magnetic timing and fluid ownership corrections preserve vehicle mass/inertia,
 CAD geometry and existing fluid ellipsoid dimensions.
@@ -46,6 +46,10 @@ A numerical failure no longer silently resets the vehicle and keeps feeding the
 controller. The shared physics-step guard saves the preceding state under
 `generated/physics_failures/` and stops the runtime with a diagnostic error. This
 is a failure-handling safeguard, not a substitute for stable contact dynamics.
+
+The latest 20 N contact changes and engine-specific results are documented in
+[RAKE_CONTACT_20260912.md](RAKE_CONTACT_20260912.md). Earlier 15 N fixtures below
+are historical coverage, not evidence of zero penetration in all operating conditions.
 
 ## What the tests established
 
@@ -80,9 +84,9 @@ Run in the simulator environment:
 
 ## Configuration and remaining approximations
 
-Scene numerics: `buoy_magnet_force_release=1`, `buoy_magnet_break_n=15`,
+Scene numerics: `buoy_magnet_force_release=1`, `buoy_magnet_break_n=20`,
 `buoy_magnet_break_hold_s=.001`, `buoy_shape_drag=1`,
-`buoy_contact_max_timestep=.001`. Existing environment overrides for break force
+`buoy_contact_max_timestep=.0005`. Existing environment overrides for break force
 and contact-break hold remain available. Legacy course scenes retain their
 existing release policy unless they opt into force-based release.
 

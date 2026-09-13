@@ -27,8 +27,6 @@ def apply_initial_hold_pose_or_depth(
     """Apply the initial depth hold pose/depth constraint if active."""
     if not active:
         return
-    if depth_m is None and bar30_depth_m is None:
-        return
     if apply_captured_hold_pose(
         pose_qpos,
         data=data,
@@ -37,6 +35,8 @@ def apply_initial_hold_pose_or_depth(
         world_qpos_adr=world_qpos_adr,
         world_qvel_adr=world_qvel_adr,
     ):
+        return
+    if depth_m is None and bar30_depth_m is None:
         return
     apply_hold_depth_fallback(
         depth_m=depth_m,

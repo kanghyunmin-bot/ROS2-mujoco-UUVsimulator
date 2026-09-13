@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from typing import Any
+from sim.startup_alignment import bridge_aligned
 
 
 def maybe_release_initial_depth_hold(
@@ -23,6 +24,10 @@ def maybe_release_initial_depth_hold(
     armed = bool(armed_fn()) if callable(armed_fn) else False
     mode = str(mode_fn()).upper() if callable(mode_fn) else ""
     if not armed:
+        return
+    if initial_depth_hold.get("startup_alignment_required", False):
+        if bridge_aligned(ros_bridge):
+            release_initial_depth_hold("startup:aligned_and_operator_armed")
         return
     valid_pwm = [int(v) for v in sitl_servo_pwm_values[:8] if int(v) not in (0, 65535)]
     max_delta = max((abs(v - 1500) for v in valid_pwm), default=0)

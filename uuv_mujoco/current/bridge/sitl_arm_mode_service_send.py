@@ -1,9 +1,13 @@
 """Broadcast helpers for pending SitlTransport arm/mode retries."""
 
 from __future__ import annotations
+from sim.startup_alignment import alignment_required, transport_aligned
 
 
 def send_pending_arm_to_any_link(self, target_arm: bool) -> bool:
+    if target_arm and alignment_required() and not transport_aligned(self):
+        self._sitl_pending_arm_target = None
+        return False
     sent_any = False
     send_initial_neutral = bool(target_arm) and not bool(
         getattr(self, "_sitl_pending_arm_neutral_sent", False)
