@@ -44,8 +44,16 @@ def add_profile_args(
         help="ESC bus voltage in V; interpolate measured T200 curves within 10--20 V. If omitted, use profile value.",
     )
     parser.add_argument(
-        "--thruster-voltage-trace", type=str, default=None,
-        help="CSV with sim_time,voltage_v measured at the ESC bus; starts at 0, interpolated with endpoints held",
+        "--thruster-voltage-trace",
+        type=str,
+        default=None,
+        help="CSV with sim_time,voltage_v at the ESC bus; starts at 0. Optional .csv.json records provenance and coverage; legacy files hold endpoints.",
+    )
+    parser.add_argument(
+        "--thruster_voltage_time_offset_s",
+        type=float,
+        default=0.0,
+        help="Simulation time [s] corresponding to voltage CSV time 0; align this with the recorded RC replay origin.",
     )
     parser.add_argument(
         "--buoyancy-scale",

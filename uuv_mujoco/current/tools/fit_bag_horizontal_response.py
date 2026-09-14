@@ -1,7 +1,10 @@
 """Integral constrained least squares; coefficients are conditional effective parameters."""
 
+import argparse
+import json
+import sys
 from pathlib import Path
-import argparse, json, sys
+
 import numpy as np
 from scipy.optimize import lsq_linear
 from scipy.signal import savgol_filter
@@ -18,20 +21,32 @@ parser.add_argument(
 parser.add_argument("--sim_profiles", type=Path, required=True)
 parser.add_argument("--sim_profile", default="bag0402_clearance")
 parser.add_argument("--scene_xml", type=Path, required=True)
+parser.add_argument("--thruster_voltage_trace", type=Path)
+parser.add_argument(
+    "--voltage_trace_bag_start_s",
+    type=float,
+    help="Bag receipt time [s] corresponding to voltage CSV time zero",
+)
 args = parser.parse_args()
+if (args.thruster_voltage_trace is None) != (args.voltage_trace_bag_start_s is None):
+    parser.error("voltage trace and its bag start time must be specified together")
 R = args.output_dir.resolve()
 R.mkdir(parents=True, exist_ok=True)
 root = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(root / "uuv_mujoco/current"))
+import xml.etree.ElementTree as ET
+
 from physics.sim_profile_helpers import load_sim_profiles
 from physics.thruster_mapping import (
     ARDUSUB_VECTORED_6DOF_SERVO_MAP as names,
+)
+from physics.thruster_mapping import (
     ARDUSUB_VECTORED_6DOF_SERVO_SIGNS as signs,
 )
-from sim.physics.thruster_performance_loader import load_thruster_performance_config
-from sim.physics.thruster_force_performance import pwm_to_force_from_performance
 from sim.physics.distributed_hydrodynamics import DistributedHullHydrodynamics
-import xml.etree.ElementTree as ET
+from sim.physics.thruster_force_performance import pwm_to_force_from_performance
+from sim.physics.thruster_performance_loader import load_thruster_performance_config
+from sim.physics.thruster_voltage import load_voltage_trace, update_supply_voltage
 
 n = np.load(args.numeric_npz)
 prof = json.loads((args.profile_json).read_text())
@@ -46,6 +61,20 @@ curve = load_thruster_performance_config(
     requested_voltage=float(p[args.sim_profile]["thruster_voltage"]),
     direct=True,
 )
+voltage_model = {"mode": "constant_assumption", "voltage_v": curve["selected_voltage"]}
+if args.thruster_voltage_trace is not None:
+    trace = load_voltage_trace(
+        args.thruster_voltage_trace, curve, time_offset_s=args.voltage_trace_bag_start_s
+    )
+    curve["voltage_trace"] = trace
+    voltage_model = {
+        "mode": "recorded_trace",
+        "voltage_reference": trace["voltage_reference"],
+        "csv_sha256": trace["csv_sha256"],
+        "provenance": trace["provenance"],
+        "bag_start_s": trace["time_offset_s"],
+        "outside_trace": trace["outside_trace"],
+    }
 x = ET.parse(args.scene_xml)
 gears = {
     e.get("name"): np.fromstring(e.get("gear"), sep=" ")[:3]
@@ -57,8 +86,10 @@ v = np.column_stack([np.interp(t, d[:, 0] - t0, d[:, j]) for j in (1, 2, 3)])
 u = savgol_filter(v[:, 0], 9, 2)
 omega = np.column_stack([np.interp(t, imu[:, 0] - t0, imu[:, j]) for j in (5, 6, 7)])
 pwm = np.column_stack([np.interp(t, rc[:, 0] - t0, rc[:, j]) for j in range(1, 9)])
-f = np.array(
-    [
+forces = []
+for bag_time, row in zip(t, pwm):
+    update_supply_voltage(curve, float(bag_time))
+    forces.append(
         [
             sum(
                 pwm_to_force_from_performance((row[j] - 1500) / 400 * signs[j], curve)
@@ -67,9 +98,8 @@ f = np.array(
             )
             for a in (0, 1)
         ]
-        for row in pwm
-    ]
-)
+    )
+f = np.array(forces)
 
 
 # Evaluate nominal fully-submerged straight-ahead distributed drag, no current.
@@ -110,7 +140,10 @@ for start in np.arange(20, 71, 1.0):
     if np.any(d[di, 5] < 0.5) or np.any(t[ids] - (d[di, 0] - t0) > 0.3):
         continue
     dt = t[ids]
-    integ = lambda z: float(np.trapezoid(z, dt))
+
+    def integ(z, sample_times=dt):
+        return float(np.trapezoid(z, sample_times))
+
     rows.append(
         [
             start,
@@ -179,6 +212,8 @@ for _ in range(200):
     )
     boots.append(z.x / sc)
 report = {
+    "calibration_status": "single_bag_effective_not_physical",
+    "voltage_model": voltage_model,
     "mass_plus_added_mass_assumed_kg": mass,
     "nominal_surge_quadratic_drag_N_s2_m2": q0,
     "train_windows": a[train, 0].tolist(),
@@ -195,7 +230,7 @@ report = {
     "baseline_heldout_impulse_rmse_Ns": float(
         np.sqrt(np.mean((X[test, 0] + q0 * X[test, 2] - y[test]) ** 2))
     ),
-    "scope": "Surge only, effective coefficients conditional on mass, 20V static PWM curve, 2Hz receipt-time motor feedback. Sway not identified; weak lateral excitation and coordinate ambiguity. July parameters not proven April settings.",
+    "scope": "Surge only, effective coefficients conditional on mass and the recorded voltage_model assumption, using receipt-time motor feedback. Sway not identified; weak lateral excitation and coordinate ambiguity. July parameters not proven April settings. Voltage input alone does not identify physical thrust separately from hull drag.",
 }
 (R / "fit_result.json").write_text(json.dumps(report, indent=2))
 print(json.dumps(report, indent=2))

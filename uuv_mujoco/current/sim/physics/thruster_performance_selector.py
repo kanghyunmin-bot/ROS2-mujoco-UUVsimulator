@@ -37,18 +37,41 @@ def select_thruster_performance_config(
     trace_path = getattr(args, "thruster_voltage_trace", None)
     if trace_path:
         if not perf_cfg.get("active"):
-            raise ValueError("--thruster-voltage-trace requires the measured performance model")
-        perf_cfg["voltage_trace"] = load_voltage_trace(Path(trace_path), perf_cfg)
+            raise ValueError(
+                "--thruster-voltage-trace requires the measured performance model"
+            )
+        perf_cfg["voltage_trace"] = load_voltage_trace(
+            Path(trace_path),
+            perf_cfg,
+            time_offset_s=float(getattr(args, "thruster_voltage_time_offset_s", 0.0)),
+        )
         update_supply_voltage(perf_cfg, 0.0)
-        print(f"[thruster perf] ESC bus voltage trace: {trace_path}; sim-time interpolation, endpoints held", flush=True)
+        trace = perf_cfg["voltage_trace"]
+        print(
+            f"[thruster perf] voltage trace: {trace_path}; reference={trace['voltage_reference']}, "
+            f"sim offset={trace['time_offset_s']:g}s, outside={trace['outside_trace']}; "
+            f"source={trace['provenance']}; sha256={trace['csv_sha256']}",
+            flush=True,
+        )
     elif perf_cfg.get("active"):
-        print(f"[thruster perf] ESC bus voltage: {active_thruster_voltage:g} V constant assumption; use --thruster-voltage-trace for recorded battery sag", flush=True)
-    _force_direct_for_raw_rcou_replay(perf_cfg, plant_replay_direct_rcout=plant_replay_direct_rcout)
+        print(
+            f"[thruster perf] ESC bus voltage: {active_thruster_voltage:g} V constant assumption; use --thruster-voltage-trace for a verified ESC voltage recording",
+            flush=True,
+        )
+    _force_direct_for_raw_rcou_replay(
+        perf_cfg, plant_replay_direct_rcout=plant_replay_direct_rcout
+    )
     return perf_cfg
 
 
-def _force_direct_for_raw_rcou_replay(perf_cfg: dict, *, plant_replay_direct_rcout: bool) -> None:
-    if not (plant_replay_direct_rcout and perf_cfg.get("active") and not perf_cfg.get("direct")):
+def _force_direct_for_raw_rcou_replay(
+    perf_cfg: dict, *, plant_replay_direct_rcout: bool
+) -> None:
+    if not (
+        plant_replay_direct_rcout
+        and perf_cfg.get("active")
+        and not perf_cfg.get("direct")
+    ):
         return
     # Plant replay consumes final ArduSub/real RCOU PWM as the actuator command.
     # It must map raw PWM through the T200 curve once; legacy polynomial/gain

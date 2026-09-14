@@ -1,0 +1,49 @@
+{
+  "source_sqlite_sha256": "e3f60d33dbf72f9c4df223f8afe7e389f8c49ffc6ff7031647ce3da32ec3c154",
+  "source_manifest_sha256": "b8f9ab9f02a6dd077d0f7840e101d52de726f93ed206140745e7e0359f59c7c5",
+  "performance_sha256": "fd3963e390a9f057f47d4b96c475b9f7a0ec37b2ef8f970b586454678d176ac8",
+  "replay_sha256": "7b448648856035dfb214ea1e6625e544dbd30324130846444f8fc8bada9cb53c",
+  "voltage_topic": "/battery",
+  "voltage_reference": "battery_pack_unverified",
+  "provenance": "April 2 /battery pack telemetry; ESC rail and direct connection not confirmed",
+  "bag_interval_s": [
+    20.0,
+    70.0
+  ],
+  "voltage_time_offset_s": 18.00375,
+  "voltage": {
+    "ready": false,
+    "reasons": [
+      "ESC supply reference is unverified; pack voltage is not converted automatically",
+      "Voltage exceeds measured force-curve coverage; no clipping or extrapolation"
+    ],
+    "support_samples": 1002,
+    "nonfinite_samples": 0,
+    "out_of_curve_samples": 986,
+    "measured_curve_range_v": [
+      10.0,
+      20.0
+    ],
+    "maximum_gap_s": 0.10374839099999988,
+    "voltage_min_median_max_v": [
+      19.375,
+      21.765625,
+      22.515625
+    ]
+  },
+  "pwm": {
+    "ready": false,
+    "samples": 100,
+    "received_hz": 2.0001186535843734,
+    "maximum_gap_s": 0.503306778999999,
+    "gap_p95_s": 0.5022808682999951,
+    "gaps_over_limit": 99,
+    "minimum_required_hz": 50.0,
+    "maximum_allowed_gap_s": 0.05,
+    "boundary_covered": false
+  },
+  "voltage_replay_ready": false,
+  "identification_input_ready": false,
+  "physical_parameters_identified": false,
+  "runtime_voltage_csv": null
+}

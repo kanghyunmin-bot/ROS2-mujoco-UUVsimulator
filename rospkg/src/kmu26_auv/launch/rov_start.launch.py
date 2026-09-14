@@ -2,16 +2,15 @@
 
 import os
 
-from ament_index_python.packages import PackageNotFoundError
-from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import (
+    PackageNotFoundError,
+    get_package_share_directory,
+)
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
-from launch.actions import IncludeLaunchDescription
-from launch.actions import LogInfo
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo
 from launch.conditions import IfCondition
 from launch.launch_description_sources import AnyLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
-from launch.substitutions import PythonExpression
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
@@ -81,6 +80,7 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("mavros_sim_attitude_rate_hz", default_value="20.0"),
         DeclareLaunchArgument("mavros_raw_imu_rate_hz", default_value="50.0"),
         DeclareLaunchArgument("mavros_baro_rate_hz", default_value="10.0"),
+        DeclareLaunchArgument("mavros_rcout_rate_hz", default_value="-1.0"),
         DeclareLaunchArgument("dronecan_python", default_value=dronecan_python_default),
         DeclareLaunchArgument("use_external_baro_bridge", default_value="false"),
         DeclareLaunchArgument(
@@ -322,6 +322,7 @@ def generate_launch_description() -> LaunchDescription:
     mavros_sim_attitude_rate_hz = LaunchConfiguration("mavros_sim_attitude_rate_hz")
     mavros_raw_imu_rate_hz = LaunchConfiguration("mavros_raw_imu_rate_hz")
     mavros_baro_rate_hz = LaunchConfiguration("mavros_baro_rate_hz")
+    mavros_rcout_rate_hz = LaunchConfiguration("mavros_rcout_rate_hz")
     dronecan_python = LaunchConfiguration("dronecan_python")
     use_buoy_control = LaunchConfiguration("use_buoy_control")
     buoy_topic = LaunchConfiguration("buoy_topic")
@@ -522,6 +523,8 @@ def generate_launch_description() -> LaunchDescription:
                         mavros_raw_imu_rate_hz, value_type=float),
                     "baro_rate_hz": ParameterValue(
                         mavros_baro_rate_hz, value_type=float),
+                    "rcout_rate_hz": ParameterValue(
+                        mavros_rcout_rate_hz, value_type=float),
                     "use_sim_time": ParameterValue(use_sim_time, value_type=bool),
                 }
             ],

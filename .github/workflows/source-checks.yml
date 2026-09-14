@@ -20,6 +20,13 @@ jobs:
       - run: python -m pytest -q uuv_mujoco/current/tools/test_startup_alignment.py
       - name: Offline rosbag phase, validity and noise contracts
         run: python -m pytest -q uuv_mujoco/current/tools/test_rosbag_trend_math.py
+      - name: Voltage replay and final PWM recording
+        run: >-
+          python -m pytest -q
+          uuv_mujoco/current/tools/test_voltage_trace_contract.py
+          uuv_mujoco/current/tools/test_prepare_propulsion_replay.py
+          uuv_mujoco/current/tools/test_propulsion_recording_rates.py
+          uuv_mujoco/current/tools/test_t200_actuator_physics.py
       - run: python -m pytest -q uuv_mujoco/current/tools/test_hydrodynamic_batch_sampling.py uuv_mujoco/current/tools/test_vla_camera_intrinsics.py uuv_mujoco/current/tools/test_research_pool_layout.py uuv_mujoco/current/tools/test_sitl_heartbeat_state_recording.py
       - name: Camera optics and capture timing
         run: >-

@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import numpy as np
+from sim.transport import MavlinkMessageIntervalRequester, MavlinkTelemetryObserver
 
 from bridge.sitl_env import env_flag, env_to_float
-from sim.transport import MavlinkMessageIntervalRequester, MavlinkTelemetryObserver
 
 
 def initialize_mavlink_telemetry_state(transport: object) -> None:
-    transport._sitl_rcout_telemetry_hz = float(np.clip(env_to_float("ROS2_UUV_RCOU_TELEMETRY_HZ", 2.0), 0.5, 20.0))
+    # Identification can opt into high-rate final-PWM evidence. Keep the light
+    # default; the requested rate must still be verified in the recorded bag.
+    transport._sitl_rcout_telemetry_hz = float(np.clip(env_to_float("ROS2_UUV_RCOU_TELEMETRY_HZ", 2.0), 0.5, 100.0))
     transport._sitl_ap_telemetry_hz = float(
         np.clip(env_to_float("ROS2_UUV_SITL_AP_TELEMETRY_HZ", 10.0), 0.5, 20.0)
     )

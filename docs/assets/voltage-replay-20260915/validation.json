@@ -1,0 +1,14 @@
+{
+  "default_fixed20_matches_prior": true,
+  "constant16_and_trace16_force_arrays_equal": true,
+  "constant16_and_trace16_fit_models_equal": true,
+  "baseline_fixed20_coefficients": [
+    0.12293316274117821,
+    35.120873813940435
+  ],
+  "synthetic_fixed16_coefficients": [
+    0.13039952438444086,
+    36.04182726305414
+  ],
+  "synthetic_notice": "Constant16 is a software parity fixture, not measured ESC voltage; no production coefficients changed."
+}

@@ -3,6 +3,7 @@
 import math
 import sys
 import time
+from typing import ClassVar
 
 import rclpy
 from mavros_msgs.msg import State
@@ -13,13 +14,14 @@ from rclpy.node import Node
 class MavrosImuRateConfig(Node):
     """Request MAVLink sensor message rates through MAVROS."""
 
-    MESSAGE_IDS = {
+    MESSAGE_IDS: ClassVar[dict[str, int]] = {
         "ATTITUDE": 30,
         "ATTITUDE_QUATERNION": 31,
         "LOCAL_POSITION_NED": 32,
         "RAW_IMU": 27,
         "HIGHRES_IMU": 105,
         "SCALED_PRESSURE2": 137,
+        "SERVO_OUTPUT_RAW": 36,
     }
 
     def __init__(self):
@@ -73,6 +75,14 @@ class MavrosImuRateConfig(Node):
             if use_sim_time and (rate_hz == 0.0 or rate_hz > 50.0):
                 raise ValueError("sim_attitude_rate_hz must be positive and no greater than 50 Hz")
             requests.append((label, self.MESSAGE_IDS[label], rate_hz))
+
+        # Final actuator feedback is independent of AHRS/raw sensor ownership.
+        # Opt in for identification; do not increase normal mission traffic.
+        rcout_rate = float(self.declare_parameter("rcout_rate_hz", -1.0).value)
+        if rcout_rate != -1.0:
+            if not math.isfinite(rcout_rate) or not 0.0 < rcout_rate <= 100.0:
+                raise ValueError("rcout_rate_hz must be -1 (unchanged) or in (0, 100] Hz")
+            requests.append(("SERVO_OUTPUT_RAW", self.MESSAGE_IDS["SERVO_OUTPUT_RAW"], rcout_rate))
 
         return requests
 
