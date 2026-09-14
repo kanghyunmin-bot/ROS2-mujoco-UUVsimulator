@@ -1,10 +1,15 @@
 # Pool water, white ropes and green robot — 2026-09-14
 
 The research pool now has a visual-only animated water surface, bounded highlights,
-depth-dependent incoming light loss and approximate moving caustics. Robot CAD
-visual meshes are green. The three buoy moorings use shared three-strand white
+depth-dependent incoming light loss and approximate moving caustics. Only the two hands and the two lower capsule assemblies are green.
+Enclosure and external frame colors are restored to their original values. The three buoy moorings use shared three-strand white
 visual sleeves over their original invisible collision capsules. The visual outer
 radius is approximately 3.5 mm; the physical capsule radius remains 3 mm.
+
+The selective color mesh contains exactly 58,158 existing triangles from CAD
+components 92, 93, 137, 138, 181 and 182. Four lower shell components form the
+two capsules. These triangles were removed from the original chunks and reused
+without decimation or added geometry; `selective_colors.json` records the mapping.
 
 ## Rendering and cost boundaries
 

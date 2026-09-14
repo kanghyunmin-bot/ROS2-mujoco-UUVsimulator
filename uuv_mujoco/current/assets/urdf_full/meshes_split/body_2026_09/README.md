@@ -91,3 +91,13 @@ Optical-window follow-up: component 339 was extracted from visual chunk 16
 into `front_optical_window.obj` and made visually transparent. Original triangles
 and the solid `cad_collision_339_0` collider are preserved. Cameras are inside
 the front panel; see `docs/gui/CAD_SENSOR_MOUNTS.md` for CAD/TF alignment.
+
+
+Selective color follow-up (2026-09-14): components 92/93 (hands) and
+137/138/181/182 (the four shells of two lower capsules) were extracted from
+existing visual chunks to `body_hand_lower_green.obj`. Exactly 58,158 original
+triangles were moved, not duplicated or simplified. The remaining 20 chunks
+retain their original grey material; enclosures and external frame are unchanged.
+`selective_colors.json` records counts and IDs. `tools/split_robot_visual_colors.py`
+reproduces the extraction from the unsplit chunks and existing CAD component cache.
+Collision meshes, masses and inertia are unaffected.

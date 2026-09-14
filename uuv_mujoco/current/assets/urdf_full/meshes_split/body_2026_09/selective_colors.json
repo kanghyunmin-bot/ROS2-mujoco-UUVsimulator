@@ -1,0 +1,22 @@
+{
+  "component_ids": [
+    92,
+    93,
+    137,
+    138,
+    181,
+    182
+  ],
+  "component_triangles": {
+    "92": 15090,
+    "93": 15086,
+    "137": 8635,
+    "138": 8625,
+    "181": 5365,
+    "182": 5357
+  },
+  "selected_triangles": 58158,
+  "total_triangles_unchanged": 2888955,
+  "mesh": "body_hand_lower_green.obj",
+  "source": "exact existing OBJ triangles; no decimation"
+}

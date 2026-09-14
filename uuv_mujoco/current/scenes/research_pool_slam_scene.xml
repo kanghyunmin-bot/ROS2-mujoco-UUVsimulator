@@ -796,6 +796,7 @@
     <material name="rope_white" rgba=".97 .96 .92 1" emission=".18" specular=".08" shininess=".15" />
     <material name="water_ripple_material" rgba=".18 .52 .62 .20" specular=".8" shininess=".75" />
     <hfield name="water_ripple_field" nrow="41" ncol="81" size="5 2.5 .04 .001" />
+    <mesh name="body_hand_lower_green" file="body_2026_09/body_hand_lower_green.obj" />
   </asset>
   <worldbody>
     <light name="pool_surface_glint" directional="true" pos="0 -2 4" dir="0 .4 -1" ambient="0 0 0" diffuse="0 0 0" specular=".8 .78 .72" castshadow="false" />
@@ -1549,26 +1550,27 @@
       <geom name="cad_collision_2213_0" type="mesh" mesh="cad_collision_2213_0" density="0" contype="1" conaffinity="1" group="3" rgba="0 0 0 0" friction=".30 .01 .001" condim="3" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" solmix="1" />
       <geom name="cad_collision_2243_0" type="mesh" mesh="cad_collision_2243_0" density="0" contype="1" conaffinity="1" group="3" rgba="0 0 0 0" friction=".30 .01 .001" condim="3" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" solmix="1" />
       <geom name="cad_collision_2275_0" type="mesh" mesh="cad_collision_2275_0" density="0" contype="1" conaffinity="1" group="3" rgba="0 0 0 0" friction=".30 .01 .001" condim="3" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" solmix="1" />
-      <geom name="body_2026_visual_0" type="mesh" mesh="body_2026_visual_0" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_1" type="mesh" mesh="body_2026_visual_1" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_2" type="mesh" mesh="body_2026_visual_2" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_3" type="mesh" mesh="body_2026_visual_3" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_4" type="mesh" mesh="body_2026_visual_4" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_5" type="mesh" mesh="body_2026_visual_5" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_6" type="mesh" mesh="body_2026_visual_6" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_7" type="mesh" mesh="body_2026_visual_7" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_8" type="mesh" mesh="body_2026_visual_8" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_9" type="mesh" mesh="body_2026_visual_9" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_10" type="mesh" mesh="body_2026_visual_10" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_11" type="mesh" mesh="body_2026_visual_11" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_12" type="mesh" mesh="body_2026_visual_12" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_13" type="mesh" mesh="body_2026_visual_13" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_14" type="mesh" mesh="body_2026_visual_14" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_15" type="mesh" mesh="body_2026_visual_15" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_16" type="mesh" mesh="body_2026_visual_16" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_17" type="mesh" mesh="body_2026_visual_17" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_18" type="mesh" mesh="body_2026_visual_18" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_19" type="mesh" mesh="body_2026_visual_19" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_hand_lower_green" type="mesh" mesh="body_hand_lower_green" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_0" type="mesh" mesh="body_2026_visual_0" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_1" type="mesh" mesh="body_2026_visual_1" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_2" type="mesh" mesh="body_2026_visual_2" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_3" type="mesh" mesh="body_2026_visual_3" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_4" type="mesh" mesh="body_2026_visual_4" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_5" type="mesh" mesh="body_2026_visual_5" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_6" type="mesh" mesh="body_2026_visual_6" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_7" type="mesh" mesh="body_2026_visual_7" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_8" type="mesh" mesh="body_2026_visual_8" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_9" type="mesh" mesh="body_2026_visual_9" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_10" type="mesh" mesh="body_2026_visual_10" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_11" type="mesh" mesh="body_2026_visual_11" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_12" type="mesh" mesh="body_2026_visual_12" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_13" type="mesh" mesh="body_2026_visual_13" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_14" type="mesh" mesh="body_2026_visual_14" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_15" type="mesh" mesh="body_2026_visual_15" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_16" type="mesh" mesh="body_2026_visual_16" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_17" type="mesh" mesh="body_2026_visual_17" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_18" type="mesh" mesh="body_2026_visual_18" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_19" type="mesh" mesh="body_2026_visual_19" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
       <inertial pos="-0.0015 0 0.03" quat="1 0 0 0" mass="15" diaginertia="0.55 0.55 0.85" />
       <joint name="world_joint" type="free" />
       <geom name="fluid_center_enclosure" type="cylinder" fromto="-0.213 0 0.010 0.203 0 0.010" size="0.1105" rgba="0.15 0.90 1.00 0.01" contype="0" conaffinity="0" fluidshape="ellipsoid" fluidcoef="0.424 0.120 3.415 0.050 0.025" />
