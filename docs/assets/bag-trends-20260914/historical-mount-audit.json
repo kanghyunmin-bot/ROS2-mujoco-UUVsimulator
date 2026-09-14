@@ -1,0 +1,507 @@
+{
+  "schema": "uuv.historical_mount_audit.v1",
+  "historical_references": {
+    "simulator_commit": "9251007ec5c439c777fd61a65a08a5c89c2edb39",
+    "simulator_commit_date": "2026-06-25",
+    "scene_path": "uuv_mujoco/v2.2/scenes/tank_current_scene.xml",
+    "ros_gitlink_path": "rospkg/kmu26_auv",
+    "ros_repository": "https://github.com/kanghyunmin-bot/kmu26_auv",
+    "ros_commit": "9f50aab20aa43fae09c616ef36f8c35b0d79234c",
+    "ros_commit_date": "2026-05-04",
+    "ros_launch_path": "launch/rov_start.launch.py"
+  },
+  "input_sha256": {
+    "outputs/mount-history-20260914/rov_start_may04.launch.py": "204dd23efde5cc334e543c714186c3cda5f19d91ccaf33b889d5036a3e10749e",
+    "outputs/mount-history-20260914/scene_june25.xml": "d4650929a59afe662b96bd59fc4e891eba5055762963a1ea131cb5645fcb00ac",
+    "outputs/bag-trends-20260914/source/numeric.npz": "c8e6ff084afedb9d1ec40bec44d22b1baf0d4620d16526b5977a744b348e2884",
+    "outputs/bag-trends-20260914/source/profile.json": "4f48ed827e6b47d8eb6bc9ad193d2d3bf30e098211c70d387abcb93ec4c36eee",
+    "outputs/real-bag-audit-20260911/alignment.json": "5d369068acd29c7f1aee5729376f1693aa8b30975fe28311def5289859a03a43",
+    "uuv_mujoco/current/config/sensor_mounts_2026.json": "2276513764cbb8fe5759c0edd97b4fc79b97b3a3c000a1f29a7b447132f433ba"
+  },
+  "sensors": {
+    "imu_site": {
+      "position_body_m": [
+        0.11,
+        -0.00034,
+        0.092
+      ],
+      "rpy_rad": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "june_scene_position_body_m": [
+        0.11,
+        -0.0003,
+        0.092
+      ],
+      "june_scene_quat_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scene_rounding_difference_m": 4.000000000000005e-05,
+      "current_cad_position_body_m": [
+        0.13135,
+        0,
+        0.08541
+      ],
+      "current_minus_historical_m": [
+        0.021349999999999994,
+        0.00034,
+        -0.006589999999999999
+      ],
+      "position_distance_m": 0.022346503082137925,
+      "bag_tf_position_m": [
+        0.11,
+        -0.00034,
+        0.092
+      ],
+      "bag_tf_position_matches_launch": true
+    },
+    "dvl_site": {
+      "position_body_m": [
+        -0.03196,
+        0.0,
+        -0.097
+      ],
+      "rpy_rad": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "june_scene_position_body_m": [
+        -0.032,
+        0.0,
+        -0.097
+      ],
+      "june_scene_quat_wxyz": [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      "scene_rounding_difference_m": 3.999999999999837e-05,
+      "current_cad_position_body_m": [
+        -0.00488,
+        0,
+        -0.15861
+      ],
+      "current_minus_historical_m": [
+        0.027080000000000003,
+        0.0,
+        -0.06161
+      ],
+      "position_distance_m": 0.06729872584232185,
+      "bag_tf_position_m": [
+        -0.03196,
+        0.0,
+        -0.097
+      ],
+      "bag_tf_position_matches_launch": true
+    },
+    "bar30_site": {
+      "position_body_m": [
+        -0.17364,
+        -0.03034,
+        0.0536
+      ],
+      "rpy_rad": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "june_scene_position_body_m": [
+        -0.1736,
+        -0.0303,
+        0.0536
+      ],
+      "june_scene_quat_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scene_rounding_difference_m": 5.656854249491168e-05,
+      "current_cad_position_body_m": [
+        -0.17364,
+        -0.03034,
+        -0.03286
+      ],
+      "current_minus_historical_m": [
+        0.0,
+        0.0,
+        -0.08646000000000001
+      ],
+      "position_distance_m": 0.08646000000000001,
+      "bag_tf_position_m": [
+        -0.17364,
+        -0.03034,
+        0.0536
+      ],
+      "bag_tf_position_matches_launch": true
+    }
+  },
+  "effects_from_recorded_real_ahrs": {
+    "window_s": [
+      20,
+      70
+    ],
+    "initial_window_s": [
+      10,
+      17
+    ],
+    "dvl_delta_velocity_body_mps": {
+      "rms": [
+        0.0018887592592009145,
+        0.008730146887072247,
+        0.0008301834237812173
+      ],
+      "abs_p95": [
+        0.004382433946188538,
+        0.024373075209308183,
+        0.0019262507914751764
+      ],
+      "abs_max": [
+        0.007761479361802341,
+        0.03379018685333431,
+        0.0034114731556177153
+      ],
+      "n": 1000
+    },
+    "pressure_absolute_depth_delta_m": {
+      "rms": 0.08640320653063932,
+      "abs_p95": 0.08645966920084217,
+      "abs_max": 0.08645999598147472,
+      "n": 1000
+    },
+    "pressure_relative_depth_delta_m": {
+      "rms": 6.604558289982213e-05,
+      "abs_p95": 9.941423727456295e-05,
+      "abs_max": 0.00013108040818568534,
+      "n": 1000
+    }
+  },
+  "interpretation": [
+    "Historical TF is a supported configuration reference, not measured April extrinsics.",
+    "Current CAD positions are also estimates; coordinate differences do not prove physical relocation.",
+    "Uses recorded real AHRS and rigid-body kinematics; no new physical rollout or parameter fitting.",
+    "Old DVL published TF is identity while its MuJoCo site has roll pi. Do not infer output axes from site rotation alone.",
+    "Translation alone does not change gyro readings. Unknown sensor axis conventions remain separate.",
+    "Pressure height change includes a constant offset; initial-zero relative depth removes that constant."
+  ],
+  "recorded_rollout_sensor_point_sensitivity": {
+    "selected_phase_frozen": true,
+    "historical_tf_applied_to_recorded_bag": false,
+    "source_report_sha256": "5dd94481faa6de1cc321261ca2b5328cf2df27d43c4e6b45f8f934a0534c5937",
+    "runs": {
+      "baseline": {
+        "surge": {
+          "body_reference": {
+            "raw": {
+              "n": 232,
+              "rmse": 0.48898193257234757,
+              "bias": 0.3907947171266168,
+              "centered_rmse": 0.293909542968777,
+              "p95_abs_error": 0.7133940593445334,
+              "reference_p05_p95_span": 0.35290784830609445,
+              "rmse_over_reference_span": 1.385579648963288,
+              "rmse_over_stationary_sigma": null,
+              "correlation": 0.9262234318095127
+            },
+            "trend": {
+              "n": 232,
+              "rmse": 0.4878855411180826,
+              "bias": 0.39083111759386924,
+              "centered_rmse": 0.29203311242462116,
+              "p95_abs_error": 0.7128366223973924,
+              "reference_p05_p95_span": 0.354332306829592,
+              "rmse_over_reference_span": 1.3769152056256613,
+              "rmse_over_stationary_sigma": null,
+              "correlation": 0.9297427708316434
+            }
+          },
+          "historical_sensor_point": {
+            "raw": {
+              "n": 232,
+              "rmse": 0.4892616684561207,
+              "bias": 0.3913321953202164,
+              "centered_rmse": 0.29365982552321823,
+              "p95_abs_error": 0.714554627217268,
+              "reference_p05_p95_span": 0.35290784830609445,
+              "rmse_over_reference_span": 1.3863723088180226,
+              "rmse_over_stationary_sigma": null,
+              "correlation": 0.9275898599459907
+            },
+            "trend": {
+              "n": 232,
+              "rmse": 0.4881738797327197,
+              "bias": 0.39132766124782575,
+              "centered_rmse": 0.2918499587041306,
+              "p95_abs_error": 0.7135048074479546,
+              "reference_p05_p95_span": 0.354332306829592,
+              "rmse_over_reference_span": 1.3777289576010796,
+              "rmse_over_stationary_sigma": null,
+              "correlation": 0.930935761154635
+            }
+          }
+        },
+        "relative_depth": {
+          "body_reference": {
+            "raw": {
+              "n": 270,
+              "rmse": 0.026248363716244078,
+              "bias": -0.0018439031124598251,
+              "centered_rmse": 0.026183518080886297,
+              "p95_abs_error": 0.0537633613988385,
+              "reference_p05_p95_span": 0.07175775368681708,
+              "rmse_over_reference_span": 0.36579132383106183,
+              "rmse_over_stationary_sigma": null,
+              "correlation": 0.3047917840568902
+            },
+            "trend": {
+              "n": 270,
+              "rmse": 0.026085211352902253,
+              "bias": -0.0018346714322979736,
+              "centered_rmse": 0.026020611677304788,
+              "p95_abs_error": 0.05338113730708791,
+              "reference_p05_p95_span": 0.07077265518786918,
+              "rmse_over_reference_span": 0.3685775428893814,
+              "rmse_over_stationary_sigma": null,
+              "correlation": 0.30544387321826866
+            }
+          },
+          "historical_sensor_point": {
+            "raw": {
+              "n": 270,
+              "rmse": 0.02597281358195734,
+              "bias": -0.003995487177449431,
+              "centered_rmse": 0.02566365382360713,
+              "p95_abs_error": 0.04969463215820759,
+              "reference_p05_p95_span": 0.07175775368681708,
+              "rmse_over_reference_span": 0.36195131881237963,
+              "rmse_over_stationary_sigma": null,
+              "correlation": 0.3183355816847605
+            },
+            "trend": {
+              "n": 270,
+              "rmse": 0.025759181074417745,
+              "bias": -0.004000094644537695,
+              "centered_rmse": 0.025446702192217015,
+              "p95_abs_error": 0.049348919246398816,
+              "reference_p05_p95_span": 0.07077265518786918,
+              "rmse_over_reference_span": 0.36397081621480565,
+              "rmse_over_stationary_sigma": null,
+              "correlation": 0.31980725460547205
+            }
+          }
+        }
+      },
+      "effective": {
+        "surge": {
+          "body_reference": {
+            "raw": {
+              "n": 232,
+              "rmse": 0.06390248430693374,
+              "bias": 0.04108355517535635,
+              "centered_rmse": 0.04894557175834565,
+              "p95_abs_error": 0.09586294532023709,
+              "reference_p05_p95_span": 0.35290784830609445,
+              "rmse_over_reference_span": 0.18107413766414157,
+              "rmse_over_stationary_sigma": null,
+              "correlation": 0.9213753121241972
+            },
+            "trend": {
+              "n": 232,
+              "rmse": 0.06311485214639163,
+              "bias": 0.04118994097773582,
+              "centered_rmse": 0.04782126434664307,
+              "p95_abs_error": 0.09338875031594722,
+              "reference_p05_p95_span": 0.354332306829592,
+              "rmse_over_reference_span": 0.17812333487486728,
+              "rmse_over_stationary_sigma": null,
+              "correlation": 0.9251075156428855
+            }
+          },
+          "historical_sensor_point": {
+            "raw": {
+              "n": 232,
+              "rmse": 0.06386014642930125,
+              "bias": 0.04118563110498434,
+              "centered_rmse": 0.04880432452617231,
+              "p95_abs_error": 0.09556065375517687,
+              "reference_p05_p95_span": 0.35290784830609445,
+              "rmse_over_reference_span": 0.18095416901556746,
+              "rmse_over_stationary_sigma": null,
+              "correlation": 0.9218910125656571
+            },
+            "trend": {
+              "n": 232,
+              "rmse": 0.0630725965907706,
+              "bias": 0.04128426293051873,
+              "centered_rmse": 0.047683981324821045,
+              "p95_abs_error": 0.09324032628437315,
+              "reference_p05_p95_span": 0.354332306829592,
+              "rmse_over_reference_span": 0.1780040808446629,
+              "rmse_over_stationary_sigma": null,
+              "correlation": 0.9255881237794177
+            }
+          }
+        },
+        "relative_depth": {
+          "body_reference": {
+            "raw": {
+              "n": 270,
+              "rmse": 0.03335509323565276,
+              "bias": -0.01557450634486624,
+              "centered_rmse": 0.029495711499687705,
+              "p95_abs_error": 0.06805073996541662,
+              "reference_p05_p95_span": 0.07175775368681708,
+              "rmse_over_reference_span": 0.46482911632419954,
+              "rmse_over_stationary_sigma": null,
+              "correlation": -0.20432542365503678
+            },
+            "trend": {
+              "n": 270,
+              "rmse": 0.03319836129465378,
+              "bias": -0.015575400232892146,
+              "centered_rmse": 0.029317880213882954,
+              "p95_abs_error": 0.06770858325255112,
+              "reference_p05_p95_span": 0.07077265518786918,
+              "rmse_over_reference_span": 0.4690845808529756,
+              "rmse_over_stationary_sigma": null,
+              "correlation": -0.20506841429225275
+            }
+          },
+          "historical_sensor_point": {
+            "raw": {
+              "n": 270,
+              "rmse": 0.033250667334924565,
+              "bias": -0.015680952136190956,
+              "centered_rmse": 0.02932089047625102,
+              "p95_abs_error": 0.06809111370288781,
+              "reference_p05_p95_span": 0.07175775368681708,
+              "rmse_over_reference_span": 0.4633738603363386,
+              "rmse_over_stationary_sigma": null,
+              "correlation": -0.20565207615642705
+            },
+            "trend": {
+              "n": 270,
+              "rmse": 0.03310238601839653,
+              "bias": -0.015681371468868444,
+              "centered_rmse": 0.029152402113141428,
+              "p95_abs_error": 0.06765726750772012,
+              "reference_p05_p95_span": 0.07077265518786918,
+              "rmse_over_reference_span": 0.46772847409108453,
+              "rmse_over_stationary_sigma": null,
+              "correlation": -0.20723589826499217
+            }
+          }
+        }
+      },
+      "drag_only": {
+        "surge": {
+          "body_reference": {
+            "raw": {
+              "n": 232,
+              "rmse": 0.09701680753636294,
+              "bias": -0.0511006677760159,
+              "centered_rmse": 0.08246807077525783,
+              "p95_abs_error": 0.1782806524967552,
+              "reference_p05_p95_span": 0.35290784830609445,
+              "rmse_over_reference_span": 0.2749069140911127,
+              "rmse_over_stationary_sigma": null,
+              "correlation": 0.8666409530428072
+            },
+            "trend": {
+              "n": 232,
+              "rmse": 0.09455741199203332,
+              "bias": -0.05075522374888243,
+              "centered_rmse": 0.07978102170837377,
+              "p95_abs_error": 0.17722768598077226,
+              "reference_p05_p95_span": 0.354332306829592,
+              "rmse_over_reference_span": 0.2668608257544761,
+              "rmse_over_stationary_sigma": null,
+              "correlation": 0.8738891246412721
+            }
+          },
+          "historical_sensor_point": {
+            "raw": {
+              "n": 232,
+              "rmse": 0.09581868187792571,
+              "bias": -0.050734619404584874,
+              "centered_rmse": 0.08128479679924806,
+              "p95_abs_error": 0.17190037577401313,
+              "reference_p05_p95_span": 0.35290784830609445,
+              "rmse_over_reference_span": 0.27151190413543147,
+              "rmse_over_stationary_sigma": null,
+              "correlation": 0.871020244343579
+            },
+            "trend": {
+              "n": 232,
+              "rmse": 0.09354315170573788,
+              "bias": -0.05040610401277361,
+              "centered_rmse": 0.0788006720104349,
+              "p95_abs_error": 0.17207240628202386,
+              "reference_p05_p95_span": 0.354332306829592,
+              "rmse_over_reference_span": 0.2639983707461519,
+              "rmse_over_stationary_sigma": null,
+              "correlation": 0.877538930634513
+            }
+          }
+        },
+        "relative_depth": {
+          "body_reference": {
+            "raw": {
+              "n": 270,
+              "rmse": 0.026826417966248454,
+              "bias": -0.003281073693941362,
+              "centered_rmse": 0.026625011855674056,
+              "p95_abs_error": 0.05298526993601697,
+              "reference_p05_p95_span": 0.07175775368681708,
+              "rmse_over_reference_span": 0.3738469585228509,
+              "rmse_over_stationary_sigma": null,
+              "correlation": 0.16392526680713293
+            },
+            "trend": {
+              "n": 270,
+              "rmse": 0.026681310517627316,
+              "bias": -0.003287885199559912,
+              "centered_rmse": 0.026477955771784287,
+              "p95_abs_error": 0.05243585825956063,
+              "reference_p05_p95_span": 0.07077265518786918,
+              "rmse_over_reference_span": 0.37700027569688577,
+              "rmse_over_stationary_sigma": null,
+              "correlation": 0.1639537610548354
+            }
+          },
+          "historical_sensor_point": {
+            "raw": {
+              "n": 270,
+              "rmse": 0.026544439479135457,
+              "bias": -0.005366471164093469,
+              "centered_rmse": 0.025996312325144086,
+              "p95_abs_error": 0.04994561245767237,
+              "reference_p05_p95_span": 0.07175775368681708,
+              "rmse_over_reference_span": 0.36991736941748843,
+              "rmse_over_stationary_sigma": null,
+              "correlation": 0.17392129836493708
+            },
+            "trend": {
+              "n": 270,
+              "rmse": 0.026405178838136645,
+              "bias": -0.005381748425398939,
+              "centered_rmse": 0.025850923646161955,
+              "p95_abs_error": 0.050000145755105405,
+              "reference_p05_p95_span": 0.07077265518786918,
+              "rmse_over_reference_span": 0.3730986038045756,
+              "rmse_over_stationary_sigma": null,
+              "correlation": 0.17331645947694108
+            }
+          }
+        }
+      }
+    }
+  }
+}
