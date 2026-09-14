@@ -77,6 +77,7 @@ Docker 설치·GPU 설정은 [개발 컨테이너 안내](docker/ubuntu-dev/READ
 | 최신 파이프라인 검사 | [Offline hardening](docs/contracts/OFFLINE_HARDENING_20260912.md) |
 | 수집 시작·시계 검증 | [Collection readiness](docs/contracts/PRE_VLA_COLLECTOR_READINESS_20260914.md) |
 | 실물 로그 보정의 범위 | [Horizontal response](docs/contracts/HORIZONTAL_RESPONSE_CALIBRATION_20260912.md) |
+| ROSBAG 위상·경로·노이즈 비교 | [Trend alignment](docs/contracts/ROSBAG_TREND_ALIGNMENT.md) |
 | 줄 안정화와 재현 절차 | [Rope stability](docs/gui/ROPE_STABILITY_20260912.md) |
 | 센서 장착 가정 | [CAD sensor mounts](docs/gui/CAD_SENSOR_MOUNTS.md) |
 

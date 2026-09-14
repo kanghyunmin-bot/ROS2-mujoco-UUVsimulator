@@ -18,6 +18,8 @@ jobs:
       - run: python uuv_mujoco/current/tools/check_attached_buoy_impacts.py
       - run: python -m pytest -q uuv_mujoco/current/tools/test_contact_timestep.py
       - run: python -m pytest -q uuv_mujoco/current/tools/test_startup_alignment.py
+      - name: Offline rosbag phase, validity and noise contracts
+        run: python -m pytest -q uuv_mujoco/current/tools/test_rosbag_trend_math.py
       - run: python -m pytest -q uuv_mujoco/current/tools/test_hydrodynamic_batch_sampling.py uuv_mujoco/current/tools/test_vla_camera_intrinsics.py uuv_mujoco/current/tools/test_research_pool_layout.py uuv_mujoco/current/tools/test_sitl_heartbeat_state_recording.py
       - name: Camera optics and capture timing
         run: >-
