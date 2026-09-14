@@ -16,6 +16,7 @@ from pathlib import Path
 import sys
 import time
 from types import SimpleNamespace
+from dataclasses import replace
 from unittest.mock import patch
 
 import cv2
@@ -52,6 +53,7 @@ def main() -> None:
     parser.add_argument("--height", type=int, default=360)
     parser.add_argument("--frames", type=int, default=30)
     parser.add_argument("--warmup", type=int, default=5)
+    parser.add_argument("--water_lighting", choices=("profile", "off"), default="profile")
     parser.add_argument("--quality", choices=("low", "scene"), default="low")
     args = parser.parse_args()
     if args.frames < 1 or args.warmup < 0:
@@ -75,8 +77,11 @@ def main() -> None:
             owner, publish_images=True, image_width=args.width,
             image_height=args.height, image_hz=15,
         )
+    if args.water_lighting == "off":
+        owner._camera_sensor_profile = replace(owner._camera_sensor_profile, optics=replace(owner._camera_sensor_profile.optics, pool_lighting_enabled=False))
     before_state = (data.qpos.copy(), data.qvel.copy(), float(data.time), model.geom_rgba.copy())
     report = {
+        "water_lighting_enabled": owner._camera_sensor_profile.optics.pool_lighting_enabled,
         "scene": str(scene),
         "scene_sha256": hashlib.sha256(scene.read_bytes()).hexdigest(),
         "profile": str(profile_path),
@@ -133,7 +138,7 @@ def main() -> None:
             row = np.concatenate((frame.rgb, rgb), axis=1)
             row = cv2.cvtColor(row, cv2.COLOR_RGB2BGR)
             banner = np.zeros((28, row.shape[1], 3), dtype=np.uint8)
-            cv2.putText(banner, f"{camera}: ideal RGB", (8, 19), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (230, 230, 230), 1)
+            cv2.putText(banner, f"{camera}: scene RGB + lighting", (8, 19), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (230, 230, 230), 1)
             cv2.putText(banner, "Pool lite: depth-aware water optics", (rgb.shape[1] + 8, 19), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (230, 230, 230), 1)
             rows.append(np.concatenate((banner, row), axis=0))
             paths = frame.optical_path_length_m

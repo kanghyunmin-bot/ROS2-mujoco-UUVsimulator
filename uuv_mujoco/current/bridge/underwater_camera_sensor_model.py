@@ -139,6 +139,7 @@ class UnderwaterOpticsConfig:
     vignetting_strength: float = 0.0
     path_mode: str = "fixed"
     max_optical_path_length_m: float = 12.0
+    pool_lighting_enabled: bool = False
 
     def __post_init__(self) -> None:
         if self.path_mode not in {"fixed", "depth"}:
@@ -511,6 +512,7 @@ def load_underwater_camera_profile(
         calibration=calibration,
         intrinsics_from_renderer=bool(payload.get("intrinsics_from_renderer", False)),
         optics=UnderwaterOpticsConfig(
+            pool_lighting_enabled=bool(optics_raw.get("pool_lighting_enabled", False)),
             path_mode=str(optics_raw.get("path_mode", "fixed")),
             max_optical_path_length_m=float(optics_raw.get("max_optical_path_length_m", 12.0)),
             optical_path_length_m=float(optics_raw.get("optical_path_length_m", 0.0)),

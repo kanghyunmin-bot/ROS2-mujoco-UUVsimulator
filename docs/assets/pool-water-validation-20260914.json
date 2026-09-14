@@ -1,0 +1,501 @@
+{
+  "baseline": {
+    "water_lighting_enabled": false,
+    "scene": "/home/khm/robotics/underwater/ROS2-mujoco-UUVsimulator/uuv_mujoco/current/scenes/research_pool_slam_scene.xml",
+    "scene_sha256": "093ae46d208d59fc3e7ef79668b130f1647756e5378b466c47b61c9250f99a44",
+    "profile": "/home/khm/robotics/underwater/ROS2-mujoco-UUVsimulator/uuv_mujoco/current/config/sensor_models/imx219_underwater_pool_lite.json",
+    "profile_sha256": "015179e6a54c31c89049139064b3fbc3096212eb8fab6fc31b570bcf436452bb",
+    "mujoco_version": "3.8.0",
+    "backend": "egl",
+    "width": 640,
+    "height": 360,
+    "samples": 30,
+    "warmup": 5,
+    "shadowsize": 1024,
+    "offsamples": 1,
+    "scope": "static warm-render microbenchmark; no live SITL/GUI or end-to-end collection timing",
+    "cameras": {
+      "stereo_left": {
+        "rgb_only": {
+          "p50_ms": 1.2694010000586786,
+          "p95_ms": 1.3530462500057183
+        },
+        "rgb_depth_and_projection": {
+          "p50_ms": 2.171794000105365,
+          "p95_ms": 2.740736500004459
+        },
+        "pool_lite_postprocess": {
+          "p50_ms": 2.0671835000030114,
+          "p95_ms": 2.478102149996175
+        },
+        "original_prior_postprocess": {
+          "p50_ms": 14.654604499924062,
+          "p95_ms": 15.952020950066979
+        },
+        "pool_lite_capture_and_process": {
+          "p50_ms": 4.255673999978171,
+          "p95_ms": 5.145016400126678
+        },
+        "optical_path_min_m": 2.07863187789917,
+        "optical_path_max_m": 8.772064208984375,
+        "optical_path_mean_m": 5.143554210662842,
+        "intrinsics_k": [
+          257.0666412135806,
+          0.0,
+          319.5,
+          0.0,
+          257.0666412135806,
+          179.5,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "same_sequence_deterministic": true
+      },
+      "stereo_right": {
+        "rgb_only": {
+          "p50_ms": 1.4458454999157766,
+          "p95_ms": 1.510529300003327
+        },
+        "rgb_depth_and_projection": {
+          "p50_ms": 2.3613240000486257,
+          "p95_ms": 2.7730414500183542
+        },
+        "pool_lite_postprocess": {
+          "p50_ms": 2.068485499989947,
+          "p95_ms": 2.638087400009681
+        },
+        "original_prior_postprocess": {
+          "p50_ms": 14.125057499995819,
+          "p95_ms": 15.7406484999683
+        },
+        "pool_lite_capture_and_process": {
+          "p50_ms": 4.535092000082841,
+          "p95_ms": 5.164563200003158
+        },
+        "optical_path_min_m": 0.020705150440335274,
+        "optical_path_max_m": 8.780967712402344,
+        "optical_path_mean_m": 2.9547879695892334,
+        "intrinsics_k": [
+          207.0663132997817,
+          0.0,
+          319.5,
+          0.0,
+          207.0663132997817,
+          179.5,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "same_sequence_deterministic": true
+      }
+    },
+    "simulation_state_unchanged": true,
+    "two_camera_15hz_serial_budget_percent": 13.186149000091518
+  },
+  "enabled": {
+    "water_lighting_enabled": true,
+    "scene": "/home/khm/robotics/underwater/ROS2-mujoco-UUVsimulator/uuv_mujoco/current/scenes/research_pool_slam_scene.xml",
+    "scene_sha256": "093ae46d208d59fc3e7ef79668b130f1647756e5378b466c47b61c9250f99a44",
+    "profile": "/home/khm/robotics/underwater/ROS2-mujoco-UUVsimulator/uuv_mujoco/current/config/sensor_models/imx219_underwater_pool_lite.json",
+    "profile_sha256": "015179e6a54c31c89049139064b3fbc3096212eb8fab6fc31b570bcf436452bb",
+    "mujoco_version": "3.8.0",
+    "backend": "egl",
+    "width": 640,
+    "height": 360,
+    "samples": 30,
+    "warmup": 5,
+    "shadowsize": 1024,
+    "offsamples": 1,
+    "scope": "static warm-render microbenchmark; no live SITL/GUI or end-to-end collection timing",
+    "cameras": {
+      "stereo_left": {
+        "rgb_only": {
+          "p50_ms": 1.2844789999917339,
+          "p95_ms": 1.3941870499365903
+        },
+        "rgb_depth_and_projection": {
+          "p50_ms": 9.139977499899032,
+          "p95_ms": 10.194732199931877
+        },
+        "pool_lite_postprocess": {
+          "p50_ms": 2.30138150016046,
+          "p95_ms": 2.853843650098042
+        },
+        "original_prior_postprocess": {
+          "p50_ms": 14.380558500079133,
+          "p95_ms": 15.748812149990952
+        },
+        "pool_lite_capture_and_process": {
+          "p50_ms": 11.518993999970917,
+          "p95_ms": 12.678950150018409
+        },
+        "optical_path_min_m": 2.07863187789917,
+        "optical_path_max_m": 8.772064208984375,
+        "optical_path_mean_m": 5.143554210662842,
+        "intrinsics_k": [
+          257.0666412135806,
+          0.0,
+          319.5,
+          0.0,
+          257.0666412135806,
+          179.5,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "same_sequence_deterministic": true
+      },
+      "stereo_right": {
+        "rgb_only": {
+          "p50_ms": 1.4501684999004283,
+          "p95_ms": 1.5200524998704168
+        },
+        "rgb_depth_and_projection": {
+          "p50_ms": 9.31295999998838,
+          "p95_ms": 10.638870799994036
+        },
+        "pool_lite_postprocess": {
+          "p50_ms": 2.270844000008765,
+          "p95_ms": 2.5811209500034233
+        },
+        "original_prior_postprocess": {
+          "p50_ms": 13.858550000009018,
+          "p95_ms": 14.676470299991706
+        },
+        "pool_lite_capture_and_process": {
+          "p50_ms": 11.511433999885412,
+          "p95_ms": 13.044059849903531
+        },
+        "optical_path_min_m": 0.020705150440335274,
+        "optical_path_max_m": 8.780967712402344,
+        "optical_path_mean_m": 2.9547879695892334,
+        "intrinsics_k": [
+          207.0663132997817,
+          0.0,
+          319.5,
+          0.0,
+          207.0663132997817,
+          179.5,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "same_sequence_deterministic": true
+      }
+    },
+    "simulation_state_unchanged": true,
+    "two_camera_15hz_serial_budget_percent": 34.54564199978449
+  },
+  "physics": {
+    "physical_geoms_unchanged": 812,
+    "arrays_exact_match": [
+      "body_mass",
+      "body_inertia",
+      "body_ipos",
+      "body_iquat",
+      "jnt_type",
+      "jnt_pos",
+      "dof_damping",
+      "dof_armature",
+      "eq_data",
+      "eq_solref"
+    ]
+  },
+  "live": {
+    "kind": "read_only_live_input_probe",
+    "wall_duration_s": 15.000104030000102,
+    "ros_domain_id": "42",
+    "collector_rate_hz_configured": 10.0,
+    "sensor_max_age_s": 0.25,
+    "clock": {
+      "sim_progress_s": 3.852499999999999,
+      "observed_rtf": 0.2568518219041897,
+      "progress_events": 1541,
+      "resets": 0,
+      "max_no_progress_wall_s": 0.15984156200011057
+    },
+    "streams": {
+      "ego": {
+        "topic": "/imx219/camera0/image_raw/compressed",
+        "publisher_count": 1,
+        "received_messages": 58,
+        "received_hz_wall_window": 3.866639850230399,
+        "unique_source_stamps": 58,
+        "observed_unique_source_hz": 14.999999999999996,
+        "frame_ids": [
+          "imx219_camera0_optical_frame"
+        ],
+        "collector_samples": 38,
+        "samples_with_input": 38,
+        "missing_samples": 0,
+        "stale_samples": 0,
+        "semantic_invalid_samples": 0,
+        "fresh_and_semantic_valid_ratio": 1.0,
+        "repeated_or_rewound_sample_stamps": 0,
+        "source_age_at_sample_s": {
+          "min": 0.02999999999999936,
+          "median": 0.04500000000000082,
+          "p95": 0.0600000000000005,
+          "max": 0.0600000000000005
+        },
+        "source_age_at_receipt_s": {
+          "min": 0.009999999999999787,
+          "median": 0.010000000000001563,
+          "p95": 0.010000000000001563,
+          "max": 0.010000000000001563
+        },
+        "invalid_sample_examples": [],
+        "decoded_image_checks": [
+          {
+            "dtype": "uint8",
+            "shape_hwc": [
+              360,
+              640,
+              3
+            ]
+          }
+        ]
+      },
+      "hand": {
+        "topic": "/imx219/camera1/image_raw/compressed",
+        "publisher_count": 1,
+        "received_messages": 58,
+        "received_hz_wall_window": 3.866639850230399,
+        "unique_source_stamps": 58,
+        "observed_unique_source_hz": 14.999999999999996,
+        "frame_ids": [
+          "imx219_camera1_optical_frame"
+        ],
+        "collector_samples": 38,
+        "samples_with_input": 38,
+        "missing_samples": 0,
+        "stale_samples": 0,
+        "semantic_invalid_samples": 0,
+        "fresh_and_semantic_valid_ratio": 1.0,
+        "repeated_or_rewound_sample_stamps": 0,
+        "source_age_at_sample_s": {
+          "min": 0.02999999999999936,
+          "median": 0.04500000000000082,
+          "p95": 0.0600000000000005,
+          "max": 0.0600000000000005
+        },
+        "source_age_at_receipt_s": {
+          "min": 0.009999999999999787,
+          "median": 0.010000000000001563,
+          "p95": 0.010000000000001563,
+          "max": 0.010000000000001563
+        },
+        "invalid_sample_examples": [],
+        "decoded_image_checks": [
+          {
+            "dtype": "uint8",
+            "shape_hwc": [
+              360,
+              640,
+              3
+            ]
+          }
+        ]
+      },
+      "imu": {
+        "topic": "/mavros/imu/data",
+        "publisher_count": 1,
+        "received_messages": 39,
+        "received_hz_wall_window": 2.599981968258372,
+        "unique_source_stamps": 39,
+        "observed_unique_source_hz": 10.000000000000004,
+        "frame_ids": [
+          "base_link"
+        ],
+        "collector_samples": 38,
+        "samples_with_input": 38,
+        "missing_samples": 0,
+        "stale_samples": 0,
+        "semantic_invalid_samples": 0,
+        "fresh_and_semantic_valid_ratio": 1.0,
+        "repeated_or_rewound_sample_stamps": 0,
+        "source_age_at_sample_s": {
+          "min": 0.009999999999999787,
+          "median": 0.009999999999999787,
+          "p95": 0.010375000000001218,
+          "max": 0.012500000000001066
+        },
+        "source_age_at_receipt_s": {
+          "min": 0.0,
+          "median": 0.0,
+          "p95": 0.00025000000000155253,
+          "max": 0.002500000000001279
+        },
+        "invalid_sample_examples": []
+      },
+      "depth": {
+        "topic": "/depth/pose",
+        "publisher_count": 1,
+        "received_messages": 38,
+        "received_hz_wall_window": 2.5333157639440547,
+        "unique_source_stamps": 38,
+        "observed_unique_source_hz": 10.000000000000002,
+        "frame_ids": [
+          "odom"
+        ],
+        "collector_samples": 38,
+        "samples_with_input": 38,
+        "missing_samples": 0,
+        "stale_samples": 0,
+        "semantic_invalid_samples": 0,
+        "fresh_and_semantic_valid_ratio": 1.0,
+        "repeated_or_rewound_sample_stamps": 0,
+        "source_age_at_sample_s": {
+          "min": 0.09999999999999964,
+          "median": 0.10000000000000053,
+          "p95": 0.10000000000000142,
+          "max": 0.10000000000000142
+        },
+        "source_age_at_receipt_s": {
+          "min": 0.009999999999999787,
+          "median": 0.015000000000000568,
+          "p95": 0.017875000000001504,
+          "max": 0.02000000000000135
+        },
+        "invalid_sample_examples": []
+      },
+      "dvl_twist": {
+        "topic": "/dvl/twist",
+        "publisher_count": 1,
+        "received_messages": 38,
+        "received_hz_wall_window": 2.5333157639440547,
+        "unique_source_stamps": 38,
+        "observed_unique_source_hz": 10.013531799729364,
+        "frame_ids": [
+          "dvl_link"
+        ],
+        "collector_samples": 38,
+        "samples_with_input": 38,
+        "missing_samples": 0,
+        "stale_samples": 0,
+        "semantic_invalid_samples": 0,
+        "fresh_and_semantic_valid_ratio": 1.0,
+        "repeated_or_rewound_sample_stamps": 0,
+        "source_age_at_sample_s": {
+          "min": 0.07499999999999929,
+          "median": 0.08500000000000085,
+          "p95": 0.09500000000000064,
+          "max": 0.09500000000000064
+        },
+        "source_age_at_receipt_s": {
+          "min": 0.0,
+          "median": 0.0,
+          "p95": 1.7763568394002505e-15,
+          "max": 0.002500000000001279
+        },
+        "invalid_sample_examples": []
+      },
+      "dvl_data": {
+        "topic": "/dvl/data",
+        "publisher_count": 1,
+        "received_messages": 38,
+        "received_hz_wall_window": 2.5333157639440547,
+        "unique_source_stamps": 38,
+        "observed_unique_source_hz": 10.013531799729364,
+        "frame_ids": [
+          "dvl_link"
+        ],
+        "collector_samples": 38,
+        "samples_with_input": 38,
+        "missing_samples": 0,
+        "stale_samples": 0,
+        "semantic_invalid_samples": 0,
+        "fresh_and_semantic_valid_ratio": 1.0,
+        "repeated_or_rewound_sample_stamps": 0,
+        "source_age_at_sample_s": {
+          "min": 0.07499999999999929,
+          "median": 0.08500000000000085,
+          "p95": 0.09500000000000064,
+          "max": 0.09500000000000064
+        },
+        "source_age_at_receipt_s": {
+          "min": 0.0,
+          "median": 0.0,
+          "p95": 1.7763568394002505e-15,
+          "max": 1.7763568394002505e-15
+        },
+        "invalid_sample_examples": []
+      },
+      "imu_motion": {
+        "topic": "/mavros/imu/data_raw",
+        "publisher_count": 1,
+        "received_messages": 192,
+        "received_hz_wall_window": 12.799911228348908,
+        "unique_source_stamps": 192,
+        "observed_unique_source_hz": 49.99999999999999,
+        "frame_ids": [
+          "fcu_link"
+        ],
+        "collector_samples": 38,
+        "samples_with_input": 38,
+        "missing_samples": 0,
+        "stale_samples": 0,
+        "semantic_invalid_samples": 0,
+        "fresh_and_semantic_valid_ratio": 1.0,
+        "repeated_or_rewound_sample_stamps": 0,
+        "source_age_at_sample_s": {
+          "min": 0.019999999999999574,
+          "median": 0.02000000000000135,
+          "p95": 0.02000000000000135,
+          "max": 0.02000000000000135
+        },
+        "source_age_at_receipt_s": {
+          "min": 1.7763568394002505e-15,
+          "median": 0.004999999999999005,
+          "p95": 0.005000000000000782,
+          "max": 0.007500000000000284
+        },
+        "invalid_sample_examples": []
+      }
+    },
+    "collector_timer_samples": 38,
+    "collector_sample_interval_s": {
+      "min": 0.09999999999999964,
+      "median": 0.09999999999999964,
+      "p95": 0.10000000000000142,
+      "max": 0.10000000000000142
+    },
+    "camera_source_skew_s": {
+      "min": 0.0,
+      "median": 0.0,
+      "p95": 0.0,
+      "max": 0.0
+    },
+    "dvl_velocity_usable_ratio": 1.0,
+    "altitude_usable_ratio": 1.0,
+    "vehicle": {
+      "connected": true,
+      "armed": false,
+      "mode": "MANUAL"
+    },
+    "vehicle_receipt_age_wall_s": 2.163968787000158,
+    "vehicle_receipt_age_ros_s": 0.5100000000000016,
+    "vehicle_freshness_clock": "simulation",
+    "vehicle_message_count": 4,
+    "vehicle_receipt_interval_wall_s": {
+      "min": 3.6622458739998365,
+      "median": 3.816972008999983,
+      "p95": 3.9142747089000522,
+      "max": 3.92508612000006
+    },
+    "vehicle_receipt_interval_sim_s": {
+      "min": 1.0,
+      "median": 1.0,
+      "p95": 1.0,
+      "max": 1.0
+    },
+    "rc_override_publisher_count": 1,
+    "blocking_observations": [
+      "vehicle disarmed; task demonstration not ready",
+      "vehicle mode differs from STABILIZE"
+    ],
+    "limits": "Observed rates are measured, not configured publication rates. Camera decoding is sampled once per wall second. No controls or collector services were called. This is not a task demonstration or physical calibration validation.",
+    "collector_config": "/workspace/rospkg/src/auv_vla_data_collector/config/collector.yaml"
+  }
+}

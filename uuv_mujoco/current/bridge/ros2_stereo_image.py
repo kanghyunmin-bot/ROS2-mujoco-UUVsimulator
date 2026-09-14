@@ -14,6 +14,7 @@ import numpy as np
 
 from .ros2_bridge_publish_stamp import stamp_from_seconds_like
 from .underwater_camera_render import CameraOpticalPathProjector
+from .water_lighting import PoolWaterLighting
 from .ros2_camera_sensor_runtime import (
     CameraFrameDelivery,
     CameraSensorRuntime,
@@ -69,6 +70,7 @@ def configure_stereo_image_runtime(
         maximum=95,
     )
     bridge._stereo_image_renderers: dict[str, Any] = {}
+    bridge._pool_water_lighting = {}
     bridge._camera_path_projectors: dict[str, CameraOpticalPathProjector] = {}
     bridge._stereo_image_warned: set[str] = set()
     bridge._stereo_image_async_requested = _env_bool(
@@ -597,6 +599,17 @@ def render_camera_frame(self: Any, camera_name: str, data: Any) -> RenderedCamer
         water_surface_z_m=float(getattr(self, "_water_surface_z", 0.0)),
         max_path_length_m=self._camera_sensor_profile.optics.max_optical_path_length_m,
     )
+    if self._camera_sensor_profile.optics.pool_lighting_enabled:
+        surface_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "water_surface")
+        if surface_id >= 0:
+            lighting = self._pool_water_lighting
+            if camera not in lighting:
+                lighting[camera] = PoolWaterLighting(rgb.shape[1], rgb.shape[0], float(self.model.cam_fovy[camera_id]))
+            rgb = lighting[camera].apply(
+                rgb, depth_m, position=data.cam_xpos[camera_id], rotation=data.cam_xmat[camera_id],
+                time_s=float(data.time), surface_z=float(getattr(self, "_water_surface_z", 0.0)),
+                center_xy=data.geom_xpos[surface_id, :2], half_size_xy=self.model.geom_size[surface_id, :2],
+            )
     return RenderedCameraFrame(rgb, float(data.time), paths)
 
 
@@ -1069,6 +1082,7 @@ def close_stereo_image_renderers(self: Any) -> None:
             pass
     getattr(self, "_camera_sensor_runtimes", {}).clear()
     getattr(self, "_camera_path_projectors", {}).clear()
+    getattr(self, "_pool_water_lighting", {}).clear()
     renderers = getattr(self, "_stereo_image_renderers", {})
     for renderer in list(renderers.values()):
         try:

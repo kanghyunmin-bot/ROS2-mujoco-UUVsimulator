@@ -24,6 +24,7 @@ jobs:
           python -m pytest -q
           uuv_mujoco/current/tools/test_underwater_camera_sensor_model.py
           uuv_mujoco/current/tools/test_underwater_camera_render.py
+          uuv_mujoco/current/tools/test_water_lighting.py
           uuv_mujoco/current/tools/test_camera_sensor_runtime.py
           uuv_mujoco/current/tools/test_camera_publish_integration.py
           uuv_mujoco/current/tools/test_mavproxy_stream_ownership.py

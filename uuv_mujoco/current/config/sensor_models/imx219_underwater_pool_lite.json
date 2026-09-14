@@ -8,7 +8,7 @@
   "evidence": {
     "basis": "qualitative clear-pool engineering prior; coefficients are not measured IMX219 specifications",
     "runtime_boundary": "aligned ideal MuJoCo RGB and z-depth converted to underwater ray length; unchanged ROS image topics",
-    "limitations": "homogeneous water and a horizontal surface; no refraction, caustics, particles, volumetric lights, measured sensor noise, or exposure calibration",
+    "limitations": "homogeneous water; artistic world-anchored waves, highlights and caustics with incoming depth attenuation; no scene reflection, refraction, volumetric light rays, light occlusion or measured optical calibration",
     "performance": "one extra depth pass; cached pinhole rays; float32 per-channel optics; no image blur or electronic noise"
   },
   "intrinsics": {
@@ -22,6 +22,7 @@
   },
   "underwater_optics": {
     "path_mode": "depth",
+    "pool_lighting_enabled": true,
     "max_optical_path_length_m": 12.0,
     "optical_path_length_m": 0.0,
     "attenuation_coefficients_rgb_per_m": [0.16, 0.055, 0.025],

@@ -7,6 +7,7 @@ import time
 from dataclasses import replace
 from typing import Any
 
+from sim.runtime.water_surface_visual import WaterSurfaceVisual
 from sim.runtime.simulation_loop_cadence import build_viewer_loop_cadence
 from sim.runtime.simulation_loop_catchup import (
     mark_viewer_frame_synced,
@@ -54,6 +55,10 @@ def run_viewer_runtime_loop(runtime: Any, viewer: Any) -> None:
     stats_skipped_frames = 0
     stats_timing = {"advance_s": 0.0, "render_s": 0.0, "loops": 0}
     max_skipped_syncs = _max_skipped_viewer_syncs()
+    with viewer.lock():
+        water_visual = WaterSurfaceVisual(runtime.mujoco, runtime.model)
+        if water_visual.field_id >= 0:
+            viewer.opt.geomgroup[5] = 1
 
     while viewer.is_running() and not runtime.stop_event.is_set():
         now_wall = time.perf_counter()
@@ -80,6 +85,7 @@ def run_viewer_runtime_loop(runtime: Any, viewer: Any) -> None:
             else:
                 render_started = time.perf_counter()
                 _draw_viewer_runtime_frame(runtime, viewer=viewer, has_set_texts=has_set_texts, axis=axis)
+                water_visual.update_viewer(viewer, float(runtime.data.time))
                 _sync_viewer_preserving_applied_wrenches(runtime, viewer)
                 stats_timing["render_s"] += max(0.0, time.perf_counter() - render_started)
                 synced_frames += 1

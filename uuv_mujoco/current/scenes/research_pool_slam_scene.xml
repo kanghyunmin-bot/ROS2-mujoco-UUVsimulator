@@ -791,8 +791,14 @@
     <mesh name="cad_collision_2243_0" file="body_2026_09/collision/cad_collision_2243_0.stl" />
     <mesh name="cad_collision_2275_0" file="body_2026_09/collision/cad_collision_2275_0.stl" />
     <mesh name="front_optical_window" file="body_2026_09/front_optical_window.obj" />
+    <mesh name="rope_braid_long" file="rope_braid_long.obj" />
+    <mesh name="rope_braid_short" file="rope_braid_short.obj" />
+    <material name="rope_white" rgba=".97 .96 .92 1" emission=".18" specular=".08" shininess=".15" />
+    <material name="water_ripple_material" rgba=".18 .52 .62 .20" specular=".8" shininess=".75" />
+    <hfield name="water_ripple_field" nrow="41" ncol="81" size="5 2.5 .04 .001" />
   </asset>
   <worldbody>
+    <light name="pool_surface_glint" directional="true" pos="0 -2 4" dir="0 .4 -1" ambient="0 0 0" diffuse="0 0 0" specular=".8 .78 .72" castshadow="false" />
     <light name="pool_ceiling_light_a" pos="-2.5 0 3" dir="0 0 -1" diffuse="0.25 0.27 0.28" specular="0.12 0.12 0.12" />
     <light name="pool_ceiling_light_b" pos="2.5 0 3" dir="0 0 -1" diffuse="0.25 0.27 0.28" specular="0.12 0.12 0.12" />
     <camera name="course_overview" pos="0 0 10" xyaxes="1 0 0 0 1 0" fovy="58" />
@@ -803,7 +809,8 @@
     <geom name="pool_wall_py" type="box" pos="0 2.55 -2.5" size="5.1 2.5 0.05" material="pool_tile" quat="0.7071067812 0.7071067812 0 0" />
     <geom name="pool_wall_ny" type="box" pos="0 -2.55 -2.5" size="5.1 2.5 0.05" material="pool_tile" quat="0.7071067812 0.7071067812 0 0" />
     <geom name="water_vis" type="box" pos="0 0 -2.5" size="5 2.5 2.5" rgba="0.04 0.36 0.56 0.08" contype="0" conaffinity="0" group="5" />
-    <geom name="water_surface" type="box" pos="0 0 0.004" size="5 2.5 .004" rgba="0.38 0.78 0.92 0.12" contype="0" conaffinity="0" group="5" />
+    <geom name="water_ripples" type="hfield" hfield="water_ripple_field" pos="0 0 -.02" material="water_ripple_material" density="0" contype="0" conaffinity="0" group="5" />
+    <geom name="water_surface" type="box" pos="0 0 0.004" size="5 2.5 .004" rgba="0.38 0.78 0.92 0" contype="0" conaffinity="0" group="5" />
     <body name="base_link" pos="-3.2000 0.0000 -2.8000" quat="1 0 0 0">
       <geom name="front_optical_window" type="mesh" mesh="front_optical_window" rgba=".7 .85 .95 .06" density="0" contype="0" conaffinity="0" group="2" />
       <geom name="cad_collision_0_0" type="mesh" mesh="cad_collision_0_0" density="0" contype="1" conaffinity="1" group="3" rgba="0 0 0 0" friction=".30 .01 .001" condim="3" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" solmix="1" />
@@ -1542,26 +1549,26 @@
       <geom name="cad_collision_2213_0" type="mesh" mesh="cad_collision_2213_0" density="0" contype="1" conaffinity="1" group="3" rgba="0 0 0 0" friction=".30 .01 .001" condim="3" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" solmix="1" />
       <geom name="cad_collision_2243_0" type="mesh" mesh="cad_collision_2243_0" density="0" contype="1" conaffinity="1" group="3" rgba="0 0 0 0" friction=".30 .01 .001" condim="3" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" solmix="1" />
       <geom name="cad_collision_2275_0" type="mesh" mesh="cad_collision_2275_0" density="0" contype="1" conaffinity="1" group="3" rgba="0 0 0 0" friction=".30 .01 .001" condim="3" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" solmix="1" />
-      <geom name="body_2026_visual_0" type="mesh" mesh="body_2026_visual_0" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_1" type="mesh" mesh="body_2026_visual_1" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_2" type="mesh" mesh="body_2026_visual_2" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_3" type="mesh" mesh="body_2026_visual_3" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_4" type="mesh" mesh="body_2026_visual_4" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_5" type="mesh" mesh="body_2026_visual_5" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_6" type="mesh" mesh="body_2026_visual_6" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_7" type="mesh" mesh="body_2026_visual_7" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_8" type="mesh" mesh="body_2026_visual_8" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_9" type="mesh" mesh="body_2026_visual_9" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_10" type="mesh" mesh="body_2026_visual_10" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_11" type="mesh" mesh="body_2026_visual_11" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_12" type="mesh" mesh="body_2026_visual_12" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_13" type="mesh" mesh="body_2026_visual_13" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_14" type="mesh" mesh="body_2026_visual_14" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_15" type="mesh" mesh="body_2026_visual_15" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_16" type="mesh" mesh="body_2026_visual_16" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_17" type="mesh" mesh="body_2026_visual_17" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_18" type="mesh" mesh="body_2026_visual_18" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
-      <geom name="body_2026_visual_19" type="mesh" mesh="body_2026_visual_19" rgba="0.65 0.68 0.70 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_0" type="mesh" mesh="body_2026_visual_0" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_1" type="mesh" mesh="body_2026_visual_1" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_2" type="mesh" mesh="body_2026_visual_2" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_3" type="mesh" mesh="body_2026_visual_3" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_4" type="mesh" mesh="body_2026_visual_4" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_5" type="mesh" mesh="body_2026_visual_5" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_6" type="mesh" mesh="body_2026_visual_6" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_7" type="mesh" mesh="body_2026_visual_7" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_8" type="mesh" mesh="body_2026_visual_8" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_9" type="mesh" mesh="body_2026_visual_9" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_10" type="mesh" mesh="body_2026_visual_10" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_11" type="mesh" mesh="body_2026_visual_11" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_12" type="mesh" mesh="body_2026_visual_12" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_13" type="mesh" mesh="body_2026_visual_13" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_14" type="mesh" mesh="body_2026_visual_14" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_15" type="mesh" mesh="body_2026_visual_15" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_16" type="mesh" mesh="body_2026_visual_16" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_17" type="mesh" mesh="body_2026_visual_17" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_18" type="mesh" mesh="body_2026_visual_18" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
+      <geom name="body_2026_visual_19" type="mesh" mesh="body_2026_visual_19" rgba="0.08 0.48 0.19 1" density="0" contype="0" conaffinity="0" group="2" />
       <inertial pos="-0.0015 0 0.03" quat="1 0 0 0" mass="15" diaginertia="0.55 0.55 0.85" />
       <joint name="world_joint" type="free" />
       <geom name="fluid_center_enclosure" type="cylinder" fromto="-0.213 0 0.010 0.203 0 0.010" size="0.1105" rgba="0.15 0.90 1.00 0.01" contype="0" conaffinity="0" fluidshape="ellipsoid" fluidcoef="0.424 0.120 3.415 0.050 0.025" />
@@ -1650,22 +1657,28 @@
       <geom name="course_buoy_a_yellow_1_bottom_jig" type="cylinder" pos="0 0 0.095" size="0.030 0.014" rgba="0.95 0.95 0.92 1" contype="4" conaffinity="7" group="0" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" solmix="1" condim="3" friction=".30 .01 .001" />
       <body name="course_buoy_a_yellow_1_rope_00" pos="0 0 0.109000000" gravcomp="0.8695652173913043">
         <joint name="course_buoy_a_yellow_1_rope_joint_00" type="ball" damping="0.0003" armature="0.00002" />
-        <geom name="course_buoy_a_yellow_1_rope_geom_00" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".75 .78 .72 1" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+        <geom name="course_buoy_a_yellow_1_rope_geom_00" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".91 .90 .85 0" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+        <geom name="course_buoy_a_yellow_1_rope_braid_00" type="mesh" mesh="rope_braid_long" material="rope_white" density="0" contype="0" conaffinity="0" group="2" />
         <body name="course_buoy_a_yellow_1_rope_01" pos="0 0 0.279333333" gravcomp="0.8695652173913043">
           <joint name="course_buoy_a_yellow_1_rope_joint_01" type="ball" damping="0.0003" armature="0.00002" />
-          <geom name="course_buoy_a_yellow_1_rope_geom_01" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".75 .78 .72 1" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+          <geom name="course_buoy_a_yellow_1_rope_geom_01" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".91 .90 .85 0" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+          <geom name="course_buoy_a_yellow_1_rope_braid_01" type="mesh" mesh="rope_braid_long" material="rope_white" density="0" contype="0" conaffinity="0" group="2" />
           <body name="course_buoy_a_yellow_1_rope_02" pos="0 0 0.279333333" gravcomp="0.8695652173913043">
             <joint name="course_buoy_a_yellow_1_rope_joint_02" type="ball" damping="0.0003" armature="0.00002" />
-            <geom name="course_buoy_a_yellow_1_rope_geom_02" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".75 .78 .72 1" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+            <geom name="course_buoy_a_yellow_1_rope_geom_02" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".91 .90 .85 0" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+            <geom name="course_buoy_a_yellow_1_rope_braid_02" type="mesh" mesh="rope_braid_long" material="rope_white" density="0" contype="0" conaffinity="0" group="2" />
             <body name="course_buoy_a_yellow_1_rope_03" pos="0 0 0.279333333" gravcomp="0.8695652173913043">
               <joint name="course_buoy_a_yellow_1_rope_joint_03" type="ball" damping="0.0003" armature="0.00002" />
-              <geom name="course_buoy_a_yellow_1_rope_geom_03" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".75 .78 .72 1" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+              <geom name="course_buoy_a_yellow_1_rope_geom_03" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".91 .90 .85 0" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+              <geom name="course_buoy_a_yellow_1_rope_braid_03" type="mesh" mesh="rope_braid_long" material="rope_white" density="0" contype="0" conaffinity="0" group="2" />
               <body name="course_buoy_a_yellow_1_rope_04" pos="0 0 0.279333333" gravcomp="0.8695652173913043">
                 <joint name="course_buoy_a_yellow_1_rope_joint_04" type="ball" damping="0.0003" armature="0.00002" />
-                <geom name="course_buoy_a_yellow_1_rope_geom_04" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".75 .78 .72 1" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+                <geom name="course_buoy_a_yellow_1_rope_geom_04" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".91 .90 .85 0" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+                <geom name="course_buoy_a_yellow_1_rope_braid_04" type="mesh" mesh="rope_braid_long" material="rope_white" density="0" contype="0" conaffinity="0" group="2" />
                 <body name="course_buoy_a_yellow_1_rope_05" pos="0 0 0.279333333" gravcomp="0.8695652173913043">
                   <joint name="course_buoy_a_yellow_1_rope_joint_05" type="ball" damping="0.0003" armature="0.00002" />
-                  <geom name="course_buoy_a_yellow_1_rope_geom_05" type="capsule" fromto="0 0 0 0 0 0.244333333" size=".003" density="1150" rgba=".75 .78 .72 1" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+                  <geom name="course_buoy_a_yellow_1_rope_geom_05" type="capsule" fromto="0 0 0 0 0 0.244333333" size=".003" density="1150" rgba=".91 .90 .85 0" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+                  <geom name="course_buoy_a_yellow_1_rope_braid_05" type="mesh" mesh="rope_braid_short" material="rope_white" density="0" contype="0" conaffinity="0" group="2" />
                   <body name="course_buoy_a_yellow_1_rope_magnet_tip" pos="0 0 0.279333333" gravcomp=".2">
                     <geom name="course_buoy_a_yellow_1_rod_top_jig" type="cylinder" pos="0 0 -.020" size=".028 .010" mass=".008" rgba=".95 .95 .92 1" contype="4" conaffinity="7" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" solmix="1" condim="3" friction=".30 .01 .001" />
                     <geom name="course_buoy_a_yellow_1_fixed_magnet" type="cylinder" pos="0 0 -.010" size=".018 .010" mass=".004" rgba=".04 .04 .04 1" contype="4" conaffinity="7" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" solmix="1" condim="3" friction=".30 .01 .001" />
@@ -1710,22 +1723,28 @@
       <geom name="course_buoy_a_orange_1_bottom_jig" type="cylinder" pos="0 0 0.095" size="0.030 0.014" rgba="0.95 0.95 0.92 1" contype="4" conaffinity="7" group="0" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" solmix="1" condim="3" friction=".30 .01 .001" />
       <body name="course_buoy_a_orange_1_rope_00" pos="0 0 0.109000000" gravcomp="0.8695652173913043">
         <joint name="course_buoy_a_orange_1_rope_joint_00" type="ball" damping="0.0003" armature="0.00002" />
-        <geom name="course_buoy_a_orange_1_rope_geom_00" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".75 .78 .72 1" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+        <geom name="course_buoy_a_orange_1_rope_geom_00" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".91 .90 .85 0" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+        <geom name="course_buoy_a_orange_1_rope_braid_00" type="mesh" mesh="rope_braid_long" material="rope_white" density="0" contype="0" conaffinity="0" group="2" />
         <body name="course_buoy_a_orange_1_rope_01" pos="0 0 0.279333333" gravcomp="0.8695652173913043">
           <joint name="course_buoy_a_orange_1_rope_joint_01" type="ball" damping="0.0003" armature="0.00002" />
-          <geom name="course_buoy_a_orange_1_rope_geom_01" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".75 .78 .72 1" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+          <geom name="course_buoy_a_orange_1_rope_geom_01" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".91 .90 .85 0" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+          <geom name="course_buoy_a_orange_1_rope_braid_01" type="mesh" mesh="rope_braid_long" material="rope_white" density="0" contype="0" conaffinity="0" group="2" />
           <body name="course_buoy_a_orange_1_rope_02" pos="0 0 0.279333333" gravcomp="0.8695652173913043">
             <joint name="course_buoy_a_orange_1_rope_joint_02" type="ball" damping="0.0003" armature="0.00002" />
-            <geom name="course_buoy_a_orange_1_rope_geom_02" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".75 .78 .72 1" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+            <geom name="course_buoy_a_orange_1_rope_geom_02" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".91 .90 .85 0" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+            <geom name="course_buoy_a_orange_1_rope_braid_02" type="mesh" mesh="rope_braid_long" material="rope_white" density="0" contype="0" conaffinity="0" group="2" />
             <body name="course_buoy_a_orange_1_rope_03" pos="0 0 0.279333333" gravcomp="0.8695652173913043">
               <joint name="course_buoy_a_orange_1_rope_joint_03" type="ball" damping="0.0003" armature="0.00002" />
-              <geom name="course_buoy_a_orange_1_rope_geom_03" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".75 .78 .72 1" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+              <geom name="course_buoy_a_orange_1_rope_geom_03" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".91 .90 .85 0" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+              <geom name="course_buoy_a_orange_1_rope_braid_03" type="mesh" mesh="rope_braid_long" material="rope_white" density="0" contype="0" conaffinity="0" group="2" />
               <body name="course_buoy_a_orange_1_rope_04" pos="0 0 0.279333333" gravcomp="0.8695652173913043">
                 <joint name="course_buoy_a_orange_1_rope_joint_04" type="ball" damping="0.0003" armature="0.00002" />
-                <geom name="course_buoy_a_orange_1_rope_geom_04" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".75 .78 .72 1" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+                <geom name="course_buoy_a_orange_1_rope_geom_04" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".91 .90 .85 0" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+                <geom name="course_buoy_a_orange_1_rope_braid_04" type="mesh" mesh="rope_braid_long" material="rope_white" density="0" contype="0" conaffinity="0" group="2" />
                 <body name="course_buoy_a_orange_1_rope_05" pos="0 0 0.279333333" gravcomp="0.8695652173913043">
                   <joint name="course_buoy_a_orange_1_rope_joint_05" type="ball" damping="0.0003" armature="0.00002" />
-                  <geom name="course_buoy_a_orange_1_rope_geom_05" type="capsule" fromto="0 0 0 0 0 0.244333333" size=".003" density="1150" rgba=".75 .78 .72 1" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+                  <geom name="course_buoy_a_orange_1_rope_geom_05" type="capsule" fromto="0 0 0 0 0 0.244333333" size=".003" density="1150" rgba=".91 .90 .85 0" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+                  <geom name="course_buoy_a_orange_1_rope_braid_05" type="mesh" mesh="rope_braid_short" material="rope_white" density="0" contype="0" conaffinity="0" group="2" />
                   <body name="course_buoy_a_orange_1_rope_magnet_tip" pos="0 0 0.279333333" gravcomp=".2">
                     <geom name="course_buoy_a_orange_1_rod_top_jig" type="cylinder" pos="0 0 -.020" size=".028 .010" mass=".008" rgba=".95 .95 .92 1" contype="4" conaffinity="7" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" solmix="1" condim="3" friction=".30 .01 .001" />
                     <geom name="course_buoy_a_orange_1_fixed_magnet" type="cylinder" pos="0 0 -.010" size=".018 .010" mass=".004" rgba=".04 .04 .04 1" contype="4" conaffinity="7" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" solmix="1" condim="3" friction=".30 .01 .001" />
@@ -1770,22 +1789,28 @@
       <geom name="course_buoy_b_yellow_1_bottom_jig" type="cylinder" pos="0 0 0.095" size="0.030 0.014" rgba="0.95 0.95 0.92 1" contype="4" conaffinity="7" group="0" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" solmix="1" condim="3" friction=".30 .01 .001" />
       <body name="course_buoy_b_yellow_1_rope_00" pos="0 0 0.109000000" gravcomp="0.8695652173913043">
         <joint name="course_buoy_b_yellow_1_rope_joint_00" type="ball" damping="0.0003" armature="0.00002" />
-        <geom name="course_buoy_b_yellow_1_rope_geom_00" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".75 .78 .72 1" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+        <geom name="course_buoy_b_yellow_1_rope_geom_00" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".91 .90 .85 0" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+        <geom name="course_buoy_b_yellow_1_rope_braid_00" type="mesh" mesh="rope_braid_long" material="rope_white" density="0" contype="0" conaffinity="0" group="2" />
         <body name="course_buoy_b_yellow_1_rope_01" pos="0 0 0.279333333" gravcomp="0.8695652173913043">
           <joint name="course_buoy_b_yellow_1_rope_joint_01" type="ball" damping="0.0003" armature="0.00002" />
-          <geom name="course_buoy_b_yellow_1_rope_geom_01" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".75 .78 .72 1" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+          <geom name="course_buoy_b_yellow_1_rope_geom_01" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".91 .90 .85 0" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+          <geom name="course_buoy_b_yellow_1_rope_braid_01" type="mesh" mesh="rope_braid_long" material="rope_white" density="0" contype="0" conaffinity="0" group="2" />
           <body name="course_buoy_b_yellow_1_rope_02" pos="0 0 0.279333333" gravcomp="0.8695652173913043">
             <joint name="course_buoy_b_yellow_1_rope_joint_02" type="ball" damping="0.0003" armature="0.00002" />
-            <geom name="course_buoy_b_yellow_1_rope_geom_02" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".75 .78 .72 1" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+            <geom name="course_buoy_b_yellow_1_rope_geom_02" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".91 .90 .85 0" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+            <geom name="course_buoy_b_yellow_1_rope_braid_02" type="mesh" mesh="rope_braid_long" material="rope_white" density="0" contype="0" conaffinity="0" group="2" />
             <body name="course_buoy_b_yellow_1_rope_03" pos="0 0 0.279333333" gravcomp="0.8695652173913043">
               <joint name="course_buoy_b_yellow_1_rope_joint_03" type="ball" damping="0.0003" armature="0.00002" />
-              <geom name="course_buoy_b_yellow_1_rope_geom_03" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".75 .78 .72 1" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+              <geom name="course_buoy_b_yellow_1_rope_geom_03" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".91 .90 .85 0" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+              <geom name="course_buoy_b_yellow_1_rope_braid_03" type="mesh" mesh="rope_braid_long" material="rope_white" density="0" contype="0" conaffinity="0" group="2" />
               <body name="course_buoy_b_yellow_1_rope_04" pos="0 0 0.279333333" gravcomp="0.8695652173913043">
                 <joint name="course_buoy_b_yellow_1_rope_joint_04" type="ball" damping="0.0003" armature="0.00002" />
-                <geom name="course_buoy_b_yellow_1_rope_geom_04" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".75 .78 .72 1" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+                <geom name="course_buoy_b_yellow_1_rope_geom_04" type="capsule" fromto="0 0 0 0 0 0.279333333" size=".003" density="1150" rgba=".91 .90 .85 0" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+                <geom name="course_buoy_b_yellow_1_rope_braid_04" type="mesh" mesh="rope_braid_long" material="rope_white" density="0" contype="0" conaffinity="0" group="2" />
                 <body name="course_buoy_b_yellow_1_rope_05" pos="0 0 0.279333333" gravcomp="0.8695652173913043">
                   <joint name="course_buoy_b_yellow_1_rope_joint_05" type="ball" damping="0.0003" armature="0.00002" />
-                  <geom name="course_buoy_b_yellow_1_rope_geom_05" type="capsule" fromto="0 0 0 0 0 0.244333333" size=".003" density="1150" rgba=".75 .78 .72 1" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+                  <geom name="course_buoy_b_yellow_1_rope_geom_05" type="capsule" fromto="0 0 0 0 0 0.244333333" size=".003" density="1150" rgba=".91 .90 .85 0" contype="4" conaffinity="7" condim="3" friction=".5 .005 .0001" solref=".01 1" fluidshape="ellipsoid" fluidcoef="0 0 0 0 0" />
+                  <geom name="course_buoy_b_yellow_1_rope_braid_05" type="mesh" mesh="rope_braid_short" material="rope_white" density="0" contype="0" conaffinity="0" group="2" />
                   <body name="course_buoy_b_yellow_1_rope_magnet_tip" pos="0 0 0.279333333" gravcomp=".2">
                     <geom name="course_buoy_b_yellow_1_rod_top_jig" type="cylinder" pos="0 0 -.020" size=".028 .010" mass=".008" rgba=".95 .95 .92 1" contype="4" conaffinity="7" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" solmix="1" condim="3" friction=".30 .01 .001" />
                     <geom name="course_buoy_b_yellow_1_fixed_magnet" type="cylinder" pos="0 0 -.010" size=".018 .010" mass=".004" rgba=".04 .04 .04 1" contype="4" conaffinity="7" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" solmix="1" condim="3" friction=".30 .01 .001" />
