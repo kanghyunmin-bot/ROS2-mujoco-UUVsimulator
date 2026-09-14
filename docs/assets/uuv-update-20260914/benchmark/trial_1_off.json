@@ -1,0 +1,94 @@
+{
+  "water_lighting_enabled": false,
+  "scene": "/workspace/uuv_mujoco/current/scenes/research_pool_slam_scene.xml",
+  "scene_sha256": "40257d982b9f41915e3cfe49674e565008e7f3b017c5e072f49bc7fbf88a6a39",
+  "profile": "/workspace/uuv_mujoco/current/config/sensor_models/imx219_underwater_pool_lite.json",
+  "profile_sha256": "015179e6a54c31c89049139064b3fbc3096212eb8fab6fc31b570bcf436452bb",
+  "mujoco_version": "3.12.0",
+  "backend": "glfw",
+  "width": 640,
+  "height": 360,
+  "samples": 40,
+  "warmup": 8,
+  "shadowsize": 1024,
+  "offsamples": 1,
+  "scope": "static warm-render microbenchmark; no live SITL/GUI or end-to-end collection timing",
+  "cameras": {
+    "stereo_left": {
+      "rgb_only": {
+        "p50_ms": 1.1101835000317806,
+        "p95_ms": 1.1635445499678099
+      },
+      "rgb_depth_and_projection": {
+        "p50_ms": 1.8783154998800455,
+        "p95_ms": 2.38041239992981
+      },
+      "pool_lite_postprocess": {
+        "p50_ms": 2.094111499900464,
+        "p95_ms": 2.6489639496730883
+      },
+      "original_prior_postprocess": {
+        "p50_ms": 14.401255999928253,
+        "p95_ms": 15.107698700035142
+      },
+      "pool_lite_capture_and_process": {
+        "p50_ms": 3.9651034999224066,
+        "p95_ms": 4.741409599887446
+      },
+      "optical_path_min_m": 2.07863187789917,
+      "optical_path_max_m": 8.772064208984375,
+      "optical_path_mean_m": 5.1435546875,
+      "intrinsics_k": [
+        257.0666412135806,
+        0.0,
+        319.5,
+        0.0,
+        257.0666412135806,
+        179.5,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "same_sequence_deterministic": true
+    },
+    "stereo_right": {
+      "rgb_only": {
+        "p50_ms": 1.168521499948838,
+        "p95_ms": 1.2054391500669226
+      },
+      "rgb_depth_and_projection": {
+        "p50_ms": 1.9542715001534816,
+        "p95_ms": 2.1952505999706773
+      },
+      "pool_lite_postprocess": {
+        "p50_ms": 2.1435029998428945,
+        "p95_ms": 2.3153044999844496
+      },
+      "original_prior_postprocess": {
+        "p50_ms": 14.450267000029271,
+        "p95_ms": 15.0409520002313
+      },
+      "pool_lite_capture_and_process": {
+        "p50_ms": 4.0931010000804235,
+        "p95_ms": 4.496645900258044
+      },
+      "optical_path_min_m": 0.020705150440335274,
+      "optical_path_max_m": 8.780967712402344,
+      "optical_path_mean_m": 2.9547879695892334,
+      "intrinsics_k": [
+        207.0663132997817,
+        0.0,
+        319.5,
+        0.0,
+        207.0663132997817,
+        179.5,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "same_sequence_deterministic": true
+    }
+  },
+  "simulation_state_unchanged": true,
+  "two_camera_15hz_serial_budget_percent": 12.087306750004245
+}
