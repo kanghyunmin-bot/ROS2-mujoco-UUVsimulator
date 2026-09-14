@@ -68,3 +68,18 @@ MUJOCO_GL=egl python uuv_mujoco/current/tools/render_camera_validation.py --wate
 
 The scripts render an independent model and do not publish vehicle controls.
 The native viewer enables geom group 5 for the new pool surface at startup.
+
+
+## Desktop camera recovery
+
+On the local XWayland desktop, mixing an inherited `MUJOCO_GL=egl` camera
+renderer with the native GLFW viewer reproduced `Failed to make the EGL context
+current`. A hidden native-context + camera probe failed with EGL and passed
+with GLFW. Graphical Linux launches now select GLFW consistently and remove a
+conflicting EGL PyOpenGL override; headless Linux retains EGL. Four executable
+launcher-selection tests passed; the native-viewer regression failed against
+the previous launcher. Front/hand JPEGs were then verified in the actual web GUI.
+
+The native viewer's digit 2 is also a geometry-group visibility shortcut and can
+hide robot visuals in group 2. This is separate from camera production failure.
+MuJoCo source: https://github.com/google-deepmind/mujoco/blob/3.12.0/simulate/simulate.cc

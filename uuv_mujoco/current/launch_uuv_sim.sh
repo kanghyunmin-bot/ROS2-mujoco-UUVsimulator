@@ -786,6 +786,7 @@ if [[ -n "$EXISTING_MJ_PIDS" ]]; then
     fi
 fi
 
+# Keep native viewer and camera contexts on the same graphics backend.
 # Set display for headless mode
 if [ "$HEADLESS" = true ]; then
     HEADLESS_ARG="--headless"
@@ -804,6 +805,14 @@ if [ "$HEADLESS" = true ]; then
             echo "[launch] Running in headless mode (default MuJoCo GL backend)"
             ;;
     esac
+elif [[ "$HOST_OS" == "Linux" && -n "${DISPLAY:-}" ]]; then
+    # An inherited EGL setting can conflict with the GLFW/GLX viewer on
+    # XWayland: the viewer runs while both camera captures fail indefinitely.
+    export MUJOCO_GL=glfw
+    if [[ "${PYOPENGL_PLATFORM:-}" == "egl" ]]; then
+        unset PYOPENGL_PLATFORM
+    fi
+    echo "[launch] Native viewer and camera capture use GLFW (DISPLAY=${DISPLAY})."
 fi
 
 configure_mujoco_viewer_window_backend
