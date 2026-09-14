@@ -57,6 +57,8 @@ def extract(database, output, source_zip):
         "/mavros/state",
         "/mavros/local_position/odom",
         "/odometry/filtered",
+        "/battery",
+        "/mavros/battery",
     }
     numeric, odometry, profile, row_counts = {}, {}, {}, {}
     topics = connection.execute("SELECT id,name,type FROM topics").fetchall()
@@ -115,6 +117,18 @@ def extract(database, output, source_zip):
                 value = [message.pose.pose.position.z]
             elif typ == "sensor_msgs/msg/FluidPressure":
                 value = [message.fluid_pressure]
+            elif typ == "sensor_msgs/msg/BatteryState":
+                # Preserve topic identity: MAVROS and a battery bridge may
+                # publish incompatible sources on /mavros/battery. Pack
+                # telemetry is not automatically a measured ESC-bus voltage.
+                value = [message.voltage, message.current, message.percentage]
+                profile[name]["columns"] = [
+                    "receipt_epoch_s",
+                    "voltage_v",
+                    "current_a",
+                    "percentage",
+                ]
+                profile[name]["voltage_reference"] = "unverified_pack_or_fcu_source"
             elif hasattr(message, "channels"):
                 value = list(message.channels)
             elif name == "/mavros/state":

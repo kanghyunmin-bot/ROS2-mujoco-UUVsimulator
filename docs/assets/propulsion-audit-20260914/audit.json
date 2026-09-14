@@ -1,0 +1,463 @@
+{
+  "status": "propulsion_budget_mismatch_localized_not_physically_identified",
+  "source_sqlite_sha256": "e3f60d33dbf72f9c4df223f8afe7e389f8c49ffc6ff7031647ce3da32ec3c154",
+  "source_manifest_sha256": "b8f9ab9f02a6dd077d0f7840e101d52de726f93ed206140745e7e0359f59c7c5",
+  "audit_script_sha256": "9211e88d1ca9995ff53998d85b23b15befa73412bf827ed82164bd0bda182327",
+  "curve_audit": {
+    "source_url": "https://cad.bluerobotics.com/T200-Public-Performance-Data-10-20V-September-2019.xlsx",
+    "source_sha256": "1399b76df7a176cfbb08760c11731199053336e7d92182dece11824c73285085",
+    "kgf_to_newton": 9.80665,
+    "checks": [
+      {
+        "voltage_v": 10,
+        "knots": 201,
+        "max_force_error_n": 0.0
+      },
+      {
+        "voltage_v": 12,
+        "knots": 201,
+        "max_force_error_n": 0.0
+      },
+      {
+        "voltage_v": 14,
+        "knots": 201,
+        "max_force_error_n": 0.0
+      },
+      {
+        "voltage_v": 16,
+        "knots": 201,
+        "max_force_error_n": 0.0
+      },
+      {
+        "voltage_v": 18,
+        "knots": 201,
+        "max_force_error_n": 0.0
+      },
+      {
+        "voltage_v": 20,
+        "knots": 201,
+        "max_force_error_n": 0.0
+      }
+    ]
+  },
+  "battery": {
+    "__battery": {
+      "all_count": 2890,
+      "drive_voltage_v": {
+        "count": 1000,
+        "min": 19.375,
+        "median": 21.765625,
+        "max": 22.515625
+      },
+      "drive_current_a": {
+        "count": 1000,
+        "min": 0.87451171875,
+        "median": 8.8359375,
+        "max": 39.21875
+      },
+      "drive_samples_below_2v": 0,
+      "drive_samples_above_curve_20v": 984,
+      "straight_voltage_v": {
+        "count": 36,
+        "min": 22.046875,
+        "median": 22.1328125,
+        "max": 22.1875
+      },
+      "straight_current_a": {
+        "count": 36,
+        "min": 3.646484375,
+        "median": 4.41796875,
+        "max": 5.48828125
+      }
+    },
+    "__mavros__battery": {
+      "all_count": 1887,
+      "drive_voltage_v": {
+        "count": 650,
+        "min": 0.7130000591278076,
+        "median": 21.5,
+        "max": 22.515625
+      },
+      "drive_current_a": {
+        "count": 650,
+        "min": -0.9599999785423279,
+        "median": 5.556640625,
+        "max": 39.21875
+      },
+      "drive_samples_below_2v": 150,
+      "drive_samples_above_curve_20v": 492,
+      "straight_voltage_v": {
+        "count": 23,
+        "min": 0.7160000205039978,
+        "median": 22.109375,
+        "max": 22.1875
+      },
+      "straight_current_a": {
+        "count": 23,
+        "min": -0.9599999785423279,
+        "median": 4.28515625,
+        "max": 5.48828125
+      }
+    },
+    "interpretation": "Preserve topics separately. /mavros/battery contains incompatible low-voltage and pack-voltage values. /battery is pack telemetry, not a calibrated measurement at each ESC. No clipping or extrapolation of above-20 V pack samples into the T200 curve is performed."
+  },
+  "straight_segment": {
+    "window_s": [
+      39.0,
+      40.8
+    ],
+    "pwm_samples": 4,
+    "real_surge_mps": {
+      "count": 16,
+      "min": 0.2295713871717453,
+      "median": 0.24716386198997498,
+      "max": 0.273107647895813
+    },
+    "real_horizontal_pwm_us": {
+      "count": 4,
+      "min": [
+        1372.0,
+        1374.0,
+        1370.0,
+        1374.0
+      ],
+      "median": [
+        1382.5,
+        1388.0,
+        1382.5,
+        1387.5
+      ],
+      "max": [
+        1391.0,
+        1395.0,
+        1391.0,
+        1394.0
+      ]
+    },
+    "real_velocity_linear_slope_mps2": -0.011656042371366616,
+    "conditional_mass_kg": 18.8105086982,
+    "nominal_drag_at_real_speed_n": 2.682692929830292,
+    "voltage_polarity_sensitivity": [
+      {
+        "voltage_v": 10,
+        "polarity": "mapped",
+        "mean_surge_force_n": 9.774222316578243,
+        "conditional_unexplained_opposing_force_n": 7.31078547316113
+      },
+      {
+        "voltage_v": 10,
+        "polarity": "all_weaker",
+        "mean_surge_force_n": 8.767705456946695,
+        "conditional_unexplained_opposing_force_n": 6.304268613529582
+      },
+      {
+        "voltage_v": 10,
+        "polarity": "all_stronger",
+        "mean_surge_force_n": 10.788602589175664,
+        "conditional_unexplained_opposing_force_n": 8.325165745758552
+      },
+      {
+        "voltage_v": 12,
+        "polarity": "mapped",
+        "mean_surge_force_n": 13.047367963622246,
+        "conditional_unexplained_opposing_force_n": 10.583931120205134
+      },
+      {
+        "voltage_v": 12,
+        "polarity": "all_weaker",
+        "mean_surge_force_n": 11.594602418177491,
+        "conditional_unexplained_opposing_force_n": 9.131165574760379
+      },
+      {
+        "voltage_v": 12,
+        "polarity": "all_stronger",
+        "mean_surge_force_n": 14.506031068791405,
+        "conditional_unexplained_opposing_force_n": 12.042594225374293
+      },
+      {
+        "voltage_v": 16,
+        "polarity": "mapped",
+        "mean_surge_force_n": 19.239805674246032,
+        "conditional_unexplained_opposing_force_n": 16.77636883082892
+      },
+      {
+        "voltage_v": 16,
+        "polarity": "all_weaker",
+        "mean_surge_force_n": 17.043947603526423,
+        "conditional_unexplained_opposing_force_n": 14.580510760109311
+      },
+      {
+        "voltage_v": 16,
+        "polarity": "all_stronger",
+        "mean_surge_force_n": 21.46121983710472,
+        "conditional_unexplained_opposing_force_n": 18.997782993687608
+      },
+      {
+        "voltage_v": 20,
+        "polarity": "mapped",
+        "mean_surge_force_n": 19.91212748282804,
+        "conditional_unexplained_opposing_force_n": 17.448690639410927
+      },
+      {
+        "voltage_v": 20,
+        "polarity": "all_weaker",
+        "mean_surge_force_n": 18.241152227580354,
+        "conditional_unexplained_opposing_force_n": 15.777715384163242
+      },
+      {
+        "voltage_v": 20,
+        "polarity": "all_stronger",
+        "mean_surge_force_n": 21.606692976973346,
+        "conditional_unexplained_opposing_force_n": 19.143256133556232
+      }
+    ]
+  },
+  "saved_rollouts": {
+    "nominal": {
+      "drive_pwm_samples": 100,
+      "drive_pwm_rmse_per_channel_us": [
+        62.42942944135534,
+        61.62615580245847,
+        60.54747351370025,
+        59.49734082878086,
+        47.434798534102086,
+        38.83132031475757,
+        55.56757387077417,
+        51.002304163196875
+      ],
+      "straight_horizontal_pwm_rmse_us": 3.7552547473570113,
+      "straight_horizontal_pwm_max_error_us": 6.658335685729753,
+      "straight_surge_speed_mps": {
+        "count": 16,
+        "min": 0.6483428412834931,
+        "median": 0.6765079104509177,
+        "max": 0.7005651587720766
+      },
+      "straight_surge_rmse_mps": 0.43040982248343534,
+      "straight_surge_force_n": {
+        "count": 180,
+        "min": 17.4874012,
+        "median": 19.6229821,
+        "max": 22.5723204
+      },
+      "max_saved_drive_to_force_error_n": 9.444197246466501e-08,
+      "max_saved_force_to_mujoco_translation_error_n": 2.3999999996249244e-06,
+      "trace_sha256": "262949de2550f6bcd0b1b292e0809f77004f7560749c4f4cf46dd08cdcd72023",
+      "replay_sha256": "7b448648856035dfb214ea1e6625e544dbd30324130846444f8fc8bada9cb53c"
+    },
+    "effective": {
+      "drive_pwm_samples": 100,
+      "drive_pwm_rmse_per_channel_us": [
+        39.918723754642386,
+        36.91817020881893,
+        38.66211132284426,
+        35.52475547983642,
+        49.6502761057061,
+        59.429009128462916,
+        57.98114485326266,
+        49.568579314581584
+      ],
+      "straight_horizontal_pwm_rmse_us": 10.060791559766283,
+      "straight_horizontal_pwm_max_error_us": 21.880048751831055,
+      "straight_surge_speed_mps": {
+        "count": 16,
+        "min": 0.2364443412314795,
+        "median": 0.25613520148547364,
+        "max": 0.2604401849289131
+      },
+      "straight_surge_rmse_mps": 0.01655527425460837,
+      "straight_surge_force_n": {
+        "count": 180,
+        "min": 2.24862894,
+        "median": 2.53993577,
+        "max": 2.96970043
+      },
+      "max_saved_drive_to_force_error_n": 2.3397795700930146e-08,
+      "max_saved_force_to_mujoco_translation_error_n": 2.9999999995311555e-07,
+      "trace_sha256": "aec173940043a041c258c876fafea769e9eff9ac931ebde1d19d1134c1b22c00",
+      "replay_sha256": "2a2b455facdecc78bd33e82e7fb8e22527e912d494108bfbf0c578bbda721c74"
+    }
+  },
+  "actual_mujoco_probe": {
+    "mujoco_version": "3.8.0",
+    "pwm_us": [
+      1382,
+      1388,
+      1382,
+      1388,
+      1467,
+      1532,
+      1580,
+      1416
+    ],
+    "speed_mps": 0.24716386198997498,
+    "individual_force_n": [
+      7.828863656768,
+      7.250595318483999,
+      -6.605603710398,
+      -6.183023001651999,
+      0.644991608086,
+      0.5782683382839999,
+      4.581664526404,
+      4.893039785479999
+    ],
+    "force_body_n": [
+      19.7057123484733,
+      0.11008777848309137,
+      -10.697964247556035
+    ],
+    "qfrc_actuator_translation_n": [
+      19.70571289247392,
+      0.11008778152220078,
+      -10.697964258254
+    ],
+    "max_equation_residual_generalized": 1.0658141036401503e-14,
+    "equation_residual_units": "translational N and rotational N m",
+    "max_curve_force_error_n": 0.0,
+    "distributed_surge_drag_n": -2.682692929830292,
+    "added_mass_surge_kg": 3.8105086982,
+    "note": "Fixed level pose, zero angular velocity, actual runtime force path. First acceleration-history sample is seeded; no transient or full-trajectory agreement claim."
+  },
+  "fit_sensitivity": {
+    "frozen_coefficients_k_d2": [
+      0.12293316274117821,
+      35.120873813940435
+    ],
+    "train_windows_s": [
+      20.0,
+      21.0,
+      22.0,
+      23.0,
+      24.0,
+      38.0,
+      39.0
+    ],
+    "near_neutral_windows_abs_impulse_below_0_2_ns": [
+      20.0,
+      21.0,
+      22.0
+    ],
+    "leave_one_window_out": [
+      {
+        "omitted_start_s": 20.0,
+        "coefficients_k_d2": [
+          0.12290346278598324,
+          35.10597499155658
+        ]
+      },
+      {
+        "omitted_start_s": 21.0,
+        "coefficients_k_d2": [
+          0.12293446470446195,
+          35.1217086983603
+        ]
+      },
+      {
+        "omitted_start_s": 22.0,
+        "coefficients_k_d2": [
+          0.12291850787435316,
+          35.11319467725838
+        ]
+      },
+      {
+        "omitted_start_s": 23.0,
+        "coefficients_k_d2": [
+          0.10606396651412604,
+          27.085449795024257
+        ]
+      },
+      {
+        "omitted_start_s": 24.0,
+        "coefficients_k_d2": [
+          0.17183302614568022,
+          50.03938957586742
+        ]
+      },
+      {
+        "omitted_start_s": 38.0,
+        "coefficients_k_d2": [
+          0.12386271813508024,
+          38.25545271355402
+        ]
+      },
+      {
+        "omitted_start_s": 39.0,
+        "coefficients_k_d2": [
+          0.12185768892973356,
+          34.11060433788952
+        ]
+      }
+    ],
+    "input_sampling_sensitivity": [
+      {
+        "method": "linear_pwm",
+        "force_delay_s": -0.25,
+        "coefficients_k_d2": [
+          0.10217395785546578,
+          26.382127273325352
+        ]
+      },
+      {
+        "method": "linear_pwm",
+        "force_delay_s": 0,
+        "coefficients_k_d2": [
+          0.1229331627411782,
+          35.120873813940435
+        ]
+      },
+      {
+        "method": "linear_pwm",
+        "force_delay_s": 0.25,
+        "coefficients_k_d2": [
+          0.13978922166223498,
+          39.3414097203095
+        ]
+      },
+      {
+        "method": "last_observed_pwm",
+        "force_delay_s": -0.25,
+        "coefficients_k_d2": [
+          0.11993555699033359,
+          33.867909884554805
+        ]
+      },
+      {
+        "method": "last_observed_pwm",
+        "force_delay_s": 0,
+        "coefficients_k_d2": [
+          0.13990732076844165,
+          38.9826344156664
+        ]
+      },
+      {
+        "method": "last_observed_pwm",
+        "force_delay_s": 0.25,
+        "coefficients_k_d2": [
+          0.15323154345096526,
+          40.01459155746263
+        ]
+      }
+    ],
+    "identification_status": "effective_single_bag_only",
+    "interpretation": "Same velocity/filter/windows and mass as the original fit. Alternatives are sensitivities, not selected replacements. 2 Hz telemetry cannot establish the true inter-sample PWM or 40\u201360 ms motor lag."
+  },
+  "configuration_sha256": {
+    "config/thruster_performance.json": "fd3963e390a9f057f47d4b96c475b9f7a0ec37b2ef8f970b586454678d176ac8",
+    "config/thruster_params.json": "662ac600c16b7c2cbc007a2a7b88d6a1f5901ef19a0049f900cc2694fd977ef0",
+    "config/sim_profiles.json": "169c93f63209e0da2f2ef22ad6bdb8fc2e1416267be9ebde241cf5b62cd5f0ce"
+  },
+  "case_input_sha256": {
+    "profiles.json": "e61ddc42322eda1f15c78445eddb3023374cdf910665fc62ebb94da5d519d72e",
+    "clearance_tank.xml": "a55be9c1709e2f9621bdb4d28e50dff27b5a733eafb72acc0c1abe1c01bbb524",
+    "params.parm": "87b5ba947ce79f764b1dd22a99c4ce7d74470e7922b3be49a05584d9011d5e79",
+    "fit_inputs.npz": "82e93fd624068ecb15051fae5440c82acc7998eb586d36f9100be07618901d0f",
+    "fit_result.json": "0b54821ddaa494bef1f8384e21b1522214aca7e283f19d023226ca0023a1cb67"
+  },
+  "limits": [
+    "No new plant coefficients applied; frozen fit is retained as an effective model only.",
+    "Short straight segment is diagnostic, not proof that all RC/PWM matches, and not a separate real trial.",
+    "Residual opposing force is conditional on nominal static thrust, zero water current, mass and straight-body approximation; it is not measured tether tension.",
+    "Real vehicle had a tether; diagnostic scene has none. Mounted prop polarity, ESC bus voltage, net thrust, hull drag and water current remain unmeasured.",
+    "Full pose/trajectory Real2Sim, depth/yaw and sim-to-real policy success remain unvalidated."
+  ]
+}
