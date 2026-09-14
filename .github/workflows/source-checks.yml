@@ -19,3 +19,15 @@ jobs:
       - run: python -m pytest -q uuv_mujoco/current/tools/test_contact_timestep.py
       - run: python -m pytest -q uuv_mujoco/current/tools/test_startup_alignment.py
       - run: python -m pytest -q uuv_mujoco/current/tools/test_hydrodynamic_batch_sampling.py uuv_mujoco/current/tools/test_vla_camera_intrinsics.py uuv_mujoco/current/tools/test_research_pool_layout.py uuv_mujoco/current/tools/test_sitl_heartbeat_state_recording.py
+      - name: Camera optics and capture timing
+        run: >-
+          python -m pytest -q
+          uuv_mujoco/current/tools/test_underwater_camera_sensor_model.py
+          uuv_mujoco/current/tools/test_underwater_camera_render.py
+          uuv_mujoco/current/tools/test_camera_sensor_runtime.py
+          uuv_mujoco/current/tools/test_camera_publish_integration.py
+          uuv_mujoco/current/tools/test_mavproxy_stream_ownership.py
+      - name: Browser preview and missing sensor values
+        run: |
+          node uuv_mujoco/current/tools/test_web_sensor_display.cjs
+          node uuv_mujoco/current/tools/test_web_camera_preview.cjs

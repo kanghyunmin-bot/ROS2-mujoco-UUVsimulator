@@ -16,6 +16,7 @@ import threading
 import time
 import webbrowser
 from collections import deque
+from contextlib import nullcontext
 from dataclasses import fields, is_dataclass
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -1024,6 +1025,36 @@ class UuvWebHandler(BaseHTTPRequestHandler):
         sys.stderr.write(f"[web-gui] {self.address_string()} {fmt % args}\n")
 
     def _handle_command(self, payload: dict[str, Any]) -> dict[str, Any]:
+        recorder = getattr(self.controller, "recorder", None)
+        command = str(payload.get("command", "")).strip().lower()
+        # Prepare fixes provenance for the whole session. Serialize preparation
+        # and configuration changes across the threaded HTTP request handlers.
+        configuration_commands = {
+            "camera_config", "stack_start", "stack_stop", "stack_reset", "physics_apply",
+            "course_save", "tool_save", "pinger_homing_start", "ping360_enabled", "ping360_config",
+        }
+        if command in configuration_commands or command in {"recorder_prepare", "recorder_action"}:
+            with recorder.lock if recorder is not None else nullcontext():
+                if recorder is not None and command in configuration_commands:
+                    recorder.require_configuration_unlocked()
+                return self._dispatch_command(payload)
+        return self._dispatch_command(payload)
+
+    def _enqueue_configuration_command(self, label: str, callback: Callable[[], Any]) -> None:
+        recorder = getattr(self.controller, "recorder", None)
+
+        def apply_configuration() -> None:
+            # The ROS command queue may run after another HTTP handler has
+            # prepared a session. Check and publish under the same session lock.
+            # Rejections reach the existing user-visible command event log.
+            with recorder.lock if recorder is not None else nullcontext():
+                if recorder is not None:
+                    recorder.require_configuration_unlocked()
+                callback()
+
+        self.controller.enqueue(label, apply_configuration)
+
+    def _dispatch_command(self, payload: dict[str, Any]) -> dict[str, Any]:
         command = str(payload.get("command", "rc" if self.path.startswith("/api/rc") else "")).strip().lower()
         if command == "recorder_prepare":
             return self.controller.recorder.prepare(payload.get("task", ""), payload.get("mode", "STABILIZE"))
@@ -1066,7 +1097,9 @@ class UuvWebHandler(BaseHTTPRequestHandler):
             return {"command": "release", "accepted": accepted, "seq": sequence}
         if command == "ping360_enabled":
             enabled = bool(payload.get("enabled", True))
-            self.controller.enqueue("ping360_enabled", lambda: self.controller.node.publish_ping360_enabled(enabled))
+            self._enqueue_configuration_command(
+                "ping360_enabled", lambda: self.controller.node.publish_ping360_enabled(enabled)
+            )
             return {"command": "ping360_enabled", "enabled": enabled}
         if command == "stereo_camera_enabled":
             enabled = bool(payload.get("enabled", True))
@@ -1092,7 +1125,9 @@ class UuvWebHandler(BaseHTTPRequestHandler):
             }
         if command == "ping360_config":
             config = _ping360_config(payload)
-            self.controller.enqueue("ping360_config", lambda: self.controller.node.publish_ping360_config(**config))
+            self._enqueue_configuration_command(
+                "ping360_config", lambda: self.controller.node.publish_ping360_config(**config)
+            )
             return {"command": "ping360_config"}
         if command == "stack_start":
             preset_id = str(payload.get("sim_preset", "")).strip() or None

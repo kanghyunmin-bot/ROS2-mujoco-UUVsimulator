@@ -14,6 +14,8 @@
     </default>
   </default>
   <asset>
+    <!-- Low-cost diffuse environment; no extra geometry or collision surfaces. -->
+    <texture name="pool_environment" type="skybox" builtin="gradient" rgb1="0.38 0.58 0.66" rgb2="0.10 0.24 0.32" width="256" height="1536" />
     <mesh name="base_link_part0" content_type="model/stl" file="body_2026_09/base_link_part0_collision.stl" />
     <mesh name="base_link_part1" content_type="model/stl" file="body_2026_09/base_link_part1_collision.stl" />
     <mesh name="base_link_part2" content_type="model/stl" file="body_2026_09/base_link_part2_collision.stl" />

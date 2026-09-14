@@ -14,6 +14,11 @@ from bridge.ros2_stereo_image import configure_stereo_image_runtime
 
 
 class CameraIntrinsicsTest(unittest.TestCase):
+    def test_lite_profile_uses_actual_front_and_hand_intrinsics(self):
+        profile = Path(__file__).resolve().parents[1] / "config/sensor_models/imx219_underwater_pool_lite.json"
+        with patch.dict(os.environ, {"ROS2_UUV_CAMERA_SENSOR_MODEL_CONFIG": str(profile)}):
+            self.test_default_profile_uses_each_rendered_fov()
+
     def test_default_profile_uses_each_rendered_fov(self):
         model = mujoco.MjModel.from_xml_string(
             '<mujoco><worldbody><camera name="stereo_left" fovy="70"/><camera name="stereo_right" fovy="82"/></worldbody></mujoco>'

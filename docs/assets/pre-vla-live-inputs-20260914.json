@@ -1,0 +1,265 @@
+{
+  "kind": "read_only_live_input_probe",
+  "wall_duration_s": 12.000090556000941,
+  "ros_domain_id": "42",
+  "collector_rate_hz_configured": 10.0,
+  "sensor_max_age_s": 0.25,
+  "clock": {
+    "sim_progress_s": 3.8374999999999986,
+    "observed_rtf": 0.32003720390338014,
+    "progress_events": 1535,
+    "resets": 0,
+    "max_no_progress_wall_s": 0.02384895800059894
+  },
+  "streams": {
+    "ego": {
+      "topic": "/imx219/camera0/image_raw/compressed",
+      "publisher_count": 1,
+      "received_messages": 57,
+      "received_hz_wall_window": 4.749964155186791,
+      "unique_source_stamps": 57,
+      "observed_unique_source_hz": 15.013404825737263,
+      "frame_ids": [
+        "imx219_camera0_optical_frame"
+      ],
+      "collector_samples": 39,
+      "samples_with_input": 39,
+      "missing_samples": 0,
+      "stale_samples": 0,
+      "semantic_invalid_samples": 0,
+      "fresh_and_semantic_valid_ratio": 1.0,
+      "repeated_or_rewound_sample_stamps": 0,
+      "source_age_at_sample_s": {
+        "min": 0.030000000000001137,
+        "median": 0.03000000000000469,
+        "p95": 0.060000000000002274,
+        "max": 0.060000000000002274
+      },
+      "source_age_at_receipt_s": {
+        "min": 0.00999999999999801,
+        "median": 0.010000000000001563,
+        "p95": 0.010000000000005116,
+        "max": 0.010000000000005116
+      },
+      "invalid_sample_examples": [],
+      "decoded_image_checks": [
+        {
+          "dtype": "uint8",
+          "shape_hwc": [
+            360,
+            640,
+            3
+          ]
+        }
+      ]
+    },
+    "hand": {
+      "topic": "/imx219/camera1/image_raw/compressed",
+      "publisher_count": 1,
+      "received_messages": 57,
+      "received_hz_wall_window": 4.749964155186791,
+      "unique_source_stamps": 57,
+      "observed_unique_source_hz": 15.013404825737263,
+      "frame_ids": [
+        "imx219_camera1_optical_frame"
+      ],
+      "collector_samples": 39,
+      "samples_with_input": 39,
+      "missing_samples": 0,
+      "stale_samples": 0,
+      "semantic_invalid_samples": 0,
+      "fresh_and_semantic_valid_ratio": 1.0,
+      "repeated_or_rewound_sample_stamps": 0,
+      "source_age_at_sample_s": {
+        "min": 0.030000000000001137,
+        "median": 0.03000000000000469,
+        "p95": 0.060000000000002274,
+        "max": 0.060000000000002274
+      },
+      "source_age_at_receipt_s": {
+        "min": 0.00999999999999801,
+        "median": 0.010000000000001563,
+        "p95": 0.010000000000005116,
+        "max": 0.010000000000005116
+      },
+      "invalid_sample_examples": [],
+      "decoded_image_checks": [
+        {
+          "dtype": "uint8",
+          "shape_hwc": [
+            360,
+            640,
+            3
+          ]
+        }
+      ]
+    },
+    "imu": {
+      "topic": "/mavros/imu/data",
+      "publisher_count": 1,
+      "received_messages": 33,
+      "received_hz_wall_window": 2.749979247739721,
+      "unique_source_stamps": 33,
+      "observed_unique_source_hz": 8.64280891289669,
+      "frame_ids": [
+        "base_link"
+      ],
+      "collector_samples": 39,
+      "samples_with_input": 39,
+      "missing_samples": 0,
+      "stale_samples": 0,
+      "semantic_invalid_samples": 0,
+      "fresh_and_semantic_valid_ratio": 1.0,
+      "repeated_or_rewound_sample_stamps": 5,
+      "source_age_at_sample_s": {
+        "min": 0.045000000000001705,
+        "median": 0.04749999999999943,
+        "p95": 0.20225000000000193,
+        "max": 0.24749999999999872
+      },
+      "source_age_at_receipt_s": {
+        "min": 0.0,
+        "median": 0.0,
+        "p95": 3.552713678800501e-15,
+        "max": 7.105427357601002e-15
+      },
+      "invalid_sample_examples": []
+    },
+    "depth": {
+      "topic": "/depth/pose",
+      "publisher_count": 1,
+      "received_messages": 39,
+      "received_hz_wall_window": 3.2499754746014884,
+      "unique_source_stamps": 39,
+      "observed_unique_source_hz": 9.999999999999998,
+      "frame_ids": [
+        "odom"
+      ],
+      "collector_samples": 39,
+      "samples_with_input": 39,
+      "missing_samples": 0,
+      "stale_samples": 0,
+      "semantic_invalid_samples": 0,
+      "fresh_and_semantic_valid_ratio": 1.0,
+      "repeated_or_rewound_sample_stamps": 0,
+      "source_age_at_sample_s": {
+        "min": 0.10000000000000142,
+        "median": 0.10000000000000142,
+        "p95": 0.10000000000000142,
+        "max": 0.10000000000000853
+      },
+      "source_age_at_receipt_s": {
+        "min": 0.007500000000003837,
+        "median": 0.015000000000000568,
+        "p95": 0.019999999999999574,
+        "max": 0.020000000000003126
+      },
+      "invalid_sample_examples": []
+    },
+    "dvl_twist": {
+      "topic": "/dvl/twist",
+      "publisher_count": 1,
+      "received_messages": 38,
+      "received_hz_wall_window": 3.166642770124527,
+      "unique_source_stamps": 38,
+      "observed_unique_source_hz": 10.027100271002716,
+      "frame_ids": [
+        "dvl_link"
+      ],
+      "collector_samples": 39,
+      "samples_with_input": 39,
+      "missing_samples": 0,
+      "stale_samples": 0,
+      "semantic_invalid_samples": 0,
+      "fresh_and_semantic_valid_ratio": 1.0,
+      "repeated_or_rewound_sample_stamps": 0,
+      "source_age_at_sample_s": {
+        "min": 0.07250000000000156,
+        "median": 0.08500000000000085,
+        "p95": 0.09250000000000114,
+        "max": 0.09500000000000242
+      },
+      "source_age_at_receipt_s": {
+        "min": 0.0,
+        "median": 1.7763568394002505e-15,
+        "p95": 0.002500000000001812,
+        "max": 0.0025000000000048317
+      },
+      "invalid_sample_examples": []
+    },
+    "dvl_data": {
+      "topic": "/dvl/data",
+      "publisher_count": 1,
+      "received_messages": 38,
+      "received_hz_wall_window": 3.166642770124527,
+      "unique_source_stamps": 38,
+      "observed_unique_source_hz": 10.027100271002716,
+      "frame_ids": [
+        "dvl_link"
+      ],
+      "collector_samples": 39,
+      "samples_with_input": 39,
+      "missing_samples": 0,
+      "stale_samples": 0,
+      "semantic_invalid_samples": 0,
+      "fresh_and_semantic_valid_ratio": 1.0,
+      "repeated_or_rewound_sample_stamps": 0,
+      "source_age_at_sample_s": {
+        "min": 0.07250000000000156,
+        "median": 0.08500000000000085,
+        "p95": 0.09250000000000114,
+        "max": 0.09500000000000242
+      },
+      "source_age_at_receipt_s": {
+        "min": 0.0,
+        "median": 0.0,
+        "p95": 0.002500000000001279,
+        "max": 0.0025000000000048317
+      },
+      "invalid_sample_examples": []
+    }
+  },
+  "collector_timer_samples": 39,
+  "collector_sample_interval_s": {
+    "min": 0.09999999999999432,
+    "median": 0.10000000000000142,
+    "p95": 0.10000000000000142,
+    "max": 0.10000000000000142
+  },
+  "camera_source_skew_s": {
+    "min": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0
+  },
+  "dvl_velocity_usable_ratio": 1.0,
+  "altitude_usable_ratio": 1.0,
+  "vehicle": {
+    "connected": true,
+    "armed": false,
+    "mode": "MANUAL"
+  },
+  "vehicle_receipt_age_wall_s": 1.4869939880009042,
+  "vehicle_receipt_age_ros_s": 0.47000000000000597,
+  "vehicle_freshness_clock": "simulation",
+  "vehicle_message_count": 4,
+  "vehicle_receipt_interval_wall_s": {
+    "min": 3.119807781000418,
+    "median": 3.1306659689998924,
+    "p95": 3.1332706436996887,
+    "max": 3.133560051999666
+  },
+  "vehicle_receipt_interval_sim_s": {
+    "min": 0.9974999999999987,
+    "median": 1.0,
+    "p95": 1.0022499999999979,
+    "max": 1.0024999999999977
+  },
+  "rc_override_publisher_count": 1,
+  "blocking_observations": [
+    "vehicle disarmed; task demonstration not ready",
+    "vehicle mode differs from STABILIZE"
+  ],
+  "limits": "Observed rates are measured, not configured publication rates. Camera decoding is sampled once per wall second. No controls or collector services were called. This is not a task demonstration or physical calibration validation.",
+  "collector_config": "/workspace/rospkg/src/auv_vla_data_collector/config/collector.yaml"
+}

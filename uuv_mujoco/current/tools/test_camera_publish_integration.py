@@ -104,6 +104,88 @@ class _FakeCv2:
 
 
 class CameraPublishIntegrationTest(unittest.TestCase):
+    def test_failed_renders_are_limited_to_configured_capture_rate(self) -> None:
+        with patch.dict(os.environ, {"ROS2_UUV_CAMERA_SENSOR_MODEL_ENABLE": "1"}):
+            owner = _bridge(hz=15.0)
+        with patch.object(camera, "_render_camera_rgb_or_none", return_value=None) as render:
+            for tick in range(100):
+                camera._modeled_camera_delivery_for_publish(
+                    owner, "stereo_left", SimpleNamespace(time=tick / 100.0)
+                )
+        self.assertEqual(render.call_count, 15)
+        runtime = owner._camera_sensor_runtimes["stereo_left"]
+        self.assertEqual(runtime.stats.accepted_captures, 0)
+        self.assertEqual(runtime.stats.pending_frames, 0)
+        camera.close_stereo_image_renderers(owner)
+
+    def test_modeled_schedule_delivers_15hz_without_extra_renders_or_period_latency(self) -> None:
+        from bridge.ros2_publish_queue import PublishQueue
+        from bridge.ros2_runtime_env import ros_topic_due
+
+        with patch.dict(os.environ, {
+            "ROS2_UUV_CAMERA_SENSOR_MODEL_ENABLE": "1",
+            "ROS2_UUV_CAMERA_PROCESSING_LATENCY_S": "0.004",
+            "ROS2_UUV_CAMERA_PROCESSING_JITTER_S": "0",
+            "ROS2_UUV_CAMERA_TRANSPORT_LATENCY_S": "0.006",
+            "ROS2_UUV_CAMERA_TRANSPORT_JITTER_S": "0",
+        }):
+            owner = _bridge(hz=15.0)
+        owner._ros_sensor_rate_next_t = {}
+        owner.node = SimpleNamespace(create_publisher=lambda _type, topic, _qos: topic)
+        camera.create_stereo_image_publishers(owner, camera_sensor_qos=None)
+        demand = SimpleNamespace(wants_output=lambda publisher, _time, **_kwargs:
+                                 publisher == camera.IMX219_CAMERA0_RAW_TOPIC)
+        captures, deliveries = [], []
+
+        def render(_owner, _camera, data):
+            captures.append(float(data.time))
+            return _rgb()
+
+        with patch.object(camera, "_render_camera_rgb_or_none", side_effect=render):
+            for tick in range(100):
+                now = tick / 100.0
+                jobs = PublishQueue(demand, now)
+
+                def add_rate_limited(publisher, label, builder, hz, **kwargs):
+                    if ros_topic_due(owner, label, now, hz):
+                        jobs.add(publisher, label, builder, **kwargs)
+
+                builders = camera.build_stereo_publish_builders(owner, SimpleNamespace(time=now), _Stamp())
+                camera.schedule_stereo_image_jobs(owner, jobs, add_rate_limited, builders=builders)
+                jobs.flush(lambda _pub, msg, _label: deliveries.append(
+                    (now, msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9)
+                ) or True)
+        self.assertEqual(len(deliveries), 15)
+        self.assertEqual(len(captures), 15, "delivery polling must not trigger extra renders")
+        self.assertEqual(len({capture for _, capture in deliveries}), 15)
+        self.assertLessEqual(max(now - capture for now, capture in deliveries), 0.02 + 1e-9)
+        self.assertEqual(owner._camera_sensor_runtimes["stereo_left"].stats.rate_limited_frames, 0)
+        camera.close_stereo_image_renderers(owner)
+
+    def test_depth_capture_preserves_same_frame_map_and_capture_time(self) -> None:
+        from bridge.ros2_camera_sensor_runtime import RenderedCameraFrame
+        from bridge.underwater_camera_sensor_model import load_underwater_camera_profile
+
+        profile_path = CURRENT / "config/sensor_models/imx219_underwater_pool_lite.json"
+        with patch.dict(os.environ, {
+            "ROS2_UUV_CAMERA_SENSOR_MODEL_ENABLE": "1",
+            "ROS2_UUV_CAMERA_SENSOR_MODEL_CONFIG": str(profile_path),
+        }):
+            owner = _bridge()
+        self.assertFalse(owner._stereo_image_async_enabled)
+        paths = np.full((64, 64), 2.0, dtype=np.float32)
+        frame = RenderedCameraFrame(_rgb(), 3.0, paths)
+        with patch.object(camera, "render_camera_frame", return_value=frame):
+            actual = camera._rendered_camera_frame_for_publish(owner, "stereo_left", SimpleNamespace(time=3.0))
+        self.assertIs(actual.optical_path_length_m, paths)
+        runtime = owner._camera_sensor_runtimes["stereo_left"]
+        self.assertEqual(runtime.advance(3.0, actual), ())
+        deliveries = runtime.advance(3.1, None)
+        self.assertEqual(deliveries[0].capture_time_s, 3.0)
+        self.assertEqual(deliveries[0].diagnostics.path_mode, "depth")
+        self.assertEqual(load_underwater_camera_profile(profile_path).optics.blur_radius_px, 0)
+        camera.close_stereo_image_renderers(owner)
+
     def tearDown(self) -> None:
         os.environ.pop("ROS2_UUV_CAMERA_SENSOR_MODEL_ENABLE", None)
         os.environ.pop("ROS2_UUV_CAMERA_PROCESSING_LATENCY_S", None)

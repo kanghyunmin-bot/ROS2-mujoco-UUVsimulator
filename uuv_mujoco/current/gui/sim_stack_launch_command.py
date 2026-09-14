@@ -16,11 +16,17 @@ DEFAULT_CAMERA_PRESET_ID = "balanced"
 
 CAMERA_PRESETS = (
     {"id": "balanced", "label": "640x360 @ 4Hz", "width": 640, "height": 360, "hz": 4.0},
+    {"id": "vla_lite", "label": "VLA lite · 640x360 @ 15Hz", "width": 640, "height": 360, "hz": 15.0},
     {"id": "smooth540", "label": "960x540 @ 10Hz", "width": 960, "height": 540, "hz": 10.0},
     {"id": "hd720", "label": "1280x720 @ 5Hz", "width": 1280, "height": 720, "hz": 5.0},
     {"id": "hd720_fast", "label": "1280x720 @ 10Hz", "width": 1280, "height": 720, "hz": 10.0},
     {"id": "hd720_smooth", "label": "1280x720 @ 20Hz", "width": 1280, "height": 720, "hz": 20.0},
     {"id": "hd720_realtime", "label": "1280x720 @ 30Hz", "width": 1280, "height": 720, "hz": 30.0},
+)
+
+CAMERA_OPTICS_PROFILES = (
+    {"id": "inherited", "label": "기존 환경 설정 유지"},
+    {"id": "pool_lite", "label": "수중 풀 · 경량 광학"},
 )
 
 
@@ -96,6 +102,9 @@ def normalize_camera_config(values: dict[str, object] | None = None, *, strict_p
     matched_id = _matching_preset_id(width, height, hz)
     matched = _preset_by_id(matched_id) if matched_id != "custom" else None
     label = str(matched["label"]) if matched else f"{width}x{height} @ {_format_hz(hz)}Hz"
+    optics_profile = str(values.get("optics_profile", "inherited"))
+    if optics_profile not in {profile["id"] for profile in CAMERA_OPTICS_PROFILES}:
+        raise ValueError(f"unsupported camera optics profile: {optics_profile}")
     return {
         "preset_id": matched_id,
         "label": label,
@@ -103,7 +112,31 @@ def normalize_camera_config(values: dict[str, object] | None = None, *, strict_p
         "height": height,
         "hz": hz,
         "hz_arg": _format_hz(hz),
+        "optics_profile": optics_profile,
     }
+
+
+def camera_optics_environment(config: dict[str, object]) -> dict[str, str]:
+    """Return opt-in sensor model overrides; inherited preserves launch settings."""
+    if config.get("optics_profile") == "pool_lite":
+        return {
+            "ROS2_UUV_CAMERA_SENSOR_MODEL_ENABLE": "1",
+            "ROS2_UUV_CAMERA_SENSOR_MODEL_CONFIG": "config/sensor_models/imx219_underwater_pool_lite.json",
+        }
+    return {}
+
+
+def camera_config_from_launch_command(config: dict[str, object], command: list[str]) -> dict[str, object]:
+    """Capture actual launch arguments, including caller overrides of defaults."""
+    values = dict(config)
+    for key, option in (("width", "--ros2-image-width"), ("height", "--ros2-image-height"),
+                        ("hz", "--ros2-image-hz")):
+        for index, argument in enumerate(command):
+            if argument.startswith(option + "="):
+                values[key] = argument.split("=", 1)[1]
+            elif argument == option and index + 1 < len(command):
+                values[key] = command[index + 1]
+    return {**normalize_camera_config(values), "enabled": "--ros2-images" in command}
 
 
 def camera_config_from_owner(owner) -> dict[str, object]:

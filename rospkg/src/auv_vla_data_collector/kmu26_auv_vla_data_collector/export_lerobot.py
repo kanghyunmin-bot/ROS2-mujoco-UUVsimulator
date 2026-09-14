@@ -126,6 +126,7 @@ def export_dataset(
                     "channels": provenance.get("action_channels"),
                     "neutral": provenance.get("neutral_pwm"),
                     "span": provenance.get("pwm_span"),
+                    "imu_motion": provenance.get("imu_motion"),
                 },
                 sort_keys=True,
             )

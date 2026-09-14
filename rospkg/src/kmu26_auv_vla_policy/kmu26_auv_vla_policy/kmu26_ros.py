@@ -73,6 +73,7 @@ class RovPolicyAdapter(Node):
         self.owned = False
         self.deadman_at = -float("inf")
         self.state_at = -float("inf")
+        self.state_ros_at = -float("inf")
         self.vehicle_state = None
         self.epoch = 0
         self.pool = ThreadPoolExecutor(max_workers=1)
@@ -103,6 +104,7 @@ class RovPolicyAdapter(Node):
     def _state(self, message):
         self.vehicle_state = message
         self.state_at = time.monotonic()
+        self.state_ros_at = self.sensors._now()
 
     def _ready(self, now):
         if now - self.deadman_at > 0.3:
@@ -110,9 +112,21 @@ class RovPolicyAdapter(Node):
         if self.dry_run:
             return True
         state = self.vehicle_state
+        if self.sensors.get_parameter("use_sim_time").value:
+            ros_time = self.sensors._now()
+            state_fresh = (
+                ros_time > 0.0
+                and ros_time >= self.last_ros_time
+                and now - self.clock_advanced_at <= self.timeout
+                # FCU heartbeats arrive about once per simulation second;
+                # match the collector's two-period window for tick jitter.
+                and 0.0 <= ros_time - self.state_ros_at <= 2.0
+            )
+        else:
+            state_fresh = now - self.state_at <= 1.0
         return bool(
             state
-            and now - self.state_at <= 1.0
+            and state_fresh
             and state.connected
             and state.armed
             and state.mode == self.expected_mode
@@ -164,6 +178,9 @@ class RovPolicyAdapter(Node):
             self.clock_advanced_at = now
         reset = ros_time < self.last_ros_time
         self.last_ros_time = ros_time
+        if reset and self.sensors.get_parameter("use_sim_time").value:
+            self.vehicle_state = None
+            self.state_at = self.state_ros_at = -float("inf")
         if not self.enabled:
             return
         if (
@@ -218,7 +235,7 @@ class RovPolicyAdapter(Node):
                 )
             elif now - self.requested_at > self.timeout:
                 self._stop()
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001 - Every inference failure must release RC ownership.
             self.get_logger().warning(f"VLA stopped: {error}")
             self._stop()
 

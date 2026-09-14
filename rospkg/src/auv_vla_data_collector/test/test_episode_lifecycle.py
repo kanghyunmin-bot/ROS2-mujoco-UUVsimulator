@@ -36,6 +36,133 @@ def test_clock_rewind_clears_cached_inputs(node):
     assert not node._rc_tracker.fresh(10, 0.5)
 
 
+@pytest.mark.parametrize("clock_state", ["zero", "unobserved", "stalled", "rewound"])
+def test_simulation_start_and_status_share_clock_gate(node, clock_state):
+    import json
+    import time
+    from rclpy.parameter import Parameter
+
+    node.set_parameters([Parameter("use_sim_time", value=True)])
+    node._clock_last = 10.0
+    if clock_state == "zero":
+        node._now = lambda: 0.0
+        node._clock_last = 0.0
+        for name in ("ego", "release", "imu", "depth", "control"):
+            getattr(node, "_" + name).source_time = 0.0
+            getattr(node, "_" + name).received_time = 0.0
+        node._rc_tracker.update([1500] * 18, 0.0)
+    elif clock_state == "unobserved":
+        node._clock_last = None
+    elif clock_state == "stalled":
+        node._clock_wall = time.monotonic() - 1.1
+    else:
+        node._clock_last = 11.0
+
+    status = json.loads(node._on_get_status(Trigger.Request(), Trigger.Response()).message)
+    start = node._on_start_episode(Trigger.Request(), Trigger.Response())
+    assert not status["ready"]
+    assert "simulation clock" in status["missing"]
+    assert not start.success
+    assert "simulation clock" in start.message
+    assert not node._active
+    assert not list(node._dataset_root.glob(".recording_episode_*"))
+
+
+def test_policy_rejects_stalled_simulation_before_watchdog_runs(node):
+    import time
+    from rclpy.parameter import Parameter
+
+    node.set_parameters([Parameter("use_sim_time", value=True)])
+    node._clock_last = 10.0
+    node._clock_wall = time.monotonic() - 1.1
+    with pytest.raises(ValueError, match="clock"):
+        node.policy_observation(np.zeros(4))
+
+
+def test_initialized_simulation_clock_allows_collection_and_policy(node):
+    from rclpy.parameter import Parameter
+
+    node.set_parameters([Parameter("use_sim_time", value=True)])
+    node._watch_clock()
+    assert node._on_start_episode(Trigger.Request(), Trigger.Response()).success
+    node._record_sample()
+    assert len(node._states) == 1
+    assert node.policy_observation(np.zeros(4))["state.depth"][0, 0] == 1.0
+
+
+def test_wall_clock_collection_does_not_require_simulation_clock(node):
+    node._clock_last = None
+    node._clock_wall = -float("inf")
+    assert node._on_start_episode(Trigger.Request(), Trigger.Response()).success
+    node._record_sample()
+    assert len(node._states) == 1
+    assert node.policy_observation(np.zeros(4))["state.depth"][0, 0] == 1.0
+
+
+def test_clock_rewind_requires_new_vehicle_telemetry(node):
+    node._on_vehicle_state(State(connected=True, armed=True, mode="STABILIZE"))
+    assert node._on_start_episode(Trigger.Request(), Trigger.Response()).success
+    node._record_sample()
+    node._watch_clock()
+    node._now = lambda: 0.0
+    node._watch_clock()
+    assert node._vehicle is None
+    assert node._vehicle_at == -float("inf")
+    assert node._vehicle_ros_at == -float("inf")
+    assert node._episode_vehicle is None
+    assert not node._active
+    assert node._last_result["termination_reason"] == "clock_reset"
+
+
+@pytest.mark.parametrize(
+    "sim_time,wall_elapsed,ros_elapsed,clock_progress,expected",
+    [
+        (True, 4.0, 0.5, True, True),
+        (True, 0.5, 2.1, True, False),
+        (True, 1.2, 0.0, False, False),
+        (True, 0.2, -0.5, False, False),
+        (False, 1.9, 4.0, True, True),
+        (False, 2.1, 0.5, True, False),
+    ],
+)
+def test_vehicle_freshness_uses_collection_clock(
+    node, monkeypatch, sim_time, wall_elapsed, ros_elapsed, clock_progress, expected
+):
+    from rclpy.parameter import Parameter
+
+    wall = [100.0]
+    monkeypatch.setattr("kmu26_auv_vla_data_collector.collector.time.monotonic", lambda: wall[0])
+    node.set_parameters([Parameter("use_sim_time", value=sim_time)])
+    node._data_source = "simulation" if sim_time else "real"
+    node._session_id = "clock_freshness_test"
+    node._provenance_context = {"test": True}
+    node.count_publishers = lambda topic: 1
+    node._clock_last = 10.0
+    node._clock_wall = wall[0]
+    node._on_vehicle_state(State(connected=True, armed=True, mode="STABILIZE"))
+    wall[0] += wall_elapsed
+    node._now = lambda: 10.0 + ros_elapsed
+    if clock_progress:
+        node._watch_clock()
+    assert node._demonstration_ready() is expected
+
+
+def test_active_recording_rejects_stalled_clock_before_watchdog_runs(node):
+    import time
+    from rclpy.parameter import Parameter
+
+    node.set_parameters([Parameter("use_sim_time", value=True)])
+    node._clock_last = 10.0
+    assert node._on_start_episode(Trigger.Request(), Trigger.Response()).success
+    node._record_sample()
+    node._now = lambda: 10.1
+    node._clock_wall = time.monotonic() - 1.1
+    node._record_sample()
+    assert not node._active
+    assert node._last_result["termination_reason"] == "clock_stalled"
+    assert len(node._states) == 1
+
+
 def test_mode_change_ends_episode(node):
     node._on_vehicle_state(State(connected=True, armed=True, mode="STABILIZE"))
     assert node._on_start_episode(Trigger.Request(), Trigger.Response()).success

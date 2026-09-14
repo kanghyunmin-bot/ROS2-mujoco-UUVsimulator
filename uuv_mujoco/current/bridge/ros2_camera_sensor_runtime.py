@@ -32,6 +32,7 @@ class RenderedCameraFrame:
 
     rgb: np.ndarray
     capture_time_s: float
+    optical_path_length_m: np.ndarray | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.rgb, np.ndarray):
@@ -206,8 +207,14 @@ class CameraSensorRuntime:
         self,
         reference_time_s: float,
         rendered: RenderedCameraFrame | None,
+        *,
+        capture_failed: bool = False,
     ) -> tuple[CameraFrameDelivery, ...]:
-        """Offer at most one new render and drain every frame whose arrival is due."""
+        """Offer a render or failed attempt, and drain every frame whose arrival is due.
+
+        A failed capture consumes its scheduled slot without creating an image
+        or packet, keeping repeated renderer failures within the capture budget.
+        """
 
         if self._closed:
             return ()
@@ -219,6 +226,11 @@ class CameraSensorRuntime:
             self.reset()
         self._last_reference_time_s = now_s
 
+        if capture_failed:
+            if rendered is not None:
+                raise ValueError("a failed capture cannot include a rendered frame")
+            if now_s + epsilon_s >= self._next_allowed_capture_time_s:
+                self._advance_capture_deadline(now_s, epsilon_s)
         if rendered is not None:
             self._offer(rendered, now_s, epsilon_s)
         packets = self.transport.drain_arrived(now_s)
@@ -233,6 +245,23 @@ class CameraSensorRuntime:
                 diagnostics=packet.payload.diagnostics,
             )
             for packet in packets
+        )
+
+    def capture_due(self, reference_time_s: float) -> bool:
+        """Whether one capture is due at simulation time [s], before rendering.
+
+        Checking does not consume a capture slot. Delivery polling can therefore
+        run between captures without creating extra RGB/depth frames.
+        """
+        now_s = float(reference_time_s)
+        if not math.isfinite(now_s) or now_s < 0.0:
+            raise ValueError("camera reference_time_s must be finite and non-negative")
+        if self._closed:
+            return False
+        epsilon_s = self.transport.config.schedule.epsilon_s
+        return (
+            now_s + epsilon_s < self._last_reference_time_s
+            or now_s + epsilon_s >= self._next_allowed_capture_time_s
         )
 
     def reset(self) -> None:
@@ -279,8 +308,10 @@ class CameraSensorRuntime:
 
         sequence = self._next_sequence
         self._next_sequence += 1
-        self._next_allowed_capture_time_s = capture_time_s + self.frame_period_s
-        processed, diagnostics = self.model.process(rendered.rgb, sequence=sequence)
+        self._advance_capture_deadline(capture_time_s, epsilon_s)
+        processed, diagnostics = self.model.process(
+            rendered.rgb, sequence=sequence, optical_path_length_m=rendered.optical_path_length_m
+        )
         capture = SensorCapture(
             sequence=sequence,
             capture_time_s=capture_time_s,
@@ -291,6 +322,20 @@ class CameraSensorRuntime:
             ModeledCameraFrame(rgb=processed, diagnostics=diagnostics),
         )
         self._accepted_captures += 1
+
+    def _advance_capture_deadline(self, capture_time_s: float, epsilon_s: float) -> None:
+        # Keep the original sampling phase when a physics/ROS tick rounds a
+        # deadline upward. Resetting to capture_time + period would reject the
+        # next on-phase frame (15 Hz on a 100 Hz loop becomes roughly 10 Hz).
+        # Skip missed slots in constant time; never render a catch-up burst.
+        previous_due_s = self._next_allowed_capture_time_s
+        if math.isfinite(previous_due_s):
+            elapsed_slots = max(
+                1, math.floor((capture_time_s + epsilon_s - previous_due_s) / self.frame_period_s) + 1
+            )
+            self._next_allowed_capture_time_s = previous_due_s + elapsed_slots * self.frame_period_s
+        else:
+            self._next_allowed_capture_time_s = capture_time_s + self.frame_period_s
 
 
 __all__ = [

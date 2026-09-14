@@ -7,6 +7,7 @@ import os
 import sys
 import unittest
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from threading import Event, Thread
 from unittest.mock import patch
 
@@ -433,7 +434,7 @@ class WebGuiRuntimeContractsTest(unittest.TestCase):
         )
         self.assertIn("pingerStartPending", script)
         self.assertIn(
-            'pingerStartButton.disabled = pingerRunning || state.pingerStartPending',
+            'pingerStartButton.disabled = state.configurationLocked || pingerRunning || state.pingerStartPending',
             script,
         )
         self.assertIn(
@@ -445,24 +446,26 @@ class WebGuiRuntimeContractsTest(unittest.TestCase):
             script,
         )
         self.assertIn(
-            'no_odom_probe_pwm_delta: numericValue("pingerHomingProbePwmDelta", 90)',
+            'probe_pwm_delta: numericValue("pingerHomingProbePwmDelta", 20)',
             script,
         )
         self.assertIn(
-            'no_odom_approach_pwm_delta: numericValue("pingerHomingApproachPwmDelta", 200)',
+            'approach_pwm_delta: numericValue("pingerHomingApproachPwmDelta", 25)',
             script,
         )
         self.assertIn(
-            'no_odom_forward_duration_s: numericValue("pingerHomingApproachDuration", 40)',
+            'navigation_mode: "odometry"',
             script,
         )
         self.assertIn(
-            '<option value="no_odom_phase" selected>Phase ABBA (no odometry)</option>',
+            '<option value="phase" selected>Phase / odometry (real parity)</option>',
             index,
         )
         self.assertNotIn('id="pingerHomingUseYolo"', index)
         self.assertNotIn('id="pingerHomingYoloRange"', index)
-        self.assertNotIn('<option value="MANUAL">MANUAL</option>', index)
+        # The recorder supports MANUAL, but acoustic homing uses ALT_HOLD.
+        homing_panel = index.split('id="pingerHomingPanel"', 1)[1].split('</fieldset>', 1)[0]
+        self.assertNotIn('<option value="MANUAL">MANUAL</option>', homing_panel)
 
     def test_frontend_accepts_a_physical_browser_gamepad_for_pilot_input(self) -> None:
         script = (CURRENT_DIR / "gui" / "web_static" / "app.js").read_text(
@@ -480,6 +483,17 @@ class WebGuiRuntimeContractsTest(unittest.TestCase):
         self.assertIn('id="gamepadStatus"', index)
 
     def test_mission_selects_real_and_sim_pose_contracts(self) -> None:
+        # Optional mission packages are not shipped in the core checkout.
+        # Supply their launch path without invoking ROS or requiring an install.
+        directory = TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        ros_source = Path(directory.name)
+        launch = ros_source / "kmu26_control_packages/kmu26_vision_mission_fsm/launch/mission_fsm_real.launch.py"
+        launch.parent.mkdir(parents=True)
+        launch.touch()
+        source_patch = patch("gui.web_process_manager.ROS_SOURCE_DIR", ros_source)
+        source_patch.start()
+        self.addCleanup(source_patch.stop)
         manager = WebProcessManager(_Node())
         manager._clear_mission_status_file = lambda: None  # type: ignore[method-assign]
         captured: list[list[str]] = []

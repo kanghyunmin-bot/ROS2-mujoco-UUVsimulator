@@ -11,7 +11,7 @@
     <div class="button-row"><button id="recSuccess" disabled>성공 저장</button><button id="recFailure" disabled>실패 저장</button><button id="recDiscard" disabled>현재 녹화 폐기</button></div>
     <p id="recState" role="status" aria-live="polite">레코더 준비를 눌러 시작하세요.</p>
     <p id="recError" role="alert"></p><p id="recMissing"></p><p id="recResult" style="overflow-wrap:anywhere"></p>
-    <details><summary>사용 순서</summary><p>준비 → 자세 정렬·ARM·조종 입력 활성화 → 녹화 → 저장 순서입니다. 준비 버튼은 자동 ARM하거나 로봇을 움직이지 않습니다. 복귀·리셋은 녹화 종료 후 하세요. 카메라가 4Hz라면 수집용으로 변경하고 센서 상태를 먼저 확인하세요. 실패·자동 중단 자료는 학습용 성공 시연과 별도로 검토하세요.</p></details>`;
+    <details><summary>사용 순서</summary><p>카메라 VLA lite 적용 + 재시작 → 준비 → 자세 정렬·ARM·조종 입력 활성화 → 녹화 → 저장 순서입니다. 센서 출력은 10Hz 이상이 필요하며, 요청 주기와 실제 수신 주기는 다를 수 있습니다. 준비 버튼은 자동 ARM하거나 로봇을 움직이지 않습니다. 센서·시뮬레이션 변경과 리셋은 세션 종료 후 가능합니다. 미리보기 속도는 녹화와 독립적으로 낮출 수 있습니다. 실패·자동 중단 자료는 학습용 성공 시연과 별도로 검토하세요.</p></details>`;
   document.querySelector('.control-column').appendChild(panel);
   const el = id => document.getElementById(id);
   const checks = [['ego camera','전방'],['buoy-release camera','손 카메라'],['IMU','IMU'],['depth','수심'],['RC override','RC'],['armed/mode/single RC publisher/provenance','운용 조건'],['simulation clock','시계']];
@@ -47,11 +47,18 @@
       cell.dataset.ready = String(Boolean(r.online && !missing));
     });
     const blocked = pending || r.busy || !r.online || !r.owned;
-    el('recPrepare').disabled = pending || r.running || r.online;
+    const configurationLocked = Boolean(r.configuration_locked);
+    for (const id of ['stereoCameraProfile', 'stereoCameraOptics', 'stereoCameraApplyBtn', 'stereoCameraSaveBtn',
+                     'stackResetBtn', 'physicsApplyBtn', 'physicsApplyRestartBtn',
+                     'courseSaveBtn', 'courseSaveResetBtn', 'toolEditorSaveBtn']) {
+      const button = el(id);
+      if (button) button.disabled = configurationLocked;
+    }
+    el('recPrepare').disabled = pending || configurationLocked || r.running || r.online;
     el('recTask').disabled = r.running || r.online;
     el('recMode').disabled = r.running || r.online;
     el('recStart').disabled = blocked || r.active || !r.ready;
-    el('recClose').disabled = blocked || r.active || !r.running;
+    el('recClose').disabled = pending || !configurationLocked || (r.running && (blocked || r.active));
     for (const id of ['recSuccess','recFailure','recDiscard']) el(id).disabled = blocked || !r.active;
     const state = !r.online ? (r.running ? '준비 중 / 상태 수신 대기' : '레코더 미연결') : r.active ? `● 녹화 중 · ${r.frames}프레임 · 시뮬 ${Number(r.duration_s || 0).toFixed(1)}초` : r.ready ? '녹화 준비 완료' : '입력 준비 필요';
     el('recState').textContent = state + ' — ' + (r.message || '');

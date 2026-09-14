@@ -94,6 +94,7 @@ class VlaDataCollector(Node):
         }
         self._vehicle = None
         self._vehicle_at = -float("inf")
+        self._vehicle_ros_at = -float("inf")
         self._episode_vehicle = None
         self._vehicle_samples = []
         self._rc_feedback = {}
@@ -152,6 +153,16 @@ class VlaDataCollector(Node):
             self.declare_parameter("dvl_data_topic", "/dvl/data").value
         )
         imu_topic = str(self.declare_parameter("imu_topic", "/mavros/imu/data").value)
+        self._imu_motion_topic = str(self.declare_parameter("imu_motion_topic", "").value)
+        self._imu_motion_frame = str(self.declare_parameter("imu_motion_frame", "fcu_link").value)
+        self._imu_motion_convention = str(self.declare_parameter("imu_motion_convention", "FLU").value)
+        if self._imu_motion_topic and (
+            not self.get_parameter("use_sim_time").value
+            or self._body_frame != "base_link"
+            or self._imu_motion_frame != "fcu_link"
+            or self._imu_motion_convention != "FLU"
+        ):
+            raise ValueError("Separate IMU motion requires the simulation fcu_link/body-FLU contract")
         depth_topic = str(self.declare_parameter("depth_topic", "/depth/pose").value)
         rc_topic = str(
             self.declare_parameter("rc_override_topic", "/mavros/rc/override").value
@@ -177,6 +188,7 @@ class VlaDataCollector(Node):
         self._dvl_twist: Optional[Latest] = None
         self._dvl_data: Optional[Latest] = None
         self._imu: Optional[Latest] = None
+        self._imu_motion: Latest | None = None
         self._depth: Optional[Latest] = None
         self._control: Optional[Latest] = None
         self._control_command = np.zeros(4, dtype=np.float32)
@@ -217,6 +229,11 @@ class VlaDataCollector(Node):
             DVL, dvl_data_topic, self._on_dvl_data, qos_profile_sensor_data
         )
         self.create_subscription(Imu, imu_topic, self._on_imu, qos_profile_sensor_data)
+        if self._imu_motion_topic:
+            self._topics["imu_motion"] = self._imu_motion_topic
+            self.create_subscription(
+                Imu, self._imu_motion_topic, self._on_imu_motion, qos_profile_sensor_data
+            )
         self.create_subscription(
             PoseWithCovarianceStamped,
             depth_topic,
@@ -257,6 +274,18 @@ class VlaDataCollector(Node):
     def _now(self) -> float:
         return self.get_clock().now().nanoseconds * 1.0e-9
 
+    def _simulation_clock_issue(self, now: float) -> str | None:
+        """Check clock health before consuming cached simulation inputs."""
+        if not self.get_parameter("use_sim_time").value:
+            return None
+        if now <= 0.0 or self._clock_last is None:
+            return "clock_uninitialized"
+        if now < self._clock_last:
+            return "clock_reset"
+        if time.monotonic() - self._clock_wall > 1.0:
+            return "clock_stalled"
+        return None
+
     def _interrupt_episode(self, reason: str) -> None:
         if self._active:
             if self._states:
@@ -276,12 +305,17 @@ class VlaDataCollector(Node):
                     "ego",
                     "release",
                     "imu",
+                    "imu_motion",
                     "depth",
                     "dvl_data",
                     "dvl_twist",
                     "control",
                 ):
                     setattr(self, "_" + name, None)
+                self._vehicle = None
+                self._vehicle_at = -float("inf")
+                self._vehicle_ros_at = -float("inf")
+                self._episode_vehicle = None
                 self._rc_feedback.clear()
                 self._rc_tracker = RcCommandTracker(
                     self._action_channel_indices, self._neutral_pwm, self._pwm_span
@@ -300,6 +334,7 @@ class VlaDataCollector(Node):
         with self._lock:
             self._vehicle = message
             self._vehicle_at = time.monotonic()
+            self._vehicle_ros_at = self._now()
             current = (message.connected, message.armed, message.mode)
             if (
                 self._active
@@ -310,12 +345,20 @@ class VlaDataCollector(Node):
 
     def _demonstration_ready(self) -> bool:
         state = self._vehicle
+        if self.get_parameter("use_sim_time").value:
+            now = self._now()
+            state_fresh = (
+                self._simulation_clock_issue(now) is None
+                and 0.0 <= now - self._vehicle_ros_at <= 2.0
+            )
+        else:
+            state_fresh = time.monotonic() - self._vehicle_at <= 2.0
         return bool(
             state
             and state.connected
             and state.armed
             and state.mode == self._expected_mode
-            and time.monotonic() - self._vehicle_at <= 2.0
+            and state_fresh
             and self.count_publishers(self._topics["rc_override"]) == 1
             and self._data_source != "unknown"
             and self._session_id
@@ -399,6 +442,34 @@ class VlaDataCollector(Node):
             with self._lock:
                 self._depth = self._latest(message, depth)
 
+    def _on_imu_motion(self, message: Imu) -> None:
+        """Cache modeled body-FLU angular velocity [rad/s] and specific force [m/s²].
+
+        The strict simulation bridge already rotates sensor vectors into body
+        axes and labels them fcu_link. Specific force remains at the IMU origin;
+        no translational lever-arm correction is applied. AHRS supplies attitude
+        independently and cannot refresh this capture's timestamp.
+        """
+        angular, linear = message.angular_velocity, message.linear_acceleration
+        value = (
+            np.asarray([angular.x, angular.y, angular.z], dtype=np.float32),
+            np.asarray([linear.x, linear.y, linear.z], dtype=np.float32),
+        )
+        valid = (
+            message.header.frame_id == self._imu_motion_frame
+            and message.angular_velocity_covariance[0] >= 0
+            and message.linear_acceleration_covariance[0] >= 0
+            and np.isfinite(value).all()
+        )
+        with self._lock:
+            self._imu_motion = self._latest(message, value) if valid else None
+
+    def _imu_values(self):
+        angular, linear, attitude = self._imu.value
+        if self._imu_motion_topic:
+            angular, linear = self._imu_motion.value
+        return angular, linear, attitude
+
     def _on_rc_override(self, message: OverrideRCIn) -> None:
         with self._lock:
             command, update_mask = self._rc_tracker.update(
@@ -433,6 +504,7 @@ class VlaDataCollector(Node):
 
     def _missing_start_inputs(self, now: float) -> list[str]:
         checks = {
+            "simulation clock": self._simulation_clock_issue(now) is None,
             "ego camera": self._is_fresh(self._ego, now, self._max_sensor_age),
             "buoy-release camera": self._is_fresh(
                 self._release, now, self._max_sensor_age
@@ -445,6 +517,8 @@ class VlaDataCollector(Node):
             checks["armed/mode/single RC publisher/provenance"] = (
                 self._demonstration_ready()
             )
+        if self._imu_motion_topic:
+            checks["IMU motion"] = self._is_fresh(self._imu_motion, now, self._max_sensor_age)
         return [name for name, ready in checks.items() if not ready]
 
     def policy_observation(self, previous_command: np.ndarray) -> dict:
@@ -455,6 +529,9 @@ class VlaDataCollector(Node):
         """
         with self._lock:
             now = self._now()
+            clock_issue = self._simulation_clock_issue(now)
+            if clock_issue is not None:
+                raise ValueError(f"Simulation clock unavailable: {clock_issue}")
             for name, value in (
                 ("ego", self._ego),
                 ("release", self._release),
@@ -465,6 +542,8 @@ class VlaDataCollector(Node):
                     raise ValueError(f"Missing/stale {name}")
             if not self._task_description:
                 raise ValueError("Missing task description")
+            if self._imu_motion_topic and not self._is_fresh(self._imu_motion, now, self._max_sensor_age):
+                raise ValueError("Missing/stale imu_motion")
             raw_valid = self._is_fresh(self._dvl_data, now, self._max_sensor_age)
             altitude, velocity_valid = (
                 self._dvl_data.value if raw_valid else (0.0, False)
@@ -479,7 +558,7 @@ class VlaDataCollector(Node):
             altitude_valid = bool(
                 raw_valid and velocity_valid and np.isfinite(altitude) and altitude > 0
             )
-            angular, linear, attitude = self._imu.value
+            angular, linear, attitude = self._imu_values()
             state = build_state(
                 previous_command,
                 self._dvl_twist.value if dvl_valid else np.zeros(3),
@@ -534,10 +613,6 @@ class VlaDataCollector(Node):
             missing = self._missing_start_inputs(now)
             if not self._task_description:
                 missing.append("task instruction")
-            if self.get_parameter("use_sim_time").value and (
-                now <= 0 or time.monotonic() - self._clock_wall > 1.0
-            ):
-                missing.append("simulation clock")
             warnings = [name for name, value in (
                 ("DVL velocity", self._dvl_twist), ("DVL validity/altitude", self._dvl_data)
             ) if not self._is_fresh(value, now, self._max_sensor_age)]
@@ -659,6 +734,10 @@ class VlaDataCollector(Node):
             if not self._active or self._recording_dir is None:
                 return
             now = self._now()
+            clock_issue = self._simulation_clock_issue(now)
+            if clock_issue is not None:
+                self._interrupt_episode(clock_issue)
+                return
             if self._ros_timestamps:
                 try:
                     validate_sample_times(
@@ -678,6 +757,9 @@ class VlaDataCollector(Node):
                 return
             if not self._is_fresh(self._imu, now, self._max_sensor_age):
                 self._warn_skipped("stale IMU", now)
+                return
+            if self._imu_motion_topic and not self._is_fresh(self._imu_motion, now, self._max_sensor_age):
+                self._warn_skipped("stale IMU motion", now)
                 return
             if not self._is_fresh(self._depth, now, self._max_sensor_age):
                 self._warn_skipped("stale depth", now)
@@ -723,7 +805,7 @@ class VlaDataCollector(Node):
                 self._dvl_twist.value if dvl_valid else np.zeros(3, dtype=np.float32)
             )
             altitude_value = float(altitude) if altitude_valid else 0.0
-            angular_velocity, linear_acceleration, attitude = self._imu.value
+            angular_velocity, linear_acceleration, attitude = self._imu_values()
 
             try:
                 state = build_state(
@@ -813,6 +895,12 @@ class VlaDataCollector(Node):
                     "state_receipt_age_wall_s": time.monotonic() - self._vehicle_at
                     if v
                     else None,
+                    "state_receipt_age_ros_s": now - self._vehicle_ros_at if v else None,
+                    "imu_motion": {
+                        "source_time": self._imu_motion.source_time,
+                        "receipt_time": self._imu_motion.received_time,
+                        "frame_id": self._imu_motion.frame_id,
+                    } if self._imu_motion_topic else None,
                     "rc_feedback": dict(self._rc_feedback),
                     "rc_publishers": self.count_publishers(self._topics["rc_override"]),
                 }
@@ -871,6 +959,13 @@ class VlaDataCollector(Node):
                 "max_control_age_sec": self._max_control_age,
                 "action_semantics": "latest_requested_rc_at_observation; FCU acceptance unverified",
                 "dvl_reference": "DVL acoustic origin; axes FLU; lever arm retained",
+                "imu_motion": {
+                    "topic": self._imu_motion_topic,
+                    "frame": self._imu_motion_frame,
+                    "convention": self._imu_motion_convention,
+                    "reference": "IMU origin specific force; body axes; no lever-arm correction",
+                    "timestamps": "vehicle_state.jsonl imu_motion; legacy IMU timestamp is AHRS",
+                } if self._imu_motion_topic else None,
             },
             "episode_index": self._episode_index,
             "task": self._episode_task,

@@ -1,0 +1,48 @@
+{
+  "schema": "uuv_mujoco.sensor_model.underwater_camera.v1",
+  "profile": "dual_imx219_underwater_pool_lite",
+  "calibration_status": "unvalidated_pool_visual_prior_not_physical_camera_calibration",
+  "seed": 260914,
+  "enabled_by_default": false,
+  "intrinsics_from_renderer": true,
+  "evidence": {
+    "basis": "qualitative clear-pool engineering prior; coefficients are not measured IMX219 specifications",
+    "runtime_boundary": "aligned ideal MuJoCo RGB and z-depth converted to underwater ray length; unchanged ROS image topics",
+    "limitations": "homogeneous water and a horizontal surface; no refraction, caustics, particles, volumetric lights, measured sensor noise, or exposure calibration",
+    "performance": "one extra depth pass; cached pinhole rays; float32 per-channel optics; no image blur or electronic noise"
+  },
+  "intrinsics": {
+    "width": 1280,
+    "height": 720,
+    "distortion_model": "plumb_bob",
+    "d": [0.0, 0.0, 0.0, 0.0, 0.0],
+    "k": [514.13374, 0.0, 639.5, 0.0, 514.13374, 359.5, 0.0, 0.0, 1.0],
+    "r": [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+    "p": [514.13374, 0.0, 639.5, 0.0, 0.0, 514.13374, 359.5, 0.0, 0.0, 0.0, 1.0, 0.0]
+  },
+  "underwater_optics": {
+    "path_mode": "depth",
+    "max_optical_path_length_m": 12.0,
+    "optical_path_length_m": 0.0,
+    "attenuation_coefficients_rgb_per_m": [0.16, 0.055, 0.025],
+    "backscatter_coefficients_rgb_per_m": [0.065, 0.08, 0.10],
+    "veiling_light_rgb": [0.11, 0.38, 0.50],
+    "backscatter_strength": 0.42,
+    "blur_radius_px": 0,
+    "vignetting_strength": 0.025
+  },
+  "electronics": {
+    "exposure_scale": 1.0,
+    "analog_gain": 1.0,
+    "black_level": 0.0,
+    "shot_noise_electrons_per_unit": 0.0,
+    "read_noise_electrons_rms": 0.0,
+    "quantization_bits": 8
+  },
+  "timing": {
+    "processing_latency": {"mean_s": 0.004, "jitter_std_s": 0.0, "max_s": 0.004},
+    "transport_latency": {"mean_s": 0.006, "jitter_std_s": 0.0, "max_s": 0.006},
+    "dropout_probability": 0.0,
+    "queue": {"capacity": 2, "overflow_policy": "drop_oldest"}
+  }
+}

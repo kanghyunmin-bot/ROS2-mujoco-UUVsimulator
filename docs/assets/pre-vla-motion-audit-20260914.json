@@ -1,0 +1,22 @@
+{
+  "rows": 51,
+  "motion_age_min_s": 0.01999999999999602,
+  "motion_age_max_s": 0.020000000000003126,
+  "motion_unique_captures": 51,
+  "motion_frames": [
+    "fcu_link"
+  ],
+  "state_shape": [
+    51,
+    23
+  ],
+  "legacy_timestamp_shape": [
+    51,
+    7
+  ],
+  "accel_z_range_m_s2": [
+    9.336999893188477,
+    10.295999526977539
+  ],
+  "audit_preserved_by_export": true
+}

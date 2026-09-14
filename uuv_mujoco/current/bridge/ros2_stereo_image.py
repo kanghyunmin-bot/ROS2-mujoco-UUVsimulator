@@ -13,6 +13,7 @@ import mujoco
 import numpy as np
 
 from .ros2_bridge_publish_stamp import stamp_from_seconds_like
+from .underwater_camera_render import CameraOpticalPathProjector
 from .ros2_camera_sensor_runtime import (
     CameraFrameDelivery,
     CameraSensorRuntime,
@@ -68,6 +69,7 @@ def configure_stereo_image_runtime(
         maximum=95,
     )
     bridge._stereo_image_renderers: dict[str, Any] = {}
+    bridge._camera_path_projectors: dict[str, CameraOpticalPathProjector] = {}
     bridge._stereo_image_warned: set[str] = set()
     bridge._stereo_image_async_requested = _env_bool(
         "ROS2_UUV_ASYNC_CAMERA_RENDER", True
@@ -163,8 +165,11 @@ def _configure_underwater_camera_sensor_model(
         # and non-16:9 collection resolutions. Explicit calibrations are retained.
         if (
             camera_name not in bridge._camera_calibrations
-            and Path(configured_path or DEFAULT_CAMERA_PROFILE_PATH).resolve()
-            == Path(DEFAULT_CAMERA_PROFILE_PATH).resolve()
+            and (
+                profile.intrinsics_from_renderer
+                or Path(configured_path or DEFAULT_CAMERA_PROFILE_PATH).resolve()
+                == Path(DEFAULT_CAMERA_PROFILE_PATH).resolve()
+            )
             and isinstance(getattr(bridge, "model", None), mujoco.MjModel)
         ):
             camera_id = mujoco.mj_name2id(
@@ -449,6 +454,15 @@ def schedule_stereo_image_jobs(
     if not bool(getattr(self, "_stereo_image_enabled", False)):
         return
     hz = float(getattr(self, "_stereo_image_hz", DEFAULT_IMAGE_HZ))
+    if bool(getattr(self, "_camera_sensor_model_enabled", False)):
+        # The sensor runtime owns capture cadence and checks it before render.
+        # Poll bounded transport on each ROS tick so a 10 ms latency does not
+        # become a full camera period. PublishQueue retains subscriber demand
+        # gating, and per-tick builders share one delivery across all aliases.
+        def add_modeled_job(publisher, label, builder, _hz, **kwargs):
+            jobs.add(publisher, label, builder, **kwargs)
+
+        add_rate_limited = add_modeled_job
     add_rate_limited(
         self.pub_stereo_left_image,
         "/stereo/left/image_raw",
@@ -546,6 +560,44 @@ def render_camera_rgb(self: Any, camera_name: str, data: Any) -> np.ndarray:
     renderer = _renderer_for_camera(self, camera)
     renderer.update_scene(data, camera=camera)
     return np.ascontiguousarray(renderer.render(), dtype=np.uint8)
+
+
+def render_camera_frame(self: Any, camera_name: str, data: Any) -> RenderedCameraFrame:
+    """Capture aligned RGB and bounded underwater path lengths [m].
+
+    The additional depth pass uses the same scene and simulation state. Viewer
+    annotations, sites, collision helpers, and water-volume display boxes are
+    excluded from this sensor-only scene without mutating the model or viewer.
+    """
+    camera = str(camera_name)
+    if camera not in CAMERA_NAMES:
+        raise ValueError(f"unsupported stereo camera: {camera}")
+    renderer = _renderer_for_camera(self, camera)
+    option = mujoco.MjvOption()
+    option.sitegroup[:] = 0
+    option.geomgroup[3:] = 0
+    renderer.update_scene(data, camera=camera, scene_option=option)
+    rgb = np.ascontiguousarray(renderer.render(), dtype=np.uint8)
+    renderer.enable_depth_rendering()
+    try:
+        depth_m = renderer.render()
+    finally:
+        renderer.disable_depth_rendering()
+    camera_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_CAMERA, camera)
+    projectors = self._camera_path_projectors
+    if camera not in projectors:
+        projectors[camera] = CameraOpticalPathProjector(
+            width=rgb.shape[1], height=rgb.shape[0],
+            fovy_degrees=float(self.model.cam_fovy[camera_id]),
+        )
+    paths = projectors[camera].project(
+        depth_m,
+        camera_position_z_m=float(data.cam_xpos[camera_id, 2]),
+        camera_rotation=data.cam_xmat[camera_id],
+        water_surface_z_m=float(getattr(self, "_water_surface_z", 0.0)),
+        max_path_length_m=self._camera_sensor_profile.optics.max_optical_path_length_m,
+    )
+    return RenderedCameraFrame(rgb, float(data.time), paths)
 
 
 def build_stereo_image_msg(self: Any, camera_name: str, data: Any, stamp: Any) -> Any | None:
@@ -749,9 +801,16 @@ def _modeled_camera_delivery_for_publish(
     if runtime is None:
         return None
     now_s = float(data.time)
-    rendered = _rendered_camera_frame_for_publish(self, camera_name, data)
+    capture_due = runtime.capture_due(now_s)
+    rendered = (
+        _rendered_camera_frame_for_publish(self, camera_name, data)
+        if capture_due
+        else None
+    )
     try:
-        deliveries = runtime.advance(now_s, rendered)
+        deliveries = runtime.advance(
+            now_s, rendered, capture_failed=capture_due and rendered is None
+        )
     except Exception as exc:
         _warn_once(
             self,
@@ -768,6 +827,13 @@ def _rendered_camera_frame_for_publish(
     data: Any,
 ) -> RenderedCameraFrame | None:
     if not bool(getattr(self, "_stereo_image_async_enabled", False)):
+        profile = getattr(self, "_camera_sensor_profile", None)
+        if profile is not None and profile.optics.path_mode == "depth":
+            try:
+                return render_camera_frame(self, camera_name, data)
+            except Exception as exc:
+                _warn_once(self, f"{camera_name}_depth", f"underwater RGB/depth render failed: {exc}")
+                return None
         rgb = _render_camera_rgb_or_none(self, camera_name, data)
         if rgb is None:
             return None
@@ -1002,6 +1068,7 @@ def close_stereo_image_renderers(self: Any) -> None:
         except Exception:
             pass
     getattr(self, "_camera_sensor_runtimes", {}).clear()
+    getattr(self, "_camera_path_projectors", {}).clear()
     renderers = getattr(self, "_stereo_image_renderers", {})
     for renderer in list(renderers.values()):
         try:
@@ -1078,5 +1145,6 @@ __all__ = [
     "configure_stereo_image_runtime",
     "create_stereo_image_publishers",
     "render_camera_rgb",
+    "render_camera_frame",
     "schedule_stereo_image_jobs",
 ]

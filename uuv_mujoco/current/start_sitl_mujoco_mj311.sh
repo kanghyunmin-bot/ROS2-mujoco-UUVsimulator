@@ -371,7 +371,7 @@ SITL_EXTRA_ARGS=()
 [[ "$SITL_FORCE_NO_DISPLAY" -eq 1 ]] && SITL_EXTRA_ARGS+=(--force-no-display)
 [[ "$SITL_EKF_STABLE" -eq 0 ]] && SITL_EXTRA_ARGS+=(--no-ekf-stable)
 if [[ "$SITL_PARAM_TUNE" -eq 1 ]]; then
-  SITL_BG_MAVPROXY_ARGS="${SITL_BG_MAVPROXY_ARGS:---non-interactive --nowait}"
+  SITL_BG_MAVPROXY_ARGS="${SITL_BG_MAVPROXY_ARGS:---non-interactive --nowait --streamrate=-1}"
   SITL_EXTRA_ARGS+=(--mavproxy-args "${SITL_BG_MAVPROXY_ARGS}")
   echo "[start] note: parameter-tune mode keeps background MAVProxy."
   echo "[start]       Standard one-shot mode uses legacy MAVProxy fan-out."

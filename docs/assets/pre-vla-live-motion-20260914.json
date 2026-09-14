@@ -1,0 +1,296 @@
+{
+  "kind": "read_only_live_input_probe",
+  "wall_duration_s": 30.00009037399991,
+  "ros_domain_id": "42",
+  "collector_rate_hz_configured": 10.0,
+  "sensor_max_age_s": 0.25,
+  "clock": {
+    "sim_progress_s": 6.094999999999999,
+    "observed_rtf": 0.20328771290552552,
+    "progress_events": 2438,
+    "resets": 0,
+    "max_no_progress_wall_s": 0.11691081200001463
+  },
+  "streams": {
+    "ego": {
+      "topic": "/imx219/camera0/image_raw/compressed",
+      "publisher_count": 1,
+      "received_messages": 92,
+      "received_hz_wall_window": 3.0666574284633943,
+      "unique_source_stamps": 92,
+      "observed_unique_source_hz": 14.991762767710032,
+      "frame_ids": [
+        "imx219_camera0_optical_frame"
+      ],
+      "collector_samples": 60,
+      "samples_with_input": 60,
+      "missing_samples": 0,
+      "stale_samples": 0,
+      "semantic_invalid_samples": 0,
+      "fresh_and_semantic_valid_ratio": 1.0,
+      "repeated_or_rewound_sample_stamps": 0,
+      "source_age_at_sample_s": {
+        "min": 0.030000000000001137,
+        "median": 0.04500000000000881,
+        "p95": 0.060000000000016485,
+        "max": 0.060000000000016485
+      },
+      "source_age_at_receipt_s": {
+        "min": 0.009999999999990905,
+        "median": 0.010000000000005116,
+        "p95": 0.010000000000005116,
+        "max": 0.010000000000005116
+      },
+      "invalid_sample_examples": [],
+      "decoded_image_checks": [
+        {
+          "dtype": "uint8",
+          "shape_hwc": [
+            360,
+            640,
+            3
+          ]
+        }
+      ]
+    },
+    "hand": {
+      "topic": "/imx219/camera1/image_raw/compressed",
+      "publisher_count": 1,
+      "received_messages": 92,
+      "received_hz_wall_window": 3.0666574284633943,
+      "unique_source_stamps": 92,
+      "observed_unique_source_hz": 14.991762767710032,
+      "frame_ids": [
+        "imx219_camera1_optical_frame"
+      ],
+      "collector_samples": 60,
+      "samples_with_input": 60,
+      "missing_samples": 0,
+      "stale_samples": 0,
+      "semantic_invalid_samples": 0,
+      "fresh_and_semantic_valid_ratio": 1.0,
+      "repeated_or_rewound_sample_stamps": 0,
+      "source_age_at_sample_s": {
+        "min": 0.030000000000001137,
+        "median": 0.04500000000000881,
+        "p95": 0.060000000000016485,
+        "max": 0.060000000000016485
+      },
+      "source_age_at_receipt_s": {
+        "min": 0.009999999999990905,
+        "median": 0.010000000000005116,
+        "p95": 0.010000000000005116,
+        "max": 0.010000000000005116
+      },
+      "invalid_sample_examples": [],
+      "decoded_image_checks": [
+        {
+          "dtype": "uint8",
+          "shape_hwc": [
+            360,
+            640,
+            3
+          ]
+        }
+      ]
+    },
+    "imu": {
+      "topic": "/mavros/imu/data",
+      "publisher_count": 1,
+      "received_messages": 61,
+      "received_hz_wall_window": 2.033327208002903,
+      "unique_source_stamps": 61,
+      "observed_unique_source_hz": 10.0,
+      "frame_ids": [
+        "base_link"
+      ],
+      "collector_samples": 60,
+      "samples_with_input": 60,
+      "missing_samples": 0,
+      "stale_samples": 0,
+      "semantic_invalid_samples": 0,
+      "fresh_and_semantic_valid_ratio": 1.0,
+      "repeated_or_rewound_sample_stamps": 0,
+      "source_age_at_sample_s": {
+        "min": 0.010000000000005116,
+        "median": 0.010000000000005116,
+        "p95": 0.010000000000005116,
+        "max": 0.010000000000005116
+      },
+      "source_age_at_receipt_s": {
+        "min": 0.0,
+        "median": 0.0,
+        "p95": 1.4210854715202004e-14,
+        "max": 1.4210854715202004e-14
+      },
+      "invalid_sample_examples": []
+    },
+    "depth": {
+      "topic": "/depth/pose",
+      "publisher_count": 1,
+      "received_messages": 61,
+      "received_hz_wall_window": 2.033327208002903,
+      "unique_source_stamps": 61,
+      "observed_unique_source_hz": 10.0,
+      "frame_ids": [
+        "odom"
+      ],
+      "collector_samples": 60,
+      "samples_with_input": 60,
+      "missing_samples": 0,
+      "stale_samples": 0,
+      "semantic_invalid_samples": 0,
+      "fresh_and_semantic_valid_ratio": 1.0,
+      "repeated_or_rewound_sample_stamps": 0,
+      "source_age_at_sample_s": {
+        "min": 0.09999999999999432,
+        "median": 0.10000000000000853,
+        "p95": 0.10000000000000853,
+        "max": 0.10000000000000853
+      },
+      "source_age_at_receipt_s": {
+        "min": 0.00750000000000739,
+        "median": 0.015000000000000568,
+        "p95": 0.017500000000012506,
+        "max": 0.020000000000010232
+      },
+      "invalid_sample_examples": []
+    },
+    "dvl_twist": {
+      "topic": "/dvl/twist",
+      "publisher_count": 1,
+      "received_messages": 61,
+      "received_hz_wall_window": 2.033327208002903,
+      "unique_source_stamps": 61,
+      "observed_unique_source_hz": 10.004168403501454,
+      "frame_ids": [
+        "dvl_link"
+      ],
+      "collector_samples": 60,
+      "samples_with_input": 60,
+      "missing_samples": 0,
+      "stale_samples": 0,
+      "semantic_invalid_samples": 0,
+      "fresh_and_semantic_valid_ratio": 1.0,
+      "repeated_or_rewound_sample_stamps": 0,
+      "source_age_at_sample_s": {
+        "min": 0.07750000000001478,
+        "median": 0.08750000000000568,
+        "p95": 0.09499999999999957,
+        "max": 0.09500000000001307
+      },
+      "source_age_at_receipt_s": {
+        "min": 0.0,
+        "median": 0.0,
+        "p95": 0.0024999999999977263,
+        "max": 0.002500000000011937
+      },
+      "invalid_sample_examples": []
+    },
+    "dvl_data": {
+      "topic": "/dvl/data",
+      "publisher_count": 1,
+      "received_messages": 61,
+      "received_hz_wall_window": 2.033327208002903,
+      "unique_source_stamps": 61,
+      "observed_unique_source_hz": 10.004168403501454,
+      "frame_ids": [
+        "dvl_link"
+      ],
+      "collector_samples": 60,
+      "samples_with_input": 60,
+      "missing_samples": 0,
+      "stale_samples": 0,
+      "semantic_invalid_samples": 0,
+      "fresh_and_semantic_valid_ratio": 1.0,
+      "repeated_or_rewound_sample_stamps": 0,
+      "source_age_at_sample_s": {
+        "min": 0.07750000000001478,
+        "median": 0.08750000000000568,
+        "p95": 0.09499999999999957,
+        "max": 0.09500000000001307
+      },
+      "source_age_at_receipt_s": {
+        "min": 0.0,
+        "median": 0.0,
+        "p95": 1.4210854715202004e-14,
+        "max": 1.4210854715202004e-14
+      },
+      "invalid_sample_examples": []
+    },
+    "imu_motion": {
+      "topic": "/mavros/imu/data_raw",
+      "publisher_count": 1,
+      "received_messages": 305,
+      "received_hz_wall_window": 10.166636040014515,
+      "unique_source_stamps": 305,
+      "observed_unique_source_hz": 49.9999999999999,
+      "frame_ids": [
+        "fcu_link"
+      ],
+      "collector_samples": 60,
+      "samples_with_input": 60,
+      "missing_samples": 0,
+      "stale_samples": 0,
+      "semantic_invalid_samples": 0,
+      "fresh_and_semantic_valid_ratio": 1.0,
+      "repeated_or_rewound_sample_stamps": 0,
+      "source_age_at_sample_s": {
+        "min": 0.01999999999999602,
+        "median": 0.020000000000010232,
+        "p95": 0.020000000000010232,
+        "max": 0.020000000000010232
+      },
+      "source_age_at_receipt_s": {
+        "min": 0.0024999999999977263,
+        "median": 0.002500000000011937,
+        "p95": 0.005000000000009663,
+        "max": 0.00750000000000739
+      },
+      "invalid_sample_examples": []
+    }
+  },
+  "collector_timer_samples": 60,
+  "collector_sample_interval_s": {
+    "min": 0.09999999999999432,
+    "median": 0.09999999999999432,
+    "p95": 0.10000000000000853,
+    "max": 0.10000000000000853
+  },
+  "camera_source_skew_s": {
+    "min": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0
+  },
+  "dvl_velocity_usable_ratio": 1.0,
+  "altitude_usable_ratio": 1.0,
+  "vehicle": {
+    "connected": true,
+    "armed": false,
+    "mode": "MANUAL"
+  },
+  "vehicle_receipt_age_wall_s": 2.550885668999854,
+  "vehicle_receipt_age_ros_s": 0.5174999999999983,
+  "vehicle_freshness_clock": "simulation",
+  "vehicle_message_count": 6,
+  "vehicle_receipt_interval_wall_s": {
+    "min": 4.821160810000038,
+    "median": 4.955180186000007,
+    "p95": 5.006238323800062,
+    "max": 5.018420540000079
+  },
+  "vehicle_receipt_interval_sim_s": {
+    "min": 1.0,
+    "median": 1.0,
+    "p95": 1.0,
+    "max": 1.0
+  },
+  "rc_override_publisher_count": 1,
+  "blocking_observations": [
+    "vehicle disarmed; task demonstration not ready",
+    "vehicle mode differs from STABILIZE"
+  ],
+  "limits": "Observed rates are measured, not configured publication rates. Camera decoding is sampled once per wall second. No controls or collector services were called. This is not a task demonstration or physical calibration validation.",
+  "collector_config": "/workspace/rospkg/src/auv_vla_data_collector/config/collector.yaml"
+}

@@ -56,6 +56,13 @@ def _frame(time_s: float, value: int = 100) -> RenderedCameraFrame:
 
 
 class CameraSensorRuntimeTest(unittest.TestCase):
+    def test_rounded_capture_ticks_preserve_configured_phase(self) -> None:
+        runtime = _runtime(_profile(), rate_hz=15.0)
+        captures = (0.0, 0.07, 0.14, 0.20, 0.27, 0.34, 0.40)
+        deliveries = [runtime.advance(t, _frame(t)) for t in captures]
+        self.assertEqual([len(items) for items in deliveries], [1] * len(captures))
+        self.assertEqual(runtime.stats.rate_limited_frames, 0)
+
     def test_zero_latency_delivers_capture_immediately(self) -> None:
         runtime = _runtime(_profile())
 

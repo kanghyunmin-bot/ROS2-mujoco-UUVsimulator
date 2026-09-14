@@ -142,6 +142,24 @@ an upstream body-frame velocity topic and set `dvl_input_frame:=base_link` and
 IMU must already be in `body_frame` (default `base_link`). The collector does
 not infer arbitrary mounting transforms. Depth remains positive down in metres.
 
+The simulation GUI and `sim_policy.yaml` explicitly use independently timestamped
+motion from `/mavros/imu/data_raw`; `/mavros/imu/data` supplies attitude only.
+For a manual simulation launch, set `imu_motion_topic: /mavros/imu/data_raw`,
+`imu_motion_frame: fcu_link`, and `imu_motion_convention: FLU` in a custom collector
+YAML and pass it as the launch `config`. The strict bridge already expresses
+these vectors in body FLU axes. Specific force stays at the IMU origin; no
+lever-arm correction is invented. This opt-in is restricted to simulation.
+The default empty motion topic preserves the existing physical IMU input.
+
+Both IMU streams must independently pass capture/receipt freshness checks.
+The 23D state and seven existing timestamp columns remain unchanged; the legacy
+IMU column describes AHRS, while raw motion timestamps are retained per frame
+under `imu_motion` in `vehicle_state.jsonl`. Exports reject mixing distinct motion
+contracts. Training admission validates this additional audit when configured.
+Simulated FCU state uses recorded ROS receipt age; physical data retains wall
+receipt age. Older simulation exports without ROS receipt ages require new
+verified acquisition records; do not fabricate timestamps to pass validation.
+
 Capture and receipt ages must both be valid. Clock resets and missed sampling
 intervals end the current recording with `sampling_discontinuity`; start a new
 episode after recovery. Export rejects gaps/rate changes instead of silently

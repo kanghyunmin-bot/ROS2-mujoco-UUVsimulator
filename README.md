@@ -4,11 +4,17 @@
 
 10 × 5 × 5 m 연구용 수영장, 전방·손 카메라, DVL·IMU·수심 센서와 부표·자석·줄 접촉을 통합한 ROV 연구 환경입니다. 웹 GUI에서 조종하고 시연을 기록해 LeRobot/U0 학습 입력으로 내보낼 수 있습니다.
 
-**최신 소스: `main` · 2026.09.12** · [변경 사항](docs/versions/2026.09.12.md) · [설치 안내](README_FIRST.md)
+**최신 소스: `main` · 2026.09.14** · [변경·점검 결과](docs/versions/2026.09.14.md) · [설치 안내](README_FIRST.md)
 
 ![Research pool](docs/assets/research-pool-20260912.png)
 
 ## 최신 장면과 영상
+
+![Depth-aware underwater camera comparison](docs/assets/underwater-camera-comparison-20260914.png)
+
+실제 MuJoCo 전방·손 카메라 렌더입니다. 각 행의 왼쪽은 이상적인 RGB,
+오른쪽은 거리별 색 감쇠·산란을 적용한 경량 수중 광학입니다.
+카메라 장착·부표·줄·충돌 형상은 유지하며, 광학 계수는 실측 보정 전의 가정입니다.
 
 ![Research pool scene preview](docs/assets/research-pool-20260912.gif)
 
@@ -51,7 +57,13 @@ source ./.uuv_mujoco_env.sh
 ./run_control_gui.sh --web --sim-preset research_pool_distributed --host 127.0.0.1 --port 8878
 ```
 
-<http://127.0.0.1:8878/>에서 **Start SITL/MuJoCo → READY 확인 → Arm** 순서로 시작합니다. 웹 GUI의 기본 카메라 4 Hz 프로파일은 모니터링용이며, 10 Hz VLA 수집에서는 원본 프레임의 유효 비율을 확인해 더 높은 발행률을 선택해야 합니다.
+<http://127.0.0.1:8878/>에서 **Start SITL/MuJoCo → 자세 정렬 완료 확인 → Arm** 순서로 시작합니다.
+수집 준비에는 **ROS 센서 출력 → VLA lite (640×360, 15 Hz)**,
+**광학 → 수중 풀 · 경량 광학**을 선택하고 시뮬레이션에 적용하세요.
+**미리보기 속도**는 이 브라우저의 표시만 바꾸며 원본 센서·녹화 주기를 바꾸지 않습니다.
+기본 4 Hz는 모니터링용으로, 이 설정에서는 레코더 준비가 거절됩니다.
+레코더 세션이 열린 동안 센서·물리 설정은 잠기며 세션 종료 후 변경할 수 있습니다.
+실측 검사와 재현 명령은 [VLA 수집 전 점검](docs/versions/2026.09.14.md)을 참고하세요.
 
 Docker 설치·GPU 설정은 [개발 컨테이너 안내](docker/ubuntu-dev/README.md)를 참고하세요. 활성 코드는 `uuv_mujoco/current`입니다. `.uuv_mujoco_env.sh`와 시스템 장치 권한은 각 PC에서 설정해야 합니다. GitHub 자동 소스 ZIP에는 submodule 및 Git LFS 실파일이 완전하게 포함되지 않을 수 있으므로 위 clone 절차를 사용하세요.
 
@@ -63,6 +75,7 @@ Docker 설치·GPU 설정은 [개발 컨테이너 안내](docker/ubuntu-dev/READ
 | 정책 어댑터 | [VLA policy](rospkg/src/kmu26_auv_vla_policy/README.md) |
 | 실물/시뮬 계약 | [Real stack parity](docs/contracts/REAL_STACK_PARITY.md) |
 | 최신 파이프라인 검사 | [Offline hardening](docs/contracts/OFFLINE_HARDENING_20260912.md) |
+| 수집 시작·시계 검증 | [Collection readiness](docs/contracts/PRE_VLA_COLLECTOR_READINESS_20260914.md) |
 | 실물 로그 보정의 범위 | [Horizontal response](docs/contracts/HORIZONTAL_RESPONSE_CALIBRATION_20260912.md) |
 | 줄 안정화와 재현 절차 | [Rope stability](docs/gui/ROPE_STABILITY_20260912.md) |
 | 센서 장착 가정 | [CAD sensor mounts](docs/gui/CAD_SENSOR_MOUNTS.md) |

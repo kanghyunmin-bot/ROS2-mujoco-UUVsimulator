@@ -128,6 +128,34 @@ projection_matrix:
 
 
 class CameraImageModelTest(unittest.TestCase):
+    def test_depth_profile_preserves_near_objects_and_attenuates_far_objects(self) -> None:
+        profile = replace(
+            _ideal_profile(),
+            optics=UnderwaterOpticsConfig(
+                path_mode="depth",
+                attenuation_coefficients_rgb_per_m=(0.4, 0.2, 0.1),
+            ),
+        )
+        image = np.full((1, 3, 3), 200, dtype=np.uint8)
+        paths = np.array([[0.0, 1.0, 4.0]], dtype=np.float32)
+        output, diagnostics = UnderwaterCameraSensorModel(profile).process(
+            image, sequence=0, optical_path_length_m=paths
+        )
+        np.testing.assert_array_equal(output[0, 0], image[0, 0])
+        self.assertTrue(np.all(output[0, 1] > output[0, 2]))
+        self.assertLess(output[0, 2, 0], output[0, 2, 2])
+        self.assertEqual(diagnostics.path_mode, "depth")
+
+    def test_depth_profile_requires_aligned_valid_paths(self) -> None:
+        profile = replace(_ideal_profile(), optics=UnderwaterOpticsConfig(path_mode="depth"))
+        model = UnderwaterCameraSensorModel(profile)
+        image = np.zeros((2, 3, 3), dtype=np.uint8)
+        with self.assertRaisesRegex(ValueError, "requires"):
+            model.process(image, sequence=0)
+        for paths in (np.ones((1, 3)), np.full((2, 3), np.nan), np.full((2, 3), -1.0)):
+            with self.subTest(paths=paths), self.assertRaises(ValueError):
+                model.process(image, sequence=0, optical_path_length_m=paths)
+
     def test_disabled_model_is_byte_exact_legacy_parity(self) -> None:
         image = np.arange(9 * 11 * 3, dtype=np.uint8).reshape(9, 11, 3)
         model = UnderwaterCameraSensorModel(_ideal_profile(), enabled=False)

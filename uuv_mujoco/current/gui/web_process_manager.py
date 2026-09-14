@@ -43,8 +43,11 @@ from .ros_package_stack import mavros_launch_command
 from .ros_tools import prepare_ping360_rviz_config, prepare_ros2_rviz_config, ros_bash_command
 from .sim_stack_env import build_gui_sim_stack_env, build_initial_depth_args, normalize_sim_extra_args
 from .sim_stack_launch_command import (
+    CAMERA_OPTICS_PROFILES,
     build_sim_stack_launch_command,
+    camera_config_from_launch_command,
     camera_config_from_owner,
+    camera_optics_environment,
     camera_presets_payload,
     normalize_camera_config,
 )
@@ -94,6 +97,7 @@ class WebProcessManager:
         self._active_sim_scene = ""
         self._ros_pkg_fcu_url = ROS_PACKAGE_DEFAULT_FCU_URL
         self._camera_config = camera_config_from_owner(self)
+        self._active_camera_config: dict[str, Any] | None = None
         self._mission_status_path = Path(
             os.environ.get(
                 "UUV_GUI_MISSION_STATUS_JSON",
@@ -201,6 +205,7 @@ class WebProcessManager:
             pinger_site_name = "research_pool_pinger_unavailable"
 
         base_env = dict(os.environ)
+        base_env.update(camera_optics_environment(self._camera_config))
         if start_purpose == PINGER_HOMING_SIM_PURPOSE:
             # Apply these before building the GUI contract: EKF sensor flags
             # are derived from UUV_EKF_CONTRACT by the environment builder.
@@ -275,6 +280,14 @@ class WebProcessManager:
 
         with self._lock:
             self._sim_process = proc
+            self._active_camera_config = {
+                **camera_config_from_launch_command(self._camera_config, cmd),
+                "sensor_model_enabled": env.get("ROS2_UUV_CAMERA_SENSOR_MODEL_ENABLE", "0"),
+                "sensor_model_config": env.get(
+                    "ROS2_UUV_CAMERA_SENSOR_MODEL_CONFIG",
+                    "config/sensor_models/imx219_underwater_uncalibrated_prior.json",
+                ),
+            }
             if start_purpose != PINGER_HOMING_SIM_PURPOSE:
                 self._sim_launch_preset_id = selected_preset.preset_id
             self._active_sim_launch_preset_id = selected_preset.preset_id
@@ -376,11 +389,19 @@ class WebProcessManager:
         config = normalize_camera_config(self._camera_config)
         return {
             **config,
+            "enabled": self._env_flag("UUV_GUI_STEREO_CAMERA_ENABLE", True),
             "presets": camera_presets_payload(),
+            "optics_profiles": [dict(profile) for profile in CAMERA_OPTICS_PROFILES],
+            "launched": self._active_camera_config if _process_running(self._sim_process) else None,
+            "rate_measured": False,
+            "rate_note": "선택/실행 요청값입니다. 실제 수신 주기와 수집 입력 상태를 별도로 확인하세요.",
         }
 
     def configure_camera(self, values: dict[str, Any], *, restart: bool = False) -> dict[str, Any]:
-        config = normalize_camera_config(values, strict_preset=True)
+        config = normalize_camera_config(
+            {"optics_profile": self._camera_config.get("optics_profile", "inherited"), **values},
+            strict_preset=True,
+        )
         self._camera_config = config
         self.node.push_event(f"Camera profile selected: {config['label']}")
         result: dict[str, Any] = {

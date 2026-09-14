@@ -50,7 +50,12 @@ class MavrosImuRateConfig(Node):
 
     def _build_requests(self):
         requests = []
-        rate_params = [
+        use_sim_time = bool(self.get_parameter("use_sim_time").value)
+        # Strict simulation keeps only AHRS orientation on MAVROS; raw IMU and
+        # pressure are owned by the simulator's modeled sensor boundary. One
+        # ATTITUDE request avoids the old low-rate default telemetry stream
+        # without enabling duplicate raw streams or repeated interval traffic.
+        rate_params = [("ATTITUDE", "sim_attitude_rate_hz", 20.0)] if use_sim_time else [
             ("ATTITUDE", "attitude_rate_hz", 50.0),
             ("RAW_IMU", "raw_imu_rate_hz", 50.0),
             ("LOCAL_POSITION_NED", "local_position_rate_hz", 20.0),
@@ -65,6 +70,8 @@ class MavrosImuRateConfig(Node):
                 continue
             if not math.isfinite(rate_hz):
                 raise ValueError(f"{param_name} must be finite")
+            if use_sim_time and (rate_hz == 0.0 or rate_hz > 50.0):
+                raise ValueError("sim_attitude_rate_hz must be positive and no greater than 50 Hz")
             requests.append((label, self.MESSAGE_IDS[label], rate_hz))
 
         return requests
@@ -136,7 +143,7 @@ class MavrosImuRateConfig(Node):
                 all_ok = self._call_interval(label, message_id, rate_hz) and all_ok
 
             if all_ok:
-                self.get_logger().info("MAVROS sensor message rates configured")
+                self.get_logger().info("MAVROS sensor rate requests accepted; verify achieved rates separately")
                 return True
 
             if attempt < self.retry_count:

@@ -78,6 +78,7 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("mavros_sim_launch_file", default_value=mavros_sim_default),
         DeclareLaunchArgument("configure_mavros_imu_rate", default_value="true"),
         DeclareLaunchArgument("mavros_imu_rate_hz", default_value="50.0"),
+        DeclareLaunchArgument("mavros_sim_attitude_rate_hz", default_value="20.0"),
         DeclareLaunchArgument("mavros_raw_imu_rate_hz", default_value="50.0"),
         DeclareLaunchArgument("mavros_baro_rate_hz", default_value="10.0"),
         DeclareLaunchArgument("dronecan_python", default_value=dronecan_python_default),
@@ -318,6 +319,7 @@ def generate_launch_description() -> LaunchDescription:
     mavros_sim_launch_file = LaunchConfiguration("mavros_sim_launch_file")
     configure_mavros_imu_rate = LaunchConfiguration("configure_mavros_imu_rate")
     mavros_imu_rate_hz = LaunchConfiguration("mavros_imu_rate_hz")
+    mavros_sim_attitude_rate_hz = LaunchConfiguration("mavros_sim_attitude_rate_hz")
     mavros_raw_imu_rate_hz = LaunchConfiguration("mavros_raw_imu_rate_hz")
     mavros_baro_rate_hz = LaunchConfiguration("mavros_baro_rate_hz")
     dronecan_python = LaunchConfiguration("dronecan_python")
@@ -390,9 +392,11 @@ def generate_launch_description() -> LaunchDescription:
     ]))
     mavros_imu_rate_config_enabled = IfCondition(
         PythonExpression([
-            "'", use_sim_time, "'.lower() not in ('true', '1', 'yes') and '",
-            mavros_launch_file, "' != '' and '",
-            configure_mavros_imu_rate, "' == 'true'",
+            "'", configure_mavros_imu_rate, "' == 'true' and (( '",
+            use_sim_time, "'.lower() not in ('true', '1', 'yes') and '",
+            mavros_launch_file, "' != '') or ('",
+            use_sim_time, "'.lower() in ('true', '1', 'yes') and '",
+            mavros_sim_launch_file, "' != ''))",
         ]))
     joy2mavros_enabled = IfCondition(PythonExpression([
         "'", use_joy2mavros, "' == 'true'",
@@ -512,6 +516,8 @@ def generate_launch_description() -> LaunchDescription:
                 {
                     "attitude_rate_hz": ParameterValue(
                         mavros_imu_rate_hz, value_type=float),
+                    "sim_attitude_rate_hz": ParameterValue(
+                        mavros_sim_attitude_rate_hz, value_type=float),
                     "raw_imu_rate_hz": ParameterValue(
                         mavros_raw_imu_rate_hz, value_type=float),
                     "baro_rate_hz": ParameterValue(

@@ -30,6 +30,7 @@ class WebRecorder:
         self.received = 0.0
         self.message = "레코더 준비를 눌러 시작하세요."
         self.future = None
+        self.command_client = None
         self.status_future = None
         self.status_at = 0.0
         self.command_at = 0.0
@@ -81,8 +82,14 @@ class WebRecorder:
             owned = bool(self.session and self.status.get('session_id') == self.session)
             running = self.process is not None and self.process.poll() is None
             return {**self.status, 'online': fresh, 'owned': owned, 'running': running,
+                    'configuration_locked': bool(self.session),
                     'ready': fresh and owned and self.status.get('ready', False),
                     'busy': self.future is not None, 'message': self.message}
+
+    def require_configuration_unlocked(self):
+        """Protect the provenance captured at prepare, including idle episodes."""
+        if self.session:
+            raise ValueError('센서·시뮬레이션 설정은 레코더 세션 종료 후 변경하세요. 미리보기 속도는 변경할 수 있습니다.')
 
     def prepare(self, task, mode):
         task = str(task).strip()
@@ -93,19 +100,28 @@ class WebRecorder:
         with self.lock:
             if self.closed:
                 raise ValueError('GUI가 종료 중입니다.')
+            self.require_configuration_unlocked()
             if self.process is not None and self.process.poll() is None:
                 raise ValueError('레코더가 이미 실행 중입니다. 현재 세션을 계속 사용하세요.')
             if self.clients['get_status'].service_is_ready() or self.clients['start_episode'].service_is_ready():
                 raise ValueError('별도 레코더가 실행 중입니다. 중복 실행하지 않습니다.')
+            camera = self.processes.camera_config_payload()
+            launched_camera = camera.get('launched') or camera
+            if launched_camera.get('enabled') is False:
+                raise ValueError('실행 요청에서 카메라 출력이 꺼져 있습니다. 카메라를 켜고 시뮬을 재시작하세요.')
+            # A saved selection cannot override a lower-rate running launch.
+            # This gate checks known requests, not achieved sensor throughput.
+            if float(launched_camera.get('hz', 0)) < 10.0:
+                raise ValueError('수집에는 카메라 10Hz 이상 설정이 필요합니다. VLA lite를 적용 후 입력 상태를 확인하세요.')
             self.session = datetime.now(timezone.utc).strftime('sim_%Y%m%dT%H%M%SZ_') + uuid4().hex[:8]
             root = APP_ROOT / 'outputs' / 'vla-demonstrations' / self.session
             root.mkdir(parents=True, exist_ok=False)
             context = {'session_id': self.session, 'data_source': 'simulation',
                        'captured_utc': datetime.now(timezone.utc).isoformat(),
                        'simulation': self.processes.simulation_config_payload(),
-                       'camera': self.processes.camera_config_payload(),
+                       'camera': camera,
                        'calibration_status': 'uncalibrated_or_profile_specific',
-                       'note': 'GUI configuration snapshot; not an FCU parameter readback.'}
+                       'note': 'GUI configuration/launch request snapshot; not measured sensor rates or FCU parameter readback.'}
             for name, args in [('commit', ['rev-parse', 'HEAD']), ('status', ['status', '--porcelain'])]:
                 result = subprocess.run(['git', '-C', str(APP_ROOT), *args], capture_output=True, text=True, timeout=8)
                 context[name] = result.stdout.strip() if result.returncode == 0 else 'unavailable'
@@ -114,9 +130,14 @@ class WebRecorder:
             (root / 'source.patch').write_bytes(diff.stdout)
             # Store configuration content, not just mutable paths.
             context['config_files'] = {}
-            for path in [SIM_STACK_DIR / 'config/sim_profiles.json',
+            config_paths = [SIM_STACK_DIR / 'config/sim_profiles.json',
                          SIM_STACK_DIR / 'config/sensor_mounts_2026.json',
-                         Path(context['simulation'].get('active_scene') or SIM_STACK_DIR / 'scenes/research_pool_slam_scene.xml')]:
+                         Path(context['simulation'].get('active_scene') or SIM_STACK_DIR / 'scenes/research_pool_slam_scene.xml')]
+            optics_path = launched_camera.get('sensor_model_config')
+            if optics_path:
+                path = Path(optics_path).expanduser()
+                config_paths.append(path if path.is_absolute() else SIM_STACK_DIR / path)
+            for path in config_paths:
                 if path.is_file():
                     context['config_files'][str(path)] = path.read_text()
             (root / 'context.json').write_text(json.dumps(context, ensure_ascii=False, indent=2))
@@ -128,6 +149,8 @@ class WebRecorder:
                           data_source='simulation', session_id=self.session,
                           provenance_file=str(root / 'context.json'), expected_mode=mode,
                           default_task=task, use_sim_time=True, pwm_span=int(RC_PWM_SPAN))
+            params.update(imu_motion_topic='/mavros/imu/data_raw',
+                          imu_motion_frame='fcu_link', imu_motion_convention='FLU')
             # Current front camera has a compatibility alias; use an observed source.
             topics = dict(self.node.get_topic_names_and_types())
             if '/imx219/camera0/image_raw/compressed' not in topics and 'sensor_msgs/msg/CompressedImage' in topics.get('/camera/camera/color/image_raw/compressed', []):
@@ -173,6 +196,7 @@ class WebRecorder:
                 raise ValueError('레코더 서비스가 연결되지 않았습니다.')
             self.command_at = time.monotonic()
             self.message = '레코더 요청 처리 중…'
+            self.command_client = client
             self.future = client.call_async(request)
             self.future.add_done_callback(self._command_done)
             return {'message': self.message}
@@ -181,15 +205,26 @@ class WebRecorder:
         """Stop an idle owned collector so a new task can be configured."""
         with self.lock:
             state = self.payload()
-            if not state['online'] or not state['owned'] or state.get('active') or state['busy']:
+            if not self.session:
+                raise ValueError('이 GUI에서 준비한 레코더 세션이 없습니다.')
+            if state['running'] and (not state['online'] or not state['owned'] or state.get('active') or state['busy']):
                 raise ValueError('녹화를 저장/폐기하고 최신 대기 상태에서 세션을 종료하세요.')
-            if self.process is None:
-                raise ValueError('이 GUI에서 실행한 레코더 프로세스가 없습니다.')
             self.closed = True
         try:
             self.shutdown()
-        finally:
+            if self.process is not None and self.process.poll() is None:
+                raise ValueError('레코더 종료 대기 중입니다. 잠시 후 세션 종료를 다시 누르세요.')
             with self.lock:
+                # A dead collector cannot answer an outstanding command. Drop
+                # its request before allowing a new session to reuse clients.
+                pending_command = self.future
+                self.future = None
+                command_client = getattr(self, 'command_client', None)
+                self.command_client = None
+                if pending_command is not None:
+                    if command_client is not None:
+                        command_client.remove_pending_request(pending_command)
+                    pending_command.cancel()
                 pending = self.status_future
                 self.status_future = None
                 if pending is not None:
@@ -200,10 +235,15 @@ class WebRecorder:
                 self.session = ''
                 self.closed = False
                 self.message = '세션 종료 완료. 지시문과 모드를 바꿔 새 세션을 준비할 수 있습니다.'
+        finally:
+            with self.lock:
+                self.closed = False
         return {'message': self.message}
 
     def _command_done(self, future):
         with self.lock:
+            if future is not self.future:
+                return
             try:
                 result = future.result()
                 self.message = ('완료: ' if result.success else '거절: ') + result.message
@@ -211,6 +251,7 @@ class WebRecorder:
                 self.message = f'요청 결과 확인 실패: {exc}'
             finally:
                 self.future = None
+                self.command_client = None
                 # Disable buttons until a post-command status is received.
                 self.received = 0.0
 

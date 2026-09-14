@@ -12,6 +12,10 @@ import pandas as pd
 from gr00t.data.dataset import LeRobotSingleDataset
 
 
+def _valid_age(value, maximum):
+    return isinstance(value, (int, float)) and np.isfinite(value) and 0.0 <= value <= maximum
+
+
 def validate_demonstrations(dataset_path: Path) -> None:
     """Reject connection checks, unknown provenance and interrupted recordings."""
     path = dataset_path / "meta" / "source_manifests.jsonl"
@@ -46,18 +50,40 @@ def validate_demonstrations(dataset_path: Path) -> None:
         if not log.is_file():
             raise ValueError("Missing per-frame vehicle/control telemetry")
         states = [json.loads(line) for line in log.read_text().splitlines()]
+        age_key = (
+            "state_receipt_age_ros_s"
+            if manifest["provenance"]["data_source"] == "simulation"
+            else "state_receipt_age_wall_s"
+        )
         if len(states) != manifest["frames"] or any(
             not s["connected"]
             or not s["armed"]
             or s["mode"] != manifest["provenance"]["expected_mode"]
             or s["rc_publishers"] != 1
-            or s["state_receipt_age_wall_s"] > 2.0
+            or not _valid_age(s.get(age_key), 2.0)
             for s in states
         ):
             raise ValueError("Vehicle/control state changed or was unverified")
         table = pd.read_parquet(
             dataset_path / "data" / "chunk-000" / f"episode_{i:06d}.parquet"
         )
+        motion_contract = manifest["provenance"].get("imu_motion")
+        if motion_contract:
+            maximum = manifest["provenance"].get("max_sensor_age_sec")
+            if not _valid_age(maximum, float("inf")) or maximum <= 0:
+                raise ValueError("Unverified IMU motion age limit")
+            if "telemetry.ros_timestamp" not in table:
+                raise ValueError("Missing IMU motion observation timestamps")
+            if len(table) != len(states):
+                raise ValueError("IMU motion audit length differs from observations")
+            for row, now in zip(states, table["telemetry.ros_timestamp"]):
+                motion = row.get("imu_motion") or {}
+                if motion.get("frame_id") != motion_contract.get("frame"):
+                    raise ValueError("Unverified IMU motion frame")
+                for key in ("source_time", "receipt_time"):
+                    stamp = motion.get(key)
+                    if not isinstance(stamp, (int, float)) or not _valid_age(now - stamp, maximum):
+                        raise ValueError("Missing/stale IMU motion capture or receipt")
         state = np.stack(table["observation.state"])
         stamps = np.stack(table["telemetry.source_timestamp"])
         if (

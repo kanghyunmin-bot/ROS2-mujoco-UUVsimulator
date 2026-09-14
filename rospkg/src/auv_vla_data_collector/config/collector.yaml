@@ -12,6 +12,10 @@ vla_data_collector:
     dvl_twist_topic: /dvl/twist
     dvl_data_topic: /dvl/data
     imu_topic: /mavros/imu/data
+    # Optional strict-simulation motion capture; GUI enables it explicitly.
+    imu_motion_topic: ""
+    imu_motion_frame: fcu_link
+    imu_motion_convention: FLU
     depth_topic: /depth/pose
     rc_override_topic: /mavros/rc/override
     task_description_topic: /vla/task_description

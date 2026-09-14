@@ -23,8 +23,11 @@ const state = {
   stereoCameraEnabled: true,
   stereoCameraVisionEnabled: true,
   stereoSeq: { left: 0, right: 0 },
+  previewHz: 4,
+  previewLastFrame: { left: -Infinity, right: -Infinity },
   cameraPollBusy: false,
   cameraPresetSignature: "",
+  configurationLocked: false,
   simPresetSignature: "",
   simPresetTouched: false,
   pingerStartPending: false,
@@ -523,6 +526,7 @@ function setToggle(targetId, buttonId, openText, closeText) {
 }
 
 function renderStatus(payload) {
+  state.configurationLocked = Boolean(payload.recorder?.configuration_locked);
   if (window.renderRecorder) window.renderRecorder(payload.recorder || {});
   if (window.renderStationSensors) window.renderStationSensors(payload);
   const telemetry = payload.telemetry || {};
@@ -591,7 +595,7 @@ function renderStatus(payload) {
     : state.pingerStartPending
       ? "Pinger starting"
       : "Start pinger";
-  pingerStartButton.disabled = pingerRunning || state.pingerStartPending;
+  pingerStartButton.disabled = state.configurationLocked || pingerRunning || state.pingerStartPending;
 
   if (Number.isFinite(Number(tools.rc_replay_duration_s))) {
     state.replayDuration = Number(tools.rc_replay_duration_s);
@@ -637,8 +641,8 @@ function renderSimulationConfig(config, processes) {
   const activeText = active ? ` · active ${active}` : "";
   setText("simLaunchPresetStatus", `plant: ${label} · ${profile}/${fluid}${activeText}`);
   const running = Boolean(processes?.sim_running);
-  select.disabled = running;
-  $("stackStartBtn").disabled = running;
+  select.disabled = state.configurationLocked || running;
+  $("stackStartBtn").disabled = state.configurationLocked || running;
   $("stackStartBtn").textContent = running ? "Stack Running" : "Start SITL/MuJoCo";
 }
 
@@ -743,7 +747,10 @@ function renderCameraConfig(config) {
   if (presetId && document.activeElement !== select) {
     select.value = presetId;
   }
-  setText("stereoCameraConfigStatus", `profile: ${cameraConfigLabel(config)}`);
+  const optics = $("stereoCameraOptics");
+  if (optics && document.activeElement !== optics) optics.value = config.optics_profile || "inherited";
+  const launched = config.launched ? ` · 실행 요청: ${cameraConfigLabel(config.launched)}` : " · 실행값 미확인";
+  setText("stereoCameraConfigStatus", `센서 선택: ${cameraConfigLabel(config)}${launched} · 실측 주기는 별도 확인`);
 }
 
 function cameraConfigLabel(config) {
@@ -763,6 +770,7 @@ function cameraConfigLabel(config) {
 function selectedCameraPresetPayload() {
   return {
     preset_id: $("stereoCameraProfile").value,
+    optics_profile: $("stereoCameraOptics").value,
   };
 }
 
@@ -806,10 +814,15 @@ function updateStereoView(side, frame) {
     view.classList.add("no-signal");
     image.removeAttribute("src");
     state.stereoSeq[side] = 0;
+    state.previewLastFrame[side] = -Infinity;
     return;
   }
   view.classList.remove("no-signal");
+  const now = performance.now();
+  if (document.hidden || state.previewHz <= 0 || image.complete === false
+      || now - state.previewLastFrame[side] < 1000 / state.previewHz) return;
   if (state.stereoSeq[side] !== seq) {
+    state.previewLastFrame[side] = now;
     state.stereoSeq[side] = seq;
     image.src = `/api/stereo/${side}.jpg?seq=${seq}`;
   }
@@ -1079,7 +1092,7 @@ async function requestArm(value) {
 }
 
 async function pollCameraStatus() {
-  if (document.hidden || !state.stereoCameraEnabled || state.cameraPollBusy) {
+  if (document.hidden || state.previewHz <= 0 || !state.stereoCameraEnabled || state.cameraPollBusy) {
     return;
   }
   state.cameraPollBusy = true;
@@ -1753,6 +1766,11 @@ function bindControls() {
   });
   $("stereoCameraProfile").addEventListener("change", () => {
     setText("stereoCameraConfigStatus", `profile: ${selectedCameraPresetLabel()} selected`);
+  });
+  $("stereoCameraPreviewHz").addEventListener("change", (event) => {
+    state.previewHz = Number(event.target.value);
+    state.previewLastFrame = {left: -Infinity, right: -Infinity};
+    pollCameraStatus();
   });
   $("stereoCameraApplyBtn").addEventListener("click", () => applyCameraConfig(true).catch(console.error));
   $("stereoCameraSaveBtn").addEventListener("click", () => applyCameraConfig(false).catch(console.error));

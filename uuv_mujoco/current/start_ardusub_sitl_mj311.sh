@@ -1330,7 +1330,9 @@ else
   echo "  Command       -> shared MuJoCo/bridge endpoint"
 fi
 if [[ "$USER_SET_MAVPROXY_ARGS" -eq 0 ]]; then
-  SITL_MAVPROXY_ARGS="${SITL_MAVPROXY_ARGS:---non-interactive --nowait}"
+  # Keep SR defaults and explicit per-message owners authoritative. MAVProxy's
+  # default ALL-stream request repeats every 15 s and overwrites their rates.
+  SITL_MAVPROXY_ARGS="${SITL_MAVPROXY_ARGS:---non-interactive --nowait --streamrate=-1}"
 fi
 if [[ "$USER_SET_MAVPROXY_ARGS" -eq 0 && -n "${SITL_MAVPROXY_ARGS:-}" ]]; then
   SIM_ARGS+=(--mavproxy-args "${SITL_MAVPROXY_ARGS}")

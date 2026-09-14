@@ -50,22 +50,30 @@
 
 ## 3. 현재 기본 성능 계약
 
-`gui/sim_stack_env_defaults.py` 기준 balanced 프로필:
+`gui/sim_stack_env_defaults.py`와 `sim/runtime/model_runtime_setup.py`의 최종
+적용 순서 기준이다. GUI의 balanced/low/high는 FCU 주기를 변경하지 않는다.
 
 | 항목 | 기본값 |
 | --- | --- |
-| SITL sensor loop | 100 Hz |
-| thruster loop | 100 Hz |
+| ArduSub scheduler | 400 Hz (기본 `SITL_SCHED_LOOP_RATE`) |
+| 센서 외부 발행 / thruster loop 요청 | 100 Hz / 100 Hz |
 | MAVLink servo | 30 Hz |
-| MuJoCo timestep | 0.005 s |
+| MuJoCo timestep 요청 | 0.0025 s (FCU 400 Hz 기준) |
+| 연구 수영장 접촉 timestep | 0.0005 s (FCU 주기당 5 substep) |
 | viewer | 1280x720 @ 30 FPS |
-| GUI camera stream | 640x360 @ 4 Hz |
+| 기본 원본 카메라 출력 | 640x360 @ 4 Hz (모니터링용) |
 | course buoy update | 10 Hz |
 | course buoy CSV | off |
 
-카메라는 960x540 @ 10 Hz 및 1280x720 @ 5/10/20/30 Hz 프로필을 제공하지만
-CPU-only YOLO와 폐루프 안정성 때문에 balanced가 기본이다. high 프로필의
-timestep은 0.002초이며, course-buoy 장면에서는 timestep guard가 활성화된다.
+카메라의 출력 주기는 시뮬레이션 시간 기준 요청값이며 실제 유효 프레임률은
+별도 측정해야 한다. VLA Lite는 640x360 @ 15 Hz와 깊이 기반 수중 광학을
+선택하며, GUI 미리보기 주기는 원본 센서와 별도로 제한한다. 기존 HD 설정은
+계속 선택할 수 있다.
+
+`profile_defaults()` 마지막의 FCU 계약이 이전 스타일별 timestep 값을 덮어쓰며,
+그다음 모델의 `buoy_contact_max_timestep` 제한과 FCU 정수 substep 정렬을
+적용한다. 연구 수영장은 갈퀴/봉/줄 접촉 안정성 때문에 0.5 ms 제한을 유지한다.
+성능 향상을 위해 이 물리 간격을 늘리면 기존 충돌 검증이 무효가 된다.
 
 ## 4. 물리 모델
 

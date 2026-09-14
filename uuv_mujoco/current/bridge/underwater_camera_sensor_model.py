@@ -137,8 +137,14 @@ class UnderwaterOpticsConfig:
     backscatter_strength: float = 0.0
     blur_radius_px: int = 0
     vignetting_strength: float = 0.0
+    path_mode: str = "fixed"
+    max_optical_path_length_m: float = 12.0
 
     def __post_init__(self) -> None:
+        if self.path_mode not in {"fixed", "depth"}:
+            raise ValueError("path_mode must be fixed or depth")
+        if _finite(self.max_optical_path_length_m, "max_optical_path_length_m") <= 0.0:
+            raise ValueError("max_optical_path_length_m must be positive")
         if _finite(self.optical_path_length_m, "optical_path_length_m") < 0.0:
             raise ValueError("optical_path_length_m must be non-negative")
         for name, values in (
@@ -255,6 +261,7 @@ class UnderwaterCameraProfile:
     optics: UnderwaterOpticsConfig = field(default_factory=UnderwaterOpticsConfig)
     electronics: CameraElectronicsConfig = field(default_factory=CameraElectronicsConfig)
     timing: CameraTimingConfig = field(default_factory=CameraTimingConfig)
+    intrinsics_from_renderer: bool = False
 
     def __post_init__(self) -> None:
         if self.schema != "uuv_mujoco.sensor_model.underwater_camera.v1":
@@ -276,6 +283,7 @@ class CameraModelDiagnostics:
     optical_path_length_m: float
     distortion_applied: bool
     noise_applied: bool
+    path_mode: str = "fixed"
 
 
 class UnderwaterCameraSensorModel:
@@ -314,8 +322,13 @@ class UnderwaterCameraSensorModel:
         rgb: np.ndarray,
         *,
         sequence: int,
+        optical_path_length_m: np.ndarray | None = None,
     ) -> tuple[np.ndarray, CameraModelDiagnostics]:
-        """Return one modeled ``rgb8`` frame and its deterministic diagnostics."""
+        """Return modeled RGB and diagnostics using aligned water path lengths [m].
+
+        Depth profiles require a finite, non-negative [height, width] water-path
+        map from the same capture as RGB. Fixed profiles retain the scalar prior.
+        """
 
         image = _validate_rgb8(rgb)
         if isinstance(sequence, bool) or not isinstance(sequence, int) or sequence < 0:
@@ -331,26 +344,51 @@ class UnderwaterCameraSensorModel:
 
         working = image.astype(np.float32) * (1.0 / 255.0)
         calibration = self.calibration.scaled_to(image.shape[1], image.shape[0])
+        optics = self.profile.optics
+        paths = None
+        if optics.path_mode == "depth":
+            if optical_path_length_m is None:
+                raise ValueError("depth optical profile requires an aligned water-path map")
+            paths = np.asarray(optical_path_length_m, dtype=np.float32)
+            if paths.shape != image.shape[:2]:
+                raise ValueError("water-path map must match RGB height and width")
+            if not np.all(np.isfinite(paths)) or np.any(paths < 0.0):
+                raise ValueError("water-path map must be finite and non-negative")
+            paths = np.minimum(paths, float(optics.max_optical_path_length_m))
         if calibration.has_distortion:
             working = self._apply_distortion(working, calibration)
+            if paths is not None:
+                paths = self._apply_distortion(paths[:, :, None], calibration)[:, :, 0]
 
-        optics = self.profile.optics
         path_m = float(optics.optical_path_length_m)
         attenuation = np.asarray(optics.attenuation_coefficients_rgb_per_m, dtype=np.float32)
-        transmission = np.exp(-attenuation * path_m).astype(np.float32)
-        working *= transmission.reshape(1, 1, 3)
-
         backscatter_coeff = np.asarray(
             optics.backscatter_coefficients_rgb_per_m,
             dtype=np.float32,
         )
-        backscatter = 1.0 - np.exp(-backscatter_coeff * path_m).astype(np.float32)
         veiling = np.asarray(optics.veiling_light_rgb, dtype=np.float32)
-        working += (
-            float(optics.backscatter_strength)
-            * backscatter.reshape(1, 1, 3)
-            * veiling.reshape(1, 1, 3)
-        )
+        if paths is None:
+            transmission = np.exp(-attenuation * path_m).astype(np.float32)
+            working *= transmission.reshape(1, 1, 3)
+            backscatter = 1.0 - np.exp(-backscatter_coeff * path_m).astype(np.float32)
+            working += (
+                float(optics.backscatter_strength)
+                * backscatter.reshape(1, 1, 3)
+                * veiling.reshape(1, 1, 3)
+            )
+        else:
+            # Reuse one single-channel scratch image instead of allocating two
+            # RGB-sized exponential fields for each synchronous capture.
+            scratch = np.empty_like(paths)
+            for channel in range(3):
+                np.multiply(paths, -attenuation[channel], out=scratch)
+                np.exp(scratch, out=scratch)
+                working[:, :, channel] *= scratch
+                np.multiply(paths, -backscatter_coeff[channel], out=scratch)
+                np.expm1(scratch, out=scratch)
+                scratch *= -float(optics.backscatter_strength) * veiling[channel]
+                working[:, :, channel] += scratch
+            path_m = float(np.mean(paths))
 
         if optics.blur_radius_px > 0:
             working = _box_blur(working, int(optics.blur_radius_px))
@@ -400,6 +438,7 @@ class UnderwaterCameraSensorModel:
             optical_path_length_m=path_m,
             distortion_applied=calibration.has_distortion,
             noise_applied=noise_applied,
+            path_mode=optics.path_mode,
         )
 
     def close(self) -> None:
@@ -470,7 +509,10 @@ def load_underwater_camera_profile(
         calibration_status=calibration_status,
         seed=int(payload.get("seed", 0)),
         calibration=calibration,
+        intrinsics_from_renderer=bool(payload.get("intrinsics_from_renderer", False)),
         optics=UnderwaterOpticsConfig(
+            path_mode=str(optics_raw.get("path_mode", "fixed")),
+            max_optical_path_length_m=float(optics_raw.get("max_optical_path_length_m", 12.0)),
             optical_path_length_m=float(optics_raw.get("optical_path_length_m", 0.0)),
             attenuation_coefficients_rgb_per_m=tuple(
                 optics_raw.get("attenuation_coefficients_rgb_per_m", (0.0, 0.0, 0.0))

@@ -1,0 +1,142 @@
+{
+  "inspection_only": true,
+  "usable_full_chunks": 36,
+  "first": {
+    "video.ego": {
+      "shape": [
+        1,
+        360,
+        640,
+        3
+      ],
+      "dtype": "uint8"
+    },
+    "video.buoy_release": {
+      "shape": [
+        1,
+        360,
+        640,
+        3
+      ],
+      "dtype": "uint8"
+    },
+    "state.prev_command": {
+      "shape": [
+        1,
+        4
+      ],
+      "dtype": "float64"
+    },
+    "state.dvl_velocity": {
+      "shape": [
+        1,
+        3
+      ],
+      "dtype": "float64"
+    },
+    "state.angular_velocity": {
+      "shape": [
+        1,
+        3
+      ],
+      "dtype": "float64"
+    },
+    "state.linear_acceleration": {
+      "shape": [
+        1,
+        3
+      ],
+      "dtype": "float64"
+    },
+    "state.attitude": {
+      "shape": [
+        1,
+        4
+      ],
+      "dtype": "float64"
+    },
+    "state.depth": {
+      "shape": [
+        1,
+        1
+      ],
+      "dtype": "float64"
+    },
+    "state.altitude": {
+      "shape": [
+        1,
+        1
+      ],
+      "dtype": "float64"
+    },
+    "state.validity": {
+      "shape": [
+        1,
+        4
+      ],
+      "dtype": "float64"
+    },
+    "action.motion": {
+      "shape": [
+        16,
+        4
+      ],
+      "dtype": "float64"
+    },
+    "annotation.human.action.task_description": [
+      "Stationary disarmed VLA lite connection check; not a task demonstration."
+    ]
+  },
+  "pre_model": {
+    "video": [
+      1,
+      2,
+      224,
+      224,
+      3
+    ],
+    "state": [
+      1,
+      23
+    ],
+    "action": [
+      16,
+      4
+    ]
+  },
+  "model_input": {
+    "state": [
+      1,
+      64
+    ],
+    "state_mask": [
+      1,
+      64
+    ],
+    "segmentation_target": [
+      2
+    ],
+    "segmentation_target_mask": [
+      1
+    ],
+    "has_real_action": [],
+    "action": [
+      16,
+      32
+    ],
+    "action_mask": [
+      16,
+      32
+    ],
+    "target_pos": [
+      0,
+      0
+    ],
+    "target_pos_mask": [
+      0,
+      0
+    ]
+  },
+  "tail_padding": "excluded last 15 starts per episode",
+  "optimizer_or_inference_run": false
+}

@@ -85,6 +85,23 @@ def test_declared_state_order_must_match_loader(tmp_path):
         export_dataset(root, tmp_path / "out", None)
 
 
+def test_motion_sources_cannot_be_silently_mixed(tmp_path):
+    import shutil
+
+    root, ep, _ = episode(tmp_path)
+    other = root / "episode_000001"
+    shutil.copytree(ep, other)
+    path = other / "manifest.json"
+    manifest = json.loads(path.read_text())
+    manifest["provenance"]["imu_motion"] = {
+        "topic": "/mavros/imu/data_raw", "frame": "fcu_link", "convention": "FLU"
+    }
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="Incompatible acquisition"):
+        export_dataset(root, tmp_path / "out", None)
+    assert not (tmp_path / "out").exists()
+
+
 @pytest.mark.parametrize("key", ["source_timestamp", "receipt_timestamp"])
 def test_nonfinite_sensor_timestamp_rejected_before_output(tmp_path, key):
     root, ep, values = episode(tmp_path)

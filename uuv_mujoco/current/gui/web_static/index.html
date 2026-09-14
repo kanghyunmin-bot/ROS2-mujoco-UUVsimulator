@@ -265,7 +265,7 @@
                   <div id="stereoCameraStatus" class="status-line">camera: waiting for ROS image</div>
                   <label class="check-row stereo-camera-toggle">
                     <input id="stereoCameraEnabled" type="checkbox" checked>
-                    <span>Camera feed</span>
+                    <span>Preview feed</span>
                   </label>
                   <label class="check-row stereo-camera-toggle">
                     <input id="stereoCameraVisionEnabled" type="checkbox" checked>
@@ -275,20 +275,23 @@
                 </div>
                 <div class="camera-config-row">
                   <label class="entry-row camera-profile-row">
-                    <span>Profile</span>
+                    <span>ROS 센서 출력</span>
                     <select id="stereoCameraProfile">
                       <option value="balanced">640x360 @ 4Hz</option>
+                      <option value="vla_lite">VLA lite · 640x360 @ 15Hz</option>
                       <option value="smooth540">960x540 @ 10Hz</option>
                       <option value="hd720">1280x720 @ 5Hz</option>
                       <option value="hd720_fast">1280x720 @ 10Hz</option>
                       <option value="hd720_smooth">1280x720 @ 20Hz</option>
-                      <option value="hd720_realtime" selected>1280x720 @ 30Hz</option>
+                      <option value="hd720_realtime">1280x720 @ 30Hz</option>
                     </select>
                   </label>
-                  <button id="stereoCameraApplyBtn" type="button">Apply</button>
-                  <button id="stereoCameraSaveBtn" type="button">Save</button>
+                  <button id="stereoCameraApplyBtn" type="button">적용 + 재시작</button>
+                  <button id="stereoCameraSaveBtn" type="button">다음 실행에 적용</button>
                 </div>
-                <div id="stereoCameraConfigStatus" class="status-line">profile: 1280x720 @ 30Hz</div>
+                <label class="entry-row"><span>광학</span><select id="stereoCameraOptics"><option value="inherited">기존 환경 설정 유지</option><option value="pool_lite">수중 풀 · 경량 광학</option></select></label>
+                <div class="camera-config-row"><label class="entry-row"><span>미리보기 속도</span><select id="stereoCameraPreviewHz"><option value="0">일시 정지</option><option value="2">2 fps · 절약</option><option value="4" selected>4 fps · 기본</option><option value="10">10 fps · 부드럽게</option></select></label><span class="status-line">이 브라우저만 변경 · ROS 센서와 녹화 주기는 유지</span></div>
+                <div id="stereoCameraConfigStatus" class="status-line">센서 설정 확인 중…</div>
                 <div class="stereo-camera-grid">
                   <div id="stereoLeftView" class="stereo-view no-signal">
                     <img id="stereoLeftImage" alt="정면 카메라">
