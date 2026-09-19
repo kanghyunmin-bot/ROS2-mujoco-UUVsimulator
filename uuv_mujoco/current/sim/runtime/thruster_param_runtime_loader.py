@@ -58,6 +58,13 @@ def load_runtime_thruster_parameters(
         env_get=env_get,
         log=log,
     )
+    apply_thruster_tau_profile_overrides(
+        sim_profile=sim_profile,
+        horizontal_thrusters=horizontal_thrusters,
+        tau_up=tau_up,
+        tau_down=tau_down,
+        log=log,
+    )
     apply_thruster_tau_env_overrides(
         thruster_names=thruster_names,
         vertical_thrusters=vertical_thrusters,
@@ -66,6 +73,59 @@ def load_runtime_thruster_parameters(
         tau_down=tau_down,
         env_get=env_get,
         log=log,
+    )
+
+
+def apply_thruster_tau_profile_overrides(
+    *,
+    sim_profile: dict,
+    horizontal_thrusters: list[str],
+    tau_up: dict[str, float | None],
+    tau_down: dict[str, float | None],
+    log: Callable[[str], None],
+) -> None:
+    """Apply profile-owned horizontal drive response time constants [s]."""
+    raw = sim_profile.get("thruster_response_time_constants")
+    if raw is None:
+        return
+    if not isinstance(raw, dict) or set(raw) != {
+        "calibration_status",
+        "provenance",
+        "horizontal",
+    }:
+        raise ValueError(
+            "thruster_response_time_constants requires status, provenance, and horizontal values"
+        )
+    if any(
+        not isinstance(raw[key], str) or not raw[key].strip()
+        for key in ("calibration_status", "provenance")
+    ):
+        raise ValueError(
+            "thruster response calibration status and provenance must be non-empty"
+        )
+    horizontal = raw["horizontal"]
+    if not isinstance(horizontal, dict) or set(horizontal) != {
+        "tau_up_s",
+        "tau_down_s",
+    }:
+        raise ValueError(
+            "horizontal thruster response requires tau_up_s and tau_down_s"
+        )
+    up, down = float(horizontal["tau_up_s"]), float(horizontal["tau_down_s"])
+    if not all(math.isfinite(value) and value > 0.0 for value in (up, down)):
+        raise ValueError(
+            "thruster response time constants must be finite and positive [s]"
+        )
+    _apply_tau_override(
+        names=horizontal_thrusters,
+        label=f"profile horizontal ({raw['calibration_status']})",
+        up=up,
+        down=down,
+        tau_up=tau_up,
+        tau_down=tau_down,
+        log=lambda message: log(
+            message.replace("tau env override:", "tau profile override:")
+        ),
     )
 
 
@@ -80,7 +140,9 @@ def apply_thruster_tau_env_overrides(
     log: Callable[[str], None],
 ) -> None:
     all_up = _first_tau_env(env_get, "UUV_THRUSTER_TAU_UP", "UUV_THRUSTER_TAU_UP_ALL")
-    all_down = _first_tau_env(env_get, "UUV_THRUSTER_TAU_DOWN", "UUV_THRUSTER_TAU_DOWN_ALL")
+    all_down = _first_tau_env(
+        env_get, "UUV_THRUSTER_TAU_DOWN", "UUV_THRUSTER_TAU_DOWN_ALL"
+    )
     _apply_tau_override(
         "all",
         thruster_names,
@@ -103,7 +165,9 @@ def apply_thruster_tau_env_overrides(
         log=log,
     )
 
-    yaw_up = _first_tau_env(env_get, "UUV_YAW_THRUSTER_TAU_UP", "UUV_HORIZONTAL_THRUSTER_TAU_UP")
+    yaw_up = _first_tau_env(
+        env_get, "UUV_YAW_THRUSTER_TAU_UP", "UUV_HORIZONTAL_THRUSTER_TAU_UP"
+    )
     yaw_down = _first_tau_env(
         env_get,
         "UUV_YAW_THRUSTER_TAU_DOWN",
@@ -166,4 +230,8 @@ def _apply_tau_override(
     log(f"[thruster] {label} tau env override: up={up_text}, down={down_text}")
 
 
-__all__ = ["apply_thruster_tau_env_overrides", "load_runtime_thruster_parameters"]
+__all__ = [
+    "apply_thruster_tau_env_overrides",
+    "apply_thruster_tau_profile_overrides",
+    "load_runtime_thruster_parameters",
+]

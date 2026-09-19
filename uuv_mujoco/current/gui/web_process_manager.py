@@ -59,12 +59,13 @@ from .sim_launch_preset import (
     build_sim_launch_preset_args,
     default_sim_launch_preset_id,
     resolve_sim_launch_preset,
+    sim_launch_preset_environment,
     sim_launch_presets_payload,
     validate_sim_launch_preset,
 )
 from .test_tank_layout_model import (
     COURSE_MODE_TEST_TANK,
-    TEST_TANK_HOMING_SUCCESS_RANGE_M,
+    TEST_TANK_HOMING_SUCCESS_RANGE_M,  # noqa: F401 - retain the existing module export
     TEST_TANK_DEPTH_M,
     load_course_layout_config,
     prepare_active_course_runtime,
@@ -211,6 +212,7 @@ class WebProcessManager:
             # are derived from UUV_EKF_CONTRACT by the environment builder.
             base_env.update(pinger_sim_environment())
         env = build_gui_sim_stack_env(base_env, backend=backend, sim_stack_dir=SIM_STACK_DIR)
+        env.update(sim_launch_preset_environment(selected_preset))
         env["ROS2_UUV_HYDROPHONE_PINGER_SITE"] = pinger_site_name
         env["UUV_GUI_COURSE_MODE"] = runtime_mode
         # Keep the bridge's normal acoustic interference profile. Pinger

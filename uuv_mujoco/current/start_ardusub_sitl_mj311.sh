@@ -601,7 +601,26 @@ real_param_file_has() {
   ' "$REAL_PARAM_FILE"
 }
 
+real2sim_param_value() {
+  [[ "${SITL_REAL2SIM_BAG0402:-0}" == "1" ]] || return 1
+  awk -v key="$1" '
+    $1 == key { print $2; found = 1; exit }
+    END { exit found ? 0 : 1 }
+  ' "${SCRIPT_DIR}/config/ardusub_bag0402_replay_overlay.param"
+}
+
+if [[ "${SITL_REAL2SIM_BAG0402:-0}" == "1" ]]; then
+  if [[ ! -s "${SCRIPT_DIR}/config/ardusub_bag0402_replay_overlay.param" ]]; then
+    echo "[error] April Real2Sim controller overlay is missing" >&2
+    exit 2
+  fi
+  echo "[start-sitl] April Real2Sim: July controller snapshot; April hardware settings unverified"
+fi
+
 is_sim_forced_param() {
+  if real2sim_param_value "$1" >/dev/null; then
+    return 0
+  fi
   case "$1" in
     # SITL-only safety/runtime contracts. These values describe the desktop
     # simulator process, not the physical vehicle controller tuning.
@@ -724,6 +743,10 @@ EXTRA_PARAM_LINES=()
 append_param_if_not_overridden() {
   local key="$1"
   local value="$2"
+  local calibrated_value
+  if calibrated_value="$(real2sim_param_value "$key")"; then
+    value="$calibrated_value"
+  fi
   if ! param_supported_by_firmware "$key"; then
     echo "[start-sitl] skipping unsupported parameter for ${ARDUSUB_FIRMWARE_VERSION:-this firmware}: ${key}"
     return 0

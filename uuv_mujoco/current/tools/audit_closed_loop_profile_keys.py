@@ -12,6 +12,7 @@ PROFILE_KEYS = (
     "body_inertia_scale_xyz",
     "yaw_torque_scale",
     "thruster_voltage",
+    "thruster_response_time_constants",
     "thruster_force_max",
     "mujoco_fluidcoef_scale",
     "mujoco_fluidcoef_geom_scales",

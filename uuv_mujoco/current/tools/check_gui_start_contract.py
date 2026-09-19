@@ -84,7 +84,7 @@ def check_default_gui_start_env() -> None:
     _assert_key(env, "SITL_SCHED_LOOP_RATE", "400")
     _assert_key(env, "SITL_MAVLINK_SERVO_HZ_DEFAULT", "30")
     _assert_key(env, "SITL_SERVO_SCALE_DEFAULT", "1.0")
-    _assert_key(env, "UUV_HORIZONTAL_DIRECT_GAIN_SCALE", "1.0")
+    _assert_key(env, "UUV_HORIZONTAL_DIRECT_GAIN_SCALE", "")
     _assert_key(env, "UUV_VERTICAL_DIRECT_GAIN_SCALE", "1.0")
     _assert_key(env, "SITL_SPEEDUP_DEFAULT", "1")
     _assert_key(env, "SITL_SENSOR_HZ_DEFAULT", "100")
@@ -142,7 +142,7 @@ def check_native_gui_start_env() -> None:
     _assert_key(env, "SITL_SCHED_LOOP_RATE", "400")
     _assert_key(env, "SITL_MAVLINK_SERVO_HZ_DEFAULT", "30")
     _assert_key(env, "SITL_SERVO_SCALE_DEFAULT", "1.0")
-    _assert_key(env, "UUV_HORIZONTAL_DIRECT_GAIN_SCALE", "1.0")
+    _assert_key(env, "UUV_HORIZONTAL_DIRECT_GAIN_SCALE", "")
     _assert_key(env, "UUV_VERTICAL_DIRECT_GAIN_SCALE", "1.0")
     _assert_key(env, "SITL_SPEEDUP_DEFAULT", "1")
     _assert_key(env, "SITL_SENSOR_HZ_DEFAULT", "100")
@@ -542,7 +542,7 @@ def check_start_uses_complete_real_ros_stack() -> None:
         "use_ekf:=true",
         "surface_pressure_pa:=101640.0",
         "depth_zero_at_start:=false",
-        "depth_offset_m:=-0.0536",
+        "depth_offset_m:=0.03286",
         "use_web_gui:=false",
         "use_rviz:=false",
         "use_mission_rviz_visualizer:=false",

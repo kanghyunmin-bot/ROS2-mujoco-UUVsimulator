@@ -17,11 +17,13 @@ from .config_paths import (
 
 
 COURSE_CURRENT_PRESET_ID = "course_current"
+COURSE_REAL2SIM_PRESET_ID = "course_real2sim_bag0402"
+COURSE_REAL2SIM_YAW_PRESET_ID = "course_real2sim_bag0402_yaw"
 RESEARCH_POOL_CURRENT_PRESET_ID = "research_pool_current"
 RESEARCH_POOL_DISTRIBUTED_PRESET_ID = "research_pool_distributed"
 RESEARCH_POOL_DISTRIBUTED_HYBRID_PRESET_ID = "research_pool_distributed_hybrid"
 RESEARCH_POOL_DISTRIBUTED_WAVES_PRESET_ID = "research_pool_distributed_waves"
-DEFAULT_SIM_LAUNCH_PRESET_ID = COURSE_CURRENT_PRESET_ID
+DEFAULT_SIM_LAUNCH_PRESET_ID = RESEARCH_POOL_DISTRIBUTED_PRESET_ID
 
 
 @dataclass(frozen=True)
@@ -36,9 +38,40 @@ class SimLaunchPreset:
     fluid_model: str
     viewer_camera_mode: str
     uses_active_course_scene: bool = False
+    profile_path: Path | None = None
 
 
 SIM_LAUNCH_PRESETS = (
+    SimLaunchPreset(
+        preset_id=COURSE_REAL2SIM_PRESET_ID,
+        label="Course / test tank · April Real2Sim",
+        description=(
+            "April effective forward response with slight positive buoyancy and still water. "
+            "Yaw and depth residuals remain; ESC voltage and mounted thrust are unmeasured."
+        ),
+        scene_path=COURSE_SCENE_PATH,
+        profile="bag0402_effective",
+        fluid_model="distributed",
+        viewer_camera_mode="course_side",
+        uses_active_course_scene=True,
+        profile_path=SIM_STACK_DIR / "config" / "sim_profiles_bag0402_effective.json",
+    ),
+    SimLaunchPreset(
+        preset_id=COURSE_REAL2SIM_YAW_PRESET_ID,
+        label="Course / test tank · April yaw candidate",
+        description=(
+            "Reduced yaw release rebound; validation bag path error remains higher. "
+            "Comparison candidate; Research pool distributed remains the default."
+        ),
+        scene_path=COURSE_SCENE_PATH,
+        profile="bag0402_yaw_response",
+        fluid_model="distributed",
+        viewer_camera_mode="course_side",
+        uses_active_course_scene=True,
+        profile_path=SIM_STACK_DIR
+        / "config"
+        / "sim_profiles_bag0402_yaw_response.json",
+    ),
     SimLaunchPreset(
         preset_id=COURSE_CURRENT_PRESET_ID,
         label="Course / test tank · ellipsoid",
@@ -61,11 +94,15 @@ SIM_LAUNCH_PRESETS = (
     SimLaunchPreset(
         preset_id=RESEARCH_POOL_DISTRIBUTED_PRESET_ID,
         label="Research pool · distributed physics",
-        description="Flat surface with distributed buoyancy, drag, added mass, current, and thruster inflow.",
+        description=(
+            "Research pool with April Real2Sim distributed physics and reviewed controller settings. "
+            "Existing pool visuals are retained; yaw and depth residuals remain."
+        ),
         scene_path=RESEARCH_POOL_SCENE_PATH,
-        profile="research_pool_distributed",
+        profile="bag0402_effective",
         fluid_model="distributed",
         viewer_camera_mode="follow",
+        profile_path=SIM_STACK_DIR / "config" / "sim_profiles_bag0402_effective.json",
     ),
     SimLaunchPreset(
         preset_id=RESEARCH_POOL_DISTRIBUTED_HYBRID_PRESET_ID,
@@ -148,6 +185,7 @@ def sim_launch_presets_payload() -> list[dict[str, object]]:
             "description": preset.description,
             "scene": str(preset.scene_path),
             "profile": preset.profile,
+            "profile_file": str(preset.profile_path or PHYSICS_PROFILE_PATH),
             "fluid_model": preset.fluid_model,
             "viewer_camera_mode": preset.viewer_camera_mode,
             "uses_active_course_scene": preset.uses_active_course_scene,
@@ -159,7 +197,7 @@ def sim_launch_presets_payload() -> list[dict[str, object]]:
 def validate_sim_launch_preset(
     preset: SimLaunchPreset,
     *,
-    profile_path: Path = PHYSICS_PROFILE_PATH,
+    profile_path: Path | None = None,
     sim_stack_dir: Path = SIM_STACK_DIR,
 ) -> None:
     """Validate that a preset still points at compatible local assets."""
@@ -169,16 +207,22 @@ def validate_sim_launch_preset(
     try:
         scene_path.relative_to(scenes_root)
     except ValueError as exc:
-        raise ValueError(f"simulator preset scene escapes scenes directory: {scene_path}") from exc
+        raise ValueError(
+            f"simulator preset scene escapes scenes directory: {scene_path}"
+        ) from exc
     if not scene_path.is_file():
         raise ValueError(f"simulator preset scene is missing: {scene_path}")
 
-    profiles = _load_resolved_profiles(profile_path)
+    profiles = _load_resolved_profiles(
+        profile_path or preset.profile_path or PHYSICS_PROFILE_PATH
+    )
     profile = profiles.get(preset.profile)
     if profile is None:
         raise ValueError(f"simulator preset profile is missing: {preset.profile}")
     distributed = profile.get("distributed_hydrodynamics")
-    distributed_active = isinstance(distributed, dict) and distributed.get("active") is True
+    distributed_active = (
+        isinstance(distributed, dict) and distributed.get("active") is True
+    )
     if preset.fluid_model == "distributed" and not distributed_active:
         raise ValueError(
             f"simulator preset {preset.preset_id} requires active distributed_hydrodynamics"
@@ -197,7 +241,7 @@ def build_sim_launch_preset_args(
     """Build the complete scene/profile/fluid argument tuple for one preset."""
 
     selected_scene = Path(scene_path) if scene_path is not None else preset.scene_path
-    return [
+    args = [
         "--scene",
         str(selected_scene),
         "--profile",
@@ -207,6 +251,26 @@ def build_sim_launch_preset_args(
         "--viewer-camera-mode",
         preset.viewer_camera_mode,
     ]
+    if preset.profile_path is not None:
+        args.extend(["--profile-file", str(preset.profile_path)])
+    return args
+
+
+def sim_launch_preset_environment(preset: SimLaunchPreset) -> dict[str, str]:
+    """Select the reviewed simulation controller overlay for this plant.
+
+    Args:
+        preset: Selected plant and scene preset.
+
+    Returns:
+        Environment overrides for the simulator child process.
+    """
+    enabled = preset.preset_id in {
+        COURSE_REAL2SIM_PRESET_ID,
+        COURSE_REAL2SIM_YAW_PRESET_ID,
+        RESEARCH_POOL_DISTRIBUTED_PRESET_ID,
+    }
+    return {"SITL_REAL2SIM_BAG0402": "1" if enabled else "0"}
 
 
 def merge_sim_launch_preset_args(
@@ -217,7 +281,13 @@ def merge_sim_launch_preset_args(
 
     result = list(preset_args)
     extras = list(extra_args or ())
-    protected = ("--scene", "--profile", "--fluid-model", "--viewer-camera-mode")
+    protected = (
+        "--scene",
+        "--profile",
+        "--profile-file",
+        "--fluid-model",
+        "--viewer-camera-mode",
+    )
     for arg in extras:
         if any(arg == option or arg.startswith(f"{option}=") for option in protected):
             raise ValueError(f"simulator preset already owns launch option: {arg}")
@@ -236,7 +306,9 @@ def _load_resolved_profiles(profile_path: Path) -> dict[str, dict[str, Any]]:
     if not isinstance(payload, dict):
         raise ValueError(f"simulator profiles must be a JSON object: {path}")
 
-    raw_profiles = {str(name): cfg for name, cfg in payload.items() if isinstance(cfg, dict)}
+    raw_profiles = {
+        str(name): cfg for name, cfg in payload.items() if isinstance(cfg, dict)
+    }
     resolved: dict[str, dict[str, Any]] = {}
     resolving: set[str] = set()
 
@@ -263,6 +335,8 @@ def _load_resolved_profiles(profile_path: Path) -> dict[str, dict[str, Any]]:
 
 __all__ = [
     "COURSE_CURRENT_PRESET_ID",
+    "COURSE_REAL2SIM_PRESET_ID",
+    "COURSE_REAL2SIM_YAW_PRESET_ID",
     "DEFAULT_SIM_LAUNCH_PRESET_ID",
     "RESEARCH_POOL_CURRENT_PRESET_ID",
     "RESEARCH_POOL_DISTRIBUTED_PRESET_ID",
@@ -277,5 +351,6 @@ __all__ = [
     "sim_launch_preset_ids",
     "sim_launch_preset_labels",
     "sim_launch_presets_payload",
+    "sim_launch_preset_environment",
     "validate_sim_launch_preset",
 ]

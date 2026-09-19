@@ -98,10 +98,10 @@ def apply_pilot_heave_response_contract(
         "UUV_HYDRO_YAWRATE_HEAVE_NEG_COEFF": "0.0",
         "UUV_YAW_TORQUE_SCALE": "1.0",
         "UUV_YAW_TORQUE_THRUSTER_SCALES_ENABLE": "0.0",
-        # Direct mode is the raw final-PWM -> measured T200 curve contract.
-        # Group gains above one apply actuator authority a second time and can
-        # drive the stock ArduSub rate loop into saturation.
-        "UUV_HORIZONTAL_DIRECT_GAIN_SCALE": "1.0",
+        # An empty override preserves the selected profile's mounted horizontal
+        # effectiveness. A numeric 1.0 would erase Real2Sim calibration after
+        # profile loading. Explicit operator overrides still take precedence.
+        "UUV_HORIZONTAL_DIRECT_GAIN_SCALE": "",
         "UUV_VERTICAL_DIRECT_GAIN_SCALE": "1.0",
     }
     for key, value in defaults.items():

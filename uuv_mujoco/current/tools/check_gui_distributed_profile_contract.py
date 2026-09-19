@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
 
 from gui.sim_launch_preset import (  # noqa: E402
     COURSE_CURRENT_PRESET_ID,
+    COURSE_REAL2SIM_PRESET_ID,
     DEFAULT_SIM_LAUNCH_PRESET_ID,
     RESEARCH_POOL_DISTRIBUTED_PRESET_ID,
     RESEARCH_POOL_DISTRIBUTED_HYBRID_PRESET_ID,
@@ -91,14 +92,16 @@ def _resolved_profiles() -> dict[str, dict[str, object]]:
 
 
 def check_preset_mapping_and_assets() -> None:
-    if DEFAULT_SIM_LAUNCH_PRESET_ID != COURSE_CURRENT_PRESET_ID:
-        raise AssertionError("GUI default must preserve the existing course/current contract")
-    if default_sim_launch_preset_id({}) != COURSE_CURRENT_PRESET_ID:
-        raise AssertionError("empty environment must select the compatibility preset")
+    if DEFAULT_SIM_LAUNCH_PRESET_ID != RESEARCH_POOL_DISTRIBUTED_PRESET_ID:
+        raise AssertionError("GUI default must select Research pool distributed physics")
+    if default_sim_launch_preset_id({}) != RESEARCH_POOL_DISTRIBUTED_PRESET_ID:
+        raise AssertionError("empty environment must select the Research pool distributed preset")
+    if default_sim_launch_preset_id({"UUV_GUI_SIM_PRESET": COURSE_CURRENT_PRESET_ID}) != COURSE_CURRENT_PRESET_ID:
+        raise AssertionError("explicit nominal baseline selection must remain available")
 
     expected = {
         RESEARCH_POOL_DISTRIBUTED_HYBRID_PRESET_ID: ("research_pool_distributed_hybrid", "distributed"),
-        RESEARCH_POOL_DISTRIBUTED_PRESET_ID: ("research_pool_distributed", "distributed"),
+        RESEARCH_POOL_DISTRIBUTED_PRESET_ID: ("bag0402_effective", "distributed"),
         RESEARCH_POOL_DISTRIBUTED_WAVES_PRESET_ID: (
             "research_pool_distributed_waves",
             "distributed",

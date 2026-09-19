@@ -9,6 +9,7 @@ from .sim_launch_preset import (
     build_sim_launch_preset_args,
     merge_sim_launch_preset_args,
     resolve_sim_launch_preset,
+    sim_launch_preset_environment,
     validate_sim_launch_preset,
 )
 
@@ -37,7 +38,7 @@ def _start_sim_stack(self, extra_args: list[str] | None = None) -> None:
         self,
         target=guard.target,
         extra_args=launch_args,
-        env=self._gui_sim_stack_env(),
+        env={**self._gui_sim_stack_env(), **sim_launch_preset_environment(preset)},
     )
     if started is None:
         return
