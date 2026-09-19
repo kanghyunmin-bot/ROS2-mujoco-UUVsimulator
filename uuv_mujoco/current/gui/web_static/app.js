@@ -126,16 +126,25 @@ async function postCommand(payload) {
 }
 
 async function postRc(payload) {
-  const response = await fetch("/api/rc", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok || body.ok === false) {
-    throw new Error(body.error || `HTTP ${response.status}`);
+  // Bound the single-flight queue even when the network or response body stalls.
+  // The server's stale-input watchdog remains responsible for RC release.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 500);
+  try {
+    const response = await fetch("/api/rc", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || body.ok === false) {
+      throw new Error(body.error || `HTTP ${response.status}`);
+    }
+    return body;
+  } finally {
+    clearTimeout(timeout);
   }
-  return body;
 }
 
 function setText(id, value) {
