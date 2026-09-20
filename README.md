@@ -4,7 +4,9 @@
 
 10 × 5 × 5 m 연구용 수영장, 전방·손 카메라, DVL·IMU·수심 센서와 부표·자석·줄 접촉을 통합한 ROV 연구 환경입니다. 웹 GUI에서 조종하고 시연을 기록해 LeRobot/U0 학습 입력으로 내보낼 수 있습니다.
 
-**최신 소스: `main` · 2026.09.14** · [변경·점검 결과](docs/versions/2026.09.14.md) · [설치 안내](README_FIRST.md)
+**Ubuntu 22.04 / 24.04 배포판: `v2026.09.20.1`** · [배포 설치·레코더·VLA 안내](docs/RELEASE_INSTALL.md)
+
+**기존 소스 안내: 2026.09.14** · [변경·점검 결과](docs/versions/2026.09.14.md) · [설치 안내](README_FIRST.md)
 
 ![Research pool](docs/assets/research-pool-20260912.png)
 
@@ -33,7 +35,7 @@
 - **파이프라인:** 시뮬레이션 시간 10 Hz 정지 수집 50행 → LeRobot → 실제 U0 전처리와 완전한 16행동 청크 35개 전달 확인.
 - **실물 로그 활용:** 단일 수조 주행 bag으로 제한적인 수평 응답 보정. 별도 opt-in 프로파일이며 기본 모델의 실측 인증이 아닙니다.
 
-**학습된 우리 ROV용 VLA 체크포인트·작업 성공·실물 전이는 검증하지 않았습니다.** 정지 연결 데이터를 유효한 작업 시연으로 사용하지 않습니다. CAD 장착값·유체 계수·센서 광학은 추가 실측이 필요합니다.
+**CAP 없는 ROV 행동 모방 체크포인트의 저장·오프라인 추론을 검증했습니다. 작업 성공·실물 전이는 검증하지 않았습니다.** 정지 연결 데이터를 유효한 작업 시연으로 사용하지 않습니다. CAD 장착값·유체 계수·센서 광학은 추가 실측이 필요합니다.
 
 ## 설치와 실행
 
@@ -58,10 +60,19 @@ source ./.uuv_mujoco_env.sh
 ```
 
 <http://127.0.0.1:8878/>에서 **Start SITL/MuJoCo → 자세 정렬 완료 확인 → Arm** 순서로 시작합니다.
+기본 환경은 **Research pool · distributed physics**입니다. 연구 수조에서
+**April Real2Sim** 유효 보정으로 4월 bag 기반의 전후 응답과
+검토한 제어 설정을 적용합니다. 보조 bag의 회전·수심 잔차와 적용 범위는
+[Real2Sim 적용 결과](docs/contracts/REAL2SIM_APPLICATION_20260915.md)에 기록했습니다.
+SITL clock 보정과 실물 반동 비교는 [yaw 응답 검증](docs/contracts/YAW_RELEASE_REAL2SIM_20260915.md)을 참고하세요.
+`April yaw candidate`는 반동이 감소하지만 검증 bag의 경로 오차가 커 기본값으로 사용하지 않습니다.
+기존 무보정 모델은 `--sim-preset course_current`, 연구 풀 기본 모델은
+`--sim-preset research_pool_distributed`로 선택할 수 있습니다.
 수집 준비에는 **ROS 센서 출력 → VLA lite (640×360, 15 Hz)**,
 **광학 → 수중 풀 · 경량 광학**을 선택하고 시뮬레이션에 적용하세요.
 **미리보기 속도**는 이 브라우저의 표시만 바꾸며 원본 센서·녹화 주기를 바꾸지 않습니다.
-기본 4 Hz는 모니터링용으로, 이 설정에서는 레코더 준비가 거절됩니다.
+기본값은 VLA lite 15 Hz입니다. 선택 가능한 4 Hz 설정은 모니터링용이며 레코더 준비가 거절됩니다.
+단일 부표·CAP 제외·제어권 전환과 남은 검증은 [녹화/VLA 준비 상태](docs/contracts/VLA_RECORDING_READINESS_20260920.md)를 참고하세요.
 레코더 세션이 열린 동안 센서·물리 설정은 잠기며 세션 종료 후 변경할 수 있습니다.
 실측 검사와 재현 명령은 [VLA 수집 전 점검](docs/versions/2026.09.14.md)을 참고하세요.
 
@@ -77,6 +88,7 @@ Docker 설치·GPU 설정은 [개발 컨테이너 안내](docker/ubuntu-dev/READ
 | 최신 파이프라인 검사 | [Offline hardening](docs/contracts/OFFLINE_HARDENING_20260912.md) |
 | 수집 시작·시계 검증 | [Collection readiness](docs/contracts/PRE_VLA_COLLECTOR_READINESS_20260914.md) |
 | 실물 로그 보정의 범위 | [Horizontal response](docs/contracts/HORIZONTAL_RESPONSE_CALIBRATION_20260912.md) |
+| Real2Sim 적용·독립 bag 재생 | [April Real2Sim](docs/contracts/REAL2SIM_APPLICATION_20260915.md) |
 | ROSBAG 위상·경로·노이즈 비교 | [Trend alignment](docs/contracts/ROSBAG_TREND_ALIGNMENT.md) |
 | 줄 안정화와 재현 절차 | [Rope stability](docs/gui/ROPE_STABILITY_20260912.md) |
 | 센서 장착 가정 | [CAD sensor mounts](docs/gui/CAD_SENSOR_MOUNTS.md) |

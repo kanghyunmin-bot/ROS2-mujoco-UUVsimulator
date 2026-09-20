@@ -85,7 +85,7 @@ SIM_LAUNCH_PRESETS = (
     SimLaunchPreset(
         preset_id=RESEARCH_POOL_CURRENT_PRESET_ID,
         label="Research pool · ellipsoid baseline",
-        description="10 × 5 × 5 m tiled pool with three submerged buoys; whole-body ellipsoid fluid model.",
+        description="10 × 5 × 5 m tiled pool with one submerged yellow buoy; whole-body ellipsoid fluid model.",
         scene_path=RESEARCH_POOL_SCENE_PATH,
         profile="research_pool",
         fluid_model="current",

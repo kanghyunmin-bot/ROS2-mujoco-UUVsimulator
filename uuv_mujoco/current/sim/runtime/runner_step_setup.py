@@ -87,6 +87,11 @@ def create_runner_step_setup(
         publish_ros_once=publish_ros_once,
         publish_qgc_video_once=publish_qgc_video_once,
     )
+    bridge = control_setup.ros_bridge_runtime.get()
+    if bridge is not None and getattr(bridge, "node", None) is not None and hasattr(bridge, "_course_buoy_runtime"):
+        from sim.runtime.demo_reset import DemoReset
+        step_runtime.demo_reset = DemoReset(step_runtime, physics, bridge)
+        step_runtime.demo_reset.install()
     return RunnerStepSetup(
         step_runtime=step_runtime,
         run_step=step_runtime.run_step,

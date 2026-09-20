@@ -1,0 +1,7 @@
+mujoco==3.12.0
+numpy==1.26.4
+opencv-python-headless==4.11.0.86
+pandas==2.2.3
+pyarrow==14.0.1
+empy==3.3.4
+setuptools<80

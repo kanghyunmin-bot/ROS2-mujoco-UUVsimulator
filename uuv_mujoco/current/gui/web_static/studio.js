@@ -19,11 +19,11 @@
   </div>`;
   const launch = document.createElement('fieldset');
   launch.className = 'group';
-  launch.innerHTML = `<legend>03 / VLA DATA COLLECTION</legend><div class="vla-launch"><div><strong>시연 수집 워크스페이스</strong><p id="vlaOverview">별도 창에서 작업 설정 · 녹화 · 결과 확인</p></div><button id="vlaOpenBtn">VLA 수집 창 열기</button></div>`;
+  launch.innerHTML = `<legend>03 / VLA DATA COLLECTION</legend><div class="vla-launch"><div><strong>시연 수집 워크스페이스</strong><p id="vlaOverview">카메라와 조종 입력을 보면서 녹화 · 저장</p></div><button id="vlaOpenBtn">VLA 수집 창 열기</button></div>`;
   center.append(camera, sensor, launch);
   const dialog = document.createElement('div');
   dialog.id = 'recorderDialog'; dialog.className = 'dialog hidden';
-  dialog.innerHTML = `<div class="dialog-card recorder-dialog"><div class="summary-row"><h2>VLA / DEMONSTRATION WORKSPACE</h2><button id="vlaCloseBtn">닫기 · Esc</button></div><p class="status-line">이 창을 닫아도 녹화는 계속됩니다. 종료하려면 저장 또는 폐기를 선택하세요.</p><div id="recorderMount"></div><div class="recorder-guide"><div><strong>01 / PREPARE</strong><p>작업 지시문과 모드를 정하고 입력 준비 상태를 확인합니다.</p></div><div><strong>02 / DEMONSTRATE</strong><p>녹화 시작 후 창을 닫고 조종합니다. 상단에 녹화 상태가 유지됩니다.</p></div><div><strong>03 / REVIEW</strong><p>창을 다시 열어 성공·실패를 저장하거나 현재 시연을 폐기합니다.</p></div></div></div>`;
+  dialog.innerHTML = `<div class="dialog-card recorder-dialog"><div class="summary-row"><h2>VLA / DEMONSTRATION WORKSPACE</h2><button id="vlaCloseBtn">닫기 · Esc</button></div><p class="status-line">이 창을 닫아도 녹화는 계속됩니다. 종료하려면 저장 또는 폐기를 선택하세요.</p><div class="collection-workspace"><div id="recorderLiveMount"></div><div class="collection-controls"><div id="recorderMount"></div><div id="recorderPilotMount"></div></div></div><div class="recorder-guide"><div><strong>01 / PREPARE</strong><p>작업 지시문과 모드를 정하고 입력 준비 상태를 확인합니다.</p></div><div><strong>02 / DEMONSTRATE</strong><p>전방·손 영상을 보면서 조종하고 녹화합니다.</p></div><div><strong>03 / REVIEW</strong><p>영상 옆에서 성공·실패를 저장하거나 현재 시연을 폐기합니다.</p></div></div></div>`;
   document.body.append(dialog);
   const cameraDialog = document.createElement('div');
   cameraDialog.id = 'cameraDialog'; cameraDialog.className = 'dialog hidden';
@@ -32,7 +32,40 @@
   dialog.querySelector('#recorderMount').append(recorder);
   const quick = document.createElement('button'); quick.id = 'vlaQuickOpen'; quick.textContent = 'VLA 수집';
   document.querySelector('.header-actions').append(quick);
-  for (const button of [quick, launch.querySelector('button')]) button.onclick = () => window.StationWindows.open('recorderDialog');
+  const cameraSettings = document.createElement('details');
+  cameraSettings.className = 'collection-camera-settings';
+  const cameraSettingsTitle = document.createElement('summary');
+  cameraSettingsTitle.textContent = '카메라 설정 / 미리보기 속도';
+  cameraSettings.append(cameraSettingsTitle);
+  const cameraSettingsNodes = [...camera.children].filter(element =>
+    element.matches('.camera-config-row, label.entry-row, #stereoCameraConfigStatus'));
+  cameraSettingsNodes[0].before(cameraSettings);
+  cameraSettings.append(...cameraSettingsNodes);
+  cameraSettings.open = true;
+  let previousSettingsOpen = true;
+  let collectionHomes = [];
+  function openCollection() {
+    if (!dialog.classList.contains('hidden')) return;
+    // Reuse the live elements: no duplicate camera streams or recorder controls.
+    if (camera.classList.contains('expanded')) setStereoCameraExpanded(false);
+    previousSettingsOpen = cameraSettings.open;
+    cameraSettings.open = false;
+    const pilot = document.getElementById('pilotControlGroup');
+    collectionHomes = [camera, pilot].map(element => {
+      const marker = document.createComment('collection-home');
+      element.before(marker);
+      return {element, marker};
+    });
+    document.getElementById('recorderLiveMount').append(camera);
+    document.getElementById('recorderPilotMount').append(pilot);
+    window.StationWindows.open('recorderDialog');
+  }
+  dialog.addEventListener('station-window-closed', () => {
+    for (const {element, marker} of collectionHomes) marker.replaceWith(element);
+    collectionHomes = [];
+    cameraSettings.open = previousSettingsOpen;
+  });
+  for (const button of [quick, launch.querySelector('button')]) button.onclick = openCollection;
   document.getElementById('vlaCloseBtn').onclick = () => window.StationWindows.close('recorderDialog');
   const advanced = document.createElement('details');
   advanced.className = 'studio-advanced';

@@ -1,0 +1,32 @@
+name: Ubuntu release portability
+on:
+  workflow_dispatch:
+  push:
+    branches: ['codex/release-ubuntu-*']
+permissions:
+  contents: read
+jobs:
+  clean-install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      UUV_GPU: '0'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Clean Docker install, firmware build, ROS build, RGB render
+        run: ./release.sh install
+      - name: Collector export and release contracts
+        run: >-
+          docker compose -f docker/ubuntu-dev/docker-compose.yml run --rm -T uuv-dev
+          bash -lc 'cd /workspace; source rospkg/install/setup.bash;
+          export PYTHONPATH=/workspace/rospkg/src/auv_vla_data_collector:/workspace/rospkg/src/kmu26_auv_vla_policy;
+          .venv/bin/python -m pytest -q release/test_release_portability.py
+          rospkg/src/auv_vla_data_collector/test rospkg/src/kmu26_auv_vla_policy/test'
+      - name: Portable GUI contracts
+        run: python3 -m unittest discover -s tools/vla_gui -p 'test_*.py'

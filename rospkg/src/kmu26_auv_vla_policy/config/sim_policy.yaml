@@ -17,12 +17,13 @@ vla_data_collector:
     depth_pose_z_is_positive_up: true
     action_channels: [5, 6, 3, 4]
     neutral_pwm: 1500
-    pwm_span: 300
+    pwm_span: 400
 vla_policy:
   ros__parameters:
     dry_run: true
     server_url: http://127.0.0.1:8000
     expected_mode: STABILIZE
     max_action_age_sec: 0.3
-    command_limit: 0.3
+    # Simulation demonstrations cover the full GUI range; real defaults stay bounded.
+    command_limit: 1.0
     command_slew_per_sec: 0.5

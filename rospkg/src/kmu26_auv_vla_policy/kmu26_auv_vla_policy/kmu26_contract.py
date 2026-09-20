@@ -43,8 +43,17 @@ def validate_checkpoint(path: str, embodiment: str = "new_embodiment") -> None:
             raise ValueError("Checkpoint lacks KMU26 action normalization statistics")
 
 
-def motion_chunk(response: dict) -> np.ndarray:
+def motion_chunk(response: dict | list | tuple) -> np.ndarray:
     """Validate one unbatched or singleton-batched 16-step motion response."""
+    # The pinned U0 policy returns (actions, target). JSON encodes that tuple
+    # as a list. CAP-free serving must have a null target; never accept an
+    # arbitrary nested response or silently enable the target branch.
+    if isinstance(response, (list, tuple)):
+        if len(response) != 2 or response[1] is not None:
+            raise ValueError("Expected CAP-free [actions, null] response")
+        response = response[0]
+    if not isinstance(response, dict):
+        raise ValueError("Expected an action dictionary")
     chunk = np.asarray(response.get("action.motion", []), dtype=float)
     if chunk.shape == (1, 16, 4):
         chunk = chunk[0]

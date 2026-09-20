@@ -1,7 +1,7 @@
 # Single-buoy VLA method and experiment contract
 
 Status: experimental design; training and closed-loop task success are not yet validated.
-This document does not change the submitted paper or the scene's buoy population.
+The research-pool scene now contains one yellow buoy. This document does not change the submitted paper.
 
 ## Fixed simulator baseline
 
@@ -41,9 +41,13 @@ Policy HTTP server -> ROS 2 adapter -> freshness/deadman checks -> amplitude/sle
 limiter -> RC Override channels [5,6,3,4] -> ArduSub STABILIZE controller/mixer ->
 eight thruster outputs -> simulated thruster dynamics and distributed hydrodynamics.
 The real path replaces SITL/plant with Pixhawk/ESCs/physical thrusters.
-RC PWM = 1500 + 300 * normalized command before configured limiting;
-the current deployment limit is 0.3, so deployed command coverage differs from
-the full training range unless both are aligned intentionally.
+Simulation RC PWM = 1500 + 400 * normalized command; GUI demonstrations and
+sim_policy.yaml now share this range, with simulation command_limit=1.0.
+The slew limit remains 0.5 normalized units/s and must be recorded in evaluations;
+matching amplitude does not guarantee identical transient command execution.
+Physical/default adapter settings remain span=300 and command_limit=0.3.
+Do not deploy the simulation configuration to hardware without reviewing the
+real command contract and explicitly remapping or recollecting training data.
 Execution cadence/chunk selection uses ROS time; network deadlines and watchdogs
 use wall time. Measure real inference latency separately from slowed simulation.
 Keep exactly one RC owner and record requested and applied commands separately.
@@ -52,7 +56,10 @@ Keep exactly one RC owner and record requested and applied commands separately.
 
 Both simulation adaptation and real fine-tuning/inference must disable the CAP
 target branch and its loss. Local U0 code gates training and inference with
-target_loss_weight=0; verify this survives training, checkpoint save and reload.
+target_loss_weight=0. The transfer entry point enforces this in both the live
+model and serialized configuration. The serving entry point checks it before
+loading weights. Configuration round-trip tests pass; actual GPU training and
+checkpoint inference remain unvalidated.
 Do not give target position/pose ground truth to the policy.
 The module may still be allocated for checkpoint compatibility: describe this
 as CAP branch disabled, not physically removed.
@@ -90,9 +97,10 @@ Report success rate with uncertainty, completion time with timeout handling,
 approach/alignment error, unintended contacts, recovery and inference latency.
 A single task alone does not establish language grounding or general task understanding.
 
-First randomize robot/buoy pose within the accessible workspace. Then introduce
-measured or explicitly hypothetical visual degradation, correlated currents,
-thruster response variation, sensor bias/drift/dropout and communication latency.
+First randomize robot/buoy pose within the accessible workspace. Sensor errors
+use the mathematical profiles documented in SENSOR_ERROR_MODES.md. Do not add
+arbitrary temporal-pattern or task-stage dropout experiments as a novelty claim.
+Measured parameters and uncalibrated bias/drift/latency priors remain distinct.
 Match each mechanism's location in the sensor/control pipeline. Do not add
 independent white noise to every signal indiscriminately.
 Compare calibrated fixed simulation versus randomized simulation; later compare
@@ -105,6 +113,8 @@ of sufficiency or saturation.
 
 ## Outstanding validation
 
-Successful task demonstrations, GPU training, CAP-free checkpoint round-trip,
-closed-loop policy task success, one-active-buoy reset/evaluator and real transfer
-remain to be implemented or validated.
+Successful task demonstrations, GPU training and trained-weight round-trip,
+closed-loop policy task success, automatic randomized reset/success evaluator and
+real transfer remain to be implemented or validated. The one-buoy scene, existing
+manual placement, magnetic release and free-rise mechanics pass local checks.
+See VLA_RECORDING_READINESS_20260920.md for the current acquisition workflow.

@@ -29,6 +29,9 @@ fi
 
 set +u
 source /opt/ros/humble/setup.bash
+if [[ -f /opt/uuv-mavros/install/setup.bash ]]; then
+  source /opt/uuv-mavros/install/setup.bash
+fi
 set -u
 if [[ -f "${ROOT}/install/setup.bash" ]]; then
   set +u

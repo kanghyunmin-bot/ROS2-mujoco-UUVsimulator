@@ -155,12 +155,23 @@ class WebGuiRuntimeContractsTest(unittest.TestCase):
         node = _Node()
         with patch("gui.web_app.WebRecorder") as recorder:
             recorder.return_value.payload.return_value = {}
+            recorder.return_value.resetting = False
             controller = WebGuiController(node)
         processes = _ControllerProcesses()
         controller.processes = processes
         controller.replay = _EmptyStatus()
         controller.tools = _EmptyStatus()
         return controller, node, processes
+
+    def test_demo_reset_blocks_new_and_already_queued_pilot_input(self) -> None:
+        controller, node, _processes = self._controller()
+        self.assertTrue(controller.set_rc(enabled=True, axes={"forward": 0.5}))
+        controller.recorder.resetting = True
+        self.assertFalse(controller.set_rc(enabled=True, axes={"forward": 1.0}))
+        controller.release_rc()
+        controller._drain_commands()
+        self.assertNotIn("active", node.rc_actions)
+        self.assertEqual(node.rc_actions[-2:], ["neutral", "release"])
 
     def test_pinger_stop_finishes_with_mavros_release(self) -> None:
         controller, node, _processes = self._controller()

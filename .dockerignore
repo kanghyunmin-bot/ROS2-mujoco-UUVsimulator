@@ -11,3 +11,11 @@
 !docker/
 !docker/ubuntu-dev/
 !docker/ubuntu-dev/**
+
+!rospkg/
+!rospkg/src/
+!rospkg/src/kmu26_auv_vla_policy/
+!rospkg/src/kmu26_auv_vla_policy/requirements-ros.txt
+
+!rospkg/src/auv_vla_data_collector/
+!rospkg/src/auv_vla_data_collector/requirements-export.txt

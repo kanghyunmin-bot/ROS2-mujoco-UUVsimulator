@@ -1,0 +1,33 @@
+vla_data_collector:
+  ros__parameters:
+    action_channels:
+    - 5
+    - 6
+    - 3
+    - 4
+    body_frame: base_link
+    buoy_release_image_topic: /imx219/camera1/image_raw/compressed
+    dataset_root: ~/vla_data/staging
+    default_task: Approach the yellow buoy, align the fixed fork, and detach the buoy.
+    depth_pose_z_is_positive_up: true
+    depth_topic: /depth/pose
+    dvl_convention: FRD
+    dvl_data_topic: /dvl/data
+    dvl_input_frame: dvl_link
+    dvl_twist_topic: /dvl/twist
+    ego_image_topic: /imx219/camera0/image_raw/compressed
+    imu_motion_convention: FLU
+    imu_motion_frame: fcu_link
+    imu_motion_topic: /mavros/imu/data_raw
+    imu_topic: /mavros/imu/data
+    neutral_pwm: 1500
+    pwm_span: 400
+    use_sim_time: true
+vla_policy:
+  ros__parameters:
+    command_limit: 1.0
+    command_slew_per_sec: 0.5
+    dry_run: false
+    expected_mode: STABILIZE
+    max_action_age_sec: 0.3
+    server_url: http://127.0.0.1:8000

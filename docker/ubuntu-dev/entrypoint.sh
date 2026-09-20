@@ -2,6 +2,7 @@
 set -e
 
 source /opt/ros/humble/setup.bash
+source /opt/uuv-mavros/install/setup.bash
 
 # Named volumes are created as root on first use. Hand only the two dedicated
 # cache mounts to the unprivileged development user before building.

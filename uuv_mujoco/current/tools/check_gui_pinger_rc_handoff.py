@@ -220,7 +220,7 @@ def check_web_start_stop_order() -> None:
     controller.processes = _Processes(events, vision_running=True)
     result = controller.start_pinger_homing({})
     assert result["running"] is True
-    assert "activate:STABILIZE:False" in events, events
+    assert "activate:ALT_HOLD:False" in events, events
     assert events.index("release_rc") < events.index("suspend") < events.index("process_start"), events
     assert events.index("vision_stop") < events.index("process_start"), events
 
@@ -235,7 +235,10 @@ def check_auto_arm_ownership() -> None:
     disarmed_events: list[str] = []
     disarmed_controller = _controller(disarmed_events)
     result = disarmed_controller.start_pinger_homing({"auto_arm": True})
-    assert result["running"] is True
+    assert result["running"] is False
+    assert result["reason"] == "strict_rc3_prearm_requires_gui_rc_publisher"
+    assert "process_start" not in disarmed_events
+    assert "suspend" not in disarmed_events
     assert not disarmed_controller._pinger_auto_arm_owned
     # Auto-arm ownership is not granted at Start.  It requires both an arm
     # request issued by this generation and a later armed confirmation.
@@ -266,7 +269,7 @@ def check_repeated_start_is_idempotent() -> None:
     controller.node = _WebNode(events, camera_enabled=True)
     controller.processes = _Processes(events, vision_running=True)
 
-    first = controller.start_pinger_homing({"auto_arm": True})
+    first = controller.start_pinger_homing({"auto_arm": False})
     assert first["running"] is True
     saved = (
         controller._restore_camera_after_pinger,
@@ -296,7 +299,7 @@ def check_web_pinger_start_from_stopped_sim_uses_pinger_purpose() -> None:
     controller.processes = _Processes(events, sim_available=False)
     result = controller.start_pinger_homing({})
     assert result["running"] is True, result
-    assert "activate:STABILIZE:False" in events, events
+    assert "activate:ALT_HOLD:False" in events, events
     assert result["sim"]["purpose"] == "pinger_homing", result
     assert events[0] == "sim_start:pinger_homing", events
     assert events.index("sim_start:pinger_homing") < events.index("release_rc"), events

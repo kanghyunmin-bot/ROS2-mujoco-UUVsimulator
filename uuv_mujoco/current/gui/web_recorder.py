@@ -15,6 +15,8 @@ from uuid import uuid4
 from rclpy.clock import Clock, ClockType
 from std_srvs.srv import Trigger, SetBool
 
+from .collection_preflight import require_recordable_configuration
+from .collection_counts import collection_counts
 from .config_paths import APP_ROOT, SIM_STACK_DIR
 from .config_rc import RC_PWM_SPAN
 from .ros_tools import ros_bash_command
@@ -39,6 +41,8 @@ class WebRecorder:
         self.clients = {name: node.create_client(kind, '/vla_data_collector/' + name)
                         for name, kind in [('get_status', Trigger), ('start_episode', Trigger),
                                            ('stop_episode', SetBool), ('discard_episode', Trigger)]}
+        self.clients['demo_reset'] = node.create_client(Trigger, '/uuv_mujoco/demo_reset')
+        self.resetting = False
         self.timer = node.create_timer(0.5, self.poll, clock=Clock(clock_type=ClockType.STEADY_TIME))
 
     def poll(self):
@@ -78,13 +82,18 @@ class WebRecorder:
 
     def payload(self):
         with self.lock:
+            now = time.monotonic()
+            if now >= getattr(self, '_counts_refresh_at', 0.0):
+                self._collection_counts = collection_counts(APP_ROOT / 'outputs/vla-demonstrations')
+                self._counts_refresh_at = now + 3.0
             fresh = time.monotonic() - self.received < 3
             owned = bool(self.session and self.status.get('session_id') == self.session)
             running = self.process is not None and self.process.poll() is None
             return {**self.status, 'online': fresh, 'owned': owned, 'running': running,
+                    'collection_counts': self._collection_counts,
                     'configuration_locked': bool(self.session),
                     'ready': fresh and owned and self.status.get('ready', False),
-                    'busy': self.future is not None, 'message': self.message}
+                    'busy': self.future is not None, 'resetting': getattr(self, 'resetting', False), 'message': self.message}
 
     def require_configuration_unlocked(self):
         """Protect the provenance captured at prepare, including idle episodes."""
@@ -113,12 +122,14 @@ class WebRecorder:
             # This gate checks known requests, not achieved sensor throughput.
             if float(launched_camera.get('hz', 0)) < 10.0:
                 raise ValueError('수집에는 카메라 10Hz 이상 설정이 필요합니다. VLA lite를 적용 후 입력 상태를 확인하세요.')
+            simulation = self.processes.simulation_config_payload(include_evidence=True)
+            require_recordable_configuration(simulation, RC_PWM_SPAN)
             self.session = datetime.now(timezone.utc).strftime('sim_%Y%m%dT%H%M%SZ_') + uuid4().hex[:8]
             root = APP_ROOT / 'outputs' / 'vla-demonstrations' / self.session
             root.mkdir(parents=True, exist_ok=False)
             context = {'session_id': self.session, 'data_source': 'simulation',
                        'captured_utc': datetime.now(timezone.utc).isoformat(),
-                       'simulation': self.processes.simulation_config_payload(),
+                       'simulation': simulation,
                        'camera': camera,
                        'calibration_status': 'uncalibrated_or_profile_specific',
                        'note': 'GUI configuration/launch request snapshot; not measured sensor rates or FCU parameter readback.'}
@@ -128,6 +139,19 @@ class WebRecorder:
             diff = subprocess.run(['git', '-C', str(APP_ROOT), 'diff', 'HEAD', '--', 'uuv_mujoco/current',
                                    'rospkg/src/auv_vla_data_collector'], capture_output=True, timeout=15)
             (root / 'source.patch').write_bytes(diff.stdout)
+            untracked = subprocess.run(
+                ['git', '-C', str(APP_ROOT), 'ls-files', '--others', '--exclude-standard',
+                 '--', 'uuv_mujoco/current', 'rospkg/src/auv_vla_data_collector'],
+                capture_output=True, text=True, timeout=15,
+            )
+            context['untracked_source_files'] = {
+                name: (APP_ROOT / name).read_text()
+                for name in untracked.stdout.splitlines()
+                if Path(name).suffix in {'.py', '.json', '.yaml', '.sh', '.xml', '.js'}
+                and (APP_ROOT / name).is_file()
+                and (APP_ROOT / name).stat().st_size < 5_000_000
+            }
+
             # Store configuration content, not just mutable paths.
             context['config_files'] = {}
             config_paths = [SIM_STACK_DIR / 'config/sim_profiles.json',
@@ -201,6 +225,30 @@ class WebRecorder:
             self.future.add_done_callback(self._command_done)
             return {'message': self.message}
 
+    def reset_scene(self, release_control):
+        """Reset only between saved/discarded episodes, retaining session ownership."""
+        with self.lock:
+            state = self.payload()
+            if not state['online'] or not state['owned'] or state.get('active') or state['busy']:
+                raise ValueError('현재 녹화를 저장/폐기하고 대기 상태에서 초기화하세요.')
+            if state.get('expected_mode') not in {'STABILIZE', 'MANUAL'}:
+                raise ValueError('다음 시연 초기화는 STABILIZE/MANUAL 수집에서 지원합니다. ALT_HOLD 수심 목표는 자동 변경하지 않습니다.')
+            client = self.clients['demo_reset']
+            if not client.service_is_ready():
+                raise ValueError('초기화 기능 적용을 위해 GUI와 MuJoCo를 한 번 재시작하세요.')
+            self.resetting = True
+            try:
+                release_control()
+                self.command_at = time.monotonic()
+                self.message = '로봇·부표 초기화 및 센서 안정화 중… 조종 입력은 해제됩니다.'
+                self.command_client = client
+                self.future = client.call_async(Trigger.Request())
+                self.future.add_done_callback(self._command_done)
+            except Exception:
+                self.resetting = False
+                raise
+            return {'message': self.message}
+
     def close_session(self):
         """Stop an idle owned collector so a new task can be configured."""
         with self.lock:
@@ -252,6 +300,7 @@ class WebRecorder:
             finally:
                 self.future = None
                 self.command_client = None
+                self.resetting = False
                 # Disable buttons until a post-command status is received.
                 self.received = 0.0
 

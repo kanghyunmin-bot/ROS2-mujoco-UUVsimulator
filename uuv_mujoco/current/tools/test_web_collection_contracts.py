@@ -14,12 +14,31 @@ from unittest.mock import Mock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from gui.sim_stack_launch_command import camera_config_from_launch_command, camera_optics_environment, normalize_camera_config
-from gui.web_app import UuvWebHandler
+from gui.web_app import UuvWebHandler, WebGuiController
 from gui.web_process_manager import WebProcessManager
 from gui.web_recorder import WebRecorder
 
 
 class CollectionCameraContracts(unittest.TestCase):
+    def test_start_dispatch_passes_sensor_mode_through_real_controller(self):
+        controller = WebGuiController.__new__(WebGuiController)
+        controller.recorder = SimpleNamespace(lock=threading.RLock(), require_configuration_unlocked=lambda: None)
+        controller.processes = Mock()
+        controller.processes.start_sim_stack.return_value = {"status": "sim: starting"}
+        handler = UuvWebHandler.__new__(UuvWebHandler)
+        handler.controller = controller
+        handler.path = "/api/command"
+        for mode in (None, "existing", "mathematical", "bag0402"):
+            with self.subTest(mode=mode):
+                result = handler._handle_command({
+                    "command": "stack_start", "sim_preset": "research_pool_distributed",
+                    "sensor_error_mode": mode,
+                })
+                self.assertEqual(result["status"], "sim: starting")
+                controller.processes.start_sim_stack.assert_called_with(
+                    preset_id="research_pool_distributed", sensor_error_mode=mode,
+                )
+
     def recorder(self, camera=None):
         recorder = WebRecorder.__new__(WebRecorder)
         recorder.lock = threading.RLock()
@@ -35,8 +54,8 @@ class CollectionCameraContracts(unittest.TestCase):
         recorder.clients = {key: Mock(service_is_ready=lambda: False) for key in ("get_status", "start_episode")}
         return recorder
 
-    def test_lightweight_vla_rate_keeps_default_unchanged(self):
-        self.assertEqual(normalize_camera_config()["hz"], 4.0)
+    def test_lightweight_vla_rate_is_default(self):
+        self.assertEqual(normalize_camera_config()["hz"], 15.0)
         config = normalize_camera_config({"preset_id": "vla_lite"}, strict_preset=True)
         self.assertEqual((config["width"], config["height"], config["hz"]), (640, 360, 15.0))
 

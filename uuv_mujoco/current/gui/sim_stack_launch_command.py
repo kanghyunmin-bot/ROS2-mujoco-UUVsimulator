@@ -7,12 +7,10 @@ import os
 
 DEFAULT_CAMERA_WIDTH = "640"
 DEFAULT_CAMERA_HEIGHT = "360"
-DEFAULT_CAMERA_HZ = "4"
-# The control loop must retain real-time headroom on the CPU-only laptop.
-# HD presets remain selectable in the GUI, but they are opt-in because a
-# concurrent CPU YOLO node can otherwise starve SITL/MuJoCo and destabilize
-# STABILIZE/ALT_HOLD.
-DEFAULT_CAMERA_PRESET_ID = "balanced"
+DEFAULT_CAMERA_HZ = "15"
+# Default to the recording contract. Preview refresh remains independent;
+# the 4 Hz monitoring preset is still selectable for lightweight viewing.
+DEFAULT_CAMERA_PRESET_ID = "vla_lite"
 
 CAMERA_PRESETS = (
     {"id": "balanced", "label": "640x360 @ 4Hz", "width": 640, "height": 360, "hz": 4.0},

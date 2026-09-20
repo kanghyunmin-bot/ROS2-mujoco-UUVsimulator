@@ -91,14 +91,20 @@
               <label class="entry-row sim-preset-row">
                 <span>Environment / physics</span>
                 <select id="simLaunchPreset">
-                  <option value="course_current">Course / test tank · ellipsoid</option>
-                  <option value="research_pool_current">Research pool · ellipsoid baseline</option>
-                  <option value="research_pool_distributed">Research pool · distributed physics</option>
-                  <option value="research_pool_distributed_hybrid">Research pool · hybrid damping prior</option>
-                  <option value="research_pool_distributed_waves">Research pool · distributed + waves</option>
+                  <option value="research_pool_distributed" selected>Research pool · distributed physics</option>
                 </select>
               </label>
-              <div id="simLaunchPresetStatus" class="status-line">plant: course / test tank · ellipsoid</div>
+              <label><input id="showAdvancedEnvironments" type="checkbox"> 고급·비교 환경 표시</label>
+              <label class="entry-row">
+                <span>센서 오차</span>
+                <select id="sensorErrorMode">
+                  <option value="existing">기존 센서 설정</option>
+                  <option value="mathematical">수학적 오차 · 가정값</option>
+                  <option value="bag0402">4월 bag · 압력 부분 보정 (2 Hz)</option>
+                </select>
+              </label>
+              <div id="sensorErrorModeStatus" class="status-line">기존 센서 설정 유지 · 변경은 다음 시작에 적용</div>
+              <div id="simLaunchPresetStatus" class="status-line">plant: Research pool · distributed physics</div>
               <div class="button-row">
                 <button id="stackStartBtn" type="button">Start SITL/MuJoCo</button>
                 <button id="stackResetBtn" type="button" class="danger">Stop/Reset</button>
@@ -143,6 +149,14 @@
               <div id="modeButtons" class="mode-grid"></div>
             </fieldset>
 
+            <fieldset class="group">
+              <legend>VLA 제어 전환</legend>
+              <div class="button-row">
+                <button id="vlaPrepareControlBtn" type="button">VLA 제어권 준비</button>
+                <button id="vlaRestoreManualBtn" type="button">수동 제어 복귀</button>
+              </div>
+              <div id="vlaControlStatus" class="status-line">정책 실행·활성화는 별도 · 자동 Arm 없음</div>
+            </fieldset>
             <fieldset id="pilotControlGroup" class="group pilot-group">
               <legend>Pilot Control</legend>
               <div class="summary-row">
@@ -159,6 +173,7 @@
                 </label>
                 <span id="gamepadStatus">Gamepad: checking browser</span>
               </div>
+              <label class="entry-row"><span>조종기 선택</span><select id="gamepadDevice"><option value="">연결된 조종기 대기</option></select></label>
               <div class="button-row">
                 <button id="centerBtn" type="button">Center sticks</button>
                 <button id="releaseBtn" type="button">Release input</button>
@@ -278,7 +293,7 @@
                     <span>ROS 센서 출력</span>
                     <select id="stereoCameraProfile">
                       <option value="balanced">640x360 @ 4Hz</option>
-                      <option value="vla_lite">VLA lite · 640x360 @ 15Hz</option>
+                      <option value="vla_lite" selected>VLA lite · 640x360 @ 15Hz</option>
                       <option value="smooth540">960x540 @ 10Hz</option>
                       <option value="hd720">1280x720 @ 5Hz</option>
                       <option value="hd720_fast">1280x720 @ 10Hz</option>
@@ -521,6 +536,10 @@
       </div>
     </div>
 
+  <details id="vlaModelPanel" style="position:fixed;right:18px;bottom:18px;z-index:1200;background:#172738;color:#e5edf6;border:1px solid #456078;border-radius:10px;box-shadow:0 8px 28px #0008">
+    <summary style="padding:12px 18px;cursor:pointer;font-weight:700">VLA 모델 선택 · 실행</summary>
+    <iframe title="VLA 모델 실행 패널" src="http://127.0.0.1:8882/" style="width:min(440px,90vw);height:min(660px,78vh);border:0"></iframe>
+  </details>
   <script src="/windows.js?v=20260914-industrial"></script>
   <script src="/recorder.js?v=20260914-industrial"></script>
   <script src="/studio.js?v=20260914-industrial"></script>
