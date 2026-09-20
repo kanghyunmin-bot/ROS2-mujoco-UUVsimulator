@@ -7,7 +7,7 @@
 ## 준비
 
 - Docker Engine + Docker Compose v2, 일반 계정의 Docker 실행 권한.
-- 시뮬레이션 설치용 여유 디스크 25 GiB 이상. VLA까지 설치할 경우 45 GiB 권장.
+- 시뮬레이션 설치용 여유 디스크 25 GiB 이상. VLA까지 설치할 경우 60 GiB 권장.
 - GPU 가속: NVIDIA 드라이버 + NVIDIA Container Toolkit.
 - VLA 추론: 현재 검증 장비는 RTX 5080 16 GiB, 드라이버 580 계열.
   다른 GPU는 예열 응답이 0.25초 미만이어야 실행 가능합니다.
@@ -56,7 +56,7 @@ git lfs pull
 ## 데이터 수집
 
 1. Research pool · distributed physics를 선택하고 시뮬레이션을 시작합니다.
-2. ROS 센서 출력은 VLA lite(640×360, 15 Hz), 수중 풀 경량 광학을 사용합니다.
+2. MAVROS 연결이 켜져 있는지 확인합니다. ROS 센서 출력은 VLA lite(640×360, 15 Hz), 수중 풀 경량 광학을 사용합니다.
 3. 자세 정렬과 센서 수신을 확인하고, STABILIZE에서 조종을 준비합니다.
 4. 레코더 패널에 지시문을 입력하고 **준비**를 누릅니다.
 5. **녹화 시작** 후 GUI 스틱 또는 브라우저 게임패드로 시연합니다.
@@ -118,3 +118,12 @@ Ubuntu 버전별 깨끗한 CI 설치와 실제 로컬 GPU 검사는 구분하여
 
 ### 모델 라이선스
 포함된 파인튜닝 가중치는 기반 NVIDIA 모델의 비상업적 연구·평가 용도 제한을 따릅니다. 모델 묶음의 `LICENSE-BASE-MODEL.txt`와 `MODEL_CARD.md`를 함께 배포합니다.
+
+### 고정된 GPU 의존성
+
+FlashAttention 2.8.3은 현재 모델과 동일한 CUDA 13.0 / PyTorch 2.10 / Python 3.10
+조합의 [공개 사전 빌드 휠](https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/tag/v0.9.0)을
+SHA-256으로 검증해 설치합니다. PyTorch3D는 공식 저장소의 고정 소스에서 U0가 사용하는
+순수 Python 좌표 변환 기능을 설치합니다. 네이티브 PyTorch3D 연산은 포함하지 않습니다.
+Decord 0.6.0 휠 내부의 오래된 Python 태그 경고는 해당 항목만 구분하고,
+실제 MP4 디코딩·좌표 변환·CUDA attention 연산을 설치 마지막에 검사합니다.

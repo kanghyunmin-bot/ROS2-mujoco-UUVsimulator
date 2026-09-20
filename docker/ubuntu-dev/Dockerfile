@@ -80,6 +80,8 @@ ENV PATH=/home/robot/.local/bin:/usr/lib/ccache:${PATH} \
 COPY rospkg/src/auv_vla_data_collector/requirements-export.txt /tmp/vla-requirements-export.txt
 RUN python3 -m pip install --user -r /tmp/vla-requirements-export.txt
 
+RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends nlohmann-json3-dev && sudo rm -rf /var/lib/apt/lists/*
+
 WORKDIR /workspace
 ENTRYPOINT ["/usr/local/bin/uuv-dev-entrypoint"]
 CMD ["bash"]

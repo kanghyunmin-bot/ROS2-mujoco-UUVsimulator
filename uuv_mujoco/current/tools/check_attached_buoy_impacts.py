@@ -37,7 +37,10 @@ def main():
             runtime = runtime_for(mujoco, model, data)
             if "--without_fix" in sys.argv:
                 runtime.contact_break_hold_s = 0.04
-            buoy = runtime.buoys[2]
+            # The released pool contains one target; do not depend on an old
+            # three-buoy scene ordering.
+            assert runtime.buoys, "scene must contain an attached buoy"
+            buoy = runtime.buoys[0]
             origin = data.qpos[:7].copy()
             origin[:3] = data.xpos[buoy.body_id] - [0.214, side * 0.237, 0.5]
             origin[3:] = [1, 0, 0, 0]

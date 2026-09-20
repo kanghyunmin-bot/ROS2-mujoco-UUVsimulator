@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 source release/versions.env
+# Release provenance comes from its tag and checksums, not the development branch.
+export UUV_MUJOCO_SKIP_FRESHNESS_CHECK=1
 export UUV_UID="$(id -u)" UUV_GID="$(id -g)"
 export UUV_XAUTHORITY="${XAUTHORITY:-/dev/null}"
 DEV="$ROOT/docker/ubuntu-dev/dev.sh"
