@@ -6,6 +6,8 @@
 
 **최신 연구 구현 · 2026.09.22** · [전체 변경·검증 기록](docs/UUV_UPDATE_20260922.md) · [인터랙티브 설명](docs/interactive/uuv-learning.html) · [설치 안내](README_FIRST.md)
 
+[노션 최신 장 · 실제 영상과 내장 인터랙티브 자료](https://app.notion.com/p/3e3ad8acb9a181379c13c5baff275496) · [게시 전 검사와 배포 범위](docs/versions/2026.09.22.md)
+
 ## 수집 준비 → 실제 VLA 학습 → 잔차 PPO
 
 성공 라벨 시연 **135개 / 14,522프레임**, 검토 구간 **1.1배**로 U0 기반 VLA를 **25,000스텝** 학습했습니다. CAP을 제외한 VLA는 PPO 중 고정하고, 별도 잔차 정책이 행동 보정과 감속을 학습합니다. VLA 본체의 PPO 미세조정 또는 CAP 대체 성능 입증이 아닙니다.
