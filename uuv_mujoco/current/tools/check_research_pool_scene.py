@@ -39,7 +39,7 @@ def main() -> int:
     _require(not any(name.startswith(("slam_", "pool_lane_", "pool_cross_")) for name in geoms),
              "research pool must be clear of old obstacles and course marks")
     floats = [name for name in bodies if name.startswith("course_buoy_") and name.endswith("_float")]
-    _require(len(floats) == 3, "research pool must contain three submerged buoys")
+    _require(floats == ["course_buoy_a_yellow_1_float"], "research pool must contain one yellow buoy")
     for name in floats:
         prefix = name.removesuffix("_float")
         xyz = _numbers(bodies[name].get("pos"))

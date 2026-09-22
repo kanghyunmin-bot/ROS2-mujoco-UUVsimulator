@@ -734,7 +734,7 @@ def check_gui_start_uses_dist_like_transport_default() -> None:
         raise AssertionError("native GUI Start must enable ROS2 stereo camera image topics")
     _assert_equal(native_cmd[native_cmd.index("--ros2-image-width") + 1], "640", "default stereo image width")
     _assert_equal(native_cmd[native_cmd.index("--ros2-image-height") + 1], "360", "default stereo image height")
-    _assert_equal(native_cmd[native_cmd.index("--ros2-image-hz") + 1], "4", "default stereo image Hz")
+    _assert_equal(native_cmd[native_cmd.index("--ros2-image-hz") + 1], "15", "default stereo image Hz")
     if "--direct-mavlink" in native_cmd:
         raise AssertionError("native GUI Start must get direct MAVLink from env, not duplicate wrapper args")
 

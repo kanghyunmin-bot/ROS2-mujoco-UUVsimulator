@@ -1,0 +1,63 @@
+{
+  "teacher_revision": "sim-depth-hand-servo-v10-stop-align",
+  "trials": [
+    {
+      "trial": 1,
+      "frames": 273,
+      "success": true,
+      "release_force_n": 33.30428112384735,
+      "release_hand_contact": true,
+      "reset_verified": true,
+      "dt_min_s": 0.09749999999999659,
+      "dt_max_s": 0.10249999999999204,
+      "fsm_states": [
+        "TARGET_CONFIRM",
+        "SEARCH",
+        "APPROACH_BUOY",
+        "SEARCH",
+        "APPROACH_BUOY"
+      ]
+    },
+    {
+      "trial": 2,
+      "frames": 234,
+      "success": true,
+      "release_force_n": 43971.00261051459,
+      "release_hand_contact": true,
+      "reset_verified": true,
+      "dt_min_s": 0.09999999899997647,
+      "dt_max_s": 0.10000000000002274,
+      "fsm_states": [
+        "TARGET_CONFIRM",
+        "SEARCH",
+        "APPROACH_BUOY"
+      ]
+    },
+    {
+      "trial": 3,
+      "frames": 243,
+      "success": true,
+      "release_force_n": 48.240286103785785,
+      "release_hand_contact": true,
+      "reset_verified": true,
+      "dt_min_s": 0.09999999999999432,
+      "dt_max_s": 0.10000000000002274,
+      "fsm_states": [
+        "TARGET_CONFIRM",
+        "SEARCH",
+        "APPROACH_BUOY",
+        "ALIGN_STICK",
+        "SEARCH",
+        "APPROACH_BUOY"
+      ]
+    }
+  ],
+  "physical_contact_releases": 3,
+  "precision_insertion_verified": false,
+  "training_started": false,
+  "quality_review": {
+    "trial": 2,
+    "issue": "Release load 43971 N is an outlier versus 33.30/48.24 N; investigate contact dynamics before using this episode for training. Outcome label not weakened or changed."
+  },
+  "final_state": "complete, disarmed"
+}

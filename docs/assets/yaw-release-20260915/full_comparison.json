@@ -1,0 +1,216 @@
+{
+  "method": "Closed-loop RC override replay; receipt-time alignment, initial pose only, no fitted phase/time warp/scale. Real FCU position is an estimate, not external ground truth. Depth compares relative z and does not certify absolute depth.",
+  "mujoco_evaluator_version": "3.8.0",
+  "bags": {
+    "primary": {
+      "source_zip_sha256": "195aca87161fb180bc7c7ee0574523f7840399e439f7b1d245313d8d2faf2d52",
+      "evaluation_s": [
+        20.0,
+        70.0
+      ],
+      "valid_dvl_grid_count": 477,
+      "grid_count": 500,
+      "cases": {
+        "clock_only": {
+          "complete": true,
+          "surge_rmse_mps": 0.045133164595023395,
+          "xy_rmse_vs_fcu_estimate_m": 0.54998537406876,
+          "yaw_change_rmse_deg": 4.229093148590522,
+          "relative_depth_rmse_m": 0.029730948738666333,
+          "roll_pitch_rmse_deg": [
+            0.4775726417761112,
+            1.8084738912296927
+          ],
+          "surge_first_half_rmse_mps": 0.034773925385589946,
+          "surge_second_half_rmse_mps": 0.05388746413397266,
+          "yaw_at_end_deg": -363.96660676620155,
+          "real_yaw_at_end_deg": -360.69849812319694,
+          "rc_published_count": 2379,
+          "rc_delay_p50_p95_max_s": [
+            0.0012352848053005516,
+            0.0023714189529446374,
+            0.0024988079071022185
+          ],
+          "all_expected_rc_published_once": true,
+          "clearance": {
+            "sampled_poses": 2857,
+            "environment_contacts": {},
+            "conservative_horizontal_margin_m": 10.890722051391458,
+            "pass": true,
+            "note": "Checks stored poses; not a continuous contact log."
+          },
+          "controller_readback": {
+            "ATC_RAT_PIT_D": 0.008999999612569809,
+            "ATC_RAT_RLL_D": 0.008999999612569809,
+            "PSC_ACCZ_P": 0.5,
+            "MOT_PWM_MIN": 1100.0,
+            "MOT_PWM_MAX": 1900.0,
+            "FRAME_CONFIG": 2.0,
+            "RC3_TRIM": 1100.0,
+            "JS_GAIN_DEFAULT": 0.10000000149011612,
+            "SCHED_LOOP_RATE": 400.0,
+            "RC_SPEED": 200.0,
+            "SERVO_RATE": 50.0
+          },
+          "profile_sha256": "f314145bf938c98c6718eee52a751688d21f2118a9ed35bd7edddca92688e9f1",
+          "nominal_voltage_min_max_v": [
+            20.0,
+            20.0
+          ]
+        },
+        "yaw_response": {
+          "complete": true,
+          "surge_rmse_mps": 0.04358056781057344,
+          "xy_rmse_vs_fcu_estimate_m": 0.6665427247361441,
+          "yaw_change_rmse_deg": 2.7621448205885106,
+          "relative_depth_rmse_m": 0.02957496671066781,
+          "roll_pitch_rmse_deg": [
+            0.47854486923031725,
+            1.8071464830119626
+          ],
+          "surge_first_half_rmse_mps": 0.03387971106589793,
+          "surge_second_half_rmse_mps": 0.05182829580436091,
+          "yaw_at_end_deg": -357.0368238542357,
+          "real_yaw_at_end_deg": -360.69849812319694,
+          "rc_published_count": 2379,
+          "rc_delay_p50_p95_max_s": [
+            0.0012352848053005516,
+            0.0023714189529446374,
+            0.0024988079071022185
+          ],
+          "all_expected_rc_published_once": true,
+          "clearance": {
+            "sampled_poses": 2857,
+            "environment_contacts": {},
+            "conservative_horizontal_margin_m": 10.827906115922465,
+            "pass": true,
+            "note": "Checks stored poses; not a continuous contact log."
+          },
+          "controller_readback": {
+            "ATC_RAT_PIT_D": 0.008999999612569809,
+            "ATC_RAT_RLL_D": 0.008999999612569809,
+            "PSC_ACCZ_P": 0.5,
+            "MOT_PWM_MIN": 1100.0,
+            "MOT_PWM_MAX": 1900.0,
+            "FRAME_CONFIG": 2.0,
+            "RC3_TRIM": 1100.0,
+            "JS_GAIN_DEFAULT": 0.10000000149011612,
+            "SCHED_LOOP_RATE": 400.0,
+            "RC_SPEED": 200.0,
+            "SERVO_RATE": 50.0
+          },
+          "profile_sha256": "f03d1115e610501bfd7a419b90adb824360f1b6ac5d7d7fa59ec95818bbd6564",
+          "nominal_voltage_min_max_v": [
+            20.0,
+            20.0
+          ]
+        }
+      }
+    },
+    "auxiliary": {
+      "source_zip_sha256": "b1d81544db4c530161516fe1ed88c77f2bdffb5d822cbcfe5aeb81974a2bc6d5",
+      "evaluation_s": [
+        12.0,
+        110.0
+      ],
+      "valid_dvl_grid_count": 961,
+      "grid_count": 980,
+      "cases": {
+        "clock_only": {
+          "complete": true,
+          "surge_rmse_mps": 0.031117779472086132,
+          "xy_rmse_vs_fcu_estimate_m": 0.6709635220654062,
+          "yaw_change_rmse_deg": 2.5063586558630107,
+          "relative_depth_rmse_m": 0.06855514564671543,
+          "roll_pitch_rmse_deg": [
+            0.45532051538925544,
+            1.2265467582938643
+          ],
+          "surge_first_half_rmse_mps": 0.03179873703777894,
+          "surge_second_half_rmse_mps": 0.030440374292772826,
+          "yaw_at_end_deg": -367.38778999939,
+          "real_yaw_at_end_deg": -364.27488014462017,
+          "rc_published_count": 3175,
+          "rc_delay_p50_p95_max_s": [
+            0.0012389373779306823,
+            0.002367364883426859,
+            0.002498683929445633
+          ],
+          "all_expected_rc_published_once": true,
+          "clearance": {
+            "sampled_poses": 5600,
+            "environment_contacts": {},
+            "conservative_horizontal_margin_m": 11.14593885462388,
+            "pass": true,
+            "note": "Checks stored poses; not a continuous contact log."
+          },
+          "controller_readback": {
+            "ATC_RAT_PIT_D": 0.008999999612569809,
+            "ATC_RAT_RLL_D": 0.008999999612569809,
+            "PSC_ACCZ_P": 0.5,
+            "MOT_PWM_MIN": 1100.0,
+            "MOT_PWM_MAX": 1900.0,
+            "FRAME_CONFIG": 2.0,
+            "RC3_TRIM": 1100.0,
+            "JS_GAIN_DEFAULT": 0.10000000149011612,
+            "SCHED_LOOP_RATE": 400.0,
+            "RC_SPEED": 200.0,
+            "SERVO_RATE": 50.0
+          },
+          "profile_sha256": "f314145bf938c98c6718eee52a751688d21f2118a9ed35bd7edddca92688e9f1",
+          "nominal_voltage_min_max_v": [
+            20.0,
+            20.0
+          ]
+        },
+        "yaw_response": {
+          "complete": true,
+          "surge_rmse_mps": 0.02984886172730278,
+          "xy_rmse_vs_fcu_estimate_m": 0.8621210907662525,
+          "yaw_change_rmse_deg": 5.753195077434521,
+          "relative_depth_rmse_m": 0.06868906227329181,
+          "roll_pitch_rmse_deg": [
+            0.4599530647033061,
+            1.2256212653296115
+          ],
+          "surge_first_half_rmse_mps": 0.03049638096557135,
+          "surge_second_half_rmse_mps": 0.029204843824098714,
+          "yaw_at_end_deg": -359.0045933391222,
+          "real_yaw_at_end_deg": -364.27488014462017,
+          "rc_published_count": 3175,
+          "rc_delay_p50_p95_max_s": [
+            0.0012389373779306823,
+            0.002367364883426859,
+            0.002498683929445633
+          ],
+          "all_expected_rc_published_once": true,
+          "clearance": {
+            "sampled_poses": 5600,
+            "environment_contacts": {},
+            "conservative_horizontal_margin_m": 11.068621161458058,
+            "pass": true,
+            "note": "Checks stored poses; not a continuous contact log."
+          },
+          "controller_readback": {
+            "ATC_RAT_PIT_D": 0.008999999612569809,
+            "ATC_RAT_RLL_D": 0.008999999612569809,
+            "PSC_ACCZ_P": 0.5,
+            "MOT_PWM_MIN": 1100.0,
+            "MOT_PWM_MAX": 1900.0,
+            "FRAME_CONFIG": 2.0,
+            "RC3_TRIM": 1100.0,
+            "JS_GAIN_DEFAULT": 0.10000000149011612,
+            "SCHED_LOOP_RATE": 400.0,
+            "RC_SPEED": 200.0,
+            "SERVO_RATE": 50.0
+          },
+          "profile_sha256": "f03d1115e610501bfd7a419b90adb824360f1b6ac5d7d7fa59ec95818bbd6564",
+          "nominal_voltage_min_max_v": [
+            20.0,
+            20.0
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,159 @@
+{
+  "method": "Auxiliary bag receipt-time alignment; initial yaw median before arm only; frozen effective plant and same PID; no parameter fit, phase fit, or scale fit.",
+  "cases": {
+    "80 Hz baseline": {
+      "yaw_error_at_final_release_deg": 20.628724402361684,
+      "yaw_rebound_next7s_deg": 8.829434862287826,
+      "real_yaw_rebound_next7s_deg": 7.31248838300138,
+      "real_reverse_rotation_peak_next7s_deg_s": 8.859104546927854,
+      "yaw_rmse_deg": 16.160577764687336,
+      "yaw_final_deg": -349.2945760562494,
+      "error_at_30_40_50_60_75_100_s_deg": [
+        2.210423080152391,
+        18.337261318639335,
+        22.211369848599542,
+        20.407270464132658,
+        15.45314604694961,
+        16.258801898903215
+      ],
+      "settled_75_105_yaw_rate_rms_deg_s": 0.18447757127767722,
+      "settled_75_105_yaw_rate_peak_deg_s": 0.33298299408889304,
+      "settled_pwm_saturation_fraction": 0.0,
+      "rc_delay_p95_ms": 2.367364883420109,
+      "final_release_s": 66.43121385574341,
+      "first_counter_torque_after_release_s": 0.07003614425659066,
+      "reverse_rotation_peak_next7s_deg_s": 20.274977090749502,
+      "profile_sha256": "f314145bf938c98c6718eee52a751688d21f2118a9ed35bd7edddca92688e9f1",
+      "origin_sim_time": 6.22875
+    },
+    "100 Hz": {
+      "yaw_error_at_final_release_deg": 20.018206871440498,
+      "yaw_rebound_next7s_deg": 8.795337186885092,
+      "real_yaw_rebound_next7s_deg": 7.31248838300138,
+      "real_reverse_rotation_peak_next7s_deg_s": 8.859104546927854,
+      "yaw_rmse_deg": 15.514911305915373,
+      "yaw_final_deg": -349.8632771503323,
+      "error_at_30_40_50_60_75_100_s_deg": [
+        2.074618758388821,
+        17.70075500697718,
+        21.82623224329245,
+        19.86100264112378,
+        14.429518691554133,
+        15.528797309264851
+      ],
+      "settled_75_105_yaw_rate_rms_deg_s": 0.1759452424508542,
+      "settled_75_105_yaw_rate_peak_deg_s": 0.352484201646784,
+      "settled_pwm_saturation_fraction": 0.0,
+      "rc_delay_p95_ms": 2.367364883426859,
+      "final_release_s": 66.43121385574341,
+      "first_counter_torque_after_release_s": 0.06503614425659521,
+      "reverse_rotation_peak_next7s_deg_s": 20.145145484626436,
+      "profile_sha256": "f314145bf938c98c6718eee52a751688d21f2118a9ed35bd7edddca92688e9f1",
+      "origin_sim_time": 6.25375
+    },
+    "400 Hz": {
+      "yaw_error_at_final_release_deg": 20.633174643635243,
+      "yaw_rebound_next7s_deg": 8.870386247910119,
+      "real_yaw_rebound_next7s_deg": 7.31248838300138,
+      "real_reverse_rotation_peak_next7s_deg_s": 8.859104546927854,
+      "yaw_rmse_deg": 16.21050383996499,
+      "yaw_final_deg": -348.98684867179406,
+      "error_at_30_40_50_60_75_100_s_deg": [
+        1.9872798725047633,
+        18.3618649362623,
+        22.22447722612985,
+        20.42088496008188,
+        15.514459008836464,
+        16.44299920944079
+      ],
+      "settled_75_105_yaw_rate_rms_deg_s": 0.18194343010159925,
+      "settled_75_105_yaw_rate_peak_deg_s": 0.3406327564387442,
+      "settled_pwm_saturation_fraction": 0.0,
+      "rc_delay_p95_ms": 2.367364883426859,
+      "final_release_s": 66.43121385574341,
+      "first_counter_torque_after_release_s": 0.07753614425659805,
+      "reverse_rotation_peak_next7s_deg_s": 20.249819316106223,
+      "profile_sha256": "f314145bf938c98c6718eee52a751688d21f2118a9ed35bd7edddca92688e9f1",
+      "origin_sim_time": 6.25125
+    },
+    "GUI timing": {
+      "yaw_error_at_final_release_deg": 20.609854306245666,
+      "yaw_rebound_next7s_deg": 8.897967972051106,
+      "real_yaw_rebound_next7s_deg": 7.31248838300138,
+      "real_reverse_rotation_peak_next7s_deg_s": 8.859104546927854,
+      "yaw_rmse_deg": 16.154580752236015,
+      "yaw_final_deg": -349.34265026256486,
+      "error_at_30_40_50_60_75_100_s_deg": [
+        2.209850112031363,
+        18.337598057856212,
+        22.20081476036362,
+        20.3947779604148,
+        15.52692702411594,
+        16.206228196177143
+      ],
+      "settled_75_105_yaw_rate_rms_deg_s": 0.1877605601357176,
+      "settled_75_105_yaw_rate_peak_deg_s": 0.34323398139089134,
+      "settled_pwm_saturation_fraction": 0.0,
+      "rc_delay_p95_ms": 2.367364883420109,
+      "final_release_s": 66.43121385574341,
+      "first_counter_torque_after_release_s": 0.07003614425659066,
+      "reverse_rotation_peak_next7s_deg_s": 20.279406971238338,
+      "profile_sha256": "f314145bf938c98c6718eee52a751688d21f2118a9ed35bd7edddca92688e9f1",
+      "origin_sim_time": 6.22875
+    },
+    "80 Hz repeat": {
+      "yaw_error_at_final_release_deg": 20.604871621964776,
+      "yaw_rebound_next7s_deg": 8.830448867613484,
+      "real_yaw_rebound_next7s_deg": 7.31248838300138,
+      "real_reverse_rotation_peak_next7s_deg_s": 8.859104546927854,
+      "yaw_rmse_deg": 16.093195436904786,
+      "yaw_final_deg": -349.6504458478492,
+      "error_at_30_40_50_60_75_100_s_deg": [
+        1.9732675207114547,
+        18.348583208012833,
+        22.217463303676,
+        20.39144304472023,
+        15.413537167137017,
+        15.974904824024458
+      ],
+      "settled_75_105_yaw_rate_rms_deg_s": 0.19237394009685832,
+      "settled_75_105_yaw_rate_peak_deg_s": 0.33594474184742823,
+      "settled_pwm_saturation_fraction": 0.0,
+      "rc_delay_p95_ms": 2.367364883426859,
+      "final_release_s": 66.43121385574341,
+      "first_counter_torque_after_release_s": 0.06753614425659293,
+      "reverse_rotation_peak_next7s_deg_s": 20.245488786499063,
+      "profile_sha256": "f314145bf938c98c6718eee52a751688d21f2118a9ed35bd7edddca92688e9f1",
+      "origin_sim_time": 6.25125
+    },
+    "Clock rounded, 80 Hz": {
+      "yaw_error_at_final_release_deg": 3.1228637195713986,
+      "yaw_rebound_next7s_deg": 8.732661976744168,
+      "real_yaw_rebound_next7s_deg": 7.31248838300138,
+      "real_reverse_rotation_peak_next7s_deg_s": 8.859104546927854,
+      "yaw_rmse_deg": 2.5063586558630107,
+      "yaw_final_deg": -367.38778999939,
+      "error_at_30_40_50_60_75_100_s_deg": [
+        1.858429205730109,
+        0.609052014734349,
+        4.391242893516347,
+        2.9437278932282216,
+        -2.3688354763385404,
+        -1.5054643286484197
+      ],
+      "settled_75_105_yaw_rate_rms_deg_s": 0.18811104111377333,
+      "settled_75_105_yaw_rate_peak_deg_s": 0.3226017098817463,
+      "settled_pwm_saturation_fraction": 0.0,
+      "rc_delay_p95_ms": 2.367364883426859,
+      "final_release_s": 66.43121385574341,
+      "first_counter_torque_after_release_s": 0.06503614425659521,
+      "reverse_rotation_peak_next7s_deg_s": 20.27480474504473,
+      "profile_sha256": "f314145bf938c98c6718eee52a751688d21f2118a9ed35bd7edddca92688e9f1",
+      "origin_sim_time": 6.25375
+    }
+  },
+  "real": {
+    "yaw_final_deg": -364.27488014462017,
+    "settled_yaw_rate_rms_deg_s": 0.22382533791099146
+  }
+}

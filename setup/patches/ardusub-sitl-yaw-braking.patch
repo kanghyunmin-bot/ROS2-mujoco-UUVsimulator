@@ -1,0 +1,113 @@
+diff --git a/ArduSub/Sub.h b/ArduSub/Sub.h
+index feacce65f0..0a217b5c61 100644
+--- a/ArduSub/Sub.h
++++ b/ArduSub/Sub.h
+@@ -393,6 +393,12 @@ private:
+     int32_t last_roll;
+     int32_t last_pitch;
+     uint32_t last_pilot_yaw_input_ms;
++#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
++    void reset_sitl_yaw_braking();
++    bool sitl_yaw_braking_enabled = false;
++    bool sitl_yaw_braking = false;
++    bool sitl_yaw_release_started = false;
++#endif
+     uint32_t fs_terrain_recover_start_ms;
+ 
+     static const AP_Scheduler::Task scheduler_tasks[];
+diff --git a/ArduSub/control_althold.cpp b/ArduSub/control_althold.cpp
+index 4e0edf68f4..968255ad70 100644
+--- a/ArduSub/control_althold.cpp
++++ b/ArduSub/control_althold.cpp
+@@ -29,6 +29,9 @@ bool Sub::althold_init()
+         last_pitch = 0;
+     }
+     last_pilot_heading = ahrs.yaw_sensor;
++#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
++    reset_sitl_yaw_braking();
++#endif
+     last_input_ms = AP_HAL::millis();
+ 
+     return true;
+diff --git a/ArduSub/control_stabilize.cpp b/ArduSub/control_stabilize.cpp
+index af5e2a3e8b..02eb58d033 100644
+--- a/ArduSub/control_stabilize.cpp
++++ b/ArduSub/control_stabilize.cpp
+@@ -1,4 +1,18 @@
+ #include "Sub.h"
++#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
++#include <cstdlib>
++#include <cstring>
++#endif
++
++#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
++void Sub::reset_sitl_yaw_braking()
++{
++    const char *yaw_brake = std::getenv("UUV_SITL_YAW_BRAKE");
++    sitl_yaw_braking_enabled = yaw_brake != nullptr && std::strcmp(yaw_brake, "1") == 0;
++    sitl_yaw_braking = false;
++    sitl_yaw_release_started = false;
++}
++#endif
+ 
+ // stabilize_init - initialise stabilize controller
+ bool Sub::stabilize_init()
+@@ -10,6 +24,9 @@ bool Sub::stabilize_init()
+         last_pitch = 0;
+     }
+     last_pilot_heading = ahrs.yaw_sensor;
++#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
++    reset_sitl_yaw_braking();
++#endif
+     return true;
+ }
+ 
+@@ -25,6 +42,10 @@ void Sub::stabilize_run()
+         last_pilot_heading = ahrs.yaw_sensor;
+         last_roll = 0;
+         last_pitch = 0;
++#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
++        sitl_yaw_braking = false;
++        sitl_yaw_release_started = false;
++#endif
+         return;
+     }
+ 
+@@ -78,6 +99,10 @@ void Sub::handle_attitude()
+             { // call attitude controller with rate yaw determined by pilot input
+                 attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(last_roll, last_pitch, desired_yaw_rate);
+                 last_pilot_heading = ahrs.yaw_sensor;
++#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
++                sitl_yaw_braking = sitl_yaw_braking_enabled;
++                sitl_yaw_release_started = false;
++#endif
+                 last_pilot_yaw_input_ms = tnow; // time when pilot last changed heading
+             }
+             else
+@@ -85,7 +110,26 @@ void Sub::handle_attitude()
+ 
+                 // this check is required to prevent bounce back after very fast yaw maneuvers
+                 // the inertia of the vehicle causes the heading to move slightly past the point when pilot input actually stopped
++#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
++                // Capture a heading only after braking, not while still rotating.
++                // Keep roll/pitch stabilization and the measured yaw-rate feedback.
++                if (sitl_yaw_braking) {
++                    if (!sitl_yaw_release_started) {
++                        attitude_control.get_rate_yaw_pid().reset_I();
++                        sitl_yaw_release_started = true;
++                    }
++                    attitude_control.reset_yaw_target_and_rate(true);
++                    last_pilot_heading = ahrs.yaw_sensor;
++                    if (tnow - last_pilot_yaw_input_ms >= 250 &&
++                        fabsf(ahrs.get_gyro().z) < radians(0.2f)) {
++                        sitl_yaw_braking = false;
++                        attitude_control.get_rate_yaw_pid().reset_I();
++                    }
++                }
++                if (sitl_yaw_braking || tnow - last_pilot_yaw_input_ms < 250)
++#else
+                 if (tnow < last_pilot_yaw_input_ms + 250)
++#endif
+                 {                         // give 250ms to slow down, then set target heading
+                     desired_yaw_rate = 0; // Stop rotation on yaw axis
+ 

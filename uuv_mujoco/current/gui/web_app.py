@@ -45,6 +45,8 @@ from .web_process_manager import WebProcessManager
 from .web_rc_replay import WebRcReplayManager
 from .web_tool_files import WebToolFileManager
 from .web_recorder import WebRecorder
+from .web_auto_collection import WebAutoCollection
+from .vla_control_handoff import prepare_vla_control, restore_manual_control
 from .sim_launch_preset import default_sim_launch_preset_id, sim_launch_preset_ids
 
 
@@ -61,6 +63,7 @@ class WebGuiController:
         self._stop = threading.Event()
         self._spin_thread: threading.Thread | None = None
         self._control_lock = threading.Lock()
+        self._vla_control_prepared = False
         self._control_enabled = False
         self._axes = {"forward": 0.0, "lateral": 0.0, "heave": 0.0, "yaw": 0.0}
         self._pilot_release_requested = False
@@ -108,6 +111,7 @@ class WebGuiController:
         self.replay = WebRcReplayManager(node, self.release_rc)
         self.tools = WebToolFileManager(node)
         self.recorder = WebRecorder(node, self.processes)
+        self.auto_collection = WebAutoCollection(self)
 
     def start(self) -> None:
         self._spin_thread = threading.Thread(target=self._spin_loop, name="uuv-web-rclpy", daemon=True)
@@ -142,6 +146,10 @@ class WebGuiController:
         pinger_active = bool(
             self._pinger_was_running or self.processes.pinger_homing_running()
         )
+        if getattr(self, "auto_collection", None) is not None and self.auto_collection.running():
+            self.auto_collection.stop()
+            self.release_rc()
+            self.enqueue_arm_command(False, label="auto_collection_shutdown")
         self.replay.stop()
         self.recorder.shutdown()
         # Stop the exclusive pinger RC source first, but keep MAVROS and the
@@ -216,6 +224,10 @@ class WebGuiController:
     ) -> bool:
         now = time.monotonic()
         requested_enabled = bool(enabled)
+        if requested_enabled and getattr(getattr(self, "recorder", None), "resetting", False):
+            return False
+        if requested_enabled and getattr(self, "_vla_control_prepared", False):
+            return False
         owner = str(client_id or "legacy").strip()[:96] or "legacy"
         clean_axes = {
             "forward": clamp_axis(_float_value(axes.get("forward", 0.0))),
@@ -358,6 +370,7 @@ class WebGuiController:
             rc_receive_age_s = time.monotonic() - self._last_rc_receive_wall
             control = {
                 "enabled": self._control_enabled,
+                "vla_prepared": getattr(self, "_vla_control_prepared", False),
                 "axes": dict(self._axes),
                 "pilot_control_mode": GUI_PILOT_CONTROL_MODE,
                 "owner": self._control_owner if time.monotonic() <= self._control_owner_until_wall else "",
@@ -374,7 +387,7 @@ class WebGuiController:
         tool_payload.update(self.tools.status_payload())
         return {
             "telemetry": _telemetry_payload(snap),
-            "recorder": self.recorder.payload(),
+            "recorder": {**self.recorder.payload(), "auto_collection": self.auto_collection.payload()},
             "backend": {
                 "label": self.node.backend_label(),
                 "mapping": self.node.rc_mapping_summary(),
@@ -395,8 +408,12 @@ class WebGuiController:
             },
         }
 
-    def start_sim_stack(self, preset_id: str | None = None) -> dict[str, Any]:
-        return self.processes.start_sim_stack(preset_id=preset_id)
+    def start_sim_stack(
+        self, preset_id: str | None = None, *, sensor_error_mode: str | None = None
+    ) -> dict[str, Any]:
+        return self.processes.start_sim_stack(
+            preset_id=preset_id, sensor_error_mode=sensor_error_mode
+        )
 
     def stop_sim_stack(self) -> dict[str, Any]:
         return self.processes.stop_sim_stack()
@@ -450,6 +467,8 @@ class WebGuiController:
         return self.processes.stop_ping360_view()
 
     def start_pinger_homing(self, values: dict[str, Any]) -> dict[str, Any]:
+        if getattr(self, "_vla_control_prepared", False):
+            raise ValueError("수동 제어로 복귀한 뒤 다른 자율제어를 시작하세요.")
         with self._pinger_rc_handoff_lock:
             # Treat repeated browser clicks and retried HTTP requests as one
             # session.  In particular, do not overwrite the camera/vision
@@ -759,6 +778,8 @@ class WebGuiController:
         self.node.push_event(str(result.get("status", "vision preview restored")))
 
     def start_ground_truth_mission(self, values: dict[str, Any]) -> dict[str, Any]:
+        if getattr(self, "_vla_control_prepared", False):
+            raise ValueError("VLA 제어권을 반환한 뒤 실행하세요.")
         self.release_rc()
         self.node.push_event("web pilot control released for mission")
         self.node.probe_backend()
@@ -773,6 +794,8 @@ class WebGuiController:
         return self.replay.load(path=path, rate=rate)
 
     def start_rc_replay(self, path: str | None = None, rate: str | None = None) -> dict[str, Any]:
+        if getattr(self, "_vla_control_prepared", False):
+            raise ValueError("VLA 제어권을 반환한 뒤 실행하세요.")
         return self.replay.start(path=path, rate=rate)
 
     def toggle_rc_replay_pause(self) -> dict[str, Any]:
@@ -926,11 +949,15 @@ class WebGuiController:
                 self.node.push_event(f"web command failed: {exc}")
 
     def _publish_current_rc(self) -> None:
+        if getattr(getattr(self, "recorder", None), "resetting", False):
+            with self._control_lock:
+                self._rc_publish_queued = False
+            return
         with self._control_lock:
             enabled = self._control_enabled
             axes = dict(self._axes)
             self._rc_publish_queued = False
-        if not enabled or self.processes.mission_running() or self.processes.pinger_homing_running():
+        if getattr(self, "_vla_control_prepared", False) or not enabled or self.processes.mission_running() or self.processes.pinger_homing_running():
             return
         rc_forward, rc_lateral, rc_heave, rc_yaw = gui_rc_to_override_axes(
             forward=axes["forward"],
@@ -1027,11 +1054,15 @@ class UuvWebHandler(BaseHTTPRequestHandler):
     def _handle_command(self, payload: dict[str, Any]) -> dict[str, Any]:
         recorder = getattr(self.controller, "recorder", None)
         command = str(payload.get("command", "")).strip().lower()
+        automatic = getattr(self.controller, "auto_collection", None)
+        if automatic is not None:
+            automatic.authorize(payload)
         # Prepare fixes provenance for the whole session. Serialize preparation
         # and configuration changes across the threaded HTTP request handlers.
         configuration_commands = {
             "camera_config", "stack_start", "stack_stop", "stack_reset", "physics_apply",
             "course_save", "tool_save", "pinger_homing_start", "ping360_enabled", "ping360_config",
+            "vla_prepare_control", "vla_restore_manual", "auto_collection_start",
         }
         if command in configuration_commands or command in {"recorder_prepare", "recorder_action"}:
             with recorder.lock if recorder is not None else nullcontext():
@@ -1056,9 +1087,21 @@ class UuvWebHandler(BaseHTTPRequestHandler):
 
     def _dispatch_command(self, payload: dict[str, Any]) -> dict[str, Any]:
         command = str(payload.get("command", "rc" if self.path.startswith("/api/rc") else "")).strip().lower()
+        if command == "auto_collection_start":
+            return self.controller.auto_collection.start(payload.get("episodes", 3))
+        if command == "auto_collection_stop":
+            return self.controller.auto_collection.stop()
+        if command == "vla_prepare_control":
+            return prepare_vla_control(self.controller)
+        if command == "vla_restore_manual":
+            return restore_manual_control(self.controller)
         if command == "recorder_prepare":
+            if getattr(self.controller, "_vla_control_prepared", False):
+                raise ValueError("수동 제어로 복귀한 뒤 시연 레코더를 준비하세요.")
             return self.controller.recorder.prepare(payload.get("task", ""), payload.get("mode", "STABILIZE"))
         if command == "recorder_action":
+            if payload.get("action") == "reset":
+                return self.controller.recorder.reset_scene(self.controller.release_rc)
             return self.controller.recorder.command(payload.get("action", ""))
         if command == "arm":
             value = bool(payload.get("value", True))
@@ -1133,7 +1176,10 @@ class UuvWebHandler(BaseHTTPRequestHandler):
             preset_id = str(payload.get("sim_preset", "")).strip() or None
             return {
                 "command": "stack_start",
-                **self.controller.start_sim_stack(preset_id=preset_id),
+                **self.controller.start_sim_stack(
+                    preset_id=preset_id,
+                    sensor_error_mode=payload.get("sensor_error_mode"),
+                ),
             }
         if command == "stack_stop":
             return {"command": "stack_stop", **self.controller.stop_sim_stack()}
@@ -1373,6 +1419,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"web-gui already running. Open {url} in your browser.", flush=True)
             return 0
         raise
+    controller.auto_collection.gui_url = f"http://127.0.0.1:{httpd.server_port}"
     controller.start()
 
     print(f"[web-gui] serving {url}", flush=True)

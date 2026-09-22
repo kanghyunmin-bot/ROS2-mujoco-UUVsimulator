@@ -3,6 +3,7 @@
 .uuv_sim_current_version
 .env
 .venv/
+.venv-*/
 venv/
 .vscode/
 .idea/
@@ -37,6 +38,7 @@ CMakeCache.txt
 # Runtime output and mutable simulator state
 /logs/
 /outputs/
+/output/
 /test_artifacts/
 /MUJOCO_LOG.TXT
 /uuv_mujoco/current/logs/
@@ -74,3 +76,4 @@ CMakeCache.txt
 
 # Locally regenerated audit reports
 /uuv_mujoco/current/research_workspace/00_current_contract/fast_contract_sanity/
+/.venv-mjviser/

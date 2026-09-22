@@ -1,0 +1,24 @@
+VLA GUI 모델 실행 패널 (2026-09-20)
+레포: ROS2-mujoco-UUVsimulator
+
+추가: tools/vla_gui/server.py, warmup.py, index.html, test_server.py, README.md
+추가: tools/start_vla_gui.sh
+변경: docker/ubuntu-dev/dev.sh (web 시작 시 호스트 관리 서버 시작)
+변경: docker/ubuntu-dev/Dockerfile (ROS 정책 필수 패키지 설치)
+변경: uuv_mujoco/current/gui/web_static/index.html (카메라 옆 접이식 패널)
+
+모델 9개 선택, 실제 준비 모델 표시, 패키지 검사, 기존 동일 레포 서버 정리,
+HTTP 서버 로딩/예열/행동 형식 검증, 준비 모델과 선택 모델 일치 검사.
+실행 시 시뮬 프로세스 확인 -> STABILIZE/ARM -> RC handoff -> 정책 -> bounded rollout.
+종료/중지 시 정책 종료, DISARM 응답 확인, 수동 제어 복귀.
+결과 및 오류/모델/정책 로그: outputs/vla-gui/
+정확한 저장소 mount 및 host network를 가진 개발 컨테이너를 자동 탐색.
+기존 8000 포트의 무관한 프로세스는 종료하지 않음.
+
+검증: 단위 검사 5개 통과; Python 문법, shell 문법, diff 공백 검사 통과.
+브라우저 카메라와 패널 동시 표시 확인.
+강한 강조 4만 모델 준비/예열 61ms 확인.
+5초 실행: RC 48개, 비중립 48개, 수평 0.095848m, time_limit, 분리 미확인.
+종료 후 armed=false / vla_prepared=false 확인.
+중지 경로도 DISARM/수동 복귀 확인.
+실제 부표 분리 성공률을 확인한 테스트가 아님.

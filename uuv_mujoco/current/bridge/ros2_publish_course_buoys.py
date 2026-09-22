@@ -161,8 +161,95 @@ def _course_buoy_row(bridge: Any, model: Any, data: Any, body_id: int) -> dict[s
             probe_release_margin_m is not None and probe_release_margin_m <= probe_clearance_m
         ),
     }
+    # Privileged reward telemetry only; never part of the VLA observation.
+    runtime = getattr(bridge, '_course_buoy_runtime', None)
+    if runtime is not None and os.environ.get('UUV_RL_REWARD_TELEMETRY') == '1':
+        row['rl_right_fork_stem_contact_active'] = bool(body_id in runtime._right_fork_stem_contacts)
+        root_id = runtime.vehicle_root_body_id
+        fork_local = np.array([0.3355119380367045, -0.09192734377108369, -0.10434422587321063])
+        fork = data.xpos[root_id] + data.xmat[root_id].reshape(3, 3) @ fork_local
+        stem_id = mujoco.mj_name2id(model, obj_geom, prefix + '_pvc_pipe')
+        if stem_id >= 0:
+            stem = data.geom_xpos[stem_id]
+            row['rl_height_error_m'] = float(fork[2] - stem[2])
+            row['rl_fork_stem_distance_m'] = float(np.linalg.norm(fork - stem))
+            # Closest point on the rod centerline, expressed in the robot-fixed
+            # slot frame. Unlike center distance, this respects rod length.
+            rotation = data.xmat[root_id].reshape(3, 3)
+            axis = data.geom_xmat[stem_id].reshape(3, 3)[:, 2]
+            half_length = float(model.geom_size[stem_id, 1])
+            along = float(np.clip(np.dot(fork-stem, axis), -half_length, half_length))
+            closest = stem + along*axis
+            row['rl_slot_offset_m'] = (rotation.T @ (closest-fork)).tolist()
+        # Several body-local samples allow a partial buoy/rod view. No image
+        # area threshold; ray occlusion still excludes points behind obstacles.
+        points = [data.xpos[body_id].copy()]
+        target_geoms = np.flatnonzero(model.geom_bodyid == body_id)
+        for gid in target_geoms:
+            name = mujoco.mj_id2name(model, obj_geom, int(gid)) or ''
+            if 'float' not in name and not name.endswith('_pvc_pipe'):
+                continue
+            center = data.geom_xpos[gid]
+            axes = data.geom_xmat[gid].reshape(3, 3)
+            points.append(center.copy())
+            if name.endswith('_pvc_pipe'):
+                for amount in (-.9, -.45, .45, .9):
+                    points.append(center + axes[:,2]*float(model.geom_size[gid,1])*amount)
+            else:
+                for j in range(3):
+                    for sign in (-1,1):
+                        points.append(center+sign*.8*float(model.geom_size[gid,j])*axes[:,j])
+        aspect = float(getattr(bridge, "_stereo_image_width",640))/float(getattr(bridge,"_stereo_image_height",360))
+        visible = False
+        hand_visible = False
+        for camera_name in ('stereo_left', 'stereo_right'):
+            camera_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_CAMERA, camera_name)
+            if camera_id < 0:
+                continue
+            camera_visible = camera_points_visible(model, data, camera_id, body_id, points, aspect)
+            visible |= camera_visible
+            if camera_name == 'stereo_right':
+                hand_visible = camera_visible
+        row['rl_hand_target_line_of_sight'] = hand_visible
+        row['rl_target_line_of_sight'] = visible
     row.update(_runtime_buoy_row(bridge, prefix, body_name))
     return row
+
+
+def camera_points_visible(model, data, camera_id, body_id, points, aspect):
+    """Match camera render groups while testing sampled visible target points."""
+    render_groups = np.array([1,1,1,0,0,0], dtype=np.uint8)
+    window_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, 'front_optical_window')
+    # This named mesh is the camera's transmissive cover, not a task obstacle.
+    # Do not exclude the entire vehicle body: its fork and housing occlude.
+    window_alpha = float(model.geom_rgba[window_id,3]) if window_id >= 0 else 1.
+    if window_id >= 0 and model.geom_matid[window_id] >= 0:
+        window_alpha = float(model.mat_rgba[model.geom_matid[window_id],3])
+    slope = math.tan(math.radians(float(model.cam_fovy[camera_id])) / 2)
+    for point in points:
+        delta = point-data.cam_xpos[camera_id]
+        local = data.cam_xmat[camera_id].reshape(3,3).T @ delta
+        if local[2] >= 0 or abs(local[1]) > -local[2]*slope or abs(local[0]) > -local[2]*slope*aspect:
+            continue
+        length = float(np.linalg.norm(delta))
+        if length <= 0:
+            continue
+        hit = np.array([-1], dtype=np.int32)
+        direction = delta/length
+        origin = data.cam_xpos[camera_id].copy()
+        travelled = 0.
+        for _ in range(8):
+            distance = mujoco.mj_ray(model,data,origin,direction,render_groups,1,-1,hit)
+            if hit[0] < 0 or travelled + distance > length + 1e-5:
+                break
+            if int(model.geom_bodyid[hit[0]]) == body_id:
+                return True
+            if hit[0] != window_id or window_alpha >= .1:
+                break
+            # Advance through the thin cover's entry and exit surfaces only.
+            travelled += distance + 1e-6
+            origin += (distance + 1e-6)*direction
+    return False
 
 
 def _runtime_buoy_row(bridge: Any, prefix: str, body_name: str) -> dict[str, object]:
@@ -199,6 +286,13 @@ def _runtime_buoy_row(bridge: Any, prefix: str, body_name: str) -> dict[str, obj
         "net_score_released": bool(row.get("net_score_released", False)),
         "net_score_release_time_s": float(row.get("net_score_release_time_s", -1.0)),
         "release_time_s": float(row.get("release_time_s", -1.0)),
+        "release_reason": str(row.get("release_reason", "")),
+        "release_force_n": float(row.get("release_force_n", 0.0)),
+        "release_rake_contact": bool(row.get("release_rake_contact", False)),
+        "release_hand_contact": bool(row.get("release_hand_contact", False)),
+        "release_right_fork_stem_contact": bool(row.get("release_right_fork_stem_contact", False)),
+        "release_right_fork_region": bool(row.get("release_right_fork_region", False)),
+        "hand_contact_active": bool(row.get("hand_contact_active", False)),
     }
 
 

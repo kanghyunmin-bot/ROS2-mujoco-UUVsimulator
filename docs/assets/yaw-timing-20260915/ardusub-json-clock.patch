@@ -1,0 +1,11 @@
+--- a/libraries/SITL/SIM_JSON.cpp
++++ b/libraries/SITL/SIM_JSON.cpp
+@@ -338,7 +338,7 @@
+     } else {
+         deltat = state.timestamp_s - last_timestamp_s;
+     }
+-    time_now_us += deltat * 1.0e6;
++    time_now_us += uint64_t(llround(deltat * 1.0e6));
+ 
+     if (is_positive(deltat) && deltat < 0.1) {
+         // time in us to hz

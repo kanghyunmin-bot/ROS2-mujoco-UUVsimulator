@@ -19,11 +19,12 @@ from .config_paths import (
 COURSE_CURRENT_PRESET_ID = "course_current"
 COURSE_REAL2SIM_PRESET_ID = "course_real2sim_bag0402"
 COURSE_REAL2SIM_YAW_PRESET_ID = "course_real2sim_bag0402_yaw"
+RESEARCH_POOL_YAW_STABLE_PRESET_ID = "research_pool_yaw_stable"
 RESEARCH_POOL_CURRENT_PRESET_ID = "research_pool_current"
 RESEARCH_POOL_DISTRIBUTED_PRESET_ID = "research_pool_distributed"
 RESEARCH_POOL_DISTRIBUTED_HYBRID_PRESET_ID = "research_pool_distributed_hybrid"
 RESEARCH_POOL_DISTRIBUTED_WAVES_PRESET_ID = "research_pool_distributed_waves"
-DEFAULT_SIM_LAUNCH_PRESET_ID = RESEARCH_POOL_DISTRIBUTED_PRESET_ID
+DEFAULT_SIM_LAUNCH_PRESET_ID = RESEARCH_POOL_YAW_STABLE_PRESET_ID
 
 
 @dataclass(frozen=True)
@@ -42,6 +43,17 @@ class SimLaunchPreset:
 
 
 SIM_LAUNCH_PRESETS = (
+    SimLaunchPreset(
+        preset_id=RESEARCH_POOL_YAW_STABLE_PRESET_ID,
+        label="Research pool · yaw 안정화 · 수집용",
+        description="중립 회전과 입력 해제 후 되돌림을 줄인 시뮬 수집 환경. 기존 데이터와 별도 저장됩니다. 실측 실기체 보정값은 아닙니다.",
+        scene_path=RESEARCH_POOL_SCENE_PATH,
+        profile="bag0402_yaw_stable",
+        fluid_model="distributed",
+        viewer_camera_mode="follow",
+        profile_path=SIM_STACK_DIR / "config" / "sim_profiles_yaw_stable.json",
+    ),
+
     SimLaunchPreset(
         preset_id=COURSE_REAL2SIM_PRESET_ID,
         label="Course / test tank · April Real2Sim",
@@ -85,7 +97,7 @@ SIM_LAUNCH_PRESETS = (
     SimLaunchPreset(
         preset_id=RESEARCH_POOL_CURRENT_PRESET_ID,
         label="Research pool · ellipsoid baseline",
-        description="10 × 5 × 5 m tiled pool with three submerged buoys; whole-body ellipsoid fluid model.",
+        description="10 × 5 × 5 m tiled pool with one submerged yellow buoy; whole-body ellipsoid fluid model.",
         scene_path=RESEARCH_POOL_SCENE_PATH,
         profile="research_pool",
         fluid_model="current",
@@ -267,10 +279,16 @@ def sim_launch_preset_environment(preset: SimLaunchPreset) -> dict[str, str]:
     """
     enabled = preset.preset_id in {
         COURSE_REAL2SIM_PRESET_ID,
+        RESEARCH_POOL_YAW_STABLE_PRESET_ID,
         COURSE_REAL2SIM_YAW_PRESET_ID,
         RESEARCH_POOL_DISTRIBUTED_PRESET_ID,
     }
-    return {"SITL_REAL2SIM_BAG0402": "1" if enabled else "0"}
+    stable = preset.preset_id == RESEARCH_POOL_YAW_STABLE_PRESET_ID
+    return {
+        "SITL_REAL2SIM_BAG0402": "1" if enabled else "0",
+        "SITL_YAW_STABLE": "1" if stable else "0",
+        "UUV_SITL_YAW_BRAKE": "1" if stable else "0",
+    }
 
 
 def merge_sim_launch_preset_args(

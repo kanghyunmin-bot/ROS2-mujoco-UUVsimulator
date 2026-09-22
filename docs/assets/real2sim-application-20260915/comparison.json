@@ -1,0 +1,204 @@
+{
+  "method": "Closed-loop RC override replay; receipt-time alignment, initial pose only, no fitted phase/time warp/scale. Real FCU position is an estimate, not external ground truth. Depth compares relative z and does not certify absolute depth.",
+  "mujoco_evaluator_version": "3.8.0",
+  "bags": {
+    "primary": {
+      "source_zip_sha256": "195aca87161fb180bc7c7ee0574523f7840399e439f7b1d245313d8d2faf2d52",
+      "evaluation_s": [
+        20.0,
+        70.0
+      ],
+      "valid_dvl_grid_count": 477,
+      "grid_count": 500,
+      "cases": {
+        "nominal": {
+          "complete": true,
+          "surge_rmse_mps": 0.5054171756830651,
+          "xy_rmse_vs_fcu_estimate_m": 5.338010639948589,
+          "yaw_change_rmse_deg": 7.4538403530290855,
+          "relative_depth_rmse_m": 0.028890166294091267,
+          "roll_pitch_rmse_deg": [
+            0.6208958241152311,
+            1.0797719313499963
+          ],
+          "surge_first_half_rmse_mps": 0.43172138643198343,
+          "surge_second_half_rmse_mps": 0.572512166038679,
+          "yaw_at_end_deg": -375.85424023685744,
+          "real_yaw_at_end_deg": -360.69849812319694,
+          "rc_published_count": 2379,
+          "rc_delay_p50_p95_max_s": [
+            0.0012352848052934462,
+            0.0023714189529385975,
+            0.0024988079071022185
+          ],
+          "all_expected_rc_published_once": true,
+          "clearance": {
+            "sampled_poses": 2857,
+            "environment_contacts": {},
+            "conservative_horizontal_margin_m": 2.720154625291937,
+            "pass": true,
+            "note": "Checks stored poses; not a continuous contact log."
+          },
+          "controller_readback": {
+            "ATC_RAT_PIT_D": 0.008999999612569809,
+            "ATC_RAT_RLL_D": 0.008999999612569809,
+            "PSC_ACCZ_P": 0.5,
+            "MOT_PWM_MIN": 1100.0,
+            "MOT_PWM_MAX": 1900.0,
+            "FRAME_CONFIG": 2.0,
+            "RC3_TRIM": 1100.0,
+            "JS_GAIN_DEFAULT": 0.10000000149011612
+          },
+          "profile_sha256": "6f4f7516bd6df1bc4be0d50bc3b300cd440a1fa3f489d3b62ea488e9630db3b4",
+          "nominal_voltage_min_max_v": [
+            20.0,
+            20.0
+          ]
+        },
+        "effective": {
+          "complete": true,
+          "surge_rmse_mps": 0.04515182993621234,
+          "xy_rmse_vs_fcu_estimate_m": 0.5497201857316524,
+          "yaw_change_rmse_deg": 4.068909818344189,
+          "relative_depth_rmse_m": 0.030187832879055247,
+          "roll_pitch_rmse_deg": [
+            0.5064087178494687,
+            1.7833814689117844
+          ],
+          "surge_first_half_rmse_mps": 0.03471493569308151,
+          "surge_second_half_rmse_mps": 0.0539592568295482,
+          "yaw_at_end_deg": -363.3579765673524,
+          "real_yaw_at_end_deg": -360.69849812319694,
+          "rc_published_count": 2379,
+          "rc_delay_p50_p95_max_s": [
+            0.001235284805296999,
+            0.0023714189529385975,
+            0.0024988079071022185
+          ],
+          "all_expected_rc_published_once": true,
+          "clearance": {
+            "sampled_poses": 2857,
+            "environment_contacts": {},
+            "conservative_horizontal_margin_m": 10.895377653959832,
+            "pass": true,
+            "note": "Checks stored poses; not a continuous contact log."
+          },
+          "controller_readback": {
+            "ATC_RAT_PIT_D": 0.008999999612569809,
+            "ATC_RAT_RLL_D": 0.008999999612569809,
+            "PSC_ACCZ_P": 0.5,
+            "MOT_PWM_MIN": 1100.0,
+            "MOT_PWM_MAX": 1900.0,
+            "FRAME_CONFIG": 2.0,
+            "RC3_TRIM": 1100.0,
+            "JS_GAIN_DEFAULT": 0.10000000149011612
+          },
+          "profile_sha256": "f314145bf938c98c6718eee52a751688d21f2118a9ed35bd7edddca92688e9f1",
+          "nominal_voltage_min_max_v": [
+            20.0,
+            20.0
+          ]
+        }
+      }
+    },
+    "auxiliary": {
+      "source_zip_sha256": "b1d81544db4c530161516fe1ed88c77f2bdffb5d822cbcfe5aeb81974a2bc6d5",
+      "evaluation_s": [
+        12.0,
+        110.0
+      ],
+      "valid_dvl_grid_count": 961,
+      "grid_count": 980,
+      "cases": {
+        "nominal": {
+          "complete": true,
+          "surge_rmse_mps": 0.3025029965299952,
+          "xy_rmse_vs_fcu_estimate_m": 4.571303662867756,
+          "yaw_change_rmse_deg": 10.252128832207584,
+          "relative_depth_rmse_m": 0.07441821359347522,
+          "roll_pitch_rmse_deg": [
+            0.5118623556486536,
+            0.6137635522590419
+          ],
+          "surge_first_half_rmse_mps": 0.41424799545594904,
+          "surge_second_half_rmse_mps": 0.11641623290967043,
+          "yaw_at_end_deg": -378.65239914234894,
+          "real_yaw_at_end_deg": -364.27488014462017,
+          "rc_published_count": 3175,
+          "rc_delay_p50_p95_max_s": [
+            0.0012389373779306823,
+            0.002367364883417622,
+            0.0024986839294385277
+          ],
+          "all_expected_rc_published_once": true,
+          "clearance": {
+            "sampled_poses": 5600,
+            "environment_contacts": {},
+            "conservative_horizontal_margin_m": 3.3723968855516824,
+            "pass": true,
+            "note": "Checks stored poses; not a continuous contact log."
+          },
+          "controller_readback": {
+            "ATC_RAT_PIT_D": 0.008999999612569809,
+            "ATC_RAT_RLL_D": 0.008999999612569809,
+            "PSC_ACCZ_P": 0.5,
+            "MOT_PWM_MIN": 1100.0,
+            "MOT_PWM_MAX": 1900.0,
+            "FRAME_CONFIG": 2.0,
+            "RC3_TRIM": 1100.0,
+            "JS_GAIN_DEFAULT": 0.10000000149011612
+          },
+          "profile_sha256": "6f4f7516bd6df1bc4be0d50bc3b300cd440a1fa3f489d3b62ea488e9630db3b4",
+          "nominal_voltage_min_max_v": [
+            20.0,
+            20.0
+          ]
+        },
+        "effective": {
+          "complete": true,
+          "surge_rmse_mps": 0.030791222897789863,
+          "xy_rmse_vs_fcu_estimate_m": 1.6583301121251708,
+          "yaw_change_rmse_deg": 16.160577764687336,
+          "relative_depth_rmse_m": 0.0669518833194708,
+          "roll_pitch_rmse_deg": [
+            0.4444864303875413,
+            1.1909119052478667
+          ],
+          "surge_first_half_rmse_mps": 0.032187128090686926,
+          "surge_second_half_rmse_mps": 0.029368934643749678,
+          "yaw_at_end_deg": -349.2945760562494,
+          "real_yaw_at_end_deg": -364.27488014462017,
+          "rc_published_count": 3175,
+          "rc_delay_p50_p95_max_s": [
+            0.0012389373779306823,
+            0.002367364883420109,
+            0.002498683929445633
+          ],
+          "all_expected_rc_published_once": true,
+          "clearance": {
+            "sampled_poses": 5600,
+            "environment_contacts": {},
+            "conservative_horizontal_margin_m": 10.51447255066322,
+            "pass": true,
+            "note": "Checks stored poses; not a continuous contact log."
+          },
+          "controller_readback": {
+            "ATC_RAT_PIT_D": 0.008999999612569809,
+            "ATC_RAT_RLL_D": 0.008999999612569809,
+            "PSC_ACCZ_P": 0.5,
+            "MOT_PWM_MIN": 1100.0,
+            "MOT_PWM_MAX": 1900.0,
+            "FRAME_CONFIG": 2.0,
+            "RC3_TRIM": 1100.0,
+            "JS_GAIN_DEFAULT": 0.10000000149011612
+          },
+          "profile_sha256": "f314145bf938c98c6718eee52a751688d21f2118a9ed35bd7edddca92688e9f1",
+          "nominal_voltage_min_max_v": [
+            20.0,
+            20.0
+          ]
+        }
+      }
+    }
+  }
+}

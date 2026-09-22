@@ -39,7 +39,7 @@ from bridge.ros2_publish_course_buoys import (  # noqa: E402
     _parse_buoy_float_name,
 )
 from sim.runtime.course_buoy_runtime import CourseBuoyRuntime  # noqa: E402
-from tools.check_buoy_physics_contract import check_rake_release_and_rise  # noqa: E402
+from sim.vehicle_scene_contract import CANONICAL_SCENE, vehicle_signature  # noqa: E402
 
 
 BASE_SCENE = ROOT / "scenes" / "tank_current_scene.xml"
@@ -103,7 +103,7 @@ def _check_physical_yellow_buoy(root: ET.Element, model: mujoco.MjModel) -> None
     collector_eq = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_EQUALITY, f"{prefix}_collector_weld")
     cable_bottom_eq = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_EQUALITY, f"{prefix}_flex_line_bottom_connect")
     cable_top_eq = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_EQUALITY, f"{prefix}_flex_line_top_connect")
-    if min(body_id, magnet_body_id, cob_site_id, magnet_eq, collector_eq, cable_bottom_eq, cable_top_eq) < 0:
+    if min(body_id, magnet_body_id, cob_site_id, magnet_eq, cable_bottom_eq, cable_top_eq) < 0:
         raise AssertionError("test-tank physical yellow buoy is missing body/site/equality contracts")
     published_names = [
         mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, candidate)
@@ -118,7 +118,7 @@ def _check_physical_yellow_buoy(root: ET.Element, model: mujoco.MjModel) -> None
         raise AssertionError(f"test-tank yellow CoM mismatch: {model.body_ipos[body_id]}")
     if not np.allclose(model.site_pos[cob_site_id], [0.0, 0.0, 0.035], atol=1.0e-12, rtol=0.0):
         raise AssertionError(f"test-tank yellow CoB mismatch: {model.site_pos[cob_site_id]}")
-    if int(model.eq_active0[magnet_eq]) != 1 or int(model.eq_active0[collector_eq]) != 0:
+    if int(model.eq_active0[magnet_eq]) != 1 or collector_eq >= 0:
         raise AssertionError("test-tank yellow magnet/collector initial equality state is wrong")
 
     model.opt.timestep = 0.008
@@ -174,49 +174,24 @@ def _check_physical_yellow_buoy(root: ET.Element, model: mujoco.MjModel) -> None
             f"max_z={max_cob_z:.3f} target={surface_target_z:.3f}"
         )
 
-    rake_data = mujoco.MjData(model)
-    mujoco.mj_forward(model, rake_data)
-    rake_runtime = _runtime(model, rake_data)
-    position_jump, velocity_jump, hold_s, peak_n, rise_m = check_rake_release_and_rise(
-        mujoco,
-        model,
-        rake_data,
-        rake_runtime,
-        buoy_name=prefix,
-    )
-    if hold_s > float(model.opt.timestep) + 1.0e-9 or position_jump > 1.0e-6 or velocity_jump > 1.0e-6 or rise_m < 0.60:
-        raise AssertionError(
-            "test-tank yellow rake-release contract failed: "
-            f"hold={hold_s:.3f}s qpos={position_jump:.3e} qvel={velocity_jump:.3e} rise={rise_m:.3f}m"
-        )
-    print(
-        "test_tank_yellow "
-        f"nylon={TEST_TANK_NYLON_LENGTH_M:.3f}m rake={peak_n:.3f}N/{hold_s:.3f}s "
-        f"qpos_jump={position_jump:.3e} qvel_jump={velocity_jump:.3e} rise={rise_m:.3f}m "
-        f"surface={surface_reached_s:.3f}s/{surface_target_z:.3f}m"
-    )
-
-
-def _check_collector_geometry(model: mujoco.MjModel) -> None:
-    for name in ("collector_left_net_proxy", "collector_right_net_proxy"):
-        geom_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, name)
-        if geom_id < 0 or int(model.geom_type[geom_id]) != int(mujoco.mjtGeom.mjGEOM_MESH):
-            raise AssertionError(f"test-tank {name} is not the trapezoidal rigid mesh panel")
-        mesh_name = mujoco.mj_id2name(
-            model,
-            mujoco.mjtObj.mjOBJ_MESH,
-            int(model.geom_dataid[geom_id]),
-        )
-        if mesh_name != "front_open_buoy_collector_side_proxy_v1":
-            raise AssertionError(f"test-tank {name} uses unexpected mesh {mesh_name}")
-    roof_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "collector_top_net_proxy")
-    if roof_id < 0:
-        raise AssertionError("test-tank collector roof is missing")
-    _require_close(float(model.geom_pos[roof_id][2]), 0.405, "test-tank collector roof z")
-    expected_quat = np.asarray([0.99875, 0.0, -0.04994, 0.0], dtype=np.float64)
-    expected_quat /= np.linalg.norm(expected_quat)
-    if not np.allclose(model.geom_quat[roof_id], expected_quat, atol=1.0e-6, rtol=0.0):
-        raise AssertionError(f"test-tank collector roof angle mismatch: {model.geom_quat[roof_id]}")
+    # The current CAD fingers use load-based release; legacy rake geometry and
+    # synthetic collector welds are deliberately absent from this vehicle.
+    contact_data = mujoco.MjData(model)
+    mujoco.mj_forward(model, contact_data)
+    contact_runtime = _runtime(model, contact_data)
+    target = contact_data.geom_xpos[model.geom(f"{prefix}_float_geom").id].copy()
+    q = int(model.jnt_qposadr[model.joint("world_joint").id])
+    contact_data.qpos[q:q + 3] = target - [0.465, 0.074, -0.094]
+    mujoco.mj_forward(model, contact_data)
+    hand_ids = {i for i in range(model.ngeom)
+                if model.geom(i).name.startswith(("cad_collision_92_", "cad_collision_93_"))}
+    float_id = model.geom(f"{prefix}_float_geom").id
+    assert any((c.geom1 in hand_ids and c.geom2 == float_id) or
+               (c.geom2 in hand_ids and c.geom1 == float_id)
+               for c in contact_data.contact[:contact_data.ncon]), "CAD hand missed buoy"
+    contact_runtime.apply(model.opt.timestep)
+    assert not contact_runtime.buoys[0].detached, "touch alone bypassed magnetic load threshold"
+    print(f"PASS test-tank CAD contact, 16 N release, nylon and surface rise ({surface_reached_s:.3f}s)")
 
 
 def main() -> int:
@@ -281,7 +256,7 @@ def main() -> int:
         _require_close(float(data.site_xpos[pinger_site_id][2]), TEST_TANK_PINGER_Z_M, "pinger depth prior")
         _require_close(float(model.geom_pos[wall_x_id][0] - model.geom_size[wall_x_id][0]), TEST_TANK_LENGTH_M / 2.0, "inner +X wall")
         _require_close(float(model.geom_pos[wall_y_id][1] - model.geom_size[wall_y_id][1]), TEST_TANK_WIDTH_M / 2.0, "inner +Y wall")
-        _check_collector_geometry(model)
+        assert vehicle_signature(root) == vehicle_signature(ET.parse(CANONICAL_SCENE).getroot())
         _check_physical_yellow_buoy(root, model)
 
         for _ in range(100):

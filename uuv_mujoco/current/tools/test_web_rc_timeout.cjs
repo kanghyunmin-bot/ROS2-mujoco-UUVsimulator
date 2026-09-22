@@ -46,3 +46,32 @@ test("a stalled RC request times out and the newest queued command can proceed",
   assert.equal(state.rcPending, null);
   assert.equal(cleared, 2);
 });
+
+test("pilot keepalive continues at neutral and stops when control is disabled", () => {
+  const calls = [];
+  const state = { rcEnabled: true, dragging: null, axes: { forward: 0, lateral: 0, heave: 0, yaw: 0 } };
+  const heartbeat = source.slice(source.lastIndexOf("setInterval(() => {"));
+  const context = vm.createContext({
+    state, RC_KEEPALIVE_MS: 20, axesActive: () => false,
+    sendRc: force => calls.push(force), setInterval: callback => callback(),
+  });
+  vm.runInContext(heartbeat, context);
+  assert.deepEqual(calls, [true]);
+  state.rcEnabled = false;
+  vm.runInContext(heartbeat, context);
+  assert.deepEqual(calls, [true]);
+});
+
+test("two controllers require selection and disconnect never switches to another pad", () => {
+  let pads = [{index: 0, id: 'SHANWAN', connected: true}, {index: 1, id: 'Pro Controller', connected: true}];
+  const state = {gamepadIndex: null};
+  const context = vm.createContext({state, navigator: {getGamepads: () => pads}, $: () => null});
+  const selection = source.slice(source.indexOf('function currentGamepad()'), source.indexOf('async function postCommand('));
+  vm.runInContext(selection, context);
+  assert.equal(context.currentGamepad(), null);
+  state.gamepadIndex = 1;
+  assert.equal(context.currentGamepad().id, 'Pro Controller');
+  pads = [pads[0]];
+  assert.equal(context.currentGamepad(), null);
+  assert.equal(state.gamepadIndex, 1);
+});

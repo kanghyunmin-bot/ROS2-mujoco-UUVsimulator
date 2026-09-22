@@ -1,0 +1,78 @@
+VLA ROS 정책 어댑터 수정 기록
+작성일: 2026-09-20
+실제 Git 레포: ROS2-mujoco-UUVsimulator
+ROS 패키지명: kmu26_auv_vla_policy
+패키지 경로: rospkg/src/kmu26_auv_vla_policy/
+원본 출처: 조직 auv_vla의 gr00t/deployment/kmu26_{ros,contract}.py
+원본 기준: cc4ada199d84290fcc55df6cfad003f1583fc3bf (기존 대조 기록)
+아래 파일 경로는 이 패키지 루트 기준이다.
+
+1. 시뮬 녹화와 명령 범위 통일
+
+수정 파일: config/sim_policy.yaml
+  embedded collector pwm_span: 300 -> 400
+  policy command_limit: 0.3 -> 1.0
+  neutral_pwm=1500, 채널 [5,6,3,4], expected_mode=STABILIZE 유지
+  dry_run=true 유지
+  command_slew_per_sec=0.5 유지
+
+GUI 시연을 ±400 PWM으로 저장하면서 정책은 ±300 및 0.3 제한으로
+실행해 동작 크기가 달라지는 문제를 수정했다.
+진폭 범위를 맞춘 것이며 변화율 제한이 있으므로 급격한 조이스틱 입력까지
+동일한 시간 응답으로 재생한다는 뜻은 아니다. 평가 시 제한값을 기록해야 한다.
+실물/default adapter의 span=300 및 command_limit=0.3은 바꾸지 않았다.
+
+2. GUI 제어권 전환과의 연결
+
+실제 제어권 전환 구현은 시뮬 레포의 gui/vla_control_handoff.py,
+gui/web_app.py, web_static/에 있다. 정책 노드 알고리즘을 새로 작성한 것은 아니다.
+VLA 제어권 준비 시 GUI 발행자가 사라져 정책의 기존 exclusive RC 검사를
+통과할 수 있는 경로를 마련했다.
+정책 disable만으로 발행자가 사라지지 않으므로 수동 복귀 전에 프로세스를
+종료해야 한다. 다른 자율제어/재생과 동시 소유하지 않도록 GUI에서 막는다.
+
+3. 유지한 정책 동작
+
+기본 dry-run에서는 /vla/proposed_rc만 출력한다.
+실제 RC 출력에는 별도 live 설정, 최신 관측, task instruction,
+지속적인 deadman, Enable, 연결/Arm/제어 모드/단독 발행자 확인이 필요하다.
+자동 Arm이나 mode 전환 기능은 추가하지 않았다.
+관측/행동의 ROS 시간 처리, wall-clock watchdog 등 기존 구현은 유지했다.
+
+4. U0 모델과 수정 위치 구분
+
+CAP 강제 제외와 저장 설정 수정은 이 정책 패키지가 아니라
+수집기 패키지의 tools/finetune_transfer.py 및 deployment_config.py에 있다.
+새 서버 실행 도구도 수집기 패키지의 tools/serve_transfer.py에 있다.
+U0의 모델 구조나 원본 가중치를 직접 수정한 것은 아니다.
+기존 /home/khm/robotics/u0/models/u0_final은 state.prev_command 규격이 없어
+사전검사에서 예상대로 거절되었다. 이번 규격에 맞는 fine-tuning이 필요하다.
+
+5. 검사 / 문서 / 남은 작업
+
+README.md에 카메라 15 Hz, 시뮬 명령 범위, 제어권 준비/복귀 절차를 반영했다.
+새 범위 일치 검사는 시뮬 레포의 tools/test_vla_readiness_fixes.py에 있다.
+기존 정책 테스트를 포함한 격리 ROS 검사 116개가 통과했다.
+이는 실제 학습 정책의 폐루프 성공률 검사가 아니다.
+
+남은 작업: 호환 체크포인트 준비, 실제 GPU 추론/지연 측정,
+dry-run 출력 확인, 시뮬 live 접근→정렬→분리 시험, 실물 계약 별도 확인.
+
+추가: 첫 학습 모델의 실제 HTTP/ROS 연결 검증 (2026-09-20)
+- CAP 없는 U0 서버 응답 [action_dict, null] 해석 지원. 다른 target/envelope 거부.
+- HTTP 응답 형식 테스트 6개 추가, 정책 테스트 총 18개 통과.
+- 실제 HTTP 응답 약 94~110 ms 측정.
+- 기존 100 ms 결과 확인 타이머에서 chunk age=0.300s로 정지함을 재현.
+  결과 확인 주기만 20 ms로 변경. ROS 시간 기준 명령 10 Hz와 0.3초 안전 기한 유지.
+- 무구동 5초 재시험에서 비중립 명령 48개 연속 출력 확인.
+- 시뮬 제어 순서: 수동 제어 상태에서 ARM 확인 → VLA 제어권 준비 → 정책 노드 실행
+  → task/deadman 발행 → enable. 종료 시 disable/채널 release → disarm 확인.
+- GUI ARM은 GUI RC publisher를 필요로 하므로 제어권 준비 이후 ARM을 요청하면 안 됨.
+- 이번 ROS 시험은 CycloneDDS 사용. FastDDS 환경에서 발견한 payload history 오류 회피.
+
+실제 시뮬 구동 결과:
+- live-first.json: 20.0초, 학습 정책 비중립 RC 192개, 수평 이동 0.369m.
+- 수심 방향도 변화했으나 부표 detached=false. 임무 성공으로 집계하지 않음.
+- 시험 종료 후 정책 disable/RC release, DISARM 확인, 정책 노드 종료 및 수동 제어 복귀.
+- 학습된 checkpoint로 명령→ROS2→MAVROS→SITL→MuJoCo 운동 경로 확인 완료.
+- 반복 평가, 초기 조건별 성공률, 정책 학습량·제어 성능 개선은 남아 있음.

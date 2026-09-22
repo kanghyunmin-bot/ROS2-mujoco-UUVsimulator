@@ -191,3 +191,34 @@ body.telemetry-hidden .studio-grid { grid-template-columns: minmax(0,1.65fr) min
 .rec-checks [data-ready=true] strong { color: #a9d0c2; }
 .dialog-card>.panel-heading { position: sticky; top: -16px; z-index: 3; padding: 8px 0 12px; background: #101d2af7; border-bottom: 1px solid #354c5e; }
 @media(max-width:720px) { .rec-checks { grid-template-columns: repeat(4,minmax(0,1fr)); } }
+
+/* Keep live video, recording and pilot controls in one collection workspace. */
+.recorder-dialog { width: min(1700px,100%); }
+.collection-workspace { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(340px,1fr); gap: 16px; align-items: start; }
+.collection-controls { display: grid; gap: 12px; min-width: 0; }
+#recorderLiveMount { position: sticky; top: 0; min-width: 0; }
+#recorderLiveMount .stereo-camera-grid { grid-template-columns: 1fr; }
+#recorderLiveMount .stereo-view { aspect-ratio: 16/9; min-height: 150px; }
+#recorderLiveMount #stereoCameraZoomBtn { display: none; }
+#recorderPilotMount .pilot-group { margin: 0; }
+@media(max-width:900px) {
+  .collection-workspace { grid-template-columns: 1fr; }
+  #recorderLiveMount { position: static; }
+  #recorderLiveMount .stereo-camera-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  #recorderLiveMount .stereo-view { min-height: 0; }
+}
+.collection-camera-settings > summary { cursor: pointer; color: var(--muted); padding: 6px 0; }
+.collection-camera-settings[open] { display: block; }
+.collection-camera-settings[open] > :not(summary) { margin-top: 8px; }
+#recorderLiveMount .stereo-view { height: clamp(140px,24vh,300px); min-height: 0; aspect-ratio: auto; }
+#recorderLiveMount .stereo-view img { object-fit: contain; }
+.rec-progress-box { padding: 10px; margin: 10px 0; border: 1px solid var(--line); border-radius: 4px; background: #122431; }
+#recorderPanel .rec-progress-box label { margin-bottom: 8px; }
+#recTargetSeconds { width: 76px; margin-left: 8px; }
+#recProgress { display: block; width: 100%; height: 14px; margin: 8px 0; accent-color: #79bdd8; }
+#recProgressPercent { font: 600 22px var(--mono); color: #b7e8fb; }
+#recProgressTime { font: 11px var(--mono); color: var(--muted); }
+.rec-progress-box small { display: block; font-size: 10px; line-height: 1.5; color: var(--muted); }
+#recCountProgress { display: block; width: 100%; height: 16px; margin: 10px 0; accent-color: #7ac9ad; }
+#recCountTitle { color: #c8eedd; font-size: 16px; }
+#recCountPercent { color: #a4dbc6; font: 600 18px var(--mono); }

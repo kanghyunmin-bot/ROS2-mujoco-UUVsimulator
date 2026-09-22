@@ -54,6 +54,8 @@ from .sim_stack_launch_command import (
 from .sim_stack_launch_logs import open_gui_sim_stack_log
 from .sim_stack_launch_process import spawn_sim_stack_process
 from .sim_stack_launch_target import resolve_sim_stack_launch_target, sim_stack_start_script_error
+from .collection_preflight import snapshot_files
+from .sensor_error_mode import MODES, configure_sensor_error_mode, resolve_sensor_error_mode
 from .sim_launch_preset import (
     COURSE_CURRENT_PRESET_ID,
     build_sim_launch_preset_args,
@@ -93,6 +95,9 @@ class WebProcessManager:
         self._pinger_homing_status = "pinger homing: stopped"
         self._vision_status = "vision: stopped"
         self._mission_status = "mission: stopped"
+        self._sensor_error_mode = "existing"
+        self._active_sensor_error = None
+        self._active_plant_evidence = None
         self._sim_launch_preset_id = default_sim_launch_preset_id()
         self._active_sim_launch_preset_id = ""
         self._active_sim_scene = ""
@@ -158,8 +163,12 @@ class WebProcessManager:
         *,
         purpose: str | None = None,
         preset_id: str | None = None,
+        sensor_error_mode: str | None = None,
     ) -> dict[str, Any]:
         try:
+            selected_error_mode = resolve_sensor_error_mode(
+                self._sensor_error_mode if sensor_error_mode is None else sensor_error_mode
+            )
             start_purpose = normalize_sim_start_purpose(purpose)
             selected_preset = resolve_sim_launch_preset(
                 COURSE_CURRENT_PRESET_ID
@@ -213,6 +222,12 @@ class WebProcessManager:
             base_env.update(pinger_sim_environment())
         env = build_gui_sim_stack_env(base_env, backend=backend, sim_stack_dir=SIM_STACK_DIR)
         env.update(sim_launch_preset_environment(selected_preset))
+        try:
+            env, sensor_error_snapshot = configure_sensor_error_mode(env, selected_error_mode)
+        except (ValueError, OSError) as exc:
+            self._set_sim_stack_status(f"sim start failed: sensor error mode: {exc}")
+            return {"status": self._sim_stack_status}
+
         env["ROS2_UUV_HYDROPHONE_PINGER_SITE"] = pinger_site_name
         env["UUV_GUI_COURSE_MODE"] = runtime_mode
         # Keep the bridge's normal acoustic interference profile. Pinger
@@ -272,6 +287,22 @@ class WebProcessManager:
                     False if start_purpose == PINGER_HOMING_SIM_PURPOSE else None
                 ),
             )
+            evidence_paths = [scene_path, selected_preset.profile_path or SIM_STACK_DIR / "config/sim_profiles.json"]
+            if env.get("SITL_REAL2SIM_BAG0402") == "1":
+                evidence_paths.append(SIM_STACK_DIR / "config/ardusub_bag0402_replay_overlay.param")
+            if env.get("SITL_YAW_STABLE") == "1":
+                evidence_paths.append(SIM_STACK_DIR / "config/ardusub_yaw_stable.param")
+            plant_evidence = {
+                "files": snapshot_files(evidence_paths),
+                "launch_command": list(cmd),
+                "overrides": {key: value for key, value in env.items() if key in {
+                    "SITL_REAL2SIM_BAG0402", "SITL_YAW_STABLE", "UUV_SITL_YAW_BRAKE",
+                    "UUV_HORIZONTAL_DIRECT_GAIN_SCALE",
+                    "UUV_VERTICAL_DIRECT_GAIN_SCALE", "UUV_THRUSTER_TAU_UP",
+                    "UUV_THRUSTER_TAU_DOWN", "UUV_YAW_THRUSTER_TAU_UP",
+                    "UUV_YAW_THRUSTER_TAU_DOWN",
+                }},
+            }
             proc = spawn_sim_stack_process(cmd=cmd, env=env, log_file=log_file)
         except Exception as exc:
             self._set_sim_stack_status(f"sim start failed: {exc}")
@@ -281,6 +312,9 @@ class WebProcessManager:
                 _close_quietly(log_file)
 
         with self._lock:
+            self._sensor_error_mode = selected_error_mode
+            self._active_sensor_error = sensor_error_snapshot
+            self._active_plant_evidence = plant_evidence
             self._sim_process = proc
             self._active_camera_config = {
                 **camera_config_from_launch_command(self._camera_config, cmd),
@@ -300,7 +334,8 @@ class WebProcessManager:
         self.node.push_event(
             "sim stack start requested "
             f"({target.backend}, {runtime_mode}, {selected_preset.profile}/"
-            f"{selected_preset.fluid_model}, purpose={start_purpose}): {log_path.name}"
+            f"{selected_preset.fluid_model}, sensor_errors={selected_error_mode}, "
+            f"purpose={start_purpose}): {log_path.name}"
         )
         self._start_process_watcher(
             proc=proc,
@@ -319,11 +354,25 @@ class WebProcessManager:
             "simulation_config": self.simulation_config_payload(),
         }
 
-    def simulation_config_payload(self) -> dict[str, Any]:
+    def simulation_config_payload(self, *, include_evidence: bool = False) -> dict[str, Any]:
         """Return the selected atomic plant preset and the active launch."""
 
         selected = resolve_sim_launch_preset(self._sim_launch_preset_id)
         active_id = self._active_sim_launch_preset_id if _process_running(self._sim_process) else ""
+        sensor_evidence = self._active_sensor_error if active_id else None
+        plant_evidence = self._active_plant_evidence if active_id else None
+        if not include_evidence:
+            if sensor_evidence:
+                sensor_evidence = {**sensor_evidence, "profiles": [
+                    {key: value for key, value in entry.items() if key != "content"}
+                    for entry in sensor_evidence["profiles"]
+                ]}
+            if plant_evidence:
+                plant_evidence = {**plant_evidence, "files": {
+                    path: {"sha256": value["sha256"]}
+                    for path, value in plant_evidence["files"].items()
+                }}
+
         return {
             "selected_preset_id": selected.preset_id,
             "selected_label": selected.label,
@@ -332,6 +381,10 @@ class WebProcessManager:
             "active_preset_id": active_id,
             "active_scene": self._active_sim_scene if active_id else "",
             "presets": sim_launch_presets_payload(),
+            "sensor_error_modes": list(MODES),
+            "selected_sensor_error_mode": self._sensor_error_mode,
+            "active_sensor_error": sensor_evidence,
+            "active_plant_evidence": plant_evidence,
         }
 
     def stop_sim_stack(self) -> dict[str, Any]:

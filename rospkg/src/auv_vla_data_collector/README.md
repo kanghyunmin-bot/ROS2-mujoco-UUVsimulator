@@ -168,7 +168,8 @@ RC RELEASE invalidates the affected action immediately; NOCHANGE cannot renew
 an expired action. All four primary RC channels must have recent explicit
 commands. The prior helper remains available, but the recorder uses per-axis
 ownership tracking. Keep the same ArduSub mode, axis signs, neutral and PWM span
-across demonstrations and policy execution; default span 300 matches joy2mavros.
+across demonstrations and policy execution; physical/default span 300 matches
+joy2mavros. GUI simulation collection and sim_policy.yaml explicitly use span 400.
 
 Use `requirements-export.txt` in a separate export environment (plus OpenCV and
 system `ffmpeg`). Keep failed/recovery episodes separate unless deliberately
@@ -199,6 +200,14 @@ of upstream's all-field sin/cos transform. Use the same config at inference.
 `Kmu26TrainingDataset` indexes only complete 16-action chunks; use it through
 `tools/finetune_transfer.py`, not the unmodified trainer's padded dataset class.
 Failed recovery demonstrations need a separately reviewed selection/workflow.
+
+The transfer training entry now requires 10 Hz STABILIZE demonstrations with
+neutral=1500, span=400 and channels [5,6,3,4]; old span-300 data is rejected for
+explicit review/remapping. It forces CAP loss off and persists that setting in
+the model configuration and experiment_cfg/kmu26_transfer.json. Serve the resulting
+checkpoint through tools/serve_transfer.py with the same organization U0 checkout
+used for training. Its --check_only flag validates contracts without GPU inference.
+This is a simulation contract; real data/action ranges require a separate review.
 
 Full comparison, measured camera rates, regression results and operator steps:
 `docs/contracts/VLA_TRANSFER_AUDIT_20260910.md` at the workspace root.

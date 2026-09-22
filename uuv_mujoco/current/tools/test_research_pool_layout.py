@@ -61,7 +61,7 @@ class ResearchPoolLayoutTests(unittest.TestCase):
         ids = [item["id"] for item in load_layout(self.path)["items"]]
         for invalid in ({"z": -5}, {"z": 0}, {"x": 5}, {"y": 2.5}, {"x": float("nan")}):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
-                save_layout(self.path, {ids[0]: {"x": 2}, ids[1]: invalid})
+                save_layout(self.path, {ids[0]: invalid})
             self.assertEqual(self.path.read_bytes(), initial)
         with self.assertRaises(ValueError):
             save_layout(self.path, {"missing": {"x": 1}})

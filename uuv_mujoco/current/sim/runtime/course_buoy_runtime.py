@@ -52,6 +52,14 @@ class CourseBuoy:
     net_score_released: bool = False
     net_score_release_time_s: float = -1.0
     release_time_s: float = -1.0
+    release_reason: str = ""
+    release_force_n: float = 0.0
+    release_rake_contact: bool = False
+    rake_contact_active: bool = False
+    hand_contact_active: bool = False
+    release_hand_contact: bool = False
+    release_right_fork_stem_contact: bool = False
+    release_right_fork_region: bool = False
     last_vehicle_contact_time_s: float = -1.0
     contact_release_start_time_s: float = -1.0
     contact_release_peak_n: float = 0.0
@@ -143,6 +151,10 @@ class CourseBuoyRuntime:
     _score_release_zone_target: np.ndarray | None = None
     _buoy_body_by_geom: dict[int, int] = field(default_factory=dict)
     _release_probe_geom_id_set: frozenset[int] = field(default_factory=frozenset)
+    _hand_geom_id_set: frozenset[int] = field(default_factory=frozenset)
+    _hand_contacted_body_ids: set[int] = field(default_factory=set)
+    _right_fork_geom_ids: frozenset[int] = field(default_factory=frozenset)
+    _right_fork_stem_contacts: set[int] = field(default_factory=set)
     _contact_force_scratch: np.ndarray = field(
         default_factory=lambda: np.zeros(6, dtype=np.float64), repr=False
     )
@@ -412,6 +424,26 @@ class CourseBuoyRuntime:
                 "UUV_COURSE_BUOY_CONTACT_BREAK_HOLD_S", scene_numeric("buoy_magnet_break_hold_s", 0.001)))
             runtime.proximity_release_enable = False
         runtime._release_probe_geom_id_set = frozenset(runtime.vehicle_release_probe_geom_ids)
+        # Label evidence must not inherit the optional hull-release physics policy.
+        manifest_path = Path(__file__).resolve().parents[2] / "assets/urdf_full/meshes_split/body_2026_09/collision/manifest.json"
+        hand_names = set()
+        if manifest_path.is_file():
+            hand_names = {row["name"] for row in json.loads(manifest_path.read_text())["meshes"] if row.get("hand")}
+        runtime._hand_geom_id_set = frozenset(
+            gid for gid in vehicle_geom_ids
+            if (mujoco_module.mj_id2name(model, obj_geom, gid) or "") in hand_names
+            or (mujoco_module.mj_id2name(model, obj_geom, gid) or "").startswith(
+                ("mission_port_rake_", "mission_starboard_rake_")))
+        # CAD bounds use body FLU coordinates: negative Y is starboard.
+        # Only hand hulls entirely on that side count; never hull/proximity hits.
+        right_names = set()
+        if manifest_path.is_file():
+            right_names = {row['name'] for row in json.loads(manifest_path.read_text())['meshes']
+                           if row.get('hand') and row['bounds_m'][1][1] < 0}
+        runtime._right_fork_geom_ids = frozenset(
+            gid for gid in runtime._hand_geom_id_set
+            if (mujoco_module.mj_id2name(model, obj_geom, gid) or '') in right_names
+            or (mujoco_module.mj_id2name(model, obj_geom, gid) or '').startswith('mission_starboard_rake_'))
         # Category 4 is a runtime-only NETTED gate.  An MjModel may be reused
         # by acceptance tests or a soft runtime restart after a previous
         # capture, so clear that transient bit before deriving FREE state.
@@ -530,6 +562,8 @@ class CourseBuoyRuntime:
                 vehicle_contact = buoy.body_id in contacted_buoy_bodies
                 was_detached = buoy.detached
                 rake_contact = buoy.body_id in rake_contacted_buoy_bodies
+                buoy.rake_contact_active = rake_contact
+                buoy.hand_contact_active = buoy.body_id in self._hand_contacted_body_ids
                 release_contact = rake_contact or self._has_release_probe_proximity(buoy)
                 if release_contact:
                     buoy.last_vehicle_contact_time_s = float(getattr(self.data, "time", 0.0))
@@ -597,6 +631,13 @@ class CourseBuoyRuntime:
                 "net_score_released": bool(buoy.net_score_released),
                 "net_score_release_time_s": float(buoy.net_score_release_time_s),
                 "release_time_s": float(buoy.release_time_s),
+                "release_reason": buoy.release_reason,
+                "release_force_n": buoy.release_force_n,
+                "release_rake_contact": buoy.release_rake_contact,
+                "release_hand_contact": buoy.release_hand_contact,
+                "release_right_fork_stem_contact": buoy.release_right_fork_stem_contact,
+                "release_right_fork_region": buoy.release_right_fork_region,
+                "hand_contact_active": buoy.hand_contact_active,
                 "runtime_time_s": now_s,
                 "magnet_load_n": self._magnet_constraint_force_n(buoy) if self.magnet_force_release else 0.0,
                 "magnet_break_n": self.break_force_n,
@@ -1533,6 +1574,8 @@ class CourseBuoyRuntime:
     def _contact_snapshot(self) -> tuple[set[int], set[int], dict[int, float]]:
         """Classify all buoy/vehicle contacts and rake force in one ``ncon`` pass."""
 
+        self._hand_contacted_body_ids.clear()
+        self._right_fork_stem_contacts.clear()
         contacted: set[int] = set()
         rake_contacted: set[int] = set()
         rake_force_by_body: dict[int, float] = {}
@@ -1560,6 +1603,13 @@ class CourseBuoyRuntime:
 
             body_id = int(self._buoy_body_by_geom[buoy_geom])
             contacted.add(body_id)
+            if vehicle_geom in self._right_fork_geom_ids:
+                geom_name = self.mujoco_module.mj_id2name(
+                    self.model, self.mujoco_module.mjtObj.mjOBJ_GEOM, buoy_geom) or ''
+                if geom_name.endswith('_pvc_pipe'):
+                    self._right_fork_stem_contacts.add(body_id)
+            if vehicle_geom in self._hand_geom_id_set:
+                self._hand_contacted_body_ids.add(body_id)
             if vehicle_geom not in self._release_probe_geom_id_set:
                 continue
             rake_contacted.add(body_id)
@@ -1588,10 +1638,20 @@ class CourseBuoyRuntime:
                 body_id = self._buoy_body_by_geom.get(geom2)
                 if body_id is not None:
                     contacted.add(body_id)
+            if vehicle_geom in self._right_fork_geom_ids:
+                geom_name = self.mujoco_module.mj_id2name(
+                    self.model, self.mujoco_module.mjtObj.mjOBJ_GEOM, buoy_geom) or ''
+                if geom_name.endswith('_pvc_pipe'):
+                    self._right_fork_stem_contacts.add(body_id)
             if geom2 in vehicle_geom_ids:
                 body_id = self._buoy_body_by_geom.get(geom1)
                 if body_id is not None:
                     contacted.add(body_id)
+            if vehicle_geom in self._right_fork_geom_ids:
+                geom_name = self.mujoco_module.mj_id2name(
+                    self.model, self.mujoco_module.mjtObj.mjOBJ_GEOM, buoy_geom) or ''
+                if geom_name.endswith('_pvc_pipe'):
+                    self._right_fork_stem_contacts.add(body_id)
         return contacted
 
     def _has_release_probe_proximity(self, buoy: CourseBuoy) -> bool:
@@ -1809,9 +1869,47 @@ class CourseBuoyRuntime:
             max_force = max(max_force, float(np.linalg.norm(force[0:3])))
         return max_force
 
+    def right_fork_region_contains(self, buoy: CourseBuoy) -> bool:
+        """Test rod centerline against a robot-fixed slot box [m].
+
+        Region is a geometric proxy, not contact or causal proof. Center follows
+        the existing staged slot reference; half extents are an explicit draft.
+        """
+        import mujoco
+        center = np.array([0.335511938, -0.091927344, -0.104344226])
+        half = np.array([0.04, 0.025, 0.025])
+        rotation = self.data.xmat[self.vehicle_root_body_id].reshape(3, 3)
+        origin = self.data.xpos[self.vehicle_root_body_id]
+        for gid in buoy.geom_ids:
+            name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, gid) or ''
+            if not name.endswith('_pvc_pipe'):
+                continue
+            axis = self.data.geom_xmat[gid].reshape(3, 3)[:, 2]
+            extent = float(self.model.geom_size[gid, 1])
+            a = rotation.T @ (self.data.geom_xpos[gid]-axis*extent-origin)-center
+            b = rotation.T @ (self.data.geom_xpos[gid]+axis*extent-origin)-center
+            low, high = 0., 1.
+            for j in range(3):
+                delta = b[j]-a[j]
+                if abs(delta) < 1e-12:
+                    if abs(a[j]) > half[j]:
+                        high = -1.; break
+                else:
+                    entry, leave = sorted(((-half[j]-a[j])/delta, (half[j]-a[j])/delta))
+                    low, high = max(low, entry), min(high, leave)
+            if low <= high:
+                return True
+        return False
+
     def _detach(self, buoy: CourseBuoy, *, reason: str, force_n: float) -> None:
         if buoy.detached:
             return
+        buoy.release_right_fork_region = self.right_fork_region_contains(buoy)
+        buoy.release_reason = reason
+        buoy.release_force_n = float(force_n)
+        buoy.release_rake_contact = buoy.rake_contact_active
+        buoy.release_hand_contact = buoy.hand_contact_active
+        buoy.release_right_fork_stem_contact = buoy.body_id in self._right_fork_stem_contacts
         buoy.detached = True
         buoy.release_time_s = float(getattr(self.data, "time", 0.0))
         buoy.surface_on_waterline = False

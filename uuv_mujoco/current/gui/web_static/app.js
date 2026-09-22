@@ -12,6 +12,7 @@ const state = {
   joystickDrag: null,
   controlSource: "",
   gamepadEnabled: true,
+  vlaControlPrepared: false,
   gamepadIndex: null,
   gamepadDriving: false,
   gamepadStatusText: "Gamepad: checking browser",
@@ -30,6 +31,9 @@ const state = {
   configurationLocked: false,
   simPresetSignature: "",
   simPresetTouched: false,
+  sensorErrorTouched: false,
+  lastSimulationConfig: null,
+  lastSimulationProcesses: null,
   pingerStartPending: false,
   pilotDock: null,
 };
@@ -66,18 +70,33 @@ function clamp(value, min = -1, max = 1) {
   return Math.max(min, Math.min(max, Number(value) || 0));
 }
 
-function applyGamepadDeadzone(value) {
+function applyGamepadDeadzone(value, limits = [-1, 1]) {
   const axis = clamp(value);
   const magnitude = Math.abs(axis);
   if (magnitude <= GAMEPAD_DEADZONE) {
     return 0;
   }
-  // Rescale after the deadzone so full stick range remains available.
-  return Math.sign(axis) * (magnitude - GAMEPAD_DEADZONE) / (1 - GAMEPAD_DEADZONE);
+  // Preserve the raw neutral deadzone; independently scale each direction.
+  const endpoint = axis < 0 ? -limits[0] : limits[1];
+  return clamp(Math.sign(axis) * (magnitude - GAMEPAD_DEADZONE) / (endpoint - GAMEPAD_DEADZONE));
+}
+
+function gamepadAxisCalibration(gamepad) {
+  // Local USB Pro Controller sweep, 2026-09-20. User confirmed full travel.
+  // EV_ABS X/Y/RX/RY normalized by 32767; centre remains zero (not measured).
+  const procon = /vendor:\s*057e.*product:\s*2009/i.test(gamepad.id || "")
+    || /nintendo.*pro controller/i.test(gamepad.id || "");
+  return procon ? [
+    [-0.913144322031312, 0.93465987121189],
+    [-0.8170415356913968, 0.9503769035920285],
+    [-0.8948942533646657, 0.836787011322367],
+    [-0.7967162083803827, 0.8607745597705008],
+  ] : null;
 }
 
 function physicalGamepadAxes(gamepad) {
-  const axis = (index) => applyGamepadDeadzone(gamepad.axes?.[index] ?? 0);
+  const calibration = gamepadAxisCalibration(gamepad);
+  const axis = (index) => applyGamepadDeadzone(gamepad.axes?.[index] ?? 0, calibration?.[index]);
   // Standard browser layout: left stick is axes 0/1, right stick is 2/3.
   // Browser Y grows downward, while GUI/ArduSub command Y grows upward.
   return {
@@ -102,14 +121,18 @@ function currentGamepad() {
   if (!navigator.getGamepads) {
     return null;
   }
-  const pads = Array.from(navigator.getGamepads()).filter(Boolean);
-  if (!pads.length) {
-    state.gamepadIndex = null;
-    return null;
+  const pads = Array.from(navigator.getGamepads()).filter(pad => pad && pad.connected !== false);
+  // Multiple attached receivers must not silently choose the wrong controller.
+  if (state.gamepadIndex === null && pads.length === 1) state.gamepadIndex = pads[0].index;
+  const selector = $("gamepadDevice");
+  const signature = JSON.stringify(pads.map(pad => [pad.index, pad.id]));
+  if (selector && selector.dataset.devices !== signature) {
+    selector.replaceChildren(new Option("조종기를 선택하세요", ""));
+    for (const pad of pads) selector.add(new Option(`${pad.index + 1}: ${pad.id}`, String(pad.index)));
+    selector.dataset.devices = signature;
   }
-  const selected = pads.find((pad) => pad.index === state.gamepadIndex) || pads[0];
-  state.gamepadIndex = selected.index;
-  return selected;
+  if (selector) selector.value = state.gamepadIndex === null ? "" : String(state.gamepadIndex);
+  return pads.find(pad => pad.index === state.gamepadIndex) || null;
 }
 
 async function postCommand(payload) {
@@ -234,6 +257,7 @@ function axesActive() {
 }
 
 function sendRc(force = false) {
+  if (window.autoCollectionRunning) return;
   if (document.hidden) {
     return;
   }
@@ -328,6 +352,7 @@ function releaseRcForInactivePage() {
 }
 
 function enablePilotInputFromJoystick() {
+  if (window.demoResetPending) return;
   if (!state.rcEnabled) {
     state.rcEnabled = true;
     $("rcEnabled").checked = true;
@@ -358,6 +383,7 @@ function releasePhysicalGamepad(reason) {
 }
 
 function pollPhysicalGamepad() {
+  if (state.vlaControlPrepared) return;
   if (document.hidden) {
     return;
   }
@@ -379,7 +405,7 @@ function pollPhysicalGamepad() {
     if (state.controlSource === "gamepad" || state.gamepadDriving) {
       releasePhysicalGamepad("disconnected");
     } else {
-      renderGamepadStatus("Gamepad: connect controller, then move a stick");
+      renderGamepadStatus("Gamepad: 조종기를 선택하고 버튼 또는 스틱을 움직이세요");
     }
     return;
   }
@@ -388,8 +414,8 @@ function pollPhysicalGamepad() {
   const active = Object.values(axes).some((value) => Math.abs(value) > 0.001);
   renderGamepadStatus(
     active
-      ? `Gamepad: ${gamepadLabel(gamepad)} — RC active`
-      : `Gamepad: ${gamepadLabel(gamepad)} — centered`
+      ? `Gamepad: ${gamepadLabel(gamepad)} — RC active${gamepadAxisCalibration(gamepad) ? " · 프로콘 범위 보정" : ""}`
+      : `Gamepad: ${gamepadLabel(gamepad)} — centered${gamepadAxisCalibration(gamepad) ? " · 프로콘 범위 보정" : ""}`
   );
   // Leave a virtual-stick pilot session untouched while a connected physical
   // gamepad remains centred. Once the operator moves a physical stick, it
@@ -471,6 +497,7 @@ function finishJoystickDrag(session = state.joystickDrag, event = null, { center
 }
 
 function startJoystickDrag(pad, mapping, event) {
+  if (state.vlaControlPrepared) return;
   if (event.button !== undefined && event.button !== 0) {
     return;
   }
@@ -542,6 +569,15 @@ function renderStatus(payload) {
   const ui = payload.ui || {};
   const processes = payload.processes || {};
   const control = payload.control || {};
+  state.vlaControlPrepared = Boolean(control.vla_prepared);
+  $("vlaPrepareControlBtn").disabled = state.vlaControlPrepared || state.configurationLocked;
+  $("vlaRestoreManualBtn").disabled = !state.vlaControlPrepared || state.configurationLocked;
+  if (state.vlaControlPrepared) {
+    state.rcEnabled = false;
+    state.rcPending = null;
+    setText("vlaControlStatus", "VLA 제어권 준비됨 · 정책 종료 후 수동 복귀");
+  }
+
   const tools = payload.tools || {};
 
   if (typeof control.enabled === "boolean") {
@@ -623,7 +659,15 @@ function renderSimulationConfig(config, processes) {
   if (!select) {
     return;
   }
-  const presets = Array.isArray(config.presets) ? config.presets : [];
+  state.lastSimulationConfig = config;
+  state.lastSimulationProcesses = processes;
+  const allPresets = Array.isArray(config.presets) ? config.presets : [];
+  const selectedConfigId = String(config.selected_preset_id || "research_pool_yaw_stable");
+  const visibleId = state.simPresetTouched ? select.value : selectedConfigId;
+  const advanced = $("showAdvancedEnvironments").checked;
+  const presets = allPresets.filter(preset => advanced
+    || preset.id === "research_pool_yaw_stable" || preset.id === visibleId);
+
   const signature = presets
     .map((preset) => `${preset.id}:${preset.profile}:${preset.fluid_model}:${preset.scene}`)
     .join("|");
@@ -636,9 +680,10 @@ function renderSimulationConfig(config, processes) {
       option.title = String(preset.description || "");
       select.appendChild(option);
     }
+    select.value = visibleId;
     state.simPresetSignature = signature;
   }
-  const selectedId = String(config.selected_preset_id || "course_current");
+  const selectedId = String(config.selected_preset_id || "research_pool_yaw_stable");
   if (!state.simPresetTouched && selectedId && document.activeElement !== select) {
     select.value = selectedId;
   }
@@ -651,6 +696,17 @@ function renderSimulationConfig(config, processes) {
   setText("simLaunchPresetStatus", `plant: ${label} · ${profile}/${fluid}${activeText}`);
   const running = Boolean(processes?.sim_running);
   select.disabled = state.configurationLocked || running;
+  $("showAdvancedEnvironments").disabled = state.configurationLocked || running;
+  const errorSelect = $("sensorErrorMode");
+  if (!state.sensorErrorTouched) {
+    errorSelect.value = config.selected_sensor_error_mode || "existing";
+  }
+  errorSelect.disabled = state.configurationLocked || running;
+  const errorMode = (config.sensor_error_modes || []).find(mode => mode.id === errorSelect.value);
+  const activeError = config.active_sensor_error?.mode;
+  setText("sensorErrorModeStatus", (errorMode?.description || "기존 센서 설정 유지")
+    + (activeError ? ` · 실행 중: ${activeError}` : " · 다음 시작에 적용"));
+
   $("stackStartBtn").disabled = state.configurationLocked || running;
   $("stackStartBtn").textContent = running ? "Stack Running" : "Start SITL/MuJoCo";
 }
@@ -658,8 +714,9 @@ function renderSimulationConfig(config, processes) {
 async function startSimStack() {
   const presetId = $("simLaunchPreset").value;
   setText("simStackStatus", "sim: start requested");
-  const body = await postCommand({ command: "stack_start", sim_preset: presetId });
+  const body = await postCommand({ command: "stack_start", sim_preset: presetId, sensor_error_mode: $("sensorErrorMode").value });
   state.simPresetTouched = false;
+  state.sensorErrorTouched = false;
   if (body.status) {
     setText("simStackStatus", body.status);
   }
@@ -1703,6 +1760,31 @@ async function saveCourseLayout(reset = false) {
 }
 
 function bindControls() {
+  for (const [id, command] of [
+    ["vlaPrepareControlBtn", "vla_prepare_control"],
+    ["vlaRestoreManualBtn", "vla_restore_manual"],
+  ]) {
+    $(id).addEventListener("click", async () => {
+      try {
+        releaseInput();
+        const result = await postCommand({ command });
+        state.vlaControlPrepared = Boolean(result.vla_prepared);
+        setText("vlaControlStatus", result.status);
+        await pollStatus();
+      } catch (error) {
+        setText("vlaControlStatus", error.message);
+      }
+    });
+  }
+
+  $("showAdvancedEnvironments").addEventListener("change", () => {
+    renderSimulationConfig(state.lastSimulationConfig || {}, state.lastSimulationProcesses);
+  });
+  $("sensorErrorMode").addEventListener("change", () => {
+    state.sensorErrorTouched = true;
+    renderSimulationConfig(state.lastSimulationConfig || {}, state.lastSimulationProcesses);
+  });
+
   $("armBtn").addEventListener("click", () => requestArm(true));
   $("disarmBtn").addEventListener("click", () => requestArm(false));
   $("releaseBtn").addEventListener("click", releaseInput);
@@ -1723,14 +1805,17 @@ function bindControls() {
     // frame immediately; enabling it is then picked up by the 50 Hz poll.
     pollPhysicalGamepad();
   });
+  $("gamepadDevice").addEventListener("change", (event) => {
+    releaseInput();
+    state.gamepadIndex = event.target.value === "" ? null : Number(event.target.value);
+    pollPhysicalGamepad();
+  });
   window.addEventListener("gamepadconnected", (event) => {
-    state.gamepadIndex = event.gamepad.index;
     renderGamepadStatus(`Gamepad: ${gamepadLabel(event.gamepad)} — connected`);
     pollPhysicalGamepad();
   });
   window.addEventListener("gamepaddisconnected", (event) => {
     if (event.gamepad.index === state.gamepadIndex) {
-      state.gamepadIndex = null;
       releasePhysicalGamepad("disconnected");
     }
   });
@@ -1929,7 +2014,9 @@ setInterval(pollStatus, STATUS_POLL_MS);
 setInterval(pollCameraStatus, CAMERA_POLL_MS);
 setInterval(pollPhysicalGamepad, GAMEPAD_POLL_MS);
 setInterval(() => {
-  if (state.rcEnabled && (state.dragging || axesActive())) {
+  // Neutral is a live pilot command too. Stopping its heartbeat makes the
+  // server watchdog release RC whenever the operator centres the sticks.
+  if (state.rcEnabled) {
     sendRc(true);
   }
 }, RC_KEEPALIVE_MS);

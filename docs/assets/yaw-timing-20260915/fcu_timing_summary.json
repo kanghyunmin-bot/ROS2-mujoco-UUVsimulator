@@ -1,0 +1,446 @@
+{
+  "baseline": {
+    "controller_parameters": {
+      "RC_SPEED": 200.0,
+      "ATC_RAT_YAW_P": 0.49000000953674316,
+      "ATC_RAT_YAW_I": 0.0,
+      "ATC_RAT_YAW_D": 0.019999999552965164,
+      "SCHED_LOOP_RATE": 400.0,
+      "SERVO_RATE": 50.0
+    },
+    "intervals": [
+      {
+        "fcu_end_time_s": 28.202157999999997,
+        "loop_hz": 284.3915400342237,
+        "max_loop_us": 4998,
+        "long_loops": 1628
+      },
+      {
+        "fcu_end_time_s": 39.985018,
+        "loop_hz": 339.4761543462283,
+        "max_loop_us": 4999,
+        "long_loops": 714
+      },
+      {
+        "fcu_end_time_s": 49.985018,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 59.985018,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 69.985018,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 79.985018,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 89.985018,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 99.985018,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 109.985018,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      }
+    ]
+  },
+  "auxiliary_100": {
+    "controller_parameters": {
+      "RC_SPEED": 200.0,
+      "ATC_RAT_YAW_P": 0.49000000953674316,
+      "ATC_RAT_YAW_I": 0.0,
+      "ATC_RAT_YAW_D": 0.019999999552965164,
+      "SCHED_LOOP_RATE": 400.0,
+      "SERVO_RATE": 50.0
+    },
+    "intervals": [
+      {
+        "fcu_end_time_s": 28.207155999999998,
+        "loop_hz": 284.3410403498419,
+        "max_loop_us": 4998,
+        "long_loops": 1628
+      },
+      {
+        "fcu_end_time_s": 39.987518,
+        "loop_hz": 339.5481395223678,
+        "max_loop_us": 4999,
+        "long_loops": 714
+      },
+      {
+        "fcu_end_time_s": 49.987517999999994,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 59.987517999999994,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 69.987518,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 79.987518,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 89.987518,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 99.987518,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 109.987518,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      }
+    ]
+  },
+  "auxiliary_400": {
+    "controller_parameters": {
+      "RC_SPEED": 200.0,
+      "ATC_RAT_YAW_P": 0.49000000953674316,
+      "ATC_RAT_YAW_I": 0.0,
+      "ATC_RAT_YAW_D": 0.019999999552965164,
+      "SCHED_LOOP_RATE": 400.0,
+      "SERVO_RATE": 50.0
+    },
+    "intervals": [
+      {
+        "fcu_end_time_s": 28.207155999999998,
+        "loop_hz": 284.3410403498419,
+        "max_loop_us": 4998,
+        "long_loops": 1628
+      },
+      {
+        "fcu_end_time_s": 39.987518,
+        "loop_hz": 339.5481395223678,
+        "max_loop_us": 4999,
+        "long_loops": 714
+      },
+      {
+        "fcu_end_time_s": 49.987517999999994,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 59.987517999999994,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 69.987518,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 79.987518,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 89.987518,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 99.987518,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 109.987518,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      }
+    ]
+  },
+  "auxiliary_gui": {
+    "controller_parameters": {
+      "RC_SPEED": 200.0,
+      "ATC_RAT_YAW_P": 0.49000000953674316,
+      "ATC_RAT_YAW_I": 0.0,
+      "ATC_RAT_YAW_D": 0.019999999552965164,
+      "SCHED_LOOP_RATE": 400.0,
+      "SERVO_RATE": 50.0
+    },
+    "intervals": [
+      {
+        "fcu_end_time_s": 28.202157999999997,
+        "loop_hz": 284.3915400342237,
+        "max_loop_us": 4998,
+        "long_loops": 1628
+      },
+      {
+        "fcu_end_time_s": 39.985018,
+        "loop_hz": 339.4761543462283,
+        "max_loop_us": 4999,
+        "long_loops": 714
+      },
+      {
+        "fcu_end_time_s": 49.985018,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 59.985018,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 69.985018,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 79.985018,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 89.985018,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 99.985018,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 109.985018,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      }
+    ]
+  },
+  "auxiliary_80": {
+    "controller_parameters": {
+      "RC_SPEED": 200.0,
+      "ATC_RAT_YAW_P": 0.49000000953674316,
+      "ATC_RAT_YAW_I": 0.0,
+      "ATC_RAT_YAW_D": 0.019999999552965164,
+      "SCHED_LOOP_RATE": 400.0,
+      "SERVO_RATE": 50.0
+    },
+    "intervals": [
+      {
+        "fcu_end_time_s": 28.207155999999998,
+        "loop_hz": 284.3410403498419,
+        "max_loop_us": 4998,
+        "long_loops": 1628
+      },
+      {
+        "fcu_end_time_s": 39.987518,
+        "loop_hz": 339.5481395223678,
+        "max_loop_us": 4999,
+        "long_loops": 714
+      },
+      {
+        "fcu_end_time_s": 49.987517999999994,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 59.987517999999994,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 69.987518,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 79.987518,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 89.987518,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 99.987518,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 109.987518,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      }
+    ]
+  },
+  "auxiliary_round": {
+    "controller_parameters": {
+      "RC_SPEED": 200.0,
+      "ATC_RAT_YAW_P": 0.49000000953674316,
+      "ATC_RAT_YAW_I": 0.0,
+      "ATC_RAT_YAW_D": 0.019999999552965164,
+      "SCHED_LOOP_RATE": 400.0,
+      "SERVO_RATE": 50.0
+    },
+    "intervals": [
+      {
+        "fcu_end_time_s": 22.80875,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 32.808749999999996,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 42.808749999999996,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 52.808749999999996,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 62.808749999999996,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 72.80875,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 82.80874999999999,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 92.80874999999999,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 102.80874999999999,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 112.80874999999999,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      }
+    ]
+  },
+  "primary_round": {
+    "controller_parameters": {
+      "RC_SPEED": 200.0,
+      "ATC_RAT_YAW_P": 0.49000000953674316,
+      "ATC_RAT_YAW_I": 0.0,
+      "ATC_RAT_YAW_D": 0.019999999552965164,
+      "SCHED_LOOP_RATE": 400.0,
+      "SERVO_RATE": 50.0
+    },
+    "intervals": [
+      {
+        "fcu_end_time_s": 32.80625,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 42.80625,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 52.80625,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 62.80625,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      },
+      {
+        "fcu_end_time_s": 72.80624999999999,
+        "loop_hz": 400.0,
+        "max_loop_us": 2500,
+        "long_loops": 0
+      }
+    ]
+  }
+}

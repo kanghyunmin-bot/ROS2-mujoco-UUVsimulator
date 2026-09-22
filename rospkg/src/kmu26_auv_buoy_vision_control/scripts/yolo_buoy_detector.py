@@ -40,6 +40,9 @@ class YoloBuoyDetector(Node):
         self.declare_parameter("show_preview", True)
         self.declare_parameter("preview_window_name", "YOLO Buoy Detection")
         self.declare_parameter("publish_per_class", True)
+        self.declare_parameter("publish_all_detections", False)
+        self.declare_parameter("simulation_yellow_assist", False)
+        self.declare_parameter("simulation_stick_assist", False)
         # 다중 부표 선택: 면적 큰 것 → 박스 확률(confidence) → 이미지 오른쪽
         self.declare_parameter("area_similar_ratio", 0.15)
         self.declare_parameter("confidence_similar_delta", 0.05)
@@ -189,13 +192,28 @@ class YoloBuoyDetector(Node):
 
         image_height, image_width = image.shape[:2]
         detection, all_detections = self._detect_targets(image)
+        if self.get_parameter("simulation_stick_assist").value:
+            from hand_stick import detect_hand_sticks
+            sticks = detect_hand_sticks(image)
+            if sticks:
+                all_detections = [d for d in all_detections if d[0] != 1] + sticks
         stamp_sec = float(msg.header.stamp.sec) + float(msg.header.stamp.nanosec) * 1e-9
 
         published_detections = [detection] if detection is not None else []
         if self.publish_per_class:
             published_detections = self._best_detection_per_class(all_detections)
 
-        if published_detections:
+        if self.get_parameter("publish_all_detections").value:
+            out = Float32MultiArray()
+            for class_id, confidence, cx, cy, width, height, *_ in all_detections:
+                if self._class_matches(class_id):
+                    out.data.extend([stamp_sec, 1.0, float(class_id), confidence,
+                                     cx, cy, width, height, float(image_width), float(image_height)])
+            if not out.data:
+                out.data = [stamp_sec, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                            float(image_width), float(image_height)]
+            self.bbox_pub.publish(out)
+        elif published_detections:
             for published_detection in published_detections:
                 self._publish_detection(
                     stamp_sec, published_detection, image_width, image_height
@@ -295,6 +313,9 @@ class YoloBuoyDetector(Node):
 
         boxes = getattr(results[0], "boxes", None)
         if boxes is None or len(boxes) == 0:
+            if self.get_parameter("simulation_yellow_assist").value:
+                from yellow_ellipse import detect_yellow_ellipses
+                return None, detect_yellow_ellipses(image)
             return None, []
 
         xyxy = boxes.xyxy.detach().cpu().numpy()
@@ -347,6 +368,13 @@ class YoloBuoyDetector(Node):
                 throttle_duration_sec=3.0,
             )
 
+        if self.get_parameter("simulation_yellow_assist").value:
+            # Explicit simulation-only color/ellipse aid; no truth or target poses.
+            from yellow_ellipse import detect_yellow_ellipses
+            ellipses = detect_yellow_ellipses(image)
+            # Suppress uncorroborated buoy boxes; keep learned stick detections.
+            all_detections = [d for d in all_detections if d[0] != 0]
+            all_detections.extend(ellipses)
         return best, all_detections
 
     def _class_matches(self, class_id: int) -> bool:

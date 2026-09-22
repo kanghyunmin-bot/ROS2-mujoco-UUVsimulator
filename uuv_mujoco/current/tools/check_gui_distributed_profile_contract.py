@@ -16,6 +16,7 @@ from gui.sim_launch_preset import (  # noqa: E402
     COURSE_CURRENT_PRESET_ID,
     COURSE_REAL2SIM_PRESET_ID,
     DEFAULT_SIM_LAUNCH_PRESET_ID,
+    RESEARCH_POOL_YAW_STABLE_PRESET_ID,
     RESEARCH_POOL_DISTRIBUTED_PRESET_ID,
     RESEARCH_POOL_DISTRIBUTED_HYBRID_PRESET_ID,
     RESEARCH_POOL_DISTRIBUTED_WAVES_PRESET_ID,
@@ -92,10 +93,10 @@ def _resolved_profiles() -> dict[str, dict[str, object]]:
 
 
 def check_preset_mapping_and_assets() -> None:
-    if DEFAULT_SIM_LAUNCH_PRESET_ID != RESEARCH_POOL_DISTRIBUTED_PRESET_ID:
-        raise AssertionError("GUI default must select Research pool distributed physics")
-    if default_sim_launch_preset_id({}) != RESEARCH_POOL_DISTRIBUTED_PRESET_ID:
-        raise AssertionError("empty environment must select the Research pool distributed preset")
+    if DEFAULT_SIM_LAUNCH_PRESET_ID != RESEARCH_POOL_YAW_STABLE_PRESET_ID:
+        raise AssertionError("GUI default must select the yaw-stable collection profile")
+    if default_sim_launch_preset_id({}) != RESEARCH_POOL_YAW_STABLE_PRESET_ID:
+        raise AssertionError("empty environment must select the yaw-stable collection profile")
     if default_sim_launch_preset_id({"UUV_GUI_SIM_PRESET": COURSE_CURRENT_PRESET_ID}) != COURSE_CURRENT_PRESET_ID:
         raise AssertionError("explicit nominal baseline selection must remain available")
 
@@ -204,8 +205,8 @@ def check_frontend_and_backend_wiring() -> None:
     required = {
         "web selector": (index, 'id="simLaunchPreset"'),
         "distributed option": (index, 'value="research_pool_distributed"'),
-        "hybrid option": (index, 'value="research_pool_distributed_hybrid"'),
-        "wave option": (index, 'value="research_pool_distributed_waves"'),
+        "advanced environment toggle": (index, 'id="showAdvancedEnvironments"'),
+        "sensor error selection": (index, 'id="sensorErrorMode"'),
         "web preset request": (app_js, 'sim_preset: presetId'),
         "web handler validation boundary": (web_app, 'payload.get("sim_preset"'),
         "web child launch": (web_manager, "build_sim_launch_preset_args("),
@@ -217,7 +218,7 @@ def check_frontend_and_backend_wiring() -> None:
             raise AssertionError(f"missing {label}: {needle}")
 
     forbidden_browser_fields = ('scene_path:', 'profile:', 'fluid_model:')
-    start_call = 'postCommand({ command: "stack_start", sim_preset: presetId })'
+    start_call = 'postCommand({ command: "stack_start", sim_preset: presetId, sensor_error_mode: $("sensorErrorMode").value })'
     if start_call not in app_js:
         raise AssertionError("browser must submit only the stable preset identifier")
     for field in forbidden_browser_fields:

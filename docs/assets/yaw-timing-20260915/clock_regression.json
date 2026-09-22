@@ -1,0 +1,16 @@
+{
+  "original": {
+    "expression": "time_now_us += deltat * 1.0e6;",
+    "returncode": 42,
+    "ticks": 44000,
+    "non_2500_us_ticks": 8737,
+    "final_clock_us": 109990013
+  },
+  "rounded": {
+    "expression": "time_now_us += uint64_t(llround(deltat * 1.0e6));",
+    "returncode": 0,
+    "ticks": 44000,
+    "non_2500_us_ticks": 0,
+    "final_clock_us": 109998750
+  }
+}

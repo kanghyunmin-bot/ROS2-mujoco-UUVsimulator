@@ -58,6 +58,18 @@ if [[ -z "${ARDUPILOT_DIR:-}" && -d "${WORKSPACE_DIR}/ardupilot_sub_stable" ]]; 
   ARDUPILOT_DIR="${WORKSPACE_DIR}/ardupilot_sub_stable"
 fi
 ARDUPILOT_DIR="${ARDUPILOT_DIR:-${WORKSPACE_DIR}/ardupilot}"
+if [[ "${SITL_YAW_STABLE:-0}" == "1" ]]; then
+  export UUV_SITL_YAW_BRAKE=1
+  if [[ ! -s "${SCRIPT_DIR}/config/ardusub_yaw_stable.param" ]]; then
+    echo "[error] Yaw stability controller parameter file is missing." >&2
+    exit 2
+  fi
+  if ! grep -aq 'UUV_SITL_YAW_BRAKE' "${ARDUPILOT_DIR}/build/sitl/bin/ardusub"; then
+    echo "[error] Yaw stability requires the patched SITL binary." >&2
+    echo "Run: python3 setup/patch_ardusub_yaw_braking.py --apply; then rebuild ArduSub SITL." >&2
+    exit 2
+  fi
+fi
 SIM_VEHICLE="${ARDUPILOT_DIR}/Tools/autotest/sim_vehicle.py"
 THRUSTER_MAPPING_SCRIPT="${SCRIPT_DIR}/physics/thruster_mapping.py"
 
@@ -602,6 +614,13 @@ real_param_file_has() {
 }
 
 real2sim_param_value() {
+  if [[ "${SITL_YAW_STABLE:-0}" == "1" ]]; then
+    local stable_value
+    if stable_value="$(awk -v key="$1" '$1 == key { print $2; found=1; exit } END { exit found ? 0 : 1 }' "${SCRIPT_DIR}/config/ardusub_yaw_stable.param")"; then
+      printf '%s\n' "$stable_value"
+      return 0
+    fi
+  fi
   [[ "${SITL_REAL2SIM_BAG0402:-0}" == "1" ]] || return 1
   awk -v key="$1" '
     $1 == key { print $2; found = 1; exit }
@@ -1187,6 +1206,10 @@ else
   # Async timing remains an explicit transport diagnostic, not an excuse to
   # replace modeled sensor fusion with the perfect SITL truth AHRS.
   append_param_if_not_overridden "AHRS_EKF_TYPE" "${SITL_AHRS_EKF_TYPE:-3}"
+fi
+if [[ "${SITL_YAW_STABLE:-0}" == "1" ]]; then
+  append_param_if_not_overridden "EK3_SRC2_YAW" "1"
+  append_param_if_not_overridden "EK3_SRC3_YAW" "1"
 fi
 append_param_if_not_overridden "COMPASS_ENABLE" "0"
 append_param_if_not_overridden "COMPASS_USE" "0"

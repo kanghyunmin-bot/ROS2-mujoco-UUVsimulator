@@ -42,6 +42,10 @@ RUN cd /tmp/ardupilot && \
 # prerequisite installer upgrades it unconditionally, so restore compatibility.
 RUN python3 -m pip install --user "setuptools<80"
 
+# The ROS policy uses these packages independently of the GPU environment.
+COPY rospkg/src/kmu26_auv_vla_policy/requirements-ros.txt /tmp/vla-requirements-ros.txt
+RUN python3 -m pip install --user -r /tmp/vla-requirements-ros.txt
+
 USER root
 RUN apt-get update && \
     apt-get install --no-install-recommends -y \

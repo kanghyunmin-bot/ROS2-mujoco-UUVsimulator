@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -34,6 +35,17 @@ def _statistics(array: np.ndarray) -> dict[str, list[float]]:
     }
 
 
+def resolve_ffmpeg() -> str:
+    """Find the existing encoder before creating any export artifacts."""
+    binary = shutil.which("ffmpeg")
+    local = Path.home() / ".local/bin/ffmpeg"
+    if binary:
+        return binary
+    if local.is_file() and os.access(local, os.X_OK):
+        return str(local)
+    raise RuntimeError("FFmpeg is required for LeRobot export; install the system dependencies.")
+
+
 def _encode_video(frame_dir: Path, output_path: Path, fps: float) -> tuple[int, int]:
     first_frame = cv2.imread(str(frame_dir / "frame_000000.jpg"), cv2.IMREAD_COLOR)
     if first_frame is None:
@@ -41,7 +53,7 @@ def _encode_video(frame_dir: Path, output_path: Path, fps: float) -> tuple[int, 
     height, width = first_frame.shape[:2]
     output_path.parent.mkdir(parents=True, exist_ok=True)
     command = [
-        "ffmpeg",
+        resolve_ffmpeg(),
         "-hide_banner",
         "-loglevel",
         "error",
@@ -106,6 +118,8 @@ def export_dataset(
         raise ValueError(f"No complete episode directories found in {staging_root}")
     if output_root.exists() and any(output_root.iterdir()):
         raise FileExistsError(f"Output directory is not empty: {output_root}")
+
+    resolve_ffmpeg()
 
     manifests = [
         json.loads((path / "manifest.json").read_text()) for path in episode_dirs

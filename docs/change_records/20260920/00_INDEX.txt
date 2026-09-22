@@ -1,0 +1,68 @@
+수정 사항 기록 — 레포 / 패키지별
+작성일: 2026-09-20
+범위: 이번 연구 수조·오차 모드 정리와 녹화/VLA 오류 수정 및 재점검
+
+1. 실제 변경 위치와 원본 레포 구분
+
+변경을 관리하는 Git 레포:
+  /home/khm/robotics/underwater/ROS2-mujoco-UUVsimulator
+작성 시 브랜치: codex/bag-trend-alignment
+작성 시 HEAD: 98d3675
+
+레코더와 정책 어댑터는 위 레포 안에 포함된 로컬 ROS 패키지다.
+각 패키지 디렉터리의 git rev-parse --show-toplevel 결과도 위 레포다.
+따라서 '레코더/VLA 수정'은 원본 GitHub 레포에 각각 반영했다는 뜻이 아니다.
+원본에서 가져온 로컬 코드와 연결 도구를 수정했으며, 이번 원격 push는 없다.
+
+기존 대조 문서에 기록된 원본 기준(2026-09-10 확인, 최신 upstream을 뜻하지 않음):
+  수집기: https://github.com/2026-kmu-underwater-robot/auv_vla_data_collector
+  기준 commit: 4b4e2328f7b36a51c30b4929b8bf015f9396e4c3
+  VLA: https://github.com/2026-kmu-underwater-robot/auv_vla
+  기준 commit: cc4ada199d84290fcc55df6cfad003f1583fc3bf
+
+별도 U0 대조 checkout:
+  outputs/vla-transfer-audit-20260910/upstream/auv_vla
+이 checkout의 원본 모델 구현은 이번 수정 대상이 아니다.
+수정한 학습·추론 wrapper는 수집기 패키지의 tools/에 있다.
+U0 모델 구조 재설계, 가중치 수정 및 실제 fine-tuning은 수행하지 않았다.
+
+2. 상세 기록 파일(이 파일과 같은 디렉터리)
+
+  01_SIMULATOR_GUI.txt
+    연구 수조, 부표, 카메라, 수학적 오차 모드, GUI 녹화/제어권 전환
+  02_DATA_COLLECTOR_AND_TRAINING.txt
+    레코더 export, 학습 CAP 설정, 데이터 계약, 새 추론 실행 도구
+  03_VLA_POLICY.txt
+    ROS 정책 어댑터의 시뮬 설정 및 GUI 연동, 실물과의 차이
+
+3. 커밋 및 작업 트리 상태
+
+이전 단계에서 완료된 관련 커밋:
+  ef7d90b fix: Default to calibrated research pool physics
+  98d3675 fix: Bound stalled web pilot requests
+
+이번 오류 수정과 오차 모드 등의 나머지 작업은 작성 시점에 로컬 미커밋 상태다.
+이번 요청에서는 텍스트 기록만 추가하며 별도 커밋이나 push는 하지 않는다.
+작업 트리에는 이전 작업의 장면 동기화, Real2Sim 분석, 문서, 런타임 기록 등도 있다.
+git status에 보이는 모든 변경을 이번 오류 수정의 산출물로 간주하지 않는다.
+
+4. 직전 재점검 결과
+
+  로컬 물리/센서/배치/녹화 관련 pytest: 121 passed, 9 subtests passed
+  격리된 ROS Humble collector/policy/GUI pytest: 116 passed
+  JavaScript 오차 선택 및 RC timeout: 3 passed
+  GUI 시작 / distributed 기본값 / pinger 제어권 검사: PASS
+  단일 부표 자석 분리 / 상승 / 로프 처짐·충돌 검사: PASS
+  수정 파일의 치명적 정적 오류 검사, JS 구문, diff 공백 검사: PASS
+
+각 검사 묶음에는 겹치는 항목이 있어 숫자를 고유 검사 총수로 합산하지 않는다.
+위 결과는 직전 수정 턴의 실행 결과이며, 이번 텍스트 작성에서 다시 실행한 것은 아니다.
+넓은 GUI 정적 검사에는 기존 callback의 메시지 타입 annotation 경고 24건이 남아 있다.
+상세 근거: docs/contracts/VLA_RECORDING_READINESS_20260920.md
+
+5. 남은 검증
+
+실제 사용 환경의 짧은 조이스틱 시연 녹화, 지속적인 10 Hz 저장 처리량,
+무선 조이스틱 장시간 안정성, 호환 체크포인트 학습 및 GPU 추론 지연,
+정책의 접근→정렬→분리 성공률, 자동 배치 reset/성공 판정, 실물 전이.
+수정된 GUI와 시뮬레이터는 새로 실행해야 변경 사항이 적용된다.

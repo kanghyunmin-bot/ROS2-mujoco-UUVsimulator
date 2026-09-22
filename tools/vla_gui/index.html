@@ -1,0 +1,27 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VLA 모델 실행</title>
+<style>
+body{margin:0;padding:18px;background:#101923;color:#e5edf6;font:14px system-ui}h2{margin:0 0 5px;font-size:20px}p{color:#aebed0;line-height:1.5}label{display:block;margin:14px 0 6px}select,textarea,input,button{box-sizing:border-box;font:inherit;border:1px solid #42566c;border-radius:7px;padding:10px;background:#1b2b3b;color:inherit}select,textarea{width:100%}textarea{height:74px;resize:vertical}button{cursor:pointer}button:disabled{opacity:.4;cursor:default}.row{display:flex;gap:8px;margin-top:14px}.row button{flex:1}#run{background:#127157}#stop{background:#8c3441}#message{padding:12px;background:#203247;border-radius:7px;margin-top:14px;white-space:pre-wrap}#error{color:#ffbdac;white-space:pre-wrap;max-height:150px;overflow:auto}#result{white-space:pre-wrap;color:#b4e8d9}small{color:#aebed0}input{width:95px}#loaded{color:#75daba;margin-top:10px}
+</style>
+<a href="/rl" style="color:#75daba">강화학습 모드 열기</a><h2>VLA 모델 실행</h2><small>시뮬레이션 전용 · 카메라를 보면서 비교하세요</small>
+<label for="model">학습 데이터 / 학습량</label><select id="model"></select>
+<div id="loaded">실제 준비된 모델: 없음</div>
+<p id="modelNote"></p>
+<label for="task">지시문</label><textarea id="task">Approach the yellow buoy, align the fixed fork, and detach the buoy.</textarea>
+<label for="seconds">실행 시간 (시뮬 초)</label><input id="seconds" type="number" min="1" max="90" value="50">
+<div class="row"><button id="prepare">① 모델 준비</button><button id="run" disabled>② ARM 후 실행</button><button id="stop">중지 / 종료</button></div>
+<p>시뮬을 먼저 시작하세요. 비교 전 로봇·부표를 같은 위치로 초기화하세요. 실행 종료 시 DISARM과 수동 복귀를 확인합니다.</p>
+<div id="message" role="status">연결 중…</div><pre id="error" role="alert"></pre><div id="result"></div>
+<script>
+const $=id=>document.getElementById(id);let initialized=false,last={},suggestedTask=null;
+function suggestTask(){const next=last.models[$('model').value]?.task||last.default_task;if(next&&(suggestedTask===null||$('task').value===suggestedTask))$('task').value=next;suggestedTask=next;$('modelNote').textContent=last.models[$('model').value]?.description||'';}
+async function act(action){try{const r=await fetch('/api/command',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,model:$('model').value,seconds:Number($('seconds').value),task:$('task').value})});const d=await r.json();if(!r.ok)throw Error(d.error);await poll();}catch(e){$('error').textContent=e.message;}}
+async function poll(){try{const r=await fetch('/api/status');if(!r.ok)throw Error('관리 서버 응답 오류');const s=await r.json();last=s;
+if(!initialized){for(const [key,m]of Object.entries(s.models)){$('model').add(new Option(m.label,key));}$('model').value=s.model||s.default_model;suggestTask();initialized=true;}
+$('model').disabled=s.busy;$('prepare').disabled=s.busy;$('run').disabled=s.busy||s.phase!=='ready'||s.model!==$('model').value;
+$('message').textContent=s.message;$('error').textContent=s.error||'';$('loaded').textContent='실제 준비된 모델: '+(s.model?s.models[s.model].label:'없음');
+if(s.result){const x=s.result;const names={detached:'부표 분리 감지',time_limit:'제한 시간 종료 (분리 미확인)',no_policy_output:'제어 명령 없음',error:'실행 오류',disarmed:'DISARM으로 종료',velocity_guard:'속도 제한으로 종료'};$('result').textContent=`결과: ${names[x.outcome]||x.outcome}\n제어 명령 ${x.rc_frames||0}개 · 수평 이동 ${(x.xy_displacement_m||0).toFixed(2)}m\n기록: ${s.result_file||''}`;}else{$('result').textContent='';}
+}catch(e){$('run').disabled=true;$('prepare').disabled=true;$('message').textContent='VLA 관리 서버 연결 끊김';$('error').textContent=e.message;}}
+$('model').onchange=()=>{suggestTask();$('run').disabled=last.busy||last.phase!=='ready'||last.model!==$('model').value;};
+for(const action of ['prepare','run','stop'])$(action).onclick=()=>act(action);poll();setInterval(poll,1500);
+</script></html>

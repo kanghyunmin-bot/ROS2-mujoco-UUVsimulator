@@ -1,0 +1,8 @@
+{
+  "base_firmware_commit": "2dd0bb7d4c85ac48437f139d66df648fc0e1d4ae",
+  "source_only_change": "--- a/libraries/SITL/SIM_JSON.cpp\n+++ b/libraries/SITL/SIM_JSON.cpp\n@@ -338,7 +338,7 @@\n     } else {\n         deltat = state.timestamp_s - last_timestamp_s;\n     }\n-    time_now_us += deltat * 1.0e6;\n+    time_now_us += uint64_t(llround(deltat * 1.0e6));\n \n     if (is_positive(deltat) && deltat < 0.1) {\n         // time in us to hz\n",
+  "baseline_binary_sha256": "3caa56876e688382c413bc2ab30e1533431f97250aa68908328a89df8cc8c647",
+  "scope": "Isolated diagnostic candidate. Installed source and firmware unchanged. Same 4.1.2 flight-controller code, only SITL JSON time conversion altered.",
+  "patched_binary_sha256": "eef765065fa7ab22db53325d39feeb9cf260897ddc48836609f7179846796ec2",
+  "build_flags": "C/C++ and link flags identical; DEFINES differ only in SKETCHBOOK path. Same configure options except disabling submodule update in isolated copy."
+}

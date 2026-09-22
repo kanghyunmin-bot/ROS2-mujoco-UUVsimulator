@@ -1,0 +1,14 @@
+{
+  "selected": "balanced",
+  "selection_bag": "primary",
+  "validation_bag": "auxiliary",
+  "selection_reason": "Lowest release RMSE among candidates that improved primary yaw RMSE and surge RMSE; stronger drag rejected for doubled yaw error. Auxiliary response data was not used to choose coefficients.",
+  "profile_sha256": "f03d1115e610501bfd7a419b90adb824360f1b6ac5d7d7fa59ec95818bbd6564",
+  "parameters": {
+    "rigid_inertia_z_scale": 0.8,
+    "yaw_linear_drag_nm_s_per_rad": 0.15,
+    "horizontal_tau_up_s": 0.01,
+    "horizontal_tau_down_s": 0.015
+  },
+  "note": "Time constants lie near the tested fast-response end; not uniquely identifiable as physical ESC dynamics."
+}

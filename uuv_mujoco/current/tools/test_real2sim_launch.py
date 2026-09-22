@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT))
 
 from gui.sim_launch_preset import (  # noqa: E402
     RESEARCH_POOL_DISTRIBUTED_PRESET_ID,
+    RESEARCH_POOL_YAW_STABLE_PRESET_ID,
     COURSE_CURRENT_PRESET_ID,
     COURSE_REAL2SIM_PRESET_ID,
     COURSE_REAL2SIM_YAW_PRESET_ID,
@@ -28,7 +29,7 @@ from physics.sim_profile_helpers import build_sim_profile, load_sim_profiles  # 
 
 class TestReal2SimLaunch(unittest.TestCase):
     def test_yaw_candidate_preserves_default_and_controller_overlay(self):
-        self.assertEqual(default_sim_launch_preset_id({}), RESEARCH_POOL_DISTRIBUTED_PRESET_ID)
+        self.assertEqual(default_sim_launch_preset_id({}), RESEARCH_POOL_YAW_STABLE_PRESET_ID)
         preset = resolve_sim_launch_preset(COURSE_REAL2SIM_YAW_PRESET_ID)
         validate_sim_launch_preset(preset)
         args = build_sim_launch_preset_args(preset)
@@ -46,9 +47,9 @@ class TestReal2SimLaunch(unittest.TestCase):
             sim_launch_preset_environment(preset)["SITL_REAL2SIM_BAG0402"], "1"
         )
 
-    def test_default_selects_frozen_plant_and_overlay(self):
+    def test_default_selects_stable_plant_and_overlay(self):
         preset = resolve_sim_launch_preset(default_sim_launch_preset_id({}))
-        self.assertEqual(preset.preset_id, RESEARCH_POOL_DISTRIBUTED_PRESET_ID)
+        self.assertEqual(preset.preset_id, RESEARCH_POOL_YAW_STABLE_PRESET_ID)
         validate_sim_launch_preset(preset)
         args = build_sim_launch_preset_args(preset)
         profiles, warning = load_sim_profiles(
@@ -66,6 +67,18 @@ class TestReal2SimLaunch(unittest.TestCase):
         self.assertEqual(
             sim_launch_preset_environment(preset)["SITL_REAL2SIM_BAG0402"], "1"
         )
+
+    def test_stable_preset_is_opt_in_and_records_separate_plant(self):
+        stable = resolve_sim_launch_preset(RESEARCH_POOL_YAW_STABLE_PRESET_ID)
+        validate_sim_launch_preset(stable)
+        env = sim_launch_preset_environment(stable)
+        self.assertEqual(env["SITL_YAW_STABLE"], "1")
+        self.assertEqual(env["UUV_SITL_YAW_BRAKE"], "1")
+        legacy = resolve_sim_launch_preset(RESEARCH_POOL_DISTRIBUTED_PRESET_ID)
+        env.update(sim_launch_preset_environment(legacy))
+        self.assertEqual(env["SITL_YAW_STABLE"], "0")
+        self.assertEqual(env["UUV_SITL_YAW_BRAKE"], "0")
+        self.assertNotEqual(stable.profile_path, legacy.profile_path)
 
     def test_nominal_selection_clears_controller_overlay(self):
         preset = resolve_sim_launch_preset(COURSE_CURRENT_PRESET_ID)
@@ -92,6 +105,12 @@ class TestReal2SimLaunch(unittest.TestCase):
                 )
 
     def test_actual_sitl_parameter_builder_uses_reviewed_values(self):
+        self._check_parameter_builder(stable=False)
+
+    def test_stable_sitl_parameter_builder_overrides_hardware_values(self):
+        self._check_parameter_builder(stable=True)
+
+    def _check_parameter_builder(self, stable):
         source = (ROOT / "start_ardusub_sitl_mj311.sh").read_text()
         functions = source[
             source.index("real_param_file_has() {") : source.index(
@@ -107,6 +126,11 @@ class TestReal2SimLaunch(unittest.TestCase):
             if line.strip() and not line.startswith("#"):
                 key, value = line.split()
                 overlay[key] = float(value)
+        if stable:
+            for line in (ROOT / "config/ardusub_yaw_stable.param").read_text().splitlines():
+                if line.strip() and not line.startswith("#"):
+                    key, value = line.split()
+                    overlay[key] = float(value)
         with tempfile.TemporaryDirectory() as tmp:
             script = "\n".join(
                 [
@@ -132,7 +156,7 @@ class TestReal2SimLaunch(unittest.TestCase):
                 check=True,
                 text=True,
                 capture_output=True,
-                env={**os.environ, "TMPDIR": tmp, "SITL_REAL2SIM_BAG0402": "1"},
+                env={**os.environ, "TMPDIR": tmp, "SITL_REAL2SIM_BAG0402": "1", "SITL_YAW_STABLE": "1" if stable else "0"},
             )
         actual = {}
         for line in result.stdout.splitlines():

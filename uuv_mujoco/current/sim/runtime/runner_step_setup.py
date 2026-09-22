@@ -30,6 +30,14 @@ def create_runner_step_setup(
 ) -> RunnerStepSetup:
     physics = physics_setup.physics
     model_io = physics_setup.model_io
+    remote_view = None
+    if os.environ.get('UUV_REMOTE_VIEW_DIR'):
+        from sim.runtime.remote_view_state import RemoteViewState
+        try:
+            remote_view = RemoteViewState(mujoco_module, initial_setup.model,
+                                          os.environ['UUV_REMOTE_VIEW_DIR'])
+        except Exception as error:
+            print(f'[remote-view] unavailable: {error}', flush=True)
     if _seed_release_actuators_enabled(plant_replay_direct_rcout):
         initial_setup.initial_depth_runtime.release_actuator_seed = (
             lambda: seed_thruster_state_from_current_targets(
@@ -46,6 +54,8 @@ def create_runner_step_setup(
         control_setup.viewer_controls.handle_key(keycode)
 
     def publish_ros_once() -> None:
+        if remote_view is not None:
+            remote_view.publish(initial_setup.data)
         control_setup.ros_bridge_runtime.publish_once(
             data=initial_setup.data,
             initial_depth_hold=initial_setup.initial_depth_hold,
@@ -87,6 +97,11 @@ def create_runner_step_setup(
         publish_ros_once=publish_ros_once,
         publish_qgc_video_once=publish_qgc_video_once,
     )
+    bridge = control_setup.ros_bridge_runtime.get()
+    if bridge is not None and getattr(bridge, "node", None) is not None and hasattr(bridge, "_course_buoy_runtime"):
+        from sim.runtime.demo_reset import DemoReset
+        step_runtime.demo_reset = DemoReset(step_runtime, physics, bridge)
+        step_runtime.demo_reset.install()
     return RunnerStepSetup(
         step_runtime=step_runtime,
         run_step=step_runtime.run_step,

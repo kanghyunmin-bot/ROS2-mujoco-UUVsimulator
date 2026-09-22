@@ -25,6 +25,9 @@ class SimulationStepRuntime(SimulationStepRuntimeState):
         spin_started = total_started
         self.spin_ros_once()
         record_step_phase(self, "ros_spin", time.perf_counter() - spin_started)
+        reset = getattr(self, "demo_reset", None)
+        if reset is not None and reset.tick(is_paused=is_paused, publish_ros=publish_ros):
+            return (0.0, 0.0, 0.0, 0.0)
         # Consume final PWM before applying targets. The telemetry thread's
         # wall-clock rate must not add a delay to the physics command path.
         if self.sitl_enabled:

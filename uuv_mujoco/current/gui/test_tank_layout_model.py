@@ -165,6 +165,9 @@ def generate_test_tank_scene(
 ) -> Path:
     tree = ET.parse(base_scene_path)
     root = tree.getroot()
+    from sim.vehicle_scene_contract import synchronize_vehicle
+
+    synchronize_vehicle(root)
     root.set("model", "uuv_test_tank_549x274x132")
     worldbody = root.find("worldbody")
     if worldbody is None:
@@ -591,17 +594,18 @@ def _append_test_tank_buoy_equalities(
     equality = root.find("equality")
     if equality is None:
         equality = ET.SubElement(root, "equality")
-    ET.SubElement(
-        equality,
-        "weld",
-        name=f"{prefix}_collector_weld",
-        body1="front_open_buoy_collector",
-        body2=f"{prefix}_float",
-        relpose="0 0 0.2 1 0 0 0",
-        active="false",
-        solref="0.050 1",
-        solimp="0.75 0.95 0.002",
-    )
+    if root.find(".//body[@name='front_open_buoy_collector']") is not None:
+        ET.SubElement(
+            equality,
+            "weld",
+            name=f"{prefix}_collector_weld",
+            body1="front_open_buoy_collector",
+            body2=f"{prefix}_float",
+            relpose="0 0 0.2 1 0 0 0",
+            active="false",
+            solref="0.050 1",
+            solimp="0.75 0.95 0.002",
+        )
     ET.SubElement(
         equality,
         "weld",

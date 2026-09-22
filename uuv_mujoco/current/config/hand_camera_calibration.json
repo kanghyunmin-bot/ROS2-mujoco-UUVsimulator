@@ -1,0 +1,58 @@
+{
+  "version": "hand-camera-reference-v1",
+  "reference": "codex-clipboard-625f8fb0-b973-47be-a618-eb1ce9adf24b.png",
+  "position_m": [
+    0.247,
+    -0.044,
+    -0.033
+  ],
+  "xyaxes": [
+    -0.6982144638970085,
+    -0.5496091066460603,
+    -0.4587225657156324,
+    0.02861360456328386,
+    -0.6616867601700958,
+    0.7492342044044027
+  ],
+  "fovy_deg": 35,
+  "relative_pitch_deg": -15,
+  "relative_roll_deg": -25,
+  "relative_pan_deg": 12,
+  "hand_target_uv": [
+    0.48,
+    0.75
+  ],
+  "target_status": "provisional visible gap; not insertion-validated",
+  "reference_depth_m": 0.1218399852514267,
+  "target_body_m": [
+    0.3355119380367045,
+    -0.09192734377108369,
+    -0.10434422587321063
+  ],
+  "image_jacobian_per_m": [
+    [
+      -4.109217249836927,
+      -3.4381517019116403
+    ],
+    [
+      9.66262470901702,
+      -8.774799632359498
+    ]
+  ],
+  "error_to_right_down_m": [
+    [
+      0.063329316752127,
+      -0.024813762968360645
+    ],
+    [
+      0.06973691098285781,
+      0.029656964457460935
+    ]
+  ],
+  "scenes": [
+    "tank_current_scene.xml",
+    "research_pool_slam_scene.xml",
+    "tank_legacy_scene.xml",
+    "tank_current_scene_cable_test.xml"
+  ]
+}

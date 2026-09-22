@@ -1,0 +1,8 @@
+{
+  "source_commit": "2dd0bb7d4c85ac48437f139d66df648fc0e1d4ae",
+  "source_diff": "diff --git a/libraries/SITL/SIM_JSON.cpp b/libraries/SITL/SIM_JSON.cpp\nindex 8ec04a7378..a673e62b6c 100644\n--- a/libraries/SITL/SIM_JSON.cpp\n+++ b/libraries/SITL/SIM_JSON.cpp\n@@ -338,7 +338,7 @@ void JSON::recv_fdm(const struct sitl_input &input)\n     } else {\n         deltat = state.timestamp_s - last_timestamp_s;\n     }\n-    time_now_us += deltat * 1.0e6;\n+    time_now_us += uint64_t(llround(deltat * 1.0e6));\n \n     if (is_positive(deltat) && deltat < 0.1) {\n         // time in us to hz\n",
+  "installed_binary": "/home/khm/robotics/underwater/ROS2-mujoco-UUVsimulator/ardupilot_sub_stable/build/sitl/bin/ardusub",
+  "binary_sha256": "702a58ea91cf0946aa4025f404ba9cffd3aebd67cf2a134e028652c797cdbd8c",
+  "installer": "setup/patch_ardusub_json_clock.py --apply; ./waf sub -j 3",
+  "validation": "primary_validated and auxiliary_validated both use this installed binary"
+}

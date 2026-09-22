@@ -88,7 +88,11 @@ class RovPolicyAdapter(Node):
         self.last_ros_time = sensors._now()
         self.clock_advanced_at = self.last_tick
         self.timer = self.create_timer(
-            0.1, self._tick, clock=Clock(clock_type=ClockType.STEADY_TIME)
+            # Poll HTTP completion faster than the command cadence. A 100 ms
+            # polling period can add two full ticks to a 110 ms response,
+            # expiring a valid chunk before its replacement is consumed.
+            # Command publication remains gated at 10 Hz in ROS time below.
+            0.02, self._tick, clock=Clock(clock_type=ClockType.STEADY_TIME)
         )
         self.get_logger().info(
             f"VLA adapter disabled, dry_run={self.dry_run}; no arm/mode changes"
@@ -189,6 +193,11 @@ class RovPolicyAdapter(Node):
             or not self._ready(now)
             or not 0 < dt <= 0.2
         ):
+            self.get_logger().warning(
+                f"VLA watchdog: clock_reset={reset}, "
+                f"clock_stall={now - self.clock_advanced_at:.3f}s, "
+                f"ready={self._ready(now)}, tick_interval={dt:.3f}s"
+            )
             self._stop()
             return
         try:
@@ -206,11 +215,13 @@ class RovPolicyAdapter(Node):
             if self.chunk is not None:
                 age = now - self.chunk_at
                 if age > self.timeout:
+                    self.get_logger().warning(f"VLA action expired: age={age:.3f}s")
                     self._stop()
                     return
                 # Training cadence is ROS time. Wall time remains the safety watchdog.
                 ros_age = ros_time - self.chunk_ros_at
                 if not 0 <= ros_age < 1.6:
+                    self.get_logger().warning(f"VLA chunk outside horizon: age={ros_age:.3f}s")
                     self._stop()
                     return
                 command_dt = (
@@ -220,6 +231,7 @@ class RovPolicyAdapter(Node):
                 )
                 if command_dt >= 0.1 - 1e-6:
                     if command_dt > 0.2:
+                        self.get_logger().warning(f"VLA command gap: {command_dt:.3f}s")
                         self._stop()
                         return
                     action = self.chunk[min(int((ros_age + 1e-6) * 10), 15)]
@@ -234,6 +246,7 @@ class RovPolicyAdapter(Node):
                     request_action, self.url, observation, self.timeout
                 )
             elif now - self.requested_at > self.timeout:
+                self.get_logger().warning("VLA inference request exceeded deadline")
                 self._stop()
         except Exception as error:  # noqa: BLE001 - Every inference failure must release RC ownership.
             self.get_logger().warning(f"VLA stopped: {error}")

@@ -19,6 +19,8 @@ add_executable(mission_state_machine_node src/mission_state_machine_node.cpp)
 target_compile_features(mission_state_machine_node PUBLIC cxx_std_17)
 ament_target_dependencies(mission_state_machine_node geometry_msgs rclcpp std_msgs mavros_msgs)
 
+install(FILES scripts/yellow_ellipse.py scripts/hand_stick.py DESTINATION lib/${PROJECT_NAME})
+
 install(PROGRAMS
   scripts/yolo_buoy_detector.py
   DESTINATION lib/${PROJECT_NAME}
@@ -39,7 +41,13 @@ install(PROGRAMS
   RENAME check_yolo_env
 )
 
+add_executable(collection_fsm_node src/collection_fsm_node.cpp)
+target_include_directories(collection_fsm_node PRIVATE include)
+target_compile_features(collection_fsm_node PUBLIC cxx_std_17)
+ament_target_dependencies(collection_fsm_node geometry_msgs rclcpp std_msgs mavros_msgs)
+
 install(TARGETS
+  collection_fsm_node
   bbox_controller_node
   mission_state_machine_node
   DESTINATION lib/${PROJECT_NAME}
@@ -50,6 +58,10 @@ install(DIRECTORY launch
 )
 
 if(BUILD_TESTING)
+  add_executable(test_collection_servo test/test_collection_servo.cpp)
+  target_include_directories(test_collection_servo PRIVATE include)
+  target_compile_features(test_collection_servo PUBLIC cxx_std_17)
+  add_test(NAME collection_servo COMMAND test_collection_servo)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
   add_test(NAME vision_interface_defaults
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/test_interface_defaults.py)
