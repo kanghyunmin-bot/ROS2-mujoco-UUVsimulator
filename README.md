@@ -41,7 +41,7 @@ flowchart LR
 
 ![Research pool](docs/assets/research-pool-20260912.png)
 
-## 최신 장면과 영상
+## 기반 장면과 정적 렌더 · 9월 12–14일
 
 ![Depth-aware underwater camera comparison](docs/assets/underwater-camera-comparison-20260914.png)
 
@@ -64,7 +64,7 @@ flowchart LR
 - **제어:** ArduSub SITL → PWM → 추진기, MAVROS RC override, 웹 스틱·브라우저 게임패드 지원.
 - **VLA:** 상태 23차원, 행동 4차원 `[surge, sway, heave, yaw]`, 전방·손 카메라, 출처·종료 이유·시각 기록. 정책의 RC 단일 발행자 검사.
 - **파이프라인:** 초기 10Hz 정지 연결 검사에서 실제 시연 학습·GPU 추론·잔차 PPO와 독립 평가까지 확장. 현재 구현과 제한은 위 최신 기록을 기준으로 합니다.
-- **실물 로그 활용:** 단일 수조 주행 bag으로 제한적인 수평 응답 보정. 별도 opt-in 프로파일이며 기본 모델의 실측 인증이 아닙니다.
+- **실물 로그 활용:** 수조 주행 bag 기반의 조건부 수평 응답 보정과 별도 bag 재생 비교. 실제 동역학의 완전한 식별이나 실측 인증은 아닙니다.
 
 **학습 체크포인트와 시뮬레이션 분리 사례는 확인했지만 정밀 삽입 일반화·실물 전이는 검증하지 않았습니다.** 정지 연결 데이터를 유효한 작업 시연으로 사용하지 않습니다. CAD 장착값·유체 계수·센서 광학은 추가 실측이 필요합니다.
 
