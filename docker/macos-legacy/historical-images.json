@@ -1,0 +1,20 @@
+[
+  {
+    "tags": [
+      "ros2-mujoco:humble-vnc"
+    ],
+    "image_id": "sha256:190c19462fa9bbe229319e4614d7d0365bec4df405f409194804151999f690ba",
+    "created": "2026-02-14T13:17:22.26154955Z",
+    "architecture": "amd64",
+    "os": "linux"
+  },
+  {
+    "tags": [
+      "ros2-mujoco:humble"
+    ],
+    "image_id": "sha256:72e4b13c39b4bf9850dbbe758f315ba0dcff57301290f8a863410f6faa8f4905",
+    "created": "2026-02-11T06:13:43.270192013Z",
+    "architecture": "amd64",
+    "os": "linux"
+  }
+]
