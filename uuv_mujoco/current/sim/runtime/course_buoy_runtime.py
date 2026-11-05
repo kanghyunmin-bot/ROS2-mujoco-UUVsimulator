@@ -60,6 +60,7 @@ class CourseBuoy:
     release_hand_contact: bool = False
     release_right_fork_stem_contact: bool = False
     release_right_fork_region: bool = False
+    release_contact_evidence: dict[str, object] | None = None
     last_vehicle_contact_time_s: float = -1.0
     contact_release_start_time_s: float = -1.0
     contact_release_peak_n: float = 0.0
@@ -637,6 +638,7 @@ class CourseBuoyRuntime:
                 "release_hand_contact": buoy.release_hand_contact,
                 "release_right_fork_stem_contact": buoy.release_right_fork_stem_contact,
                 "release_right_fork_region": buoy.release_right_fork_region,
+                "release_contact_evidence": buoy.release_contact_evidence,
                 "hand_contact_active": buoy.hand_contact_active,
                 "runtime_time_s": now_s,
                 "magnet_load_n": self._magnet_constraint_force_n(buoy) if self.magnet_force_release else 0.0,
@@ -1638,20 +1640,10 @@ class CourseBuoyRuntime:
                 body_id = self._buoy_body_by_geom.get(geom2)
                 if body_id is not None:
                     contacted.add(body_id)
-            if vehicle_geom in self._right_fork_geom_ids:
-                geom_name = self.mujoco_module.mj_id2name(
-                    self.model, self.mujoco_module.mjtObj.mjOBJ_GEOM, buoy_geom) or ''
-                if geom_name.endswith('_pvc_pipe'):
-                    self._right_fork_stem_contacts.add(body_id)
             if geom2 in vehicle_geom_ids:
                 body_id = self._buoy_body_by_geom.get(geom1)
                 if body_id is not None:
                     contacted.add(body_id)
-            if vehicle_geom in self._right_fork_geom_ids:
-                geom_name = self.mujoco_module.mj_id2name(
-                    self.model, self.mujoco_module.mjtObj.mjOBJ_GEOM, buoy_geom) or ''
-                if geom_name.endswith('_pvc_pipe'):
-                    self._right_fork_stem_contacts.add(body_id)
         return contacted
 
     def _has_release_probe_proximity(self, buoy: CourseBuoy) -> bool:
@@ -1901,9 +1893,48 @@ class CourseBuoyRuntime:
                 return True
         return False
 
+    def release_contact_snapshot(self, buoy: CourseBuoy) -> dict[str, object]:
+        """Capture vehicle contact evidence before changing constraints.
+
+        Positions and signed separation are [m]; contact force magnitude is [N].
+        This instantaneous snapshot does not establish exclusive causality or
+        contact duration. It is diagnostic truth, never a policy observation.
+        """
+        contacts = []
+        force = np.zeros(6, dtype=np.float64)
+        for contact_id in range(int(self.data.ncon)):
+            contact = self.data.contact[contact_id]
+            first, second = int(contact.geom1), int(contact.geom2)
+            if first in self.vehicle_geom_ids and second in buoy.geom_ids:
+                vehicle_geom, buoy_geom = first, second
+            elif second in self.vehicle_geom_ids and first in buoy.geom_ids:
+                vehicle_geom, buoy_geom = second, first
+            else:
+                continue
+            vehicle_name = self.model.geom(vehicle_geom).name
+            buoy_name = self.model.geom(buoy_geom).name
+            if vehicle_geom in self._right_fork_geom_ids:
+                kind = "right_fork_stem" if buoy_name.endswith("_pvc_pipe") else "right_fork_other"
+            elif vehicle_geom in self._hand_geom_id_set:
+                kind = "other_hand"
+            else:
+                kind = "vehicle_body"
+            force[:] = 0.0
+            self.mujoco_module.mj_contactForce(self.model, self.data, contact_id, force)
+            contacts.append({
+                "vehicle_geom": vehicle_name, "buoy_geom": buoy_name,
+                "kind": kind, "position_world_m": np.asarray(contact.pos).tolist(),
+                "separation_m": float(contact.dist),
+                "force_n": float(np.linalg.norm(force[:3])),
+                "solver_active": bool(contact.efc_address >= 0),
+            })
+        return {"schema": "uuv.release_contact.v1", "time_s": float(self.data.time),
+                "contacts": contacts, "duration_s": None}
+
     def _detach(self, buoy: CourseBuoy, *, reason: str, force_n: float) -> None:
         if buoy.detached:
             return
+        buoy.release_contact_evidence = self.release_contact_snapshot(buoy)
         buoy.release_right_fork_region = self.right_fork_region_contains(buoy)
         buoy.release_reason = reason
         buoy.release_force_n = float(force_n)

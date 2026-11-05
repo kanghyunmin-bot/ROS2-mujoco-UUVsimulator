@@ -13,8 +13,11 @@ from torch.distributions import Normal
 
 
 class ResidualActorCritic(nn.Module):
-    def __init__(self, state_dim=23, action_dim=4, residual_limit=.15, learned_brake=False):
+    def __init__(self, state_dim=23, action_dim=4, residual_limit=.15, learned_brake=False,
+                 observation_contract='sensor_v1'):
         super().__init__()
+        self.state_dim = state_dim
+        self.observation_contract = observation_contract
         self.residual_limit = residual_limit
         self.learned_brake = learned_brake
         self.features = nn.Sequential(nn.Linear(state_dim+action_dim, 64), nn.Tanh(),
@@ -45,12 +48,20 @@ class ResidualActorCritic(nn.Module):
     def seed_legacy(self, saved):
         """Transfer actor/features, reset critic for the new reward; no Adam reuse."""
         target = self.state_dict()
-        for name in ('features.0.weight', 'features.0.bias', 'features.2.weight', 'features.2.bias'):
+        old_input = saved['features.0.weight']
+        old_state_dim = old_input.shape[1]-4
+        if old_state_dim not in (23, self.state_dim) or old_state_dim > self.state_dim:
+            raise ValueError('Incompatible residual observation width')
+        target['features.0.weight'].zero_()
+        target['features.0.weight'][:, :old_state_dim] = old_input[:, :old_state_dim]
+        target['features.0.weight'][:, -4:] = old_input[:, -4:]
+        for name in ('features.0.bias', 'features.2.weight', 'features.2.bias'):
             target[name] = saved[name].clone()
         for name in ('actor.weight', 'actor.bias', 'log_std'):
-            if saved[name].shape[0] != 4:
-                raise ValueError('Precision warm start expects a four-action legacy policy')
-            target[name][:4] = saved[name]
+            width = saved[name].shape[0]
+            if width not in (4, 5) or width > target[name].shape[0]:
+                raise ValueError('Incompatible residual latent width')
+            target[name][:width] = saved[name]
         target['critic.weight'].zero_()
         target['critic.bias'].zero_()
         self.load_state_dict(target)
@@ -163,7 +174,10 @@ def update(policy, optimizer, batch, *, epochs=4, clip=.2, kl_limit=.01,
 def save_checkpoint(path, policy, optimizer, *, base_model, updates, config):
     path=Path(path);path.parent.mkdir(parents=True,exist_ok=True)
     temp=path.with_suffix('.tmp')
-    torch.save({'schema':'uuv.residual_rl.v2' if policy.learned_brake else 'uuv.residual_rl.v1','policy':policy.state_dict(),
+    schema = ('uuv.residual_rl.v3' if policy.observation_contract != 'sensor_v1' else
+              'uuv.residual_rl.v2' if policy.learned_brake else 'uuv.residual_rl.v1')
+    torch.save({'schema':schema,'policy':policy.state_dict(),
+                'state_dim':policy.state_dim,'observation_contract':policy.observation_contract,
                 'learned_brake':policy.learned_brake,
                 'source_checkpoint':getattr(policy,'source_checkpoint',None),
                 'source_lineage_updates':getattr(policy,'source_lineage_updates',None),

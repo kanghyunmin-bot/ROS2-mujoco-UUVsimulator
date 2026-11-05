@@ -5,8 +5,7 @@
   panel.id = 'recorderPanel';
   panel.innerHTML = `<legend>VLA 시연 녹화</legend>
     <div class="rec-progress-box">
-      <div class="summary-row"><strong id="recCountTitle">누적 시연 집계 대기</strong><span id="recCountPercent">—</span></div>
-      <progress id="recCountProgress" max="50" value="0" aria-label="분리 성공 저장 50개 목표"></progress>
+      <strong>저장한 시연</strong>
       <p id="recCountDetails" class="status-line">저장 파일을 확인하고 있습니다.</p>
       <small>분리 임무 3종 지시문 기준 · 성공 표시는 영상 검수 전입니다. 접근·정지 테스트와 다른 지시문은 기타로 분류합니다.</small>
     </div>
@@ -19,7 +18,7 @@
       <small>포크 접촉·고정 해제로 결과를 판정합니다. 중지 시 현재 녹화는 실패로 저장하고 ARM을 해제합니다.</small>
     </div>
     <label>작업 지시문<input id="recTask" value="" style="width:100%"></label>
-    <p class="status-line">새 세션마다 같은 분리 임무의 표현을 무작위 선택합니다. 세션 안에서는 지시문을 유지합니다.</p>
+    <p class="status-line">실험에 사용할 지시문을 확인하거나 수정하세요. 세션 안에서는 같은 지시문을 사용합니다.</p>
     <label>수집 모드 <select id="recMode"><option>STABILIZE</option><option>ALT_HOLD</option><option>MANUAL</option></select></label>
     <div class="rec-progress-box">
       <label>한 시연 목표 시간 · 시뮬 초 <input id="recTargetSeconds" type="number" min="5" max="600" step="5" value="30"></label>
@@ -38,17 +37,7 @@
     <details><summary>사용 순서</summary><p>카메라 VLA lite 적용 + 재시작 → 준비 → 자세 정렬·ARM·조종 입력 활성화 → 녹화 → 저장 순서입니다. 센서 출력은 10Hz 이상이 필요하며, 요청 주기와 실제 수신 주기는 다를 수 있습니다. 준비 버튼은 자동 ARM하거나 로봇을 움직이지 않습니다. 다음 시연 초기화는 저장 후 세션을 유지한 채 사용할 수 있습니다. 센서·시뮬레이션 설정 변경과 Stop/Reset은 세션 종료 후 가능합니다. 미리보기 속도는 녹화와 독립적으로 낮출 수 있습니다. 실패·자동 중단 자료는 학습용 성공 시연과 별도로 검토하세요.</p></details>`;
   document.querySelector('.control-column').appendChild(panel);
   const el = id => document.getElementById(id);
-  const taskVariants = [
-    'Approach the yellow buoy, align the fixed fork, and detach the buoy.',
-    'Move toward the yellow buoy, align the fixed fork, and release the buoy from its attachment.',
-    'Use the fixed fork to detach the yellow buoy after approaching and aligning with it.',
-  ];
-  function chooseTask() {
-    const choices = taskVariants.filter(task => task !== el('recTask').value);
-    el('recTask').value = choices[Math.floor(Math.random() * choices.length)];
-  }
-  chooseTask();
-  let wasConfigurationLocked = false;
+  el('recTask').value = 'Approach the yellow buoy, align the fixed fork, and detach the buoy.';
   let lastRecorderStatus = {};
   let recentDuration = 0;
   let recentEpisodeKey = '';
@@ -119,12 +108,7 @@
   window.renderRecorder = r => {
     const counts = r.collection_counts;
     if (counts) {
-      const goal = counts.goal || 50;
-      el('recCountTitle').textContent = `분리 성공 ${counts.success} / ${goal}개`;
-      el('recCountPercent').textContent = `${Math.min(100, Math.floor(counts.success / goal * 100))}%`;
-      el('recCountProgress').max = goal;
-      el('recCountProgress').value = Math.min(goal, counts.success);
-      el('recCountDetails').textContent = `전체 ${counts.total}개 · 분리 실패 ${counts.failure}개 · 기타/테스트 ${counts.other}개 · 목표까지 ${Math.max(0, goal - counts.success)}개${counts.unreadable ? ` · 읽기 오류 ${counts.unreadable}개` : ''}`;
+      el('recCountDetails').textContent = `전체 ${counts.total}개 · 분리 성공 라벨 ${counts.success}개 · 분리 실패 ${counts.failure}개 · 기타/테스트 ${counts.other}개${counts.unreadable ? ` · 읽기 오류 ${counts.unreadable}개` : ''}`;
     } else {
       el('recCountDetails').textContent = '누적 집계를 불러오려면 업데이트된 GUI 서버를 실행하세요.';
     }
@@ -142,8 +126,6 @@
     window.autoCollectionRunning = autoRunning;
     const blocked = autoRunning || pending || r.busy || !r.online || !r.owned;
     const configurationLocked = autoRunning || Boolean(r.configuration_locked);
-    if (wasConfigurationLocked && !configurationLocked && !r.running && !r.online) chooseTask();
-    wasConfigurationLocked = configurationLocked;
     // A refreshed browser must show the recorder's real instruction, not a new draft.
     if ((configurationLocked || r.running || r.online) && r.task) el('recTask').value = r.task;
     for (const id of ['stereoCameraProfile', 'stereoCameraOptics', 'stereoCameraApplyBtn', 'stereoCameraSaveBtn',

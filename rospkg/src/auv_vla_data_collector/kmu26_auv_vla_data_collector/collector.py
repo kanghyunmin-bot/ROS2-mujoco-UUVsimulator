@@ -29,6 +29,7 @@ from std_srvs.srv import SetBool, Trigger
 from .contract import (
     ACTION_NAMES,
     STATE_NAMES,
+    STATE_SLICES,
     RcCommandTracker,
     body_velocity,
     build_state,
@@ -569,19 +570,9 @@ class VlaDataCollector(Node):
                 altitude if altitude_valid else 0.0,
                 [1, 1, dvl_valid, altitude_valid],
             )
-            slices = {
-                "prev_command": (0, 4),
-                "dvl_velocity": (4, 7),
-                "angular_velocity": (7, 10),
-                "linear_acceleration": (10, 13),
-                "attitude": (13, 17),
-                "depth": (17, 18),
-                "altitude": (18, 19),
-                "validity": (19, 23),
-            }
             observation = {
                 f"state.{key}": state[a:b][None].copy()
-                for key, (a, b) in slices.items()
+                for key, (a, b) in STATE_SLICES.items()
             }
             observation.update(
                 {

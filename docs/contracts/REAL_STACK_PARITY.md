@@ -173,3 +173,38 @@ ros2 launch auv rov_start.launch.py \
 The zero-valued launch defaults are inactive placeholders, not measured
 extrinsics. The new TF path is physical-only; simulation continues to use the
 MuJoCo camera sites and the bridge-owned camera TF chain.
+
+### KMU 19-state VLA on the MuJoCo ROS graph
+
+Start the research pool in real-package compatibility mode with the two IMX219
+views, external MAVROS and DVL enabled. Use an isolated simulator ROS domain.
+Start the reviewed KMU policy server with its own checkpoint and training PWM
+settings as described in the reasoning repository. In another terminal in the
+same ROS domain run:
+
+```bash
+./docker/ubuntu-dev/dev.sh vla-real
+```
+
+The runner mounts the sibling `auv_vla_reasoning_19` checkout (override with
+`UUV_REASONING_DIR`). It requires the simulation clock entry point based on
+upstream `554fb7b`. It reads the real adapter's YAML and changes the sensor
+clock to the simulator's /clock. Keep camera order, DVL frame convention,
+PWM span and ArduSub mode aligned with the reviewed real training settings.
+The server's data source describes the real training contract. Simulation
+recordings must retain their own source and clock metadata.
+
+The adapter starts disabled in dry run. Follow the upstream task, deadman
+and enable procedure to observe /vla/proposed_rc. For a controlled SITL
+test only, launch with `-p vla_policy:dry_run:=false` after stopping other RC
+publishers on the isolated domain. The adapter checks RC ownership, armed
+state and mode. The existing PPO GUI uses a different checkpoint format.
+
+Upstream collector and trainer pins requested for reproducing the full
+pipeline are `38e21e3` and `bf7d374`. The bundled simulator collector and
+legacy transfer weights are distinct from these inputs.
+
+The strict simulator provides AHRS attitude on `/mavros/imu/data` and body-FLU
+motion at the IMU origin on `/mavros/imu/data_raw` (`fcu_link`). Both captures
+must be fresh. For the public trainer, both camera views must also have the same
+resolution. Keep the requested training horizon of 16 actions at 10 Hz.

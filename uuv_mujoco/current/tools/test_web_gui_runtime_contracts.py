@@ -8,7 +8,8 @@ import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from threading import Event, Thread
+from threading import Event, Lock, Thread
+from types import SimpleNamespace
 from unittest.mock import patch
 
 
@@ -19,6 +20,8 @@ if str(CURRENT_DIR) not in sys.path:
 from gui.models import TelemetrySnapshot  # noqa: E402
 from gui.web_app import UuvWebHandler, WebGuiController  # noqa: E402
 from gui.web_process_manager import WebProcessManager  # noqa: E402
+from gui.web_rc_replay import WebRcReplayManager  # noqa: E402
+from gui import node_stereo_camera  # noqa: E402
 
 
 class _Node:
@@ -151,6 +154,37 @@ class _ControllerProcesses:
 
 
 class WebGuiRuntimeContractsTest(unittest.TestCase):
+    def test_camera_cache_preserves_capture_time_when_old_frame_is_republished(self) -> None:
+        node = SimpleNamespace(
+            _lock=Lock(),
+            _stereo_camera_seq={},
+            _stereo_camera_frames={},
+            _touch=lambda key: None,
+        )
+        message = SimpleNamespace(
+            data=b"jpeg", format="jpeg",
+            header=SimpleNamespace(stamp=SimpleNamespace(sec=10, nanosec=250000000)),
+        )
+        with patch.object(node_stereo_camera, "_compressed_frame_dimensions", return_value=(640, 360)):
+            node_stereo_camera._on_compressed_stereo_camera_image(node, "left", message)
+            node_stereo_camera._on_compressed_stereo_camera_image(node, "left", message)
+        frame = node._stereo_camera_frames["left"]
+        status = node_stereo_camera._frame_status(frame, frame.wall_s + 0.1)
+        self.assertEqual(status["capture_stamp_s"], 10.25)
+        self.assertEqual(status["seq"], 2)
+        self.assertAlmostEqual(status["age_s"], 0.1)
+
+    def test_play_resumes_paused_replay_without_reloading_or_rewinding(self) -> None:
+        replay = WebRcReplayManager(_Node(), lambda: None)
+        replay._position_s = 10.0
+        replay._pause_event.set()
+        with patch.object(replay, "running", return_value=True), patch.object(replay, "load") as load:
+            replay.start(path="same-bag", rate="1.0")
+        self.assertFalse(replay._pause_event.is_set())
+        self.assertEqual(replay._position_s, 10.0)
+        self.assertEqual(replay.status, "replay: running")
+        load.assert_not_called()
+
     def _controller(self) -> tuple[WebGuiController, _Node, _ControllerProcesses]:
         node = _Node()
         with patch("gui.web_app.WebRecorder") as recorder:

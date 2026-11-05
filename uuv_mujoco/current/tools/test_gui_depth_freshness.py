@@ -17,6 +17,8 @@ if str(CURRENT_DIR) not in sys.path:
     sys.path.insert(0, str(CURRENT_DIR))
 
 from gui.models import TelemetrySnapshot  # noqa: E402
+from gui import node_motion_depth_callbacks as depth_callbacks  # noqa: E402
+from gui import node_motion_velocity_callbacks as velocity_callbacks  # noqa: E402
 from gui.node_motion_depth_callbacks import _on_pressure_value  # noqa: E402
 from gui.node_motion_pose_callbacks import _on_ground_truth_pose, _on_odom  # noqa: E402
 from gui.node_snapshot_runtime import snapshot  # noqa: E402
@@ -48,6 +50,42 @@ def _odom(x: float, y: float, z: float) -> SimpleNamespace:
 
 
 class GuiDepthFreshnessTest(unittest.TestCase):
+    def test_dvl_sensor_velocity_wins_over_sim_truth_until_stale(self) -> None:
+        owner = _Owner()
+        message = SimpleNamespace(
+            header=SimpleNamespace(frame_id='base_link'),
+            twist=SimpleNamespace(twist=SimpleNamespace(linear=SimpleNamespace(x=.4, y=.2, z=-.1))),
+        )
+        velocity_callbacks._on_dvl_twist(owner, message)
+        _on_odom(owner, _odom(1.0, 2.0, -1.0), '/sim/odom')
+        self.assertEqual(owner._snapshot.velocity_xyz, (.4, .2, -.1))
+        self.assertEqual(owner._snapshot.velocity_source, '/dvl/twist')
+        self.assertEqual(owner._snapshot.velocity_frame, 'base_link')
+        self.assertLess(snapshot(owner).velocity_age_s, .5)
+        owner._last_wall['dvl_velocity'] = time.monotonic() - 2
+        _on_odom(owner, _odom(1.0, 2.0, -1.0), '/sim/odom')
+        self.assertEqual(owner._snapshot.velocity_source, '/sim/odom')
+
+    def test_real_depth_pose_wins_over_truth_and_keeps_its_own_freshness(self) -> None:
+        owner = _Owner()
+        message = SimpleNamespace(pose=_pose(-1.25))
+        depth_callbacks._on_depth_pose(owner, message)
+        _on_ground_truth_pose(owner, _pose(-9.0))
+        self.assertEqual(owner._snapshot.depth_m, 1.25)
+        self.assertEqual(owner._snapshot.depth_source, "/depth/pose")
+        self.assertLess(snapshot(owner).depth_age_s, 0.5)
+        owner._last_wall["depth"] = time.monotonic() - 4.0
+        owner._last_wall["pose"] = time.monotonic()
+        self.assertGreater(snapshot(owner).depth_age_s, 3.0)
+        _on_ground_truth_pose(owner, _pose(-2.0))
+        self.assertEqual(owner._snapshot.depth_m, 2.0)
+
+    def test_nonfinite_depth_pose_does_not_refresh_the_sensor(self) -> None:
+        owner = _Owner()
+        depth_callbacks._on_depth_pose(owner, SimpleNamespace(pose=_pose(float("nan"))))
+        self.assertNotIn("depth", owner._last_wall)
+        self.assertTrue(math.isnan(owner._snapshot.depth_m))
+
     def test_filtered_odometry_updates_depth_without_dedicated_depth_topic(self) -> None:
         owner = _Owner()
 

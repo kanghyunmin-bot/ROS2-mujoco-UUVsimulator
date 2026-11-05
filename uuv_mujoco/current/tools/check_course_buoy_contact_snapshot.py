@@ -42,6 +42,11 @@ def main() -> int:
     runtime._release_probe_geom_id_set = frozenset({10})
     runtime._buoy_body_by_geom = {101: 1, 102: 2}
     runtime._contact_force_scratch = np.zeros(6, dtype=np.float64)
+    # __new__ bypasses dataclass default factories; initialize evidence sets.
+    runtime._hand_contacted_body_ids = set()
+    runtime._right_fork_stem_contacts = set()
+    runtime._hand_geom_id_set = frozenset({10})
+    runtime._right_fork_geom_ids = frozenset()
 
     contacted, rake_contacted, force_by_body = runtime._contact_snapshot()
     if contacted != {1, 2}:

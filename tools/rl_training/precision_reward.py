@@ -4,6 +4,7 @@ Distances [m], angles [rad], durations [s]. This is experimental record-progress
 shaping, not policy-invariant potential shaping or a certified insertion test.
 """
 import math
+from collections import deque
 
 from reward import ForkReward
 
@@ -75,4 +76,61 @@ class PrecisionReward(ForkReward):
         self.previous_offset = observation['slot_offset_m']
         result.update(reward=sum(parts.values()), terms=parts,
                       precision_best=self.precision_best)
+        return result
+
+
+class PrecisionRewardV4(PrecisionReward):
+    """Pay progress only after a continuous aligned, slow approach interval [s].
+
+    Old v3 remains unchanged for checkpoint reproducibility. The gate is a
+    training reward qualification, not an inference-time truth controller.
+    """
+
+    dwell_s = .75
+    max_sample_gap_s = .25
+
+    def reset(self, observation):
+        super().reset(observation)
+        self.qualified_best = dict(self.best)
+        self.qualified_since = None
+        self.window = deque()
+
+    def step(self, observation):
+        dt = observation['time_s'] - self.previous_time
+        previous = self.previous_offset
+        result = super().step(observation)
+        terms = {k: v for k, v in result['terms'].items() if not k.startswith('precision_')}
+        x, y, z = observation['slot_offset_m']
+        speed = math.sqrt(sum((a-b)**2 for a, b in zip(previous, (x,y,z))))/dt
+        score = profiles(observation)
+        qualified = (not observation['detached'] and 0 < dt <= self.max_sample_gap_s
+                     and -.02 <= x <= 1.0 and abs(y) <= .05 and abs(z) <= .05
+                     and abs(score['bearing_error_rad']) <= .20
+                     and speed <= .08 and abs(observation['yaw_rate_rad_s']) <= .15)
+        now = observation['time_s']
+        if not qualified:
+            self.qualified_since = None
+            self.window.clear()
+        else:
+            if self.qualified_since is None:
+                self.qualified_since = now
+            self.window.append((now, score))
+            # Keep the sample straddling the window boundary so a transient
+            # peak cannot be credited as sustained quality.
+            while len(self.window) > 1 and self.window[1][0] < now-self.dwell_s:
+                self.window.popleft()
+        held = qualified and now-self.qualified_since >= self.dwell_s
+        for key, weight in self.weights.items():
+            sustained = min(s[key] for _,s in self.window) if held else self.qualified_best[key]
+            terms['precision_'+key] = weight*max(0.0, sustained-self.qualified_best[key])
+            if held:
+                self.qualified_best[key] = max(self.qualified_best[key], sustained)
+        # A fleeting collision also cannot earn intermediate contact credit.
+        if not held:
+            terms.pop('right_fork_contact', None)
+        result.update(terms=terms, reward=sum(terms.values()),
+                      progress_qualified=bool(held),
+                      dwell_s=0.0 if self.qualified_since is None else now-self.qualified_since,
+                      relative_speed_m_s=speed,
+                      qualified_precision_best=self.qualified_best['insertion'])
         return result

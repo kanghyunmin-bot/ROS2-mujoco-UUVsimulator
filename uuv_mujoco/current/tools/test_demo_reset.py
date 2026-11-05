@@ -35,6 +35,7 @@ def test_restore_constraints_velocity_and_time():
     original = data.qpos.copy()
     buoy = reset.buoy_runtime.buoys[0]
     buoy.detached = buoy.netted = True
+    buoy.release_contact_evidence = {'schema': 'uuv.release_contact.v1', 'time_s': 1., 'contacts': []}
     buoy.last_runtime_wrench[:] = 5
     data.eq_active[buoy.eq_id] = False
     data.qpos[buoy.free_qposadr] += 2
@@ -46,6 +47,7 @@ def test_restore_constraints_velocity_and_time():
     np.testing.assert_array_equal(data.qpos, original)
     assert data.time == 123.5 and reset.bridge._mavros_armed
     assert not reset.buoy_runtime.buoys[0].detached
+    assert reset.buoy_runtime.buoys[0].release_contact_evidence is None
     assert not reset.buoy_runtime.buoys[0].netted
     assert data.eq_active[buoy.eq_id]
     assert not data.qvel.any() and not data.xfrc_applied.any()

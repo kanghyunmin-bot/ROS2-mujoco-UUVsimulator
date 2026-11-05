@@ -1,0 +1,16 @@
+{
+  "template_sha256": "57e2125b0a04860e103fd634c2b5fd19a7ea571fa59ac577bd97afc73ad99482",
+  "preserved_parts": {
+    "word/styles.xml": "507c415cb99a1b99756a6f128a25237615048632c0d3c15f3306885d58610eee",
+    "word/numbering.xml": "00efff8ca74d5288653f39b341966ef3a9dc4e95adf5486e150b48258ecf7e11",
+    "word/theme/theme1.xml": "6ffe7c7938f6233e0b06600f7cc99a05f737a9ca9f78fedb0b3767b42fa3c43b"
+  },
+  "geometry": "A4, margins 54/72/45.35/45.35 pt, single-column extended abstract, 11 pt body",
+  "intentional_adaptations": [
+    "single author",
+    "three full-width figures",
+    "single-column extended abstract rather than full-paper sections",
+    "20 pt title and 11 pt body for abstract readability",
+    "removed example and copyright placeholders"
+  ]
+}

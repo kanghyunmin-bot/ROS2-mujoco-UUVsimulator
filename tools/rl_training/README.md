@@ -1,11 +1,13 @@
 # Parallel residual reinforcement learning
 
-> Current preset (2026-09-22): **precision_v3**, 2 release-best environments +
+> Current host preset (2026-09-23): **precision_v4**, 2 release-best environments +
 > 3 precision-candidate environments, independent PPO policies and learned braking.
-> See [the current contract](PRECISION_V3.md) and
+> V4 adds central-area random buoy placement, RGB residual observations and
+> sustained slow-alignment qualification; it requires new training, not just reloading old models.
+> See [the current contract](PRECISION_V4.md), [preserved v3 contract](PRECISION_V3.md) and
 > [visual update report](../../docs/UUV_UPDATE_20260922.md).
 > The reward values and center-distance description below describe the older
-> legacy mode, not precision_v3. Checkpoints and datasets are not distributed;
+> legacy mode, not precision_v3/v4. Checkpoints and datasets are not distributed;
 > the research GUI references host-local model paths.
 
 The GUI at http://127.0.0.1:8882/rl starts `run.py`. Each environment owns a
@@ -27,10 +29,17 @@ reward traces and recorder images/actions are saved separately. `collection-*`
 identifies the actual policy used by a successful episode; `update-*` is the next
 policy, not an assertion that its success rate improved. Success is not guaranteed.
 
-Success requires an attached yellow target at reset, a release during this episode,
-actual equality release, and right CAD finger contact with the lower PVC stem at
-release, within the configured simulation deadline. This is contact evidence, not
-proof of exclusive causality if the hull is simultaneously contacting the buoy.
+The legacy/v3/v4 `success` field requires an attached target at reset, a release
+during this episode, inactive equality, and the rod inside the provisional right
+slot box at release, within the simulation deadline. **It does not require actual
+finger contact or post-release stability.** Preserve this historical reward field
+for old-run comparisons; do not report it as verified precision task success.
+
+New recordings also retain release-time contact pairs, forces, positions and a
+separate `precision_validation` result. Missing evidence stays unknown. The
+current rollout ends at release, so post-release stability remains unobserved;
+the new diagnostic cannot certify it. See [release validation](RELEASE_VALIDATION.md)
+for the exact contract and offline audit command.
 
 Height reward compares the provisional calibrated right-fork gap point to the
 lower PVC cylinder center. Both are transformed into world coordinates. Only new

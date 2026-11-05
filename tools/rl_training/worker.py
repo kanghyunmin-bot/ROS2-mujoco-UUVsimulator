@@ -1,5 +1,5 @@
 """One isolated ROS/SITL rollout; the parent supplies VLA+residual actions."""
-import json,sys,time,threading,math,signal
+import json,sys,time,threading,math,signal,os
 from pathlib import Path
 import numpy as np
 import rclpy
@@ -8,7 +8,8 @@ from std_msgs.msg import String
 from rclpy.qos import qos_profile_sensor_data
 from kmu26_auv_vla_data_collector.collector import VlaDataCollector
 from reward import ForkReward,RewardConfig
-from precision_reward import PrecisionReward
+from precision_reward import PrecisionReward, PrecisionRewardV4
+from release_validation import validate_release
 from ipc import write,read,status
 from recording import finish_recording
 from recovery import physics_failure
@@ -54,7 +55,7 @@ previous=np.zeros(4);sequence=0;owned=False;recording=False;completed=False
 client='rl-'+folder.name
 mapping={'general_release':'general_release_reward','hand_release':'hand_release_reward','approach_progress':'approach_progress_reward','contact_bonus':'contact_bonus_reward','deadline_s':'episode_seconds','success':'success_reward','fast_success':'fast_success_reward','timeout':'timeout_reward','wrong_release':'wrong_release_reward','height_progress':'height_progress_reward','rediscovery':'rediscovery_reward','time_cost_per_s':'time_cost_per_second'}
 rcfg=RewardConfig(**{k:config.get(mapping.get(k,k), getattr(RewardConfig(),k)) for k in RewardConfig.__dataclass_fields__})
-reward=(PrecisionReward if config.get('reward_version') == 'precision_v3' else ForkReward)(rcfg)
+reward={'precision_v3':PrecisionReward,'precision_v4':PrecisionRewardV4,'legacy':ForkReward}[config.get('reward_version','legacy')](rcfg)
 def sensor_observation():
  try:return sensors.policy_observation(previous)
  except ValueError:return None
@@ -74,12 +75,13 @@ def measurement(target,obs):
  result = dict(time_s=truth['time_s'],target_id=target,detached=row['detached'],eq_active=row['eq_active'],
   release_right_fork_region=row.get('release_right_fork_region',False),
   release_time_s=row['release_time_s'],release_right_fork_stem_contact=row['release_right_fork_stem_contact'],
+  release_contact_evidence=row.get('release_contact_evidence'),
   height_error_m=row['rl_height_error_m'],fork_stem_distance_m=row['rl_fork_stem_distance_m'],
   right_fork_stem_contact_active=row.get('rl_right_fork_stem_contact_active',False),
   hand_visible=row.get('rl_hand_target_line_of_sight',False),
   camera_valid=True,visible=row['rl_target_line_of_sight'],depth_m=float(np.asarray(obs['state.depth']).reshape(-1)[0]),
   yaw_rad=math.atan2(2*(w*z+x*y),1-2*(y*y+z*z)))
- if config.get('reward_version') == 'precision_v3':
+ if config.get('reward_version') in ('precision_v3','precision_v4'):
   result['slot_offset_m'] = row['rl_slot_offset_m']
   result['yaw_rate_rad_s'] = float(np.asarray(obs['state.angular_velocity']).reshape(-1)[2])
   if not np.isfinite(result['slot_offset_m']).all() or not math.isfinite(result['yaw_rate_rad_s']):
@@ -111,10 +113,21 @@ try:
   api('recorder_prepare',task='Approach the yellow buoy, align the fixed fork, and detach the buoy.',mode='STABILIZE')
  wait(lambda:api()['recorder'].get('ready'),'recorder')
  api('release',client_id=client);owned=False
+ placement=config.get('_spawn_request')
+ if placement is not None:
+  request_path=Path(os.environ['UUV_DEMO_SPAWN_REQUEST'])
+  result_path=request_path.with_name('spawn-result.json')
+  result_path.unlink(missing_ok=True)
+  status(request_path,placement)
  api('recorder_action',action='reset')
  wait(lambda: not api()['recorder'].get('busy'),'reset')
  if not api()['recorder'].get('message','').startswith('완료:'):
   raise RuntimeError('Map reset did not complete successfully')
+ if placement is not None:
+  applied=json.loads(result_path.read_text())
+  if any(applied[k]!=v for k,v in placement.items()):
+   raise RuntimeError('Spawn request was not applied to the reset')
+  status(folder/'spawn.json',applied)
  control(np.zeros(4))
  obs=wait(sensor_observation,'fresh observations')
  wait(lambda: truth.get('buoys'),'buoy truth')
@@ -171,7 +184,7 @@ try:
  if not recording_complete:
   status(folder/'recording_warning.json',dict(reason=saved['termination_reason'],recording=saved,usable_as_demonstration=False))
  write(folder/'request.pkl',dict(id=index,done=True,last_applied_id=last_applied_id,feedback=feedback,total_reward=total,success=result['success'],released=result['released'],release_tier=result['release_tier'],precision_best=result.get('precision_best')))
- status(folder/'episode.json',dict(success=result['success'],released=result['released'],release_tier=result['release_tier'],reward=total,trace=trace,recorder=saved,recording_complete=recording_complete,precision_best=result.get('precision_best')))
+ status(folder/'episode.json',dict(success=result['success'],released=result['released'],release_tier=result['release_tier'],reward=total,trace=trace,recorder=saved,recording_complete=recording_complete,precision_best=result.get('precision_best'),spawn=applied if placement is not None else None,qualified_precision_best=result.get('qualified_precision_best'),precision_validation=validate_release(measure, released=result['released'])))
  completed=True
 except Exception as error:
  try:status(folder/'failure_status.json',api())

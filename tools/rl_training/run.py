@@ -9,12 +9,15 @@ from residual_policy import ResidualActorCritic,advantages,update,save_checkpoin
 from ipc import read,write,status
 from transition import attach_feedback
 from evaluation import summary, assessment
-from recovery import physics_failure, FailureIsolation, failure_kind, find_resume
+from recovery import physics_failure, FailureIsolation, failure_kind, find_resume, restore_group_training_state
 from schedule import round_plan
+from spawn_schedule import spawn_request
+from visual_observation import residual_state, VISUAL_CONTRACT
 
 ROOT=Path(__file__).resolve().parents[2]
 RUN=Path(sys.argv[1]).resolve();config=json.loads((RUN/'config.json').read_text())
 groups=config.get('policy_groups', {})
+visual_precision=config.get('reward_version')=='precision_v4'
 if groups:
  config={**config, 'models':list(groups),
          'model_paths':{k:config['model_paths'][g['base_model']] for k,g in groups.items()}}
@@ -48,7 +51,8 @@ isolation=FailureIsolation()
 
 def launch_rollout(worker,key,wave,suffix=''):
  folder=worker.directory/'outputs'/f'rollout-{wave:05d}{suffix}';folder.mkdir()
- (folder/'config.json').write_text(json.dumps({**{k:v for k,v in config.items() if k!='model_paths'},'_final_wave':wave==cycle_length*config['episodes_per_environment']}))
+ placement=spawn_request(config['spawn_region'],wave,worker.index,eval_repeats) if visual_precision else None
+ (folder/'config.json').write_text(json.dumps({**{k:v for k,v in config.items() if k!='model_paths'},'_spawn_request':placement,'_final_wave':wave==cycle_length*config['episodes_per_environment']}))
  inside=f'/workspace/outputs/{folder.name}'
  script='source /opt/ros/humble/setup.bash && source /workspace/rospkg/install/setup.bash && export PYTHONPATH=/workspace/rospkg/src/auv_vla_data_collector:$PYTHONPATH && python3 /workspace/tools/rl_training/worker.py '+inside
  log=(folder/'worker.log').open('w');logs.append(log)
@@ -81,18 +85,23 @@ try:
     torch.cuda.empty_cache()
     state.setdefault('shared_backbones',[]).append(key)
     report(message=key+' 동일한 고정 백본 메모리 공유')
-  actors[key]=ResidualActorCritic(learned_brake=bool(groups));optimizers[key]=torch.optim.Adam(actors[key].parameters(),lr=config.get('ppo_learning_rate',3e-4))
+  actors[key]=ResidualActorCritic(state_dim=49 if visual_precision else 23,learned_brake=bool(groups),observation_contract=VISUAL_CONTRACT if visual_precision else 'sensor_v1');optimizers[key]=torch.optim.Adam(actors[key].parameters(),lr=config.get('ppo_learning_rate',3e-4))
   if groups:
    candidate=Path(groups[key]['checkpoint']).resolve(strict=True)
    checkpoint=torch.load(candidate,map_location='cpu',weights_only=False)
-   if checkpoint.get('schema')!='uuv.residual_rl.v1' or (ROOT/checkpoint['base_model']).resolve()!=path.resolve():
+   supported=('uuv.residual_rl.v1','uuv.residual_rl.v2','uuv.residual_rl.v3') if visual_precision else ('uuv.residual_rl.v1',)
+   if checkpoint.get('schema') not in supported or (ROOT/checkpoint['base_model']).resolve()!=path.resolve():
     raise ValueError('정밀 학습 시작 정책과 원본 VLA가 호환되지 않습니다.')
-   actors[key].seed_legacy(checkpoint['policy'])
+   if checkpoint.get('schema')=='uuv.residual_rl.v3' and checkpoint.get('observation_contract')!=VISUAL_CONTRACT:
+    raise ValueError('관측 계약이 다른 시각 정책입니다.')
+   restored = restore_group_training_state(actors[key],optimizers[key],checkpoint,config)
+   if not restored:
+    actors[key].seed_legacy(checkpoint['policy'])
    actors[key].residual_limit=checkpoint['residual_limit']
    actors[key].source_checkpoint=str(candidate)
    actors[key].source_lineage_updates=checkpoint.get('lineage_updates',checkpoint['updates'])
    state.setdefault('initial_policies',{})[key]={'path':str(candidate),'source_updates':checkpoint['updates'],
-      'source_lineage_updates':actors[key].source_lineage_updates,'optimizer':'reset for precision_v3','critic':'reset for precision_v3','brake':'zero mean; legacy deterministic action preserved'}
+      'source_lineage_updates':actors[key].source_lineage_updates,'optimizer':'restored' if restored else 'reset for '+config['reward_version'],'critic':'restored' if restored else 'reset for '+config['reward_version'],'observation_contract':actors[key].observation_contract,'brake':'inherited or zero mean; deterministic action preserved'}
   elif config.get('resume_candidate'):
    if key != 'success-135-110-25000':raise ValueError('12회 후보는 135개 기반 모델에만 적용됩니다.')
    candidate,checkpoint,exact_resume=find_resume(ROOT,key,config)
@@ -112,7 +121,7 @@ try:
   for local in range(counts[key]):
    check_stop();index=len(workers);worker=IsolatedSimulator(ROOT,RUN,index)
    report(phase='starting',message=f'환경 {index+1} 시작')
-   worker.start();workers.append((worker,key))
+   worker.start(random_spawn=visual_precision);workers.append((worker,key))
    for _ in range(60):
     check_stop()
     try:worker.api();break
@@ -183,6 +192,7 @@ try:
      if process.returncode:raise RuntimeError('Rollout cleanup failed')
      del active[index];continue
     obs=data['observation']
+    sensor=residual_state(obs,actors[key].observation_contract)
     with torch.inference_mode():
      if evaluation:torch.manual_seed(91000+repeat_index*1000000+index*10000+data['id'])
      action,_=models[key].get_action(obs)
@@ -190,7 +200,6 @@ try:
     if not np.isfinite(base).all():raise ValueError('Nonfinite VLA action')
     if data.get('warmup'):
      write(folder/'response.pkl',dict(id=data['id'],action=np.zeros(4)));continue
-    sensor=np.concatenate([np.asarray(obs['state.'+k]).reshape(-1) for k in keys]).astype(np.float32)
     sensor_tensor=torch.from_numpy(sensor).unsqueeze(0);base_tensor=torch.tensor(base,dtype=torch.float32).unsqueeze(0)
     action,raw,logp,value=actors[key].act(sensor_tensor,base_tensor,deterministic=evaluation)
     trajectory.append(dict(state=sensor_tensor[0],base_action=base_tensor[0],raw_action=raw[0],old_log_prob=logp[0],value=value[0]))

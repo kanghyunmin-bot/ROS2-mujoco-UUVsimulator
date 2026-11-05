@@ -5,7 +5,7 @@
   function sync() {
     const top = stack.at(-1)?.element;
     document.body.classList.toggle('dialog-open', Boolean(top));
-    for (const root of document.querySelectorAll('body > header,body > main,body > .dialog')) {
+    for (const root of document.querySelectorAll('body > header,body > nav,body > main,body > section,body > .dialog')) {
       root.inert = Boolean(top && root !== top);
     }
     stack.forEach(({element}, index) => { element.style.zIndex = String(20 + index); });
@@ -39,6 +39,7 @@
   document.addEventListener('keydown', event => {
     const item = stack.at(-1);
     if (!item) return;
+    if (event.key === 'Escape' && document.getElementById('stationHelp')?.hidden === false) return;
     if (event.key === 'Escape') {
       event.preventDefault(); event.stopImmediatePropagation(); close(item.element.id);
     } else if (event.key === 'Tab') {

@@ -30,6 +30,7 @@ Commands:
   run           Start SITL + MuJoCo + ROS 2 with the graphical viewer
   run-headless  Start the same stack without a graphical viewer
   web           Start the browser control GUI on http://127.0.0.1:8878
+  vla-real      Run the real 19-state policy adapter against the simulator (dry run)
   reset         Stop simulator processes using the repository reset script
   down          Stop compose services (keeps build caches)
 EOF
@@ -80,6 +81,23 @@ PY
       trap 'kill -TERM "$vla_manager_pid" 2>/dev/null || true' EXIT
     fi
     run_bash 'cd /workspace && ./run_control_gui.sh --web --host 127.0.0.1 --port 8878'
+    ;;
+  vla-real)
+    reasoning_dir="${UUV_REASONING_DIR:-$WORKSPACE_DIR/../auv_vla_reasoning_19}"
+    if [[ ! -f "$reasoning_dir/auv_vla_reasoning/mujoco.py" ]]; then
+      echo "Set UUV_REASONING_DIR to the simulation-enabled auv_vla_reasoning checkout." >&2
+      exit 1
+    fi
+    shift
+    # The ROS adapter runs on CPU; only the external model server needs CUDA.
+    exec docker run --rm --init --network host --ipc host --user "$(id -u):$(id -g)" \
+      -e "ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-42}" -e ROS_HOME=/tmp/ros -e HOME=/tmp \
+      -v "$WORKSPACE_DIR:/workspace:ro" -v "$(realpath "$reasoning_dir"):/opt/vla-reasoning:ro" \
+      --entrypoint /bin/bash "$(compose config --images uuv-dev)" -ec 'source /opt/ros/humble/setup.bash
+        source /workspace/rospkg/install/setup.bash
+        cd /opt/vla-reasoning
+        exec python3 -m auv_vla_reasoning.mujoco --ros-args --params-file config/real.yaml \
+          -p use_sim_time:=true "$@"' bash "$@"
     ;;
   reset)
     run_bash 'cd /workspace/uuv_mujoco/current && ./reset_uuv_sim.sh --with-qgc-stop'

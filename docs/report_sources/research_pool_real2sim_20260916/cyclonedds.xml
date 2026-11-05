@@ -1,0 +1,1 @@
+<CycloneDDS><Domain><Discovery><Peers><Peer Address="127.0.0.1"/></Peers><ParticipantIndex>auto</ParticipantIndex><MaxAutoParticipantIndex>120</MaxAutoParticipantIndex></Discovery></Domain></CycloneDDS>

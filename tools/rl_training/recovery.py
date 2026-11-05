@@ -73,3 +73,27 @@ def find_resume(root, key, config):
             return path, checkpoint, True
     path = root/'outputs/preserved-models/135-rl-update12/collection-00013.pt'
     return path, torch.load(path, map_location='cpu', weights_only=False), False
+
+
+def restore_group_training_state(actor, optimizer, checkpoint, config):
+    """Restore a compatible learner after a capture pause, without reward migration.
+
+    A new run still performs a fresh baseline evaluation. Environment state,
+    unfinished rollouts and RNG streams are not resumed bit-for-bit.
+    """
+    if (checkpoint.get('state_dim') != actor.state_dim
+            or checkpoint.get('observation_contract') != actor.observation_contract
+            or checkpoint.get('learned_brake') != actor.learned_brake):
+        return False
+    ignored = {'models', 'model_paths', 'policy_groups', 'environments_per_model',
+               'episodes_per_environment', 'resume_candidate', 'save_successes'}
+    def signature(value):
+        return {k: v for k, v in value.items() if k not in ignored}
+    if signature(checkpoint.get('config', {})) != signature(config):
+        return False
+    if not checkpoint.get('optimizer'):
+        return False
+    actor.load_state_dict(checkpoint['policy'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
+    actor.inherited_updates = checkpoint.get('lineage_updates', checkpoint['updates'])
+    return True

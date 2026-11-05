@@ -24,7 +24,6 @@ const state = {
   stereoCameraEnabled: true,
   stereoCameraVisionEnabled: true,
   stereoSeq: { left: 0, right: 0 },
-  previewHz: 4,
   previewLastFrame: { left: -Infinity, right: -Infinity },
   cameraPollBusy: false,
   cameraPresetSignature: "",
@@ -581,7 +580,12 @@ function renderStatus(payload) {
   const tools = payload.tools || {};
 
   if (typeof control.enabled === "boolean") {
-    state.rcEnabled = Boolean(control.enabled);
+    // Status is observation, not permission to transmit. Only an explicit
+    // local input may enable this tab; otherwise an idle viewer can keep
+    // sending neutral frames after another controller's watchdog expires.
+    const otherOwner = Boolean(control.owner && control.owner !== CLIENT_ID);
+    state.rcEnabled = state.rcEnabled && control.enabled && !otherOwner && !state.vlaControlPrepared;
+    if (!state.rcEnabled) state.rcPending = null;
     const rcToggle = $("rcEnabled");
     if (rcToggle && document.activeElement !== rcToggle) {
       rcToggle.checked = state.rcEnabled;
@@ -708,7 +712,7 @@ function renderSimulationConfig(config, processes) {
     + (activeError ? ` · 실행 중: ${activeError}` : " · 다음 시작에 적용"));
 
   $("stackStartBtn").disabled = state.configurationLocked || running;
-  $("stackStartBtn").textContent = running ? "Stack Running" : "Start SITL/MuJoCo";
+  $("stackStartBtn").textContent = running ? "시뮬 실행 중" : "시뮬 시작";
 }
 
 async function startSimStack() {
@@ -869,6 +873,76 @@ function stereoStatusText(frame) {
   return `${size}, ${ageText}`;
 }
 
+// Browser-only pacing. The camera topics, recorder and simulation clock are independent.
+class PreviewRate {
+  constructor() {
+    this.setMode("auto");
+  }
+
+  setMode(value) {
+    this.mode = ["auto", "0", "2", "4", "10"].includes(value) ? value : "auto";
+    this.hz = this.mode === "auto" ? 4 : Number(this.mode);
+    this.reset();
+  }
+
+  reset() {
+    this.start = null;
+    this.count = [0, 0];
+    this.fps = [0, 0];
+    this.slow = 0;
+    this.maxLag = 0;
+    this.healthyWindows = 0;
+  }
+
+  loaded(side, elapsedMs) {
+    this.count[side === "left" ? 0 : 1]++;
+    if (elapsedMs > 900 / this.hz) this.slow++;
+  }
+
+  sample(now, lagMs) {
+    this.start ??= now;
+    this.maxLag = Math.max(this.maxLag, lagMs);
+    const elapsed = now - this.start;
+    if (elapsed < 2000) return false;
+    this.fps = this.count.map(n => n * 1000 / elapsed);
+    const frames = this.count[0] + this.count[1];
+    if (this.mode === "auto") {
+      if (this.maxLag > 250 || (frames && this.slow >= frames / 4)) {
+        this.hz = this.hz > 4 ? 4 : 2;
+        this.healthyWindows = 0;
+      } else if (Math.max(...this.fps) >= this.hz * 0.75) {
+        if (++this.healthyWindows >= 3) {
+          this.hz = this.hz === 2 ? 4 : 10;
+          this.healthyWindows = 0;
+        }
+      } else {
+        this.healthyWindows = 0;
+      }
+    }
+    this.start = now;
+    this.count = [0, 0];
+    this.slow = 0;
+    this.maxLag = 0;
+    return true;
+  }
+}
+
+const previewRate = new PreviewRate();
+let lastPreviewTick = null;
+let lastCameraPoll = -Infinity;
+function previewVisible() {
+  return !document.hidden && !$("stereoCameraPanel").closest("[hidden], .hidden");
+}
+
+function setPreviewMode(value) {
+  previewRate.setMode(value);
+  $("stereoCameraPreviewHz").value = previewRate.mode;
+  lastPreviewTick = null;
+  lastCameraPoll = -Infinity;
+  state.previewLastFrame = {left: -Infinity, right: -Infinity};
+  setText("previewReport", previewRate.hz ? "미리보기 측정 대기" : "미리보기 일시 정지");
+}
+
 function updateStereoView(side, frame) {
   const image = $(side === "right" ? "stereoRightImage" : "stereoLeftImage");
   const view = $(side === "right" ? "stereoRightView" : "stereoLeftView");
@@ -885,8 +959,8 @@ function updateStereoView(side, frame) {
   }
   view.classList.remove("no-signal");
   const now = performance.now();
-  if (document.hidden || state.previewHz <= 0 || image.complete === false
-      || now - state.previewLastFrame[side] < 1000 / state.previewHz) return;
+  if (!previewVisible() || previewRate.hz <= 0 || image.complete === false
+      || now - state.previewLastFrame[side] < 1000 / previewRate.hz) return;
   if (state.stereoSeq[side] !== seq) {
     state.previewLastFrame[side] = now;
     state.stereoSeq[side] = seq;
@@ -909,7 +983,7 @@ function setStereoCameraExpanded(expanded) {
   document.body.classList.toggle("camera-expanded", Boolean(expanded));
   setPilotControlDocked(Boolean(expanded) && window.innerWidth >= 900);
   if (expanded && state.pilotDock) $("cameraWindowBody").append($("pilotControlGroup"));
-  button.textContent = expanded ? "확대 닫기 · Esc" : "Expand";
+  button.textContent = expanded ? "확대 닫기 · Esc" : "크게 보기";
   if (expanded) {
     window.StationWindows.open("cameraDialog", button);
   } else {
@@ -1158,9 +1232,25 @@ async function requestArm(value) {
 }
 
 async function pollCameraStatus() {
-  if (document.hidden || state.previewHz <= 0 || !state.stereoCameraEnabled || state.cameraPollBusy) {
+  if (!previewVisible() || !state.stereoCameraEnabled || !previewRate.hz) {
+    if (lastPreviewTick !== null) previewRate.reset();
+    lastPreviewTick = null;
+    const label = !previewRate.hz ? "미리보기 일시 정지" :
+      !state.stereoCameraEnabled ? "카메라 꺼짐" : "영상 화면을 열면 미리보기가 재개됩니다.";
+    setText("previewReport", label);
     return;
   }
+  const now = performance.now();
+  const lag = lastPreviewTick === null ? 0 : now - lastPreviewTick - CAMERA_POLL_MS;
+  lastPreviewTick = now;
+  if (previewRate.sample(now, lag)) {
+    const [left, right] = previewRate.fps;
+    const mode = previewRate.mode === "auto" ? "자동" : "수동";
+    setText("previewReport", `${mode} · 상한 ${previewRate.hz} fps · 전방 ${left.toFixed(1)} / 손 ${right.toFixed(1)} fps`
+      + (left || right ? "" : " · 새 영상 대기"));
+  }
+  if (state.cameraPollBusy || now - lastCameraPoll < 1000 / previewRate.hz - 5) return;
+  lastCameraPoll = now;
   state.cameraPollBusy = true;
   try {
     const response = await fetch("/api/stereo/status", { cache: "no-store" });
@@ -1371,7 +1461,15 @@ function renderCourseLayout() {
   renderCourseSelection();
 }
 
+function syncCompetitionOption() {
+  const option = $("competitionCourseOption");
+  const show = $("legacyCourseEnabled").checked || state.courseLayout?.mode === "competition";
+  option.hidden = !show;
+  option.disabled = !show;
+}
+
 function renderCourseMode() {
+  syncCompetitionOption();
   const layout = state.courseLayout;
   if (!layout) {
     return;
@@ -1845,7 +1943,7 @@ function bindControls() {
   $("ros2PanelToggle").addEventListener("click", () =>
     setToggle("ros2Panel", "ros2PanelToggle", "ROS2 Panel", "Hide ROS2")
   );
-  $("toolsToggle").addEventListener("click", () => setToggle("toolsBody", "toolsToggle", "Show tools", "Hide tools"));
+  $("toolsToggle").addEventListener("click", () => setToggle("toolsBody", "toolsToggle", "실험 도구 펼치기", "실험 도구 접기"));
   $("stereoCameraEnabled").addEventListener("change", (event) => {
     state.stereoCameraEnabled = event.target.checked;
     postCommand({ command: "stereo_camera_enabled", enabled: state.stereoCameraEnabled })
@@ -1861,9 +1959,20 @@ function bindControls() {
   $("stereoCameraProfile").addEventListener("change", () => {
     setText("stereoCameraConfigStatus", `profile: ${selectedCameraPresetLabel()} selected`);
   });
+  let mode = "auto";
+  try { mode = localStorage.getItem("uuv.previewMode") || mode; } catch { /* storage unavailable */ }
+  setPreviewMode(mode);
+  for (const side of ["left", "right"]) {
+    const image = $(side === "left" ? "stereoLeftImage" : "stereoRightImage");
+    image.addEventListener("load", () => {
+      if (previewRate.hz && previewVisible() && Number.isFinite(state.previewLastFrame[side])) {
+        previewRate.loaded(side, performance.now() - state.previewLastFrame[side]);
+      }
+    });
+  }
   $("stereoCameraPreviewHz").addEventListener("change", (event) => {
-    state.previewHz = Number(event.target.value);
-    state.previewLastFrame = {left: -Infinity, right: -Infinity};
+    setPreviewMode(event.target.value);
+    try { localStorage.setItem("uuv.previewMode", previewRate.mode); } catch { /* storage unavailable */ }
     pollCameraStatus();
   });
   $("stereoCameraApplyBtn").addEventListener("click", () => applyCameraConfig(true).catch(console.error));
@@ -1894,10 +2003,6 @@ function bindControls() {
     setText("pingerHomingStatus", "pinger homing: stopping");
     postCommand({ command: "pinger_homing_stop" }).then(pollStatus).catch(console.error);
   });
-  $("rcReplayBrowseBtn").addEventListener("click", () => {
-    $("rcReplayPath").focus();
-    $("rcReplayPath").select();
-  });
   $("rcReplayLoadBtn").addEventListener("click", () =>
     postCommand({ command: "rc_replay_load", ...replayPayload() }).then(pollStatus).catch(console.error)
   );
@@ -1916,8 +2021,6 @@ function bindControls() {
 
   $("physicsOpenBtn").addEventListener("click", () => openPhysicsDialog().catch(error => setText("physicsDialogStatus", `불러오기 실패: ${error.message}`)));
   $("courseOpenBtn").addEventListener("click", () => openCourseDialog().catch(error => setText("courseDialogStatus", `불러오기 실패: ${error.message}`)));
-  $("quickPhysicsOpenBtn").addEventListener("click", () => openPhysicsDialog().catch(error => setText("physicsDialogStatus", `불러오기 실패: ${error.message}`)));
-  $("quickCourseOpenBtn").addEventListener("click", () => openCourseDialog().catch(error => setText("courseDialogStatus", `불러오기 실패: ${error.message}`)));
   $("physicsCloseBtn").addEventListener("click", () => window.StationWindows.close("physicsDialog"));
   $("physicsReloadBtn").addEventListener("click", () => loadPhysicsParams().catch(console.error));
   $("physicsApplyBtn").addEventListener("click", () => applyPhysicsParams(false).catch(console.error));
@@ -1925,6 +2028,7 @@ function bindControls() {
   $("physicsRawBtn").addEventListener("click", () => openToolEditor("physics").catch(console.error));
   $("courseCloseBtn").addEventListener("click", () => window.StationWindows.close("courseDialog"));
   $("courseReloadBtn").addEventListener("click", () => loadCourseLayout($("courseModeSelect").value).catch(console.error));
+  $("legacyCourseEnabled").addEventListener("change", syncCompetitionOption);
   $("courseModeSelect").addEventListener("change", (event) => loadCourseLayout(event.target.value).catch(console.error));
   $("courseUpdateSelectedBtn").addEventListener("click", updateSelectedCourseFromInputs);
   $("courseSaveBtn").addEventListener("click", () => saveCourseLayout(false).catch(console.error));

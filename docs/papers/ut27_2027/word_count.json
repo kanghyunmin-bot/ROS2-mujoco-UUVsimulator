@@ -1,0 +1,6 @@
+{
+  "main_text_words": 570,
+  "text_with_title_keywords_references_captions": 768,
+  "count_method": "whitespace-delimited tokens",
+  "requirement": "500-1000 words, 2 pages"
+}

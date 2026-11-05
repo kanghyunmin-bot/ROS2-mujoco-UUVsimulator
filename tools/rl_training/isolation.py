@@ -12,8 +12,9 @@ class IsolatedSimulator:
         self.directory.mkdir(parents=True,exist_ok=True)
         self.name=f'uuv-rl-{self.directory.parent.name}-{index}'
         self.owned=False
+        self.index=index
 
-    def start(self):
+    def start(self, random_spawn=False):
         mounts=[]
         # SITL writes EEPROM and metadata into its working directory. Give it a
         # private root while sharing read-only source/build subdirectories.
@@ -44,6 +45,8 @@ class IsolatedSimulator:
             'khm/ros2-mujoco-uuv:dev','-lc',
             'source /opt/ros/humble/setup.bash && source /workspace/rospkg/install/setup.bash && '
             'cd /workspace && python3 uuv_mujoco/current/gui/web_control_gui.py --host 127.0.0.1 --port 8878']
+        if random_spawn:
+            command[2:2]=['-e','UUV_DEMO_SPAWN_REQUEST=/workspace/outputs/spawn-request.json']
         subprocess.run(command,check=True,capture_output=True,text=True)
         self.owned=True
         info=json.loads(subprocess.check_output(['docker','inspect',self.name]))[0]

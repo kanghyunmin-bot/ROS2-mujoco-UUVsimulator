@@ -94,6 +94,8 @@ def bind_telemetry_callbacks(cls: type) -> None:
     cls._on_sitl_mavlink_telemetry_status = node_telemetry_callbacks._on_sitl_mavlink_telemetry_status
     cls._on_real_start_status = node_telemetry_callbacks._on_real_start_status
     cls._on_depth = node_telemetry_callbacks._on_depth
+    cls._on_depth_pose = node_telemetry_callbacks._on_depth_pose
+    cls._on_dvl_twist = node_telemetry_callbacks._on_dvl_twist
     cls._on_bar30_pressure = node_telemetry_callbacks._on_bar30_pressure
     cls._on_ping360_status = node_telemetry_callbacks._on_ping360_status
     cls._on_atm_pressure = node_telemetry_callbacks._on_atm_pressure

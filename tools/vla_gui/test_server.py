@@ -1,10 +1,49 @@
 """Control gates tested without starting or commanding a robot."""
 import unittest
+import io
 from unittest.mock import Mock, patch
 import server
 
 
 class ManagerTests(unittest.TestCase):
+    def test_manager_reaches_the_configured_live_gui_port(self):
+        with patch.dict(server.os.environ, {'UUV_GUI_URL': 'http://127.0.0.1:18879/'}), \
+             patch.object(server, 'urlopen', return_value=io.BytesIO(b'{"ok":true}')) as open_url:
+            self.assertEqual(server.request('/api/status'), {'ok': True})
+        self.assertEqual(open_url.call_args.args[0].full_url, 'http://127.0.0.1:18879/api/status')
+
+    def test_general_candidate_uses_evaluated_collection_policy(self):
+        server.refresh_new_model()
+        candidate = server.MODELS['success-135-general-35']
+        self.assertEqual(candidate['path'], server.MODELS[server.NEW_MODEL_KEY]['path'])
+        self.assertEqual(candidate['residual_checkpoint'],
+                         'outputs/rl-training/20260922-155955-6c1b18/precision-candidate/collection-00035.pt')
+        self.assertIn('4/4', candidate['description'])
+        self.assertIn('미승인', candidate['description'])
+        with self.assertRaisesRegex(ValueError, 'PPO 실행 후보'):
+            server.validate({**server.defaults(), 'models': ['success-135-general-35']}, server.MODELS)
+
+    def test_precision_candidate_uses_recorded_collection_policy(self):
+        server.refresh_new_model()
+        candidate = server.MODELS['success-135-precision-59']
+        self.assertEqual(candidate['path'], server.MODELS[server.NEW_MODEL_KEY]['path'])
+        self.assertEqual(candidate['residual_checkpoint'],
+                         'outputs/rl-training/20260922-155955-6c1b18/release-best/collection-00059.pt')
+        self.assertIn('0.856', candidate['description'])
+        self.assertIn('성공률이 아닙니다', candidate['description'])
+        self.assertTrue(candidate['ready'])
+        with self.assertRaisesRegex(ValueError, 'PPO 실행 후보'):
+            server.validate({**server.defaults(), 'models': ['success-135-precision-59']}, server.MODELS)
+
+    def test_precision_candidate_is_hidden_when_checkpoint_is_missing(self):
+        missing = Mock(is_file=Mock(return_value=False))
+        try:
+            with patch.object(server, 'PRECISION_CHECKPOINT', missing):
+                server.refresh_new_model()
+                self.assertNotIn('success-135-precision-59', server.MODELS)
+        finally:
+            server.refresh_new_model()
+
     def test_ppo_candidate_keeps_base_and_residual_paths_separate(self):
         server.refresh_new_model()
         candidate = server.MODELS[server.PPO_MODEL_KEY]

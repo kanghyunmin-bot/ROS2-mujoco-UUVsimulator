@@ -13,12 +13,20 @@ async function load(){const r=await fetch('/api/rl/config');if(!r.ok)throw Error
 function precisionPanel(){
  if(!config?.policy_groups||!Object.keys(config.policy_groups).length)return;
  let panel=el('precisionConfig');if(!panel){panel=document.createElement('section');panel.id='precisionConfig';el('form').prepend(panel);const style=document.createElement('style');style.textContent='[hidden]{display:none!important}';document.head.append(style);}
- const title=document.createElement('h2');title.textContent='정밀 접근 v3 · 정책별 독립 PPO';
+ const v4=config.reward_version==='precision_v4';
+ const title=document.createElement('h2');title.textContent=`정밀 접근 ${v4?'v4 · 랜덤 배치 · 시각 관측 확장':'v3'} · 정책별 독립 PPO`;
  const summary=document.createElement('p');summary.textContent=Object.entries(config.policy_groups).map(([k,g])=>`${k==='release-best'?'분리 성적 모델':'정밀 접근 후보'} ${g.environments}환경 · ${g.checkpoint.split('/').slice(-3).join('/')}`).join(' / ');
  const note=document.createElement('p');note.textContent='정밀 삽입 최고 성능은 아직 미검증입니다. 원본 VLA는 공유·고정하고 두 PPO 정책과 경험은 분리합니다. 수집 → PPO → 기준 2회 평가 → 후보 2회 평가 순서입니다. 보조 보상만 상승한 후보는 최고 모델로 승격하지 않습니다.';
  const reward=document.createElement('p');reward.textContent='완만한 단계 보상(시도 내 새 최고 진척만): 접근 최대 +1, 좌우·높이 정렬 +2, 진입방향 조준 +1.5, 정렬된 틈 진입 +3. 최초 접촉 +'+config.contact_bonus_reward+' / 일반 분리 +'+config.general_release_reward+' / 손 시야 +'+config.hand_release_reward+' / 포크 영역 +'+config.success_reward+'. 근거리 과속·미정렬 전진·과회전은 실제 경과 시간에 비례해 감점합니다. 단계별 합계는 각 출발 상태에 따라 이 상한보다 작습니다.';
  const ppo=document.createElement('p');ppo.textContent=`PPO: 학습률 ${config.ppo_learning_rate}, clip ${config.ppo_clip}, KL ≤ ${config.ppo_kl_limit}, 평균 행동 변화 ≤ ${config.ppo_drift_limit} (학습 배치 기준). 학습형 전진 감속 추가, 원본 모델의 초기 결정적 행동 유지. 보상 변경으로 critic·Adam은 새로 시작합니다.`;
  panel.replaceChildren(title,summary,note,reward,ppo);
+ if(v4){
+  const region=config.spawn_region;
+  const input=document.createElement('p');input.textContent=`부표 중앙 영역: X ${region.x_m.join(' ~ ')} m / Y ${region.y_m.join(' ~ ')} m (월드 좌표). 에피소드마다 부표·로프·고정점 함께 이동, 수심 유지. 학습과 평가 시드 분리, 기준·후보는 같은 평가 배치. 기본 시드 ${region.seed}.`;
+  const vision=document.createElement('p');vision.textContent='PPO 관측 23 → 49개: 기존 센서 + 두 RGB 카메라의 부표 중심·크기·면적·잘림 여부, 막대 위치·크기·방향 및 검출 여부. 색상/형상 기반 임시 시각 측정이며 실제 거리·포크 정렬의 정답이 아닙니다. 시뮬 정답 좌표는 보상에만 사용합니다.';
+  const gate=document.createElement('p');gate.textContent='과정 보상 조건: 전방 1 m 이내, 좌우·높이 오차 각 5 cm 이내, 방위 오차 0.20 rad 이내, 상대속도 0.08 m/s 이하, yaw 각속도 0.15 rad/s 이하를 0.75초 유지. 유지 구간의 최저 점수가 기존 기록을 넘어선 만큼만 지급. 빠른 스침·순간 접촉은 과정 가점 0. 실제 분리의 종료 보상은 별도 유지.';
+  panel.append(input,vision,gate);
+ }
  el('environments_per_model').disabled=true;el('environments_per_model').closest('label').hidden=true;
  el('resume_candidate').disabled=true;el('resume_candidate').closest('label').hidden=true;
  const unused=['height_progress_reward','approach_progress_reward','height_scale_m','approach_scale_m','rediscovery_reward','search_depth_m','search_yaw_rad'];
@@ -26,13 +34,15 @@ function precisionPanel(){
  for(const small of el('form').querySelectorAll('small'))small.hidden=true;
  for(const c of document.querySelectorAll('[name=model]'))c.disabled=true;
  el('total').textContent='정책별 고정 배분: '+Object.values(config.policy_groups).reduce((n,g)=>n+g.environments,0)+'환경';
- el('preview').textContent='precision_v3 적용 · 위 단계 보상 + 종료 보상 − 시간·과속·미정렬 전진·과회전 비용';
- const chartNote=el('chartSummary').parentElement.querySelector('small');chartNote.textContent='precision_v3: 기준과 후보를 각각 2회 반복 평가합니다. 포크·손 시야 포함·전체 분리 건수 중 어느 것도 줄지 않고 하나 이상 늘어날 때만 최고 모델을 교체합니다. 동률은 후보 학습을 이어가며, 건수가 줄면 되돌립니다. 보상 증가만으로 승격하지 않습니다. 소수 평가의 통과는 일반화 성능 보증이 아닙니다.';
+ el('preview').textContent=config.reward_version+' 적용 · '+(v4?'정렬·저속 유지로 인정된 ':'')+'단계 보상 + 종료 보상 − 시간·과속·미정렬 전진·과회전 비용';
+ const chartNote=el('chartSummary').parentElement.querySelector('small');chartNote.textContent=config.reward_version+': 기준과 후보를 각각 '+config.evaluation_repeats+'회 반복 평가합니다. 포크·손 시야 포함·전체 분리 건수 중 어느 것도 줄지 않고 하나 이상 늘어날 때만 최고 모델을 교체합니다. 동률은 후보 학습을 이어가며, 건수가 줄면 되돌립니다. 보상 증가만으로 승격하지 않습니다. 소수 평가의 통과는 일반화 성능 보증이 아닙니다.';
 }
 const oldPreview=preview;preview=function(){oldPreview();precisionPanel();};el('form').oninput=()=>preview();
 let chartState=null;
 function renderRLCharts(s){
  chartState=s;
+ let version=el('runRewardVersion');if(!version){version=document.createElement('p');version.id='runRewardVersion';el('rlLegend').before(version);}
+ version.textContent=`그래프·실행 기록: ${s.reward_version||'과거 버전 미기록'} / 저장 설정: ${config?.reward_version||'확인 중'}`+(config&&s.reward_version!==config.reward_version?' · 새 설정은 다음 실행부터 적용됩니다.':'');
  const groups=new Map();const complete=(s.episodes||[]).filter(e=>e.wave<=(s.completed_rounds||s.updates||0));
  for(const e of complete){const group=e.model+' · '+({training:'탐색 수집',baseline_evaluation:'기준 평가',incumbent_evaluation:'기준 평가',candidate_evaluation:'후보 평가'}[e.round_kind]||'과거 기록');if(!groups.has(group))groups.set(group,new Map());const waves=groups.get(group);if(!waves.has(e.wave))waves.set(e.wave,[]);waves.get(e.wave).push(e);}
  const colors=['#73baff','#ffbd71','#b8d78c','#d49fff','#ff829e','#67dedb'];const series=[...groups].map(([name,waves],i)=>({name,color:colors[i%colors.length],points:[...waves].sort((a,b)=>a[0]-b[0]).map(([wave,es])=>({wave,n:es.length,reward:es.reduce((a,e)=>a+e.reward,0)/es.length,general:100*es.filter(e=>e.release_tier==='general').length/es.length,hand:100*es.filter(e=>e.release_tier==='hand_view').length/es.length,fork:100*es.filter(e=>e.release_tier==='right_fork').length/es.length}))}));

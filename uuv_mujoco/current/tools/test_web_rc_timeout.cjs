@@ -62,6 +62,34 @@ test("pilot keepalive continues at neutral and stops when control is disabled", 
   assert.deepEqual(calls, [true]);
 });
 
+test("a monitoring tab never starts RC keepalives from another controller's status", () => {
+  const nodes = new Map();
+  const sent = [];
+  const state = { rcEnabled: false };
+  const context = vm.createContext({
+    state, CLIENT_ID: 'this-tab', window: {}, document: { activeElement: null },
+    $: id => { if (!nodes.has(id)) nodes.set(id, {}); return nodes.get(id); },
+    setText() {}, setValue() {}, renderStep() {}, telemetryNumber: () => NaN,
+    setInterval: callback => callback(), RC_KEEPALIVE_MS: 20,
+    sendRc: () => sent.push('command'),
+  });
+  vm.runInContext(source.slice(source.indexOf('function renderStatus('),
+    source.indexOf('function renderSimulationConfig(')), context);
+  const heartbeat = source.slice(source.lastIndexOf('setInterval(() => {'));
+  context.renderStatus({control: {enabled: true, owner: 'other-tab'}});
+  vm.runInContext(heartbeat, context);
+  assert.deepEqual(sent, []);
+  assert.equal(nodes.get('rcEnabled').checked, false);
+
+  state.rcEnabled = true; // Explicit local operator input.
+  context.renderStatus({control: {enabled: true, owner: 'this-tab'}});
+  vm.runInContext(heartbeat, context);
+  assert.deepEqual(sent, ['command']);
+  context.renderStatus({control: {enabled: true, owner: 'other-tab'}});
+  vm.runInContext(heartbeat, context);
+  assert.deepEqual(sent, ['command']);
+});
+
 test("two controllers require selection and disconnect never switches to another pad", () => {
   let pads = [{index: 0, id: 'SHANWAN', connected: true}, {index: 1, id: 'Pro Controller', connected: true}];
   const state = {gamepadIndex: null};
