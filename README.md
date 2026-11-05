@@ -1,12 +1,33 @@
-# KMU26 Underwater ROV Simulator
+# UT27 Research Studio · 수중 ROV 시뮬레이터
 
 **MuJoCo · ArduSub SITL · ROS 2 Humble · U0 VLA · Residual PPO**
 
-10 × 5 × 5 m 연구용 수영장, 전방·손 카메라, DVL·IMU·수심 센서와 부표·자석·줄 접촉을 통합한 ROV 연구 환경입니다. 웹 GUI에서 조종하고 시연을 기록해 LeRobot/U0 학습 입력으로 내보낼 수 있습니다.
+10 × 5 × 5 m 연구용 수영장, 전방·손 카메라, DVL·IMU·수심 센서와 부표·자석·줄 접촉을 통합한 ROV 연구 환경입니다. 웹 GUI에서 두 카메라와 센서를 보면서 조종합니다. 시연 수집기는 영상·센서·조종 입력의 시각을 검사하고, 저장된 시연을 LeRobot/U0 학습 입력으로 변환합니다.
 
-**최신 연구 구현 · 2026.09.22** · [전체 변경·검증 기록](docs/UUV_UPDATE_20260922.md) · [인터랙티브 설명](docs/interactive/uuv-learning.html) · [설치 안내](README_FIRST.md)
+**학습·평가 기록 · 2026.09.22** · [전체 변경·검증 기록](docs/UUV_UPDATE_20260922.md) · [인터랙티브 설명](docs/interactive/uuv-learning.html) · [설치 안내](README_FIRST.md)
 
 [노션 최신 장 · 실제 영상과 내장 인터랙티브 자료](https://app.notion.com/p/3e3ad8acb9a181379c13c5baff275496) · [게시 전 검사와 배포 범위](docs/versions/2026.09.22.md)
+
+## 연구 GUI 실행
+
+이 안내는 `codex/uuv-learning-update-20260922` 브랜치 기준입니다. 처음 설치한다면 [설치와 실행](#설치와-실행)을 먼저 확인하세요. ROS 개발 이미지 `khm/ros2-mujoco-uuv:dev`와 시뮬레이터가 준비된 PC에서는 저장소 루트에서 실행합니다.
+
+```bash
+bash tools/start_research_gui.sh
+```
+
+[연구 GUI](http://127.0.0.1:18879/)에서 **시뮬 시작**을 누르면 MuJoCo와 ArduSub SITL이 시작됩니다. **실시간 관찰**에서 전방·손 영상, IMU 자세, 수심, DVL 속도를 확인하세요. 수동 조종은 **STABILIZE → ARM → 수동 조종기 → 수동 입력 켜기** 순서입니다. 마치면 **조종 입력 해제 → DISARM**을 누릅니다.
+
+오른쪽 위 **설정**의 자동 FPS는 브라우저 미리보기 속도를 조절합니다. 센서 출력은 **실험 조건**에서 설정하고, 실제 영상 지연은 **센서 수신 상태 → 촬영 지연**에서 확인합니다.
+
+| 기능 | 2026년 11월 3일 연구 수영장 점검 결과 |
+|---|---|
+| 수동 조종·센서 | 네 축의 조종 입력에 기체가 반응했고, 입력 중단 시 제어가 해제됐습니다. 수심은 `/depth/pose`, 속도는 `/dvl/twist`에서 수신했습니다. |
+| 시연 녹화 | 점검 PC의 CPU 렌더링에서 카메라당 새 영상은 약 1 FPS였습니다. 촬영 지연이 수집 허용치 0.25초를 넘어 녹화 시작이 차단됐습니다. |
+| 운항 모드 | MANUAL·STABILIZE·ALT_HOLD 전환을 확인했습니다. GUIDED·POSHOLD는 해당 프로필에서 전환에 실패했습니다. |
+| 인식·정책 | YOLO는 ROS 환경에 torch와 ultralytics가 없어 실행에 실패했습니다. VLA 제어권 전환은 확인했고, 이번 점검에서 GPU 추론·학습은 검증하지 못했습니다. |
+
+[GUI 실행 스크립트](tools/start_research_gui.sh) · [VLA 모델 실행 안내](tools/vla_gui/README.md) · [UT27 논문 자료](docs/papers/ut27_2027/)
 
 ## 수집 준비 → 실제 VLA 학습 → 잔차 PPO
 
@@ -76,7 +97,7 @@ flowchart LR
 git lfs install
 git clone --recurse-submodules https://github.com/kanghyunmin-bot/ROS2-mujoco-UUVsimulator.git
 cd ROS2-mujoco-UUVsimulator
-git checkout main
+git switch codex/uuv-learning-update-20260922
 git submodule update --init --recursive
 git lfs pull
 ```
