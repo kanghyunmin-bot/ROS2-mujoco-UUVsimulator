@@ -4,7 +4,7 @@
 
 Pilot an underwater robot in a MuJoCo research pool and collect demonstrations for vision-language-action policies. The dashboard shows the front and hand cameras alongside attitude, depth, and Doppler velocity log (DVL) readings.
 
-![Research dashboard with the yellow buoy in the front camera, the fork in the hand camera, and live attitude, depth, and velocity readings below](docs/assets/ut27-research-studio.png)
+![UT27 live workspace with navigation on the left, two camera feeds and sensor readings in the center, and manual control sticks on the right.](docs/assets/ut27-live-workspace.png)
 
 ## Run
 
