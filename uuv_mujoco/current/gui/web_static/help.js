@@ -2,7 +2,8 @@
 (() => {
   const actions = {
     stackStartBtn: ['primary', '▶', '선택한 실험 프로필로 SITL과 MuJoCo를 시작합니다.'],
-    stackResetBtn: ['danger', '■', '실행 중인 시뮬레이션 스택을 정지·정리합니다. 다음 시연 위치 초기화는 수집 창에서 실행하세요.'],
+    stackStopBtn: ['danger', '■', '이 GUI에서 시작한 시뮬레이터를 정지합니다.'],
+    stackResetBtn: ['warning', '↻', 'SITL을 정지하고 저장된 SITL 설정을 초기화합니다.'],
     quickCenterBtn: ['neutral', '⊙', '조종 축을 중립으로 보냅니다. 조종 입력 해제나 DISARM은 별도 동작입니다.'],
     settingsOpen: ['neutral', '', '표시 성능, 조종 장치, 연결 진단과 대회 도구를 설정합니다.'],
     armBtn: ['warning', '⚠', '추진기 구동을 허용합니다. 조종 입력에 따라 기체가 움직일 수 있습니다.'],

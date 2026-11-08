@@ -409,10 +409,10 @@ class WebGuiController:
         }
 
     def start_sim_stack(
-        self, preset_id: str | None = None, *, sensor_error_mode: str | None = None
+        self, preset_id: str | None = None, *, sensor_error_mode: str | None = None, virtualgl_viewer: bool = False
     ) -> dict[str, Any]:
         return self.processes.start_sim_stack(
-            preset_id=preset_id, sensor_error_mode=sensor_error_mode
+            preset_id=preset_id, sensor_error_mode=sensor_error_mode, virtualgl_viewer=virtualgl_viewer
         )
 
     def stop_sim_stack(self) -> dict[str, Any]:
@@ -1174,11 +1174,15 @@ class UuvWebHandler(BaseHTTPRequestHandler):
             return {"command": "ping360_config"}
         if command == "stack_start":
             preset_id = str(payload.get("sim_preset", "")).strip() or None
+            virtualgl_viewer = payload.get("virtualgl_viewer", False)
+            if not isinstance(virtualgl_viewer, bool):
+                raise ValueError("virtualgl_viewer must be a boolean")
             return {
                 "command": "stack_start",
                 **self.controller.start_sim_stack(
                     preset_id=preset_id,
                     sensor_error_mode=payload.get("sensor_error_mode"),
+                    virtualgl_viewer=virtualgl_viewer,
                 ),
             }
         if command == "stack_stop":

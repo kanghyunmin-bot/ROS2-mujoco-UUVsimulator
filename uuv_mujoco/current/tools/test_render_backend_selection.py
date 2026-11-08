@@ -7,7 +7,7 @@ import subprocess
 SOURCE = Path(__file__).resolve().parents[1] / "launch_uuv_sim.sh"
 
 
-def select_backend(headless, host_os, display, backend):
+def select_backend(headless, host_os, display, backend, *, virtualgl=False):
     source = SOURCE.read_text()
     start = source.index("# Set display for headless mode")
     end = source.index("\nconfigure_mujoco_viewer_window_backend\n", start)
@@ -23,6 +23,7 @@ def select_backend(headless, host_os, display, backend):
         env={
             **os.environ,
             "HEADLESS": str(headless).lower(),
+            "VIRTUALGL": str(virtualgl).lower(),
             "HOST_OS": host_os,
             "DISPLAY": display,
             "MUJOCO_GL": backend,
@@ -38,6 +39,7 @@ def test_native_viewer_does_not_inherit_headless_egl():
 
 def test_native_viewer_uses_one_backend_on_remote_display_too():
     assert select_backend(False, "Linux", ":20", "egl") == "glfw|:20|"
+    assert select_backend(False, "Linux", ":20", "egl", virtualgl=True) == "glfw|:20|"
 
 
 def test_headless_linux_still_uses_egl():

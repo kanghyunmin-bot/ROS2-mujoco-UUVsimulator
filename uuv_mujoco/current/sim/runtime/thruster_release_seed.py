@@ -8,6 +8,9 @@ from typing import Any, Iterable
 
 import numpy as np
 
+from sim.physics.thruster_force_performance import rotor_rpm_from_command
+from sim.physics.thruster_voltage import update_supply_voltage
+
 
 def _bounded_scale(raw: object, *, default: float) -> float:
     try:
@@ -106,6 +109,12 @@ def seed_thruster_state_from_current_targets(
             elif name in horizontal_set:
                 seed_scale = horizontal_scale
             state[name] = seed_scale * float(target.get(name, 0.0))
+    perf = getattr(thruster_actuator_runtime, "perf_cfg", {})
+    if "rpm" in perf:
+        update_supply_voltage(perf, float(thruster_actuator_runtime.data.time))
+        thruster_actuator_runtime.rotor_rpm.update(
+            {name: rotor_rpm_from_command(name, state[name], perf) for name in names}
+        )
     thruster_actuator_runtime.update_forces(0.0, base_id=base_id)
     mode = "history_json" if explicit_seed else "current_target"
     print(

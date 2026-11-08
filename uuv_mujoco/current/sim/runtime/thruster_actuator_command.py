@@ -7,17 +7,26 @@ import numpy as np
 from physics.hydrodynamics_helpers import shape_thruster_command
 from sim.physics.thruster_dynamics import thruster_response
 from sim.physics.thruster_force_model import force_from_shaped_command
+from sim.physics.thruster_force_performance import ESC_DEADBAND_US, native_pwm_direction, rotor_rpm_from_command
 from sim.runtime.thruster_actuator_immersion import force_immersion_scale
 from sim.runtime.thruster_actuator_params import ThrusterUpdateParams, thruster_tau
 
 
 def update_thruster_state(runtime, name: str, dt: float, params: ThrusterUpdateParams) -> float:
     target_norm = float(np.clip(runtime.target[name], -params.command_limit, params.command_limit))
-    if runtime.perf_cfg.get("active") and runtime.perf_cfg.get("direct"):
-        if abs(target_norm) <= 25.0 / 400.0:
-            target_norm = 0.0
     tau_up, tau_down = thruster_tau(runtime, name, params)
-    runtime.state[name] = thruster_response(runtime.state[name], target_norm, dt, tau_up, tau_down)
+    perf = runtime.perf_cfg
+    if "rpm" in perf:
+        direction = native_pwm_direction(name)
+        target_rpm = rotor_rpm_from_command(name, target_norm, perf)
+        rpm = thruster_response(runtime.rotor_rpm.get(name, 0.0), target_rpm, dt, tau_up, tau_down)
+        runtime.rotor_rpm[name] = rpm
+        equivalent_pwm = np.interp(direction * rpm, perf["rotor_rpm_knots"], perf["rotor_pwm_knots"])
+        runtime.state[name] = direction * float(equivalent_pwm - 1500.0) / 400.0
+    else:
+        if perf.get("active") and perf.get("direct") and abs(target_norm) <= ESC_DEADBAND_US / 400.0:
+            target_norm = 0.0
+        runtime.state[name] = thruster_response(runtime.state[name], target_norm, dt, tau_up, tau_down)
     return float(runtime.state[name])
 
 
@@ -28,16 +37,23 @@ def shaped_thruster_command(runtime, state_value: float, params: ThrusterUpdateP
 
 
 def thruster_force(runtime, name: str, shaped_cmd: float) -> float:
-    force = force_from_shaped_command(
-        name=name,
-        command_shaped=shaped_cmd,
-        gain=float(runtime.thruster_scale.get(name, 1.0)),
-        perf_cfg=runtime.perf_cfg,
-        thruster_direct_scale=runtime.thruster_direct_scale,
-        thruster_global=runtime.thruster_global,
-        thruster_force_max=runtime.thruster_force_max,
-        thruster_reverse_asymmetry=runtime.thruster_reverse_asymmetry,
-    )
+    perf = runtime.perf_cfg
+    if "rpm" in perf:
+        direction = native_pwm_direction(name)
+        force = direction * float(np.interp(
+            direction * runtime.rotor_rpm[name], perf["rotor_rpm_knots"], perf["rotor_force_knots"]
+        )) * float(runtime.thruster_direct_scale.get(name, 1.0))
+    else:
+        force = force_from_shaped_command(
+            name=name,
+            command_shaped=shaped_cmd,
+            gain=float(runtime.thruster_scale.get(name, 1.0)),
+            perf_cfg=perf,
+            thruster_direct_scale=runtime.thruster_direct_scale,
+            thruster_global=runtime.thruster_global,
+            thruster_force_max=runtime.thruster_force_max,
+            thruster_reverse_asymmetry=runtime.thruster_reverse_asymmetry,
+        )
     immersion = force_immersion_scale(runtime, name)
     if hasattr(runtime, "last_static_force_n"):
         runtime.last_static_force_n[name] = float(force)

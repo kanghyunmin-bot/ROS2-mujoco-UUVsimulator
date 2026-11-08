@@ -79,11 +79,10 @@ class AltHoldThrottleNormalizationTest(unittest.TestCase):
         init_source = source.split("bool Sub::althold_init()", 1)[1].split(
             "float Sub::stopping_distance()", 1
         )[0]
-        self.assertIn(
-            "attitude_control.set_throttle_out(motors.get_throttle(), true, 100.0);",
-            init_source,
-        )
-        self.assertNotIn("set_throttle_out(0.75", init_source)
+        before_init = init_source.split("pos_control.init_z_controller();", 1)[0]
+        sitl_seed = before_init.partition("#if CONFIG_HAL_BOARD == HAL_BOARD_SITL")[2].partition("#else")[0]
+        self.assertIn("set_throttle_out(motors.get_throttle(), true, 100.0);", sitl_seed)
+        self.assertNotIn("set_throttle_out(0.75", sitl_seed)
 
     def test_sitl_roll_d_is_stable_without_mutating_hardware_contract(self) -> None:
         launcher = (CURRENT / "start_ardusub_sitl_mj311.sh").read_text(encoding="utf-8")

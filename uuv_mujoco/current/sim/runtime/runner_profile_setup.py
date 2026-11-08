@@ -62,6 +62,7 @@ def load_runner_profile_setup(
         active_thruster_voltage=float(profile_selection.active_thruster_voltage),
         path=Path(args.thruster_perf_file),
         plant_replay_direct_rcout=bool(runtime_mode.plant_replay_direct_rcout),
+        response_model=profile_selection.sim_profile.get("thruster_response_model", "command"),
     )
     return RunnerProfileSetup(
         listed_profiles=False,

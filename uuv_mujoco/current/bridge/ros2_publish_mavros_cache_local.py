@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .ros2_standard_messages import build_odom_msg, build_pose_msg, build_twist_cov_msg, build_twist_msg
+from .ros2_vision_sensor_pose import build_sensor_vision_pose
 
 
 def build_local_pose_msg(bridge, stamp, state):
@@ -52,13 +53,7 @@ def build_local_odom_msg(bridge, stamp, state):
 
 
 def build_vision_pose_msg(bridge, stamp, state):
-    return build_pose_msg(
-        bridge.PoseStamped,
-        stamp,
-        "map",
-        state.base_pos_enu,
-        state.quat_ros,
-    )
+    return build_sensor_vision_pose(bridge, stamp, state)
 
 
 __all__ = [

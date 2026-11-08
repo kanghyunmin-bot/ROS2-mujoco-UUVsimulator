@@ -61,7 +61,7 @@
   document.getElementById('vlaCloseBtn').onclick = () => window.StationWindows.close('recorderDialog');
   const setup = document.getElementById('station-setup');
   const headerActions = document.querySelector('.header-actions');
-  headerActions.prepend(document.getElementById('stackStartBtn'), document.getElementById('stackResetBtn'));
+  headerActions.prepend(...['stackStartBtn', 'virtualglOption', 'stackStopBtn', 'simOtherGuiLink'].map(id => document.getElementById(id)));
   headerActions.append(document.getElementById('settingsOpen'));
   setup.prepend(document.getElementById('simLaunchPreset').closest('fieldset'));
   setup.prepend(document.getElementById('setup-heading'));
@@ -81,7 +81,7 @@
   }
   main.className = 'studio-grid';
   controls.querySelector('h2').textContent = '기체 조종';
-  for (const [id,label] of Object.entries({stackStartBtn:'시뮬 시작',stackResetBtn:'정지 / 리셋',armBtn:'ARM · 구동 허용',disarmBtn:'DISARM · 구동 해제',quickCenterBtn:'스틱 중립',telemetryToggle:'상태 패널 접기'})) {
+  for (const [id,label] of Object.entries({stackStartBtn:'시뮬 시작',armBtn:'ARM · 구동 허용',disarmBtn:'DISARM · 구동 해제',quickCenterBtn:'스틱 중립',telemetryToggle:'상태 패널 접기'})) {
     const button = document.getElementById(id);
     if(button) button.textContent = label;
   }

@@ -144,14 +144,16 @@ def reset_dvl_device_emulator_report_schedule(bridge: Any) -> None:
     del bridge
 
 
-def reset_dvl_device_emulator_dead_reckoning(bridge: Any) -> None:
+def reset_dvl_device_emulator_dead_reckoning(
+    bridge: Any, *, scene_reset: bool = False
+) -> None:
     """Reset the emulated device generation and purge pre-reset wire reports."""
 
     emulator = getattr(bridge, "_dvl_device_emulator", None)
     if emulator is None:
         return
     bridge._dvl_device_emulator_seen_reset_count = (
-        emulator.reset_dead_reckoning()
+        emulator.reset_dead_reckoning(scene_reset=scene_reset)
     )
 
 

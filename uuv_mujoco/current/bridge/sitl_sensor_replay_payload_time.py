@@ -7,6 +7,11 @@ def sensor_replay_payload_timestamp_for_sim_t(transport, sim_t: float) -> float 
     if not transport._sensor_replay_frames or not transport._sensor_replay_ready:
         return None
     if transport._sensor_replay_start_on_rc:
+        if transport._sensor_replay_clock == "servo_frame":
+            # Frame selection already computed this timestamp from the servo
+            # clock. Recomputing elapsed time from sim_t relabels that sensor
+            # history whenever the plant and servo clocks advance differently.
+            return transport._sensor_replay_current_payload_t_s
         if transport._sensor_replay_start_sim_t is None:
             return None
         replay_elapsed_s = max(0.0, float(sim_t) - float(transport._sensor_replay_start_sim_t))

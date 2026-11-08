@@ -14,13 +14,17 @@ from .ros2_publish_builder_mavros import build_mavros_publish_builders
 
 
 def flush_sensor_packet_jobs(self, stamp, state: RosPublishState) -> bool:
-    """Publish modeled IMU and pressure arrivals between telemetry ticks."""
-    if not state.imu_sensor_deliveries and not state.bar30_sensor_deliveries:
+    """Publish modeled sensor arrivals between telemetry ticks."""
+    if (not state.imu_sensor_deliveries and not state.bar30_sensor_deliveries
+            and not getattr(state, "dvl_position_deliveries", ())):
         return True
     jobs = PublishQueue(self._publisher_demand, state.sim_t)
     builders = build_core_publish_builders(self, stamp, state)
     builders.update(build_mavros_publish_builders(self, stamp, state))
     entries = []
+    if self._mavros_surface_enabled or getattr(self, "_sensor_external_nav_enabled", False):
+        entries.append((getattr(self, "pub_mavros_vision_pose", None),
+                        "/mavros/vision_pose/pose", "mavros_vision_pose_batch"))
     if not self._real_pkg_compat:
         if self._imu_sensor_model_enabled:
             entries.append((self.pub_imu, "/imu/data", "imu_batch"))

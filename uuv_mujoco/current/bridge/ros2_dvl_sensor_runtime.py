@@ -76,6 +76,7 @@ class DvlPositionDelivery:
     position_std_m: float
     attitude_rpy_deg: Vector3
     generation: int
+    navigation_valid: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,6 +91,7 @@ class _DvlPositionPayload:
     position_std_m: float
     attitude_rpy_deg: Vector3
     generation: int
+    navigation_valid: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -261,6 +263,7 @@ def reset_dvl_dead_reckoning(
         dtype=np.float64,
     )
     bridge._dvl_sensor_attitude_source_available = False
+    bridge._dvl_sensor_navigation_valid = False
     bridge._dvl_sensor_position_local_frd_m = np.zeros(3, dtype=np.float64)
     bridge._dvl_sensor_position_variance_m2 = float(prior.position_std_initial_m) ** 2
     bridge._dvl_sensor_last_delivery = None
@@ -269,6 +272,12 @@ def reset_dvl_dead_reckoning(
     bridge._dvl_sensor_new_position_deliveries = ()
     bridge._dvl_sensor_current_attitude_rpy_deg = _modeled_attitude_rpy_deg(bridge)
     bridge._odom_pos = np.zeros(3, dtype=np.float64)
+
+
+def discard_dvl_scene_velocity(bridge: Any) -> None:
+    """Discard unsent velocity captured before a scene teleport."""
+    if bridge._dvl_sensor_enabled:
+        bridge._dvl_sensor_timing.discard_pending()
 
 
 def calibrate_dvl_gyro(bridge: Any) -> None:
@@ -452,6 +461,10 @@ def _apply_internal_capture(
 
     measured_velocity = getattr(sample, "measured_velocity_frd_mps", None)
     velocity_valid = bool(getattr(sample, "velocity_valid", False))
+    bridge._dvl_sensor_navigation_valid = bool(
+        dt_s > 0.0 and velocity_valid and measured_velocity is not None
+        and payload.angular_velocity_dvl_frd_rad_s is not None
+    )
     if dt_s > 0.0:
         if velocity_valid and measured_velocity is not None:
             velocity_dvl_frd = _vector3_array(
@@ -492,6 +505,7 @@ def _capture_position_payload(bridge: Any) -> _DvlPositionPayload:
         position_std_m=math.sqrt(bridge._dvl_sensor_position_variance_m2),
         attitude_rpy_deg=tuple(float(value) for value in attitude_rpy_deg),
         generation=int(bridge._dvl_sensor_dr_generation),
+        navigation_valid=bool(bridge._dvl_sensor_navigation_valid),
     )
 
 
@@ -539,6 +553,7 @@ def _deliver_position_packet(
         position_std_m=float(payload.position_std_m),
         attitude_rpy_deg=payload.attitude_rpy_deg,
         generation=int(payload.generation),
+        navigation_valid=bool(payload.navigation_valid),
     )
 
 

@@ -15,10 +15,10 @@ function setup() {
     replaceChildren() { this.children = []; this.value = ""; },
     appendChild(child) { this.children.push(child); },
   };
-  const state = { simPresetTouched: false, simPresetSignature: "", configurationLocked: false };
+  const state = { simPresetTouched: false, simPresetSignature: "", configurationLocked: false, simStopPending: false };
   const requests = [];
   const ctx = vm.createContext({
-    state, $: node, document: { activeElement: null, createElement: () => ({}) },
+    state, $: node, window: { location: { port: "8878" } }, document: { activeElement: null, createElement: () => ({}) },
     setText: (id, text) => { node(id).textContent = text; },
     postCommand: async payload => { requests.push(payload); return {}; },
     pollStatus: async () => {},
@@ -49,6 +49,38 @@ test("primary view shows pool only, advanced preserves selected comparison", () 
   node("showAdvancedEnvironments").checked = false;
   ctx.renderSimulationConfig(config, {});
   assert.equal(node("simLaunchPreset").value, "course_current");
+});
+
+test("an external simulator links to the other GUI and disables local stop and reset", () => {
+  const { ctx, node, config } = setup();
+  ctx.renderSimulationConfig(config, { sim_running: true, sim_external: true });
+  assert.equal(node("stackStopBtn").disabled, true);
+  assert.equal(node("stackResetBtn").disabled, true);
+  assert.equal(node("simOtherGuiLink").hidden, false);
+  assert.equal(node("simOtherGuiLink").href, "http://127.0.0.1:18879/");
+});
+
+test("stop sends a shutdown command rather than a SITL reset", async () => {
+  const { ctx, node, config, requests } = setup();
+  ctx.renderSimulationConfig(config, { sim_running: true, sim_external: false });
+  assert.equal(node("stackStopBtn").disabled, false);
+  await ctx.stopSimStack();
+  assert.equal(requests[0].command, "stack_stop");
+});
+
+test("VirtualGL selection survives idle polling and reaches the launch command", async () => {
+  const { ctx, node, config, requests } = setup();
+  node("virtualglViewer").checked = true;
+  ctx.renderSimulationConfig(config, {});
+  assert.equal(node("virtualglViewer").checked, true);
+  await ctx.startSimStack();
+  assert.equal(requests[0].virtualgl_viewer, true);
+  ctx.renderSimulationConfig(config, { sim_running: true, virtualgl_viewer: true });
+  assert.equal(node("virtualglViewer").checked, true);
+  assert.equal(node("virtualglViewer").disabled, true);
+  ctx.renderSimulationConfig(config, { virtualgl_available: false });
+  assert.equal(node("virtualglViewer").checked, false);
+  assert.equal(node("virtualglViewer").disabled, true);
 });
 
 test("error selection survives polling and locks while running", async () => {

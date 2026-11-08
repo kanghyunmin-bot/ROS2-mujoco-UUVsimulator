@@ -9,7 +9,7 @@ from sim.physics.thruster_performance_config import (
     normalize_thruster_perf_voltage,
 )
 from sim.physics.thruster_performance_payload import log_loaded_curve, read_performance_payload
-from sim.physics.thruster_voltage import measured_voltage_surface, force_curve_at_voltage
+from sim.physics.thruster_voltage import measured_voltage_surface, select_supply_voltage
 
 
 def load_thruster_performance_config(
@@ -17,6 +17,7 @@ def load_thruster_performance_config(
     *,
     requested_voltage: float,
     direct: bool,
+    include_rpm: bool = False,
 ) -> dict:
     """Interpolate the measured PWM/voltage surface without extrapolation."""
 
@@ -30,9 +31,9 @@ def load_thruster_performance_config(
         raise ValueError(f"requested thruster performance data unavailable: {perf_path}")
 
     requested = normalize_thruster_perf_voltage(requested_voltage, requested_voltage)
-    perf_cfg.update(measured_voltage_surface(payload))
-    perf_cfg.update(active=True, requested_voltage=requested, selected_voltage=requested)
-    perf_cfg["force"] = force_curve_at_voltage(perf_cfg, requested)
+    perf_cfg.update(measured_voltage_surface(payload, include_rpm=include_rpm))
+    perf_cfg.update(active=True, requested_voltage=requested)
+    select_supply_voltage(perf_cfg, requested)
     log_loaded_curve(perf_path, selected_voltage=requested, requested=requested, direct=direct)
     return perf_cfg
 

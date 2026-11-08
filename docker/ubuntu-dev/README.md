@@ -25,6 +25,12 @@ The project Python environment is stored in `/workspace/.venv`. ArduSub build
 outputs and ccache use named Docker volumes, so rebuilding the container does
 not discard them. The repository itself is bind-mounted at `/workspace`.
 
+For the native MuJoCo window on a Linux remote desktop, install VirtualGL
+once with `bash setup/install_virtualgl.sh`. Start the web GUI with `simstart`
+or `./docker/ubuntu-dev/dev.sh web`, then select **VirtualGL · GPU 뷰어** before
+starting the simulation. The window stays on the remote desktop and uses the
+container's NVIDIA GPU through `vglrun`.
+
 ## Verification (2026-09-12)
 
 The image was built successfully from public `osrf/ros:humble-desktop` on an

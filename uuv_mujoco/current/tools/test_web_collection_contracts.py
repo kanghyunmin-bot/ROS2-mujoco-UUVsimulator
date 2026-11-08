@@ -20,7 +20,17 @@ from gui.web_recorder import WebRecorder
 
 
 class CollectionCameraContracts(unittest.TestCase):
-    def test_start_dispatch_passes_sensor_mode_through_real_controller(self):
+    def test_stop_and_reset_leave_an_external_simulation_alone(self):
+        manager = WebProcessManager(Mock())
+        manager._simulation_runtime_available = Mock(return_value=True)
+        with patch.object(manager, "_terminate_named_process") as terminate, patch.object(manager, "_start_plain_process") as reset:
+            for action in (manager.stop_sim_stack, manager.reset_sim_stack):
+                with self.subTest(action=action.__name__), self.assertRaisesRegex(ValueError, "외부 시뮬"):
+                    action()
+        terminate.assert_not_called()
+        reset.assert_not_called()
+
+    def test_start_dispatch_passes_sensor_and_virtualgl_options_through_real_controller(self):
         controller = WebGuiController.__new__(WebGuiController)
         controller.recorder = SimpleNamespace(lock=threading.RLock(), require_configuration_unlocked=lambda: None)
         controller.processes = Mock()
@@ -28,15 +38,15 @@ class CollectionCameraContracts(unittest.TestCase):
         handler = UuvWebHandler.__new__(UuvWebHandler)
         handler.controller = controller
         handler.path = "/api/command"
-        for mode in (None, "existing", "mathematical", "bag0402"):
-            with self.subTest(mode=mode):
+        for mode, virtualgl in ((None, False), ("existing", False), ("mathematical", True), ("bag0402", True)):
+            with self.subTest(mode=mode, virtualgl=virtualgl):
                 result = handler._handle_command({
                     "command": "stack_start", "sim_preset": "research_pool_distributed",
-                    "sensor_error_mode": mode,
+                    "sensor_error_mode": mode, "virtualgl_viewer": virtualgl,
                 })
                 self.assertEqual(result["status"], "sim: starting")
                 controller.processes.start_sim_stack.assert_called_with(
-                    preset_id="research_pool_distributed", sensor_error_mode=mode,
+                    preset_id="research_pool_distributed", sensor_error_mode=mode, virtualgl_viewer=virtualgl,
                 )
 
     def recorder(self, camera=None):
@@ -168,6 +178,10 @@ class CollectionCameraContracts(unittest.TestCase):
         self.assertTrue(launched["enabled"])
         self.assertEqual(launched["optics_profile"], "pool_lite")
         self.assertFalse(camera_config_from_launch_command(selected, ["launch"])["enabled"])
+        self.assertEqual(camera_optics_environment(selected)["ROS2_UUV_CAMERA_SENSOR_MODEL_ASYNC"], "0")
+        live = normalize_camera_config({"optics_profile": "pool_lite_live"})
+        self.assertEqual(camera_optics_environment(live)["ROS2_UUV_CAMERA_SENSOR_MODEL_ASYNC"], "1")
+        self.assertEqual(camera_optics_environment(live)["ROS2_UUV_ASYNC_CAMERA_RENDER"], "1")
         self.assertEqual(camera_optics_environment({"optics_profile": "inherited"}), {})
         self.assertTrue(camera_optics_environment(selected)["ROS2_UUV_CAMERA_SENSOR_MODEL_CONFIG"].endswith("pool_lite.json"))
 

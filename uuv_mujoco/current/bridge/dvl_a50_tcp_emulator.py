@@ -188,6 +188,7 @@ class A50TcpJsonEmulator:
             "periodic_cycling_enabled": False,
         }
         self._dead_reckoning_reset_count = 0
+        self._scene_reset_count = 0
         self._gyro_calibration_count = 0
 
         self._queue_lock = threading.Lock()
@@ -283,22 +284,21 @@ class A50TcpJsonEmulator:
         with self._state_lock:
             return self._gyro_calibration_count
 
-    def reset_dead_reckoning(self) -> int:
-        """Advance the DR generation and purge unsent older position reports."""
+    def reset_dead_reckoning(self, *, scene_reset: bool = False) -> int:
+        """Purge old position reports, and velocity reports on a scene reset."""
 
         with self._state_lock:
             self._dead_reckoning_reset_count += 1
             reset_count = self._dead_reckoning_reset_count
             with self._queue_lock:
-                self._outbound = deque(
-                    queued
-                    for queued in self._outbound
-                    if not (
-                        queued.report_type == "position_local"
-                        and queued.reset_count is not None
-                        and queued.reset_count < reset_count
+                if scene_reset:
+                    self._scene_reset_count = reset_count
+                    self._outbound.clear()
+                else:
+                    self._outbound = deque(
+                        queued for queued in self._outbound
+                        if queued.report_type != "position_local"
                     )
-                )
         return reset_count
 
     def start(self) -> A50TcpJsonEmulator:
@@ -398,7 +398,8 @@ class A50TcpJsonEmulator:
         if period_s < 0.0:
             raise ValueError("report_period_s must be non-negative")
         report = self._build_velocity_report(sample, period_s)
-        self._enqueue_json(report)
+        with self._lifecycle_lock, self._state_lock:
+            self._enqueue_json(report, reset_count=self._dead_reckoning_reset_count)
         return True
 
     def publish_position(
@@ -423,7 +424,7 @@ class A50TcpJsonEmulator:
 
         # The generation check and enqueue must be atomic with the reset
         # command's generation increment and stale-position purge.
-        with self._state_lock:
+        with self._lifecycle_lock, self._state_lock:
             current_reset_count = self._dead_reckoning_reset_count
             if (
                 expected_reset_count is not None
@@ -603,7 +604,8 @@ class A50TcpJsonEmulator:
         *,
         reset_count: int | None = None,
     ) -> None:
-        if not self.is_running:
+        # Both publishing paths hold lifecycle and state locks in start() order.
+        if self._thread is None or not self._thread.is_alive():
             raise RuntimeError("emulator is not running")
         payload_copy = dict(payload)
         report_type = str(payload_copy.get("type", ""))
@@ -679,21 +681,25 @@ class A50TcpJsonEmulator:
         with self._queue_lock:
             self._last_sent_velocity_validity_us = pending.validity_us
 
-    def _discard_unsent_stale_position(
+    def _discard_unsent_stale_report(
         self,
         pending: _PendingFrame | None,
     ) -> _PendingFrame | None:
-        """Drop a pre-reset position only if no bytes reached the socket."""
+        """Drop stale telemetry only before its newline-delimited frame starts."""
 
         if (
             pending is None
-            or pending.report_type != "position_local"
             or pending.sent_bytes != 0
             or pending.reset_count is None
         ):
             return pending
         with self._state_lock:
-            if pending.reset_count < self._dead_reckoning_reset_count:
+            reset_count = (
+                self._scene_reset_count
+                if pending.report_type == "velocity"
+                else self._dead_reckoning_reset_count
+            )
+            if pending.reset_count < reset_count:
                 return None
         return pending
 
@@ -723,7 +729,7 @@ class A50TcpJsonEmulator:
             while not self._stop_event.is_set():
                 if client is not None and receive_buffer:
                     self._consume_command_lines(receive_buffer)
-                    pending_frame = self._discard_unsent_stale_position(
+                    pending_frame = self._discard_unsent_stale_report(
                         pending_frame
                     )
                 readers: list[socket.socket] = [server]
@@ -778,33 +784,35 @@ class A50TcpJsonEmulator:
                                     )
                                 )
                         self._consume_command_lines(receive_buffer)
-                        pending_frame = self._discard_unsent_stale_position(
+                        pending_frame = self._discard_unsent_stale_report(
                             pending_frame
                         )
 
                 if client is not None and client in writable:
                     if pending_frame is None:
                         pending_frame = self._dequeue()
-                    pending_frame = self._discard_unsent_stale_position(
-                        pending_frame
-                    )
-                    if pending_frame is not None:
+                    # Serialize validation and the nonblocking write with an
+                    # external scene reset so an old frame cannot start after it.
+                    with self._state_lock:
+                        pending_frame = self._discard_unsent_stale_report(pending_frame)
+                        if pending_frame is None:
+                            continue
                         try:
                             sent = client.send(pending_frame.remaining)
                         except BlockingIOError:
                             sent = 0
                         except OSError:
                             sent = -1
-                        if sent < 0:
-                            self._close_client(client)
-                            client = None
-                            receive_buffer.clear()
+                    if sent < 0:
+                        self._close_client(client)
+                        client = None
+                        receive_buffer.clear()
+                        pending_frame = None
+                    elif sent > 0:
+                        pending_frame.sent_bytes += sent
+                        if pending_frame.fully_sent:
+                            self._mark_fully_sent(pending_frame)
                             pending_frame = None
-                        elif sent > 0:
-                            pending_frame.sent_bytes += sent
-                            if pending_frame.fully_sent:
-                                self._mark_fully_sent(pending_frame)
-                                pending_frame = None
         except Exception as exc:
             with self._state_lock:
                 self._last_error = f"{type(exc).__name__}: {exc}"

@@ -1,0 +1,12 @@
+# Replay-only virtual compass heading, preserving EKF3 and IMU integration.
+# Physical coefficients are unchanged. The JSON backend synthesizes magnetic
+# field from AP_Declination at virtual home 33.810313, -118.393867 [deg].
+# GPS is disabled, so provide the same table's declination explicitly [rad].
+# No per-bag yaw offset fitting or truth-mode AHRS is used.
+COMPASS_ENABLE 1
+COMPASS_USE 1
+COMPASS_USE2 0
+COMPASS_USE3 0
+EK3_SRC1_YAW 1
+COMPASS_AUTODEC 0
+COMPASS_DEC 0.20478525084

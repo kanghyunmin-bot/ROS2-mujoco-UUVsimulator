@@ -15,6 +15,9 @@
 .research-ui .header-pills { gap: 6px; }
 .research-ui .status-pill { background: transparent; border: 0; padding: 3px 4px; font: 11px/1.5 var(--mono); color: #acb2bc; }
 .research-ui .header-actions { flex-wrap: nowrap; gap: 7px; }
+.virtualgl-option { display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px; white-space: nowrap; }
+.virtualgl-option:has(input:disabled) { opacity: .65; }
+.header-action-link { color: #a9bdff; white-space: nowrap; }
 .research-ui button { min-height: 32px; padding: 6px 10px; font: 500 12px/1.4 system-ui; color: #dce1e8; border: 1px solid #424954; border-radius: 5px; background: #282d34; box-shadow: none; }
 .research-ui button:hover:not(:disabled) { background: #343b45; border-color: #697687; }
 .research-ui button:active:not(:disabled) { background: #3c4655; }
@@ -30,7 +33,7 @@
 .research-ui input[type=checkbox] { min-height: 0; width: 14px; height: 14px; accent-color: #587fea; }
 .research-ui input[type=range] { padding: 0; accent-color: #6b8ff0; }
 .research-ui .button-row { gap: 7px; }
-.research-ui .workbench { display: grid; grid-template-columns: 192px minmax(0,1fr) 300px; grid-template-rows: minmax(0,1fr) 162px; flex: 1; min-height: 0; overflow: hidden; }
+.research-ui .workbench { display: grid; grid-template-columns: 192px minmax(0,1fr) var(--inspector-width, 300px); grid-template-rows: minmax(0,1fr) 162px; flex: 1; min-height: 0; overflow: hidden; }
 .workspace-sidebar { grid-column: 1; grid-row: 1/-1; min-width: 0; overflow: auto; display: flex; flex-direction: column; background: #191c20; border-right: 1px solid var(--line); padding: 18px 10px 12px; }
 .sidebar-heading { font: 600 10px/1.5 system-ui; letter-spacing: 1.2px; color: #9aa3af; margin: 5px 10px 11px; }
 .workspace-project { display: flex; gap: 10px; align-items: center; margin: 0 8px 25px; }
@@ -82,7 +85,7 @@
 .research-ui .sensor-cell span { font: 9px/1.5 system-ui; letter-spacing: .25px; color: #a4adba; }
 .research-ui .sensor-cell strong { margin-top: 6px; font: 500 13px/1.4 var(--mono); color: #d9e2ef; }
 .research-ui .sensor-cell small { font: 9px/1.45 system-ui; color: #8d98a8; }
-.workspace-inspector { grid-row: 1/-1; grid-column: 3; min-height: 0; display: flex; flex-direction: column; border-left: 1px solid var(--line); background: #191c20; }
+.workspace-inspector { position: relative; grid-row: 1/-1; grid-column: 3; min-height: 0; display: flex; flex-direction: column; border-left: 1px solid var(--line); background: #191c20; }
 .inspector-title { display: flex; justify-content: space-between; align-items: center; padding: 0 15px; height: 46px; flex-shrink: 0; border-bottom: 1px solid var(--line); }
 .inspector-title strong { font-size: 12px; font-weight: 550; }
 .inspector-title span { font-size: 9px; letter-spacing: 1px; color: #8993a3; }
@@ -94,7 +97,14 @@
 .research-ui .mode-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
 .research-ui .mode-grid button { font: 10px/1.5 var(--mono); }
 .research-ui .status-line, .research-ui .path-text { font: 11px/1.65 system-ui; color: #9da8b9; overflow-wrap: anywhere; }
-.research-ui .pilot-disclosure { padding: 2px 0; }
+.workspace-pilot { flex: 0 0 auto; padding: 8px 12px 0; border-top: 1px solid var(--line); }
+.research-ui .workspace-pilot .pilot-group { margin: 0 0 8px; }
+.workspace-pilot .joystick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.workspace-pilot .stick-pad { width: min(140px, 100%); }
+.inspector-resizer { position: absolute; z-index: 2; left: -5px; top: 0; bottom: 0; width: 10px; cursor: col-resize; touch-action: none; }
+.inspector-resizer::after { content: ''; position: absolute; left: 4px; top: 45%; height: 40px; width: 3px; border-radius: 2px; background: #71819a; }
+.inspector-resizer:hover::after, .inspector-resizer:focus-visible::after { background: #a9bdff; }
+.inspector-resizer:focus-visible { outline: 2px solid #8eacff; outline-offset: -2px; }
 .research-ui summary { color: #c2cbd8; font: 500 12px/1.5 system-ui; }
 .research-ui .stick-pad { background: #161e28; }
 .research-ui .telemetry-column { display: block; }
@@ -136,14 +146,13 @@
 .research-ui .camera-dialog #stereoCameraPanel, .research-ui .recorder-dialog #stereoCameraPanel { min-height: 320px; }
 .research-ui .camera-dialog .stereo-camera-grid, .research-ui .recorder-dialog .stereo-camera-grid { min-height: 240px; }
 @media (max-width: 1250px) {
-  .research-ui .workbench { grid-template-columns: 166px minmax(0,1fr) 270px; }
+  .research-ui .workbench { grid-template-columns: 166px minmax(0,1fr) var(--inspector-width, 300px); }
   .research-ui .workbench.inspector-collapsed { grid-template-columns: 166px minmax(0,1fr); }
   .research-ui .header-pills { display: none; }
 
 }
 @media (max-width: 950px) {
-  .research-ui .workbench { grid-template-columns: 150px minmax(0,1fr); }
-  .workspace-inspector { position: fixed; right: 0; top: 58px; bottom: 0; width: 290px; z-index: 10; box-shadow: -10px 0 30px #0007; }
+  .research-ui .workbench { grid-template-columns: 150px minmax(0,1fr) var(--inspector-width, 300px); }
   .workspace-toolbar-actions .workspace-hint { display: none; }
   .research-ui .workbench.inspector-collapsed { grid-template-columns: 150px minmax(0,1fr); }
 }
@@ -159,6 +168,7 @@
   .research-ui .station-nav { flex-direction: row; margin: 0; gap: 4px; }
   .research-ui .station-nav button { justify-content: center; padding: 8px 5px; font-size: 11px; gap: 5px; }
   .workspace-pages { overflow: visible; padding: 8px; }
+  .workspace-pilot { padding: 8px; }
   .workspace-toolbar { padding: 0 12px; min-height: 44px; }
   .research-ui .studio-center { display: flex; flex-direction: column; min-height: 0; height: auto; }
   .research-ui .stereo-camera-grid { grid-template-columns: 1fr; }
@@ -166,7 +176,8 @@
   .workspace-instruments { height: auto; grid-template-columns: 1fr 1fr; }
   .workspace-instruments .visual-group { height: 180px; }
   .workspace-sensors { grid-column: 1/-1; min-height: 170px!important; }
-  .workspace-inspector { top: 0; width: min(290px,85vw); }
+  .workspace-inspector { position: fixed; right: 0; top: 0; bottom: 0; width: min(290px,85vw); z-index: 10; box-shadow: -10px 0 30px #0007; }
+  .inspector-resizer { display: none; }
   .research-ui .workspace-timeline { min-height: 200px; }
   .research-ui .workspace-timeline > fieldset { grid-template-columns: 1fr; }
   .workspace-timeline .path-row { grid-row: auto; grid-column: 1; }

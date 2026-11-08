@@ -3,12 +3,12 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-COMPOSE_FILE="${SCRIPT_DIR}/docker-compose.yml"
+COMPOSE_FILES=(-f "${SCRIPT_DIR}/docker-compose.yml")
 
 export UUV_XAUTHORITY="${XAUTHORITY:-/dev/null}"
 
 compose() {
-  docker compose -f "${COMPOSE_FILE}" "$@"
+  docker compose "${COMPOSE_FILES[@]}" "$@"
 }
 
 run_bash() {
@@ -65,6 +65,10 @@ case "${1:-}" in
     run_bash 'cd /workspace/uuv_mujoco/current && ./start_sitl_mujoco_mj311.sh --ros2-real-pkg-compat -- --headless'
     ;;
   web)
+    if ! nvidia-smi -L >/dev/null 2>&1; then
+      echo '[uuv-dev] NVIDIA driver unavailable. Starting the web GUI with CPU rendering.' >&2
+      COMPOSE_FILES+=(-f "${SCRIPT_DIR}/docker-compose.software.yml")
+    fi
     # The host owns GPU model serving; the GUI container owns ROS processes.
     if ! python3 - "$WORKSPACE_DIR" <<'PY'
 import json, sys, urllib.request

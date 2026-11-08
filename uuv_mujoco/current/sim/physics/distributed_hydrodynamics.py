@@ -71,6 +71,7 @@ class DistributedHydrodynamicsConfig:
     max_patch_force_n: float
     max_total_force_n: float
     max_total_torque_nm: float
+    buoyancy_ellipsoid_half_axes_m: np.ndarray | None = None
 
     @property
     def patch_count(self) -> int:
@@ -101,6 +102,7 @@ class DistributedHydrodynamicsResult:
     force_body_n: np.ndarray
     torque_body_nm: np.ndarray
     safety_scale: float
+    buoyancy_positions_world_m: np.ndarray | None = None
 
 
 class DistributedHullHydrodynamics:
@@ -108,6 +110,8 @@ class DistributedHullHydrodynamics:
 
     def __init__(self, config: DistributedHydrodynamicsConfig) -> None:
         self.config = config
+        axes = config.buoyancy_ellipsoid_half_axes_m
+        self._ellipsoid_rows = np.flatnonzero(axes[:, 0] > 0.0) if axes is not None else np.empty(0, dtype=int)
 
     @classmethod
     def from_profile(cls, sim_profile: Mapping[str, Any]) -> "DistributedHullHydrodynamics":
@@ -220,6 +224,7 @@ class DistributedHullHydrodynamics:
                 half_heights_m=patch_arrays[5],
                 normal_drag_coefficients=normal_drag_coefficients,
                 skin_drag_coefficients=patch_arrays[7],
+                buoyancy_ellipsoid_half_axes_m=patch_arrays[8],
                 max_relative_speed_mps=_positive_bounded(
                     effective_payload.get("max_relative_speed_mps", 5.0),
                     "max_relative_speed_mps",
@@ -318,30 +323,19 @@ class DistributedHullHydrodynamics:
             sample_time,
         )
 
-        point_velocities = linear_velocity[None, :] + np.cross(
-            angular_velocity[None, :],
-            offsets_world,
+        point_velocities, relative_velocities, submerged = self._patch_motion_and_immersion(
+            linear_velocity, angular_velocity, offsets_world, currents, positions_world, surface_heights
         )
-        _require_finite("patch point velocities", point_velocities)
-        with np.errstate(over="ignore", invalid="ignore"):
-            relative_velocities = point_velocities - currents
-        _require_finite("patch relative velocities", relative_velocities)
-        relative_velocities = _clip_row_norms(
-            relative_velocities,
-            cfg.max_relative_speed_mps,
-        )
-        with np.errstate(over="ignore", invalid="ignore"):
-            immersion_numerators = (
-                surface_heights
-                - positions_world[:, 2]
-                + cfg.half_heights_m
+        buoyancy_positions = positions_world
+        if self._ellipsoid_rows.size:
+            rows = self._ellipsoid_rows
+            buoyancy_positions = positions_world.copy()
+            submerged[rows], buoyancy_positions[rows] = _ellipsoid_immersion(
+                cfg.buoyancy_ellipsoid_half_axes_m[rows],
+                rotation,
+                positions_world[rows],
+                surface_heights[rows],
             )
-        _require_finite("patch immersion depths", immersion_numerators)
-        submerged = np.clip(
-            immersion_numerators / (2.0 * cfg.half_heights_m),
-            0.0,
-            1.0,
-        )
 
         buoyancy = np.zeros_like(positions_world)
         buoyancy[:, 2] = (
@@ -419,6 +413,11 @@ class DistributedHullHydrodynamics:
         # change with vehicle speed or a drag spike.
         patch_forces = buoyancy + form_drag + skin_drag
         patch_torques = np.cross(wrench_offsets_world, patch_forces)
+        if self._ellipsoid_rows.size:
+            rows = self._ellipsoid_rows
+            patch_torques[rows] = np.cross(
+                buoyancy_positions[rows] - wrench_reference_world, buoyancy[rows]
+            )
         force_world = np.sum(patch_forces, axis=0) + rotation @ residual[:3]
         roll, pitch = _roll_pitch_from_rotation(rotation)
         residual_restoring_torque_body = (
@@ -462,7 +461,45 @@ class DistributedHullHydrodynamics:
             force_body_n=force_body,
             torque_body_nm=torque_body,
             safety_scale=safety_scale,
+            buoyancy_positions_world_m=buoyancy_positions,
         )
+
+    def _patch_motion_and_immersion(
+        self,
+        linear_velocity: np.ndarray,
+        angular_velocity: np.ndarray,
+        offsets_world: np.ndarray,
+        currents: np.ndarray,
+        positions_world: np.ndarray,
+        surface_heights: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Prepare the shared velocity and immersion inputs for this step's patch forces."""
+        cfg = self.config
+        point_velocities = linear_velocity[None, :] + np.cross(
+            angular_velocity[None, :],
+            offsets_world,
+        )
+        _require_finite("patch point velocities", point_velocities)
+        with np.errstate(over="ignore", invalid="ignore"):
+            relative_velocities = point_velocities - currents
+        _require_finite("patch relative velocities", relative_velocities)
+        relative_velocities = _clip_row_norms(
+            relative_velocities,
+            cfg.max_relative_speed_mps,
+        )
+        with np.errstate(over="ignore", invalid="ignore"):
+            immersion_numerators = (
+                surface_heights
+                - positions_world[:, 2]
+                + cfg.half_heights_m
+            )
+        _require_finite("patch immersion depths", immersion_numerators)
+        submerged = np.clip(
+            immersion_numerators / (2.0 * cfg.half_heights_m),
+            0.0,
+            1.0,
+        )
+        return point_velocities, relative_velocities, submerged
 
 
 def _disabled_config() -> DistributedHydrodynamicsConfig:
@@ -520,6 +557,25 @@ def _zero_result() -> DistributedHydrodynamicsResult:
     )
 
 
+def _ellipsoid_immersion(
+    half_axes: np.ndarray,
+    rotation: np.ndarray,
+    centers_world: np.ndarray,
+    surface_heights: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return volume fraction and centroid [m] for horizontal cuts of oriented ellipsoids."""
+    axes_squared = np.square(half_axes)
+    vertical_body = rotation[2]
+    vertical_radius = np.sqrt(axes_squared @ np.square(vertical_body))
+    cut = np.clip((surface_heights - centers_world[:, 2]) / vertical_radius, -1.0, 1.0)
+    fraction = np.square(1.0 + cut) * (2.0 - cut) / 4.0
+    # Centroid of the clipped unit ball mapped through the ellipsoid transform.
+    centroid_unit = -0.75 * np.square(1.0 - cut) / (2.0 - cut)
+    direction_world = (axes_squared * vertical_body) @ rotation.T
+    shift_world = (centroid_unit / vertical_radius)[:, None] * direction_world
+    return fraction, centers_world + shift_world
+
+
 def _parse_patches(
     raw_patches: list[Any] | tuple[Any, ...],
     *,
@@ -527,6 +583,7 @@ def _parse_patches(
     default_skin_drag: float,
 ) -> tuple[
     tuple[str, ...],
+    np.ndarray,
     np.ndarray,
     np.ndarray,
     np.ndarray,
@@ -543,6 +600,7 @@ def _parse_patches(
     half_heights: list[float] = []
     normal_drag: list[float] = []
     skin_drag: list[float] = []
+    ellipsoid_half_axes: list[np.ndarray] = []
     for index, raw_patch in enumerate(raw_patches):
         label = f"patches[{index}]"
         if not isinstance(raw_patch, Mapping):
@@ -587,6 +645,16 @@ def _parse_patches(
             normal=normal,
             label=f"{label}.quadrature_spans_body_m",
         )
+        axes = np.zeros(3, dtype=np.float64)
+        if "buoyancy_ellipsoid_half_axes_m" in raw_patch:
+            axes = _vector3(
+                raw_patch["buoyancy_ellipsoid_half_axes_m"],
+                f"{label}.buoyancy_ellipsoid_half_axes_m",
+            )
+            if np.any(axes < 1e-6) or np.any(axes > _MAX_PATCH_RADIUS_M):
+                raise ValueError(f"{label} buoyancy ellipsoid half axes are outside safe bounds")
+            if area != 0.0 or volume_share <= 0.0 or raw_patch.get("quadrature_spans_body_m") is not None:
+                raise ValueError(f"{label} buoyancy ellipsoid requires a volume-only patch without quadrature")
         quadrature_count = len(quadrature_offsets)
         for quadrature_index, offset in enumerate(quadrature_offsets):
             quadrature_position = position + offset
@@ -606,6 +674,7 @@ def _parse_patches(
             half_heights.append(half_height)
             normal_drag.append(normal_drag_coefficient)
             skin_drag.append(skin_drag_coefficient)
+            ellipsoid_half_axes.append(axes)
             if len(names) > _MAX_PATCH_COUNT:
                 raise ValueError(
                     f"expanded {_CONFIG_KEY}.patches exceeds "
@@ -622,6 +691,7 @@ def _parse_patches(
         np.asarray(half_heights, dtype=np.float64),
         np.asarray(normal_drag, dtype=np.float64),
         np.asarray(skin_drag, dtype=np.float64),
+        np.stack(ellipsoid_half_axes),
     )
 
 
@@ -715,6 +785,10 @@ def _sample_surface_heights(
 
 
 def _clip_row_norms(values: np.ndarray, limit: float) -> np.ndarray:
+    # If every component is at most half the limit, every 3D norm is
+    # strictly below the limit. Keep the normalized path for all other rows.
+    if np.max(np.abs(values), initial=0.0) <= 0.5 * limit:
+        return values.copy()
     # Compute scale factors without squaring the original values, so very
     # large but finite inputs cannot overflow inside ``np.linalg.norm``.
     max_components = np.max(np.abs(values), axis=1)

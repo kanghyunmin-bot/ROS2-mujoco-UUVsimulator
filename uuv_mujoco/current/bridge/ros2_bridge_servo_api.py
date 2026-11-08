@@ -6,7 +6,7 @@ from typing import Callable, Optional
 
 import numpy as np
 
-from .ros2_dvl_sensor_runtime import reset_dvl_dead_reckoning
+from .ros2_dvl_sensor_runtime import discard_dvl_scene_velocity, reset_dvl_dead_reckoning
 from .ros2_dvl_device_emulator_runtime import (
     reset_dvl_device_emulator_dead_reckoning,
     reset_dvl_device_emulator_report_schedule,
@@ -52,12 +52,18 @@ def force_next_publish(self) -> None:
     self._ros_sensor_rate_next_t.clear()
 
 
-def reset_odometry(self) -> None:
+def reset_odometry(self, *, scene_reset: bool = False) -> None:
+    """Reset pose origins and discard queued velocity when restoring the scene."""
     self._odom_pos = np.zeros(3, dtype=np.float64)
     self._last_odom_time = -1.0
-    reset_dvl_device_emulator_dead_reckoning(self)
+    reset_dvl_device_emulator_dead_reckoning(self, scene_reset=scene_reset)
     reset_dvl_dead_reckoning(self)
+    if scene_reset:
+        discard_dvl_scene_velocity(self)
     reset_dvl_device_emulator_report_schedule(self)
+    vision = getattr(self, "_vision_sensor_pose_runtime", None)
+    if vision is not None:
+        vision.reset_initial()
 
 
 __all__ = [

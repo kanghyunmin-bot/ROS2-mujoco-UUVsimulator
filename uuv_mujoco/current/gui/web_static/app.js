@@ -28,6 +28,7 @@ const state = {
   cameraPollBusy: false,
   cameraPresetSignature: "",
   configurationLocked: false,
+  simStopPending: false,
   simPresetSignature: "",
   simPresetTouched: false,
   sensorErrorTouched: false,
@@ -711,20 +712,53 @@ function renderSimulationConfig(config, processes) {
   setText("sensorErrorModeStatus", (errorMode?.description || "기존 센서 설정 유지")
     + (activeError ? ` · 실행 중: ${activeError}` : " · 다음 시작에 적용"));
 
-  $("stackStartBtn").disabled = state.configurationLocked || running;
-  $("stackStartBtn").textContent = running ? "시뮬 실행 중" : "시뮬 시작";
+  const external = Boolean(processes?.sim_external);
+  $("stackStartBtn").disabled = state.configurationLocked || running || state.simStopPending;
+  $("stackStartBtn").textContent = external ? "외부 시뮬 실행 중" : running ? "시뮬 실행 중" : "시뮬 시작";
+  $("stackStopBtn").disabled = state.configurationLocked || !running || external || state.simStopPending;
+  $("stackStopBtn").textContent = state.simStopPending ? "정지 중…" : "시뮬 정지";
+  $("stackResetBtn").disabled = state.configurationLocked || external || state.simStopPending;
+  const otherGuiLink = $("simOtherGuiLink");
+  const otherGui = { "8878": ["18879", "연구 GUI"], "18879": ["8878", "기본 GUI"] }[window.location.port];
+  otherGuiLink.hidden = !external || !otherGui;
+  if (external && otherGui) {
+    const [port, label] = otherGui;
+    otherGuiLink.href = `http://127.0.0.1:${port}/`;
+    otherGuiLink.textContent = `${label} 열기 ↗`;
+  }
+  const virtualglOption = $("virtualglViewer");
+  const virtualglUnavailable = processes?.virtualgl_available === false;
+  virtualglOption.disabled = state.configurationLocked || running || state.simStopPending || virtualglUnavailable;
+  if (running || virtualglUnavailable) virtualglOption.checked = Boolean(processes?.virtualgl_viewer);
 }
 
 async function startSimStack() {
   const presetId = $("simLaunchPreset").value;
   setText("simStackStatus", "sim: start requested");
-  const body = await postCommand({ command: "stack_start", sim_preset: presetId, sensor_error_mode: $("sensorErrorMode").value });
+  const body = await postCommand({
+    command: "stack_start",
+    sim_preset: presetId,
+    sensor_error_mode: $("sensorErrorMode").value,
+    virtualgl_viewer: $("virtualglViewer").checked,
+  });
   state.simPresetTouched = false;
   state.sensorErrorTouched = false;
   if (body.status) {
     setText("simStackStatus", body.status);
   }
   await pollStatus();
+}
+
+async function stopSimStack() {
+  if (state.simStopPending) return;
+  state.simStopPending = true;
+  renderSimulationConfig(state.lastSimulationConfig || {}, state.lastSimulationProcesses);
+  try {
+    await postCommand({ command: "stack_stop" });
+  } finally {
+    state.simStopPending = false;
+    await pollStatus();
+  }
 }
 
 function renderStereoCamera(camera) {
@@ -1991,6 +2025,7 @@ function bindControls() {
     setText("simLaunchPresetStatus", `plant: ${label} selected; press Start`);
   });
   $("stackStartBtn").addEventListener("click", () => startSimStack().catch(console.error));
+  $("stackStopBtn").addEventListener("click", () => stopSimStack().catch(console.error));
   $("stackResetBtn").addEventListener("click", () => postCommand({ command: "stack_reset" }).then(pollStatus).catch(console.error));
   $("rosBuildBtn").addEventListener("click", () => postCommand({ command: "ros_build" }).then(pollStatus).catch(console.error));
   $("mavrosToggleBtn").addEventListener("click", () =>

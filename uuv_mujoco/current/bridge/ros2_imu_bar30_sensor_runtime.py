@@ -147,19 +147,36 @@ def reset_imu_bar30_sensor_runtime(bridge: Any) -> None:
     if bridge._bar30_sensor_model_enabled:
         bridge._bar30_sensor_model.reset(bridge._bar30_sensor_seed)
         bridge._bar30_sensor_timing.reset(seed=bridge._bar30_sensor_seed)
-    bridge._imu_sensor_latest_capture = None
+    _clear_sensor_samples(bridge)
     bridge._imu_sensor_next_ros_capture_s = None
-    bridge._bar30_sensor_latest_capture = None
-    bridge._imu_sensor_new_deliveries = ()
-    bridge._bar30_sensor_new_deliveries = ()
-    bridge._imu_sensor_last_delivery = None
-    bridge._bar30_sensor_last_delivery = None
+    bridge._imu_bar30_scene_refresh_pending = False
     bridge._imu_sensor_missed_capture_count = 0
     bridge._bar30_sensor_missed_capture_count = 0
     bridge._imu_bar30_sensor_last_advance_time_s = None
     # Construction and MuJoCo reset can occur at non-zero time. Avoid
     # backfilling captures for states that were never observed by the model.
     bridge._imu_bar30_sensor_needs_time_anchor = True
+
+
+def _clear_sensor_samples(bridge: Any) -> None:
+    bridge._imu_sensor_latest_capture = None
+    bridge._bar30_sensor_latest_capture = None
+    bridge._imu_sensor_new_deliveries = ()
+    bridge._bar30_sensor_new_deliveries = ()
+    bridge._imu_sensor_last_delivery = None
+    bridge._bar30_sensor_last_delivery = None
+
+
+def discard_imu_bar30_scene_samples(bridge: Any) -> None:
+    """Drop pre-teleport samples while preserving sensor phase and bias state."""
+    if not getattr(bridge, "_imu_bar30_sensor_runtime_configured", False):
+        return
+    if bridge._imu_sensor_model_enabled:
+        bridge._imu_sensor_timing.discard_pending()
+    if bridge._bar30_sensor_model_enabled:
+        bridge._bar30_sensor_timing.discard_pending()
+    _clear_sensor_samples(bridge)
+    bridge._imu_bar30_scene_refresh_pending = True
 
 
 def advance_imu_bar30_sensor_runtime(
@@ -191,6 +208,7 @@ def advance_imu_bar30_sensor_runtime(
 
     measured_imu = _advance_imu(bridge, base, imu_dvl, sim_t)
     measured_vertical = _advance_bar30(bridge, vertical, sim_t)
+    bridge._imu_bar30_scene_refresh_pending = False
     return (
         measured_imu,
         measured_vertical,
@@ -215,7 +233,8 @@ def _advance_imu(
         bridge,
         "_imu_sensor_missed_capture_count",
     )
-    if imu_dvl.gyro_bmj is not None and imu_dvl.acc_bmj is not None:
+    refresh = bridge._imu_bar30_scene_refresh_pending and not captures
+    if (captures or refresh) and imu_dvl.gyro_bmj is not None and imu_dvl.acc_bmj is not None:
         quat_ros = rotmat_to_quat_wxyz(base.base_rot_enu @ bridge._bmj_to_flu.T)
         gyro_ros = bridge._bmj_to_flu @ np.asarray(imu_dvl.gyro_bmj, dtype=np.float64)
         # Keep the physical sensor model ahead of the legacy ROS-only output
@@ -224,6 +243,11 @@ def _advance_imu(
         accel_ros = bridge._bmj_to_flu @ np.asarray(
             imu_dvl.acc_bmj, dtype=np.float64
         )
+        if refresh:
+            # Refresh the FCU hold at the restored pose without an extra ROS packet.
+            bridge._imu_sensor_latest_capture = bridge._imu_sensor_model.sample(
+                quat_ros, gyro_ros, accel_ros, sample_time_s=sim_t
+            )
         for capture in captures:
             sample = bridge._imu_sensor_model.sample(
                 quat_ros,
@@ -282,6 +306,12 @@ def _advance_bar30(
         bridge,
         "_bar30_sensor_missed_capture_count",
     )
+    if bridge._imu_bar30_scene_refresh_pending and not captures:
+        bridge._bar30_sensor_latest_capture = bridge._bar30_sensor_model.sample(
+            vertical.bar30_pressure_pa,
+            sample_time_s=sim_t,
+            ambient_temperature_c=bridge._bar30_sensor_ambient_temperature_c,
+        )
     for capture in captures:
         sample = bridge._bar30_sensor_model.sample(
             vertical.bar30_pressure_pa,

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable
 
 import numpy as np
@@ -54,6 +54,7 @@ class ThrusterActuatorRuntime:
     surface_height_sampler: Callable[[np.ndarray, float], float] | None
     last_inflow_multiplier: dict[str, float]
     last_axial_advance_speed_mps: dict[str, float]
+    rotor_rpm: dict[str, float] = field(default_factory=dict)
 
     @classmethod
     def create(cls, **kwargs) -> "ThrusterActuatorRuntime":

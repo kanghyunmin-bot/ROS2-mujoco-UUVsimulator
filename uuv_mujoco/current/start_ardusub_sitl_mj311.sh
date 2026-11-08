@@ -926,11 +926,11 @@ SITL_GCS_SYSID="${SITL_MAV_GCS_SYSID:-${SITL_SYSID_MYGCS:-${SITL_MAVLINK_SOURCE_
 append_param_if_not_overridden "MAV_GCS_SYSID" "$SITL_GCS_SYSID"
 append_param_if_not_overridden "MAV_GCS_SYSID_HI" "${SITL_MAV_GCS_SYSID_HI:-0}"
 append_param_if_not_overridden "SYSID_MYGCS" "$SITL_GCS_SYSID"
-# Preserve the physical vehicle's loss-of-control parameter contract. MAVProxy
-# supplies the GCS heartbeat, so the GCS action remains active in SITL. Exact
-# upstream ArduSub 4.1.2 compiles its pilot-input action out for HAL_BOARD_SITL;
-# keep the real value visible here without patching the pinned firmware or
-# falsely claiming that SITL exercises that one hardware action.
+# MAVProxy supplies the GCS heartbeat. Pilot input has its own timer.
+# Upstream 4.1.2 omits the pilot-input check in SITL. To enable it on a fresh
+# stable checkout, run from the workspace root before launching with --no-rebuild:
+#   git -C ardupilot_sub_stable apply ../setup/patches/ardusub-sitl-althold-pilot.patch
+#   (cd ardupilot_sub_stable && ./waf configure --board sitl && ./waf sub)
 append_param_if_not_overridden "FS_GCS_ENABLE" "${SITL_FS_GCS_ENABLE:-2}"
 append_param_if_not_overridden "FS_PILOT_INPUT" "${SITL_FS_PILOT_INPUT:-2}"
 append_param_if_not_overridden "FS_PILOT_TIMEOUT" "${SITL_FS_PILOT_TIMEOUT:-3.0}"

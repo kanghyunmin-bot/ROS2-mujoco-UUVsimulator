@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from physics.thruster_curve_helpers import shape_thruster_command
+from physics.thruster_mapping import ARDUSUB_VECTORED_6DOF_SERVO_MAP, ARDUSUB_VECTORED_6DOF_SERVO_SIGNS
 from sim.physics.thruster_voltage import measured_voltage_surface, force_curve_at_voltage, load_voltage_trace, update_supply_voltage
 from sim.physics.thruster_dynamics import thruster_response
 from sim.physics.thruster_force_model import force_from_shaped_command
@@ -21,6 +22,8 @@ from sim.physics.thruster_param_defaults import default_thruster_global_params
 from sim.physics.thruster_performance_loader import load_thruster_performance_config
 from sim.runtime.thruster_actuator_command import update_thruster_state, shaped_thruster_command
 from sim.runtime.thruster_actuator_params import global_thruster_update_params
+
+NATIVE_TO_SCENE = dict(zip(ARDUSUB_VECTORED_6DOF_SERVO_MAP, ARDUSUB_VECTORED_6DOF_SERVO_SIGNS))
 
 
 class T200ActuatorTests(unittest.TestCase):
@@ -67,12 +70,13 @@ class T200ActuatorTests(unittest.TestCase):
         self.assertAlmostEqual(pwm_to_force_from_performance(-2, self.config), -39.90792903824067)
 
     def test_legacy_gain_and_reverse_asymmetry_cannot_modify_measured_curve(self):
-        for command in [-1, -.5, .5, 1]:
-            actual = force_from_shaped_command(name="yaw_lf", command_shaped=command,
+        direction = NATIVE_TO_SCENE["yaw_lf"]
+        for native_command in [-1, -.5, .5, 1]:
+            actual = force_from_shaped_command(name="yaw_lf", command_shaped=direction * native_command,
                 gain=3.3, perf_cfg=self.config, thruster_direct_scale={"yaw_lf": 1},
                 thruster_global=default_thruster_global_params(), thruster_force_max=21,
                 thruster_reverse_asymmetry={"yaw_lf": .1})
-            self.assertEqual(actual, pwm_to_force_from_performance(command, self.config))
+            self.assertEqual(actual, direction * pwm_to_force_from_performance(native_command, self.config))
 
     def test_command_limit_never_renormalizes_to_full_drive(self):
         self.assertLess(shape_thruster_command(1, .0625, .5), .5)
@@ -146,12 +150,13 @@ class T200MujocoIntegrationTests(unittest.TestCase):
         data.qvel[:] = 0
         self.mujoco.mj_forward(model, data)
         for name in actuator.all_thruster_names:
-            for command in [-.5, .5]:
+            direction = NATIVE_TO_SCENE[name]
+            for native_command in [-.5, .5]:
                 actuator.target.update({n: 0 for n in actuator.all_thruster_names})
                 actuator.state.update({n: 0 for n in actuator.all_thruster_names})
-                actuator.target[name] = command
+                actuator.target[name] = direction * native_command
                 actuator.update_forces(10, base_id=base_id)
-                expected_force = pwm_to_force_from_performance(command, actuator.perf_cfg)
+                expected_force = direction * pwm_to_force_from_performance(native_command, actuator.perf_cfg)
                 self.assertAlmostEqual(actuator.force_cmd[name], expected_force)
                 self.mujoco.mj_forward(model, data)
                 np.testing.assert_allclose(data.qfrc_actuator[v:v+3], actuator.last_force_body, atol=1e-6)

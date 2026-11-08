@@ -53,7 +53,7 @@ def log_ros2_bridge_startup(self) -> None:
         )
     if getattr(self, "_stereo_image_enabled", False):
         render_mode = (
-            "sync/reproducible sensor-model"
+            ("async/interactive sensor-model" if self._stereo_image_async_enabled else "sync/reproducible sensor-model")
             if getattr(self, "_camera_sensor_model_enabled", False)
             else (
                 "async/interactive"

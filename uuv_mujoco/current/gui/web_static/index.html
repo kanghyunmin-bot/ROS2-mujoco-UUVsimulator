@@ -103,7 +103,12 @@
               <div id="simLaunchPresetStatus" class="status-line">plant: Research pool · distributed physics</div>
               <div class="button-row">
                 <button id="stackStartBtn" type="button">Start SITL/MuJoCo</button>
-                <button id="stackResetBtn" type="button" class="danger">Stop/Reset</button>
+                <label id="virtualglOption" class="virtualgl-option" title="vglrun으로 MuJoCo 기본 3D 창과 카메라를 GPU로 렌더링합니다.">
+                  <input id="virtualglViewer" type="checkbox"> VirtualGL · GPU 뷰어
+                </label>
+                <button id="stackStopBtn" type="button" class="danger" disabled>시뮬 정지</button>
+                <a id="simOtherGuiLink" class="header-action-link" target="_blank" rel="noopener" hidden></a>
+                <button id="stackResetBtn" type="button">SITL 초기화</button>
               </div>
               <div id="simStackStatus" class="status-line">sim: stopped</div>
             </fieldset>
@@ -441,7 +446,7 @@
         <button id="stereoCameraApplyBtn" type="button">적용 + 재시작</button>
         <button id="stereoCameraSaveBtn" type="button">다음 실행에 적용</button>
       </div>
-      <label class="entry-row"><span>광학</span><select id="stereoCameraOptics"><option value="inherited">기존 환경 설정 유지</option><option value="pool_lite">수중 풀 · 경량 광학</option></select></label>
+      <label class="entry-row"><span>광학</span><select id="stereoCameraOptics"><option value="inherited">기존 환경 설정 유지</option><option value="pool_lite_live">수중 풀 · 경량 광학 (실시간 조종)</option><option value="pool_lite">수중 풀 · 경량 광학 (재현 실험)</option></select></label>
       <div id="stereoCameraConfigStatus" class="status-line">센서 설정 확인 중…</div>
     </fieldset>
   </section>

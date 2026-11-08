@@ -12,6 +12,25 @@ from sim.physics.fluid_contract import configure_fluid_model_contract
 from sim.physics.fluid_geom_apply import apply_fluid_geom_runtime_scales
 
 
+def assert_environment_only_fluid(m):
+    d = mujoco.MjData(m)
+    d.qvel[:6] = [1, 0, 0, 0.2, 0.3, 0.4]
+    joint = m.joint("course_buoy_a_yellow_1_rope_joint_05").id
+    dof = int(m.jnt_dofadr[joint])
+    d.qvel[dof] = 10
+    mujoco.mj_forward(m, d)
+    wet = d.qfrc_passive.copy()
+    density, viscosity = m.opt.density, m.opt.viscosity
+    try:
+        m.opt.density = m.opt.viscosity = 0
+        mujoco.mj_forward(m, d)
+        fluid = wet - d.qfrc_passive
+    finally:
+        m.opt.density, m.opt.viscosity = density, viscosity
+    np.testing.assert_allclose(fluid[:6], 0, atol=1e-10)
+    assert np.linalg.norm(fluid[dof : dof + 3]) > 1e-7, "rope lost its water drag"
+
+
 def main():
     m = mujoco.MjModel.from_xml_path(
         str(CURRENT / "scenes/research_pool_slam_scene.xml")
@@ -41,18 +60,7 @@ def main():
     )
     if "--without_fix" in sys.argv:
         m.opt.density = m.opt.viscosity = 0
-    d = mujoco.MjData(m)
-    d.qvel[:6] = [1, 0, 0, 0.2, 0.3, 0.4]
-    joint = m.joint("course_buoy_a_yellow_1_rope_joint_05").id
-    dof = int(m.jnt_dofadr[joint])
-    d.qvel[dof] = 10
-    mujoco.mj_forward(m, d)
-    wet = d.qfrc_passive.copy()
-    m.opt.density = m.opt.viscosity = 0
-    mujoco.mj_forward(m, d)
-    fluid = wet - d.qfrc_passive
-    np.testing.assert_allclose(fluid[:6], 0, atol=1e-10)
-    assert np.linalg.norm(fluid[dof : dof + 3]) > 1e-7, "rope lost its water drag"
+    assert_environment_only_fluid(m)
     print("PASS native rope drag remains active; no duplicate vehicle fluid wrench")
 
 

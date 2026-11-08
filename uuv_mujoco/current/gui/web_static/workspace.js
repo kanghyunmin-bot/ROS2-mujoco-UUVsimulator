@@ -64,13 +64,54 @@
   telemetry.setAttribute('aria-labelledby', 'inspectorStatusTab');
   telemetry.hidden = true;
   controls.querySelector('h2').remove();
-  // Joysticks are available on demand; the control-enable state remains explicit.
+  // Keep the original live controls outside the independently collapsible inspector.
   const pilot = byId('pilotControlGroup');
-  const pilotDetails = node('details', 'pilot-disclosure', '<summary>수동 조종기</summary>');
-  pilot.before(pilotDetails);
-  pilotDetails.append(pilot);
+  const pilotDock = node('div', 'workspace-pilot');
+  pilotDock.append(pilot);
+  stage.append(pilotDock);
   inspectorBody.append(controls, telemetry);
   inspector.append(inspectorBody);
+  const resizer = node('div', 'inspector-resizer');
+  resizer.setAttribute('role', 'separator');
+  resizer.setAttribute('aria-label', '상세 패널 너비 조절');
+  resizer.setAttribute('aria-orientation', 'vertical');
+  resizer.setAttribute('aria-valuemin', '240');
+  resizer.setAttribute('aria-valuemax', '600');
+  resizer.tabIndex = 0;
+  inspector.prepend(resizer);
+  const setInspectorWidth = (width, save = false) => {
+    const max = Math.max(240, Math.min(600, window.innerWidth - 510));
+    const value = Math.round(Math.max(240, Math.min(max, width)));
+    shell.style.setProperty('--inspector-width', `${value}px`);
+    resizer.setAttribute('aria-valuemax', String(max));
+    resizer.setAttribute('aria-valuenow', String(value));
+    if (save) { try { localStorage.setItem('workspaceInspectorWidth', String(value)); } catch (_) {} }
+  };
+  let storedWidth;
+  try { storedWidth = Number(localStorage.getItem('workspaceInspectorWidth')); } catch (_) {}
+  setInspectorWidth(storedWidth || 300);
+  window.addEventListener('resize', () => setInspectorWidth(parseInt(resizer.getAttribute('aria-valuenow'), 10)));
+  resizer.addEventListener('pointerdown', event => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    resizer.setPointerCapture(event.pointerId);
+  });
+  resizer.addEventListener('pointermove', event => {
+    if (resizer.hasPointerCapture(event.pointerId)) setInspectorWidth(window.innerWidth - event.clientX);
+  });
+  resizer.addEventListener('pointerup', event => {
+    if (resizer.hasPointerCapture(event.pointerId)) {
+      setInspectorWidth(window.innerWidth - event.clientX, true);
+      resizer.releasePointerCapture(event.pointerId);
+    }
+  });
+  resizer.addEventListener('keydown', event => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const current = Number(resizer.getAttribute('aria-valuenow'));
+    const width = event.key === 'Home' ? 240 : event.key === 'End' ? 600 : current + (event.key === 'ArrowLeft' ? 10 : -10);
+    setInspectorWidth(width, true);
+  });
   inspector.querySelectorAll('[role=tab]').forEach(button => {
     button.addEventListener('click', () => {
       for (const tab of inspector.querySelectorAll('[role=tab]')) {
@@ -138,7 +179,7 @@
 
   // Static, locally vendored Feather icons need no client-side library or network.
   const actionIcons = {
-    stackStartBtn:'play', stackResetBtn:'square', settingsOpen:'settings', quickCenterBtn:'crosshair',
+    stackStartBtn:'play', stackStopBtn:'square', stackResetBtn:'rotate-ccw', settingsOpen:'settings', quickCenterBtn:'crosshair',
     armBtn:'play', disarmBtn:'square', vlaPrepareControlBtn:'cpu', vlaRestoreManualBtn:'rotate-ccw',
     centerBtn:'crosshair', releaseBtn:'square', stereoCameraZoomBtn:'maximize-2',
     physicsOpenBtn:'sliders', courseOpenBtn:'crosshair', rcReplayLoadBtn:'folder',

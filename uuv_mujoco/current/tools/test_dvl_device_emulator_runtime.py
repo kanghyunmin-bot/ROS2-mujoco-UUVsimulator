@@ -111,6 +111,13 @@ class DvlDeviceEmulatorRuntimeTest(unittest.TestCase):
             self.addCleanup(client.close)
             client.settimeout(0.1)
 
+            # connect() can finish before the server thread accepts the socket.
+            # Wait for a peer before submitting reports that must all be observed.
+            deadline = time.monotonic() + 2.0
+            while not bridge._dvl_device_emulator.client_connected and time.monotonic() < deadline:
+                time.sleep(0.001)
+            self.assertTrue(bridge._dvl_device_emulator.client_connected)
+
             for index in range(5):
                 capture_time_s = index * 0.1
                 sample = model.sample(

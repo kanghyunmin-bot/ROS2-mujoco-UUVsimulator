@@ -540,6 +540,23 @@ class CourseBuoyRuntime:
             log=log,
         )
 
+    @dataclass(frozen=True, slots=True)
+    class _FloatWater:
+        """Water at one buoy center for one physics step."""
+
+        center_z: float
+        surface_z: float
+        radius: float
+        current: np.ndarray | None  # None when the float is entirely above water.
+
+    def _sample_float_water(self, buoy: CourseBuoy) -> _FloatWater:
+        center = self._buoy_center_world(buoy)
+        center_z = float(center[2])
+        surface_z = self._surface_height_world_m(center)
+        radius = self._float_vertical_radius_m(buoy)
+        current = self._water_velocity_world(center) if center_z <= surface_z + radius else None
+        return self._FloatWater(center_z, surface_z, radius, current)
+
     def apply(self, dt: float) -> None:
         if not self.buoys:
             return
@@ -583,8 +600,9 @@ class CourseBuoyRuntime:
                 # at zero. Reuse it instead of allocating a fifth six-axis array
                 # for every buoy and physics step; contribution order is unchanged.
                 wrench = buoy.last_runtime_wrench
-                wrench += self._float_buoyancy_wrench(buoy, vehicle_contact=vehicle_contact)
-                wrench += self._water_drag_wrench(buoy, vehicle_contact=vehicle_contact, dt=dt)
+                water = self._sample_float_water(buoy)
+                wrench += self._float_buoyancy_wrench(buoy, vehicle_contact=vehicle_contact, water=water)
+                wrench += self._water_drag_wrench(buoy, vehicle_contact=vehicle_contact, dt=dt, water=water)
                 if buoy.detached and was_detached:
                     wrench += self._stabilize_released_buoy(
                         buoy,
@@ -669,21 +687,24 @@ class CourseBuoyRuntime:
                     current[axis] = current_value - last_value
             last[axis] = 0.0
 
-    def _float_buoyancy_wrench(self, buoy: CourseBuoy, *, vehicle_contact: bool) -> np.ndarray:
+    def _float_buoyancy_wrench(
+        self, buoy: CourseBuoy, *, vehicle_contact: bool, water: _FloatWater | None = None,
+    ) -> np.ndarray:
         wrench = np.zeros(6, dtype=np.float64)
         if self.buoyancy_n <= 0.0:
             return wrench
 
-        center_world = self._buoy_center_world(buoy)
-        center_z = float(center_world[2])
-        if not self._touches_float_waterline(buoy, center_z):
+        if water is None:
+            water = self._sample_float_water(buoy)
+        if water.current is None:
             return wrench
+        center_z = water.center_z
 
         velocity_z = float(
             self._buoy_linear_velocity(buoy)[2]
-            - self._water_velocity_world(center_world)[2]
+            - water.current[2]
         )
-        target_z = self._surface_target_center_z(buoy)
+        target_z = self._surface_target_center_z(buoy, water)
         neutral_upthrust_n = self._body_weight_n(buoy)
         # Keep the tethered magnet load at the original reserve lift so the
         # compliant attachment can tilt under contact. Once physically
@@ -713,20 +734,21 @@ class CourseBuoyRuntime:
         progress = elapsed_s / max(self.release_stabilize_s, 1.0e-9)
         return 0.35 + 0.65 * self._clamp_scalar(progress, 0.0, 1.0)
 
-    def _water_drag_wrench(self, buoy: CourseBuoy, *, vehicle_contact: bool, dt: float) -> np.ndarray:
+    def _water_drag_wrench(
+        self, buoy: CourseBuoy, *, vehicle_contact: bool, dt: float, water: _FloatWater | None = None,
+    ) -> np.ndarray:
         wrench = np.zeros(6, dtype=np.float64)
-        center_world = self._buoy_center_world(buoy)
-        center_z = float(center_world[2])
-        if not self._touches_float_waterline(buoy, center_z):
+        if water is None:
+            water = self._sample_float_water(buoy)
+        if water.current is None:
             return wrench
+        center_z = water.center_z
 
         # xfrc_applied is a world-frame force, so drag must use the same
         # world-frame water-relative velocity as the vehicle fluid contract.
         # Without this subtraction, a configured current moved the vehicle
         # but left free/captured course buoys in still water.
-        velocity = self._buoy_linear_velocity(buoy) - self._water_velocity_world(
-            center_world
-        )
+        velocity = self._buoy_linear_velocity(buoy) - water.current
         if vehicle_contact and not self.shape_drag:
             velocity = velocity.copy()
             velocity[2] = 0.0
@@ -742,11 +764,11 @@ class CourseBuoyRuntime:
             # sliding naturally around it.
             immersion_fraction = self._clamp_scalar(
                 (
-                    self._surface_height_world_m(center_world)
-                    + self._float_vertical_radius_m(buoy)
+                    water.surface_z
+                    + water.radius
                     - center_z
                 )
-                / max(2.0 * self._float_vertical_radius_m(buoy), 1.0e-9),
+                / max(2.0 * water.radius, 1.0e-9),
                 0.0,
                 1.0,
             )
@@ -1207,12 +1229,13 @@ class CourseBuoyRuntime:
             self._surface_height_world_m(center_world) + self._float_vertical_radius_m(buoy)
         )
 
-    def _surface_target_center_z(self, buoy: CourseBuoy) -> float:
-        center_world = self._buoy_center_world(buoy)
+    def _surface_target_center_z(self, buoy: CourseBuoy, water: _FloatWater | None = None) -> float:
         surface_offset = float(buoy.cached_surface_target_center_z) - self.water_surface_z
         if self.shape_drag:
-            surface_offset *= self._float_vertical_radius_m(buoy) / self.float_half_height_m
-        return self._surface_height_world_m(center_world) + surface_offset
+            radius = water.radius if water is not None else self._float_vertical_radius_m(buoy)
+            surface_offset *= radius / self.float_half_height_m
+        surface_z = water.surface_z if water is not None else self._surface_height_world_m(self._buoy_center_world(buoy))
+        return surface_z + surface_offset
 
     def _water_velocity_world(self, position_world: np.ndarray) -> np.ndarray:
         sampler = getattr(self, "water_velocity_sampler", None)
