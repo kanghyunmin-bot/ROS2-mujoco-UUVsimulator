@@ -17,6 +17,7 @@
   const nav = document.querySelector('.station-nav');
   const data = byId('station-data');
   const setup = byId('station-setup');
+  const real2sim = byId('station-real2sim');
   const shell = node('section', 'workbench');
   shell.setAttribute('aria-label', tr("Underwater Robotics Workspace", "수중 로봇 실험 워크스페이스"));
   document.querySelector('.app-header').after(shell);
@@ -24,7 +25,7 @@
   // The sidebar describes work and visible views; it is not a second command surface.
   const sidebar = node('aside', 'workspace-sidebar', `<div class="sidebar-heading">WORKSPACE</div><div class="workspace-project">${icon('layers')}<div><strong id="workspaceProject">UT27 Research</strong><small>${tr("Underwater Simulation", "수중 로봇 시뮬레이션")}</small></div></div><div class="sidebar-heading">${tr("Workspace Pages", "작업")}</div>`);
   sidebar.append(nav);
-  const navIcons = ['activity', 'folder', 'sliders'];
+  const navIcons = ['activity', 'folder', 'sliders', 'settings'];
   [...nav.children].forEach((button, index) => button.insertAdjacentHTML('afterbegin', icon(navIcons[index])));
   const views = node('div', 'workspace-views', `<div class="sidebar-heading">${tr("Camera Views", "관찰 화면")}</div><button type="button" data-camera-layout="split" aria-pressed="true" data-ut27-only>${icon('layers')}${tr("All Cameras", "전체 보기")}</button><button type="button" data-camera-layout="front" aria-pressed="false">${icon('video')}${tr("Front Camera", "전방 카메라")}</button><button type="button" data-camera-layout="hand" aria-pressed="false" data-ut27-only>${icon('video')}${tr("Hand Camera", "손 카메라")}</button><div class="sidebar-heading" data-ut27-only>${tr("Experiment Tools", "실험 도구")}</div><button type="button" id="workspacePhysics" data-ut27-only>${icon('sliders')}${tr("Physics Profile", "물리 프로필")}</button><button type="button" id="workspaceCourse" data-ut27-only>${icon('crosshair')}${tr("Initial Layout", "시작 배치")}</button>`);
   sidebar.append(views, node('div', 'sidebar-foot', `${icon('cpu')}<span>MuJoCo · ROS 2<small id="workspaceFoot">UT27 / local workspace</small></span>`));
@@ -32,7 +33,7 @@
   const stage = node('section', 'workspace-stage');
   const stageHeader = node('div', 'workspace-toolbar', `<div><span class="workspace-breadcrumb" id="workspaceBreadcrumb">UT27 / </span><strong id="workspaceTitle">${tr("Live View", "실시간 관찰")}</strong></div><div class="workspace-toolbar-actions"><span class="workspace-hint">${tr("View", "화면")}</span><button id="workspaceInspectorToggle" type="button" aria-pressed="true" aria-label="${tr("Toggle the inspector", "상세 패널 표시 전환")}">${icon('sidebar')}${tr("Inspector", "상세 패널")}</button></div>`);
   const pages = node('div', 'workspace-pages');
-  pages.append(main, data, setup);
+  pages.append(main, data, setup, real2sim);
   stage.append(stageHeader, pages);
   shell.append(sidebar, stage);
 
@@ -154,8 +155,10 @@
   // Navigation changes the workspace only; never implicitly enables RC or ARM.
   for (const button of nav.querySelectorAll('button')) {
     button.addEventListener('click', () => {
+      const page = button.getAttribute('aria-controls');
       byId('workspaceTitle').textContent = button.textContent;
-      views.hidden = button.getAttribute('aria-controls') !== 'station-operation';
+      views.hidden = page !== 'station-operation';
+      shell.classList.toggle('calibration-workspace', page === 'station-real2sim');
     });
   }
   views.querySelectorAll('[data-camera-layout]').forEach(button => button.addEventListener('click', () => {
@@ -184,11 +187,11 @@
   const quick = byId('vlaQuickOpen');
   quick.setAttribute('data-ut27-only', '');
   let previousLayout = camera.dataset.layout || 'split';
-  window.setWorkspaceVehicle = vehicle => {
+  window.setWorkspaceVehicle = (vehicle, customName) => {
     const blue = vehicle === 'bluerov2_standard';
     const previous = document.body.dataset.vehicle;
-    document.body.dataset.vehicle = blue ? 'bluerov2_standard' : 'ut27';
-    const label = blue ? 'BlueROV2 Standard' : 'UT27';
+    document.body.dataset.vehicle = vehicle === 'real2sim' ? 'real2sim' : (blue ? 'bluerov2_standard' : 'ut27');
+    const label = vehicle === 'real2sim' ? customName : (blue ? 'BlueROV2 Standard' : 'UT27');
     byId('workspaceVehicleName').textContent = label;
     byId('workspaceProject').textContent = `${label} Research`;
     byId('workspaceBreadcrumb').textContent = `${label} / `;

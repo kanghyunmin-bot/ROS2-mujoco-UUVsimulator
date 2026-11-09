@@ -6,7 +6,7 @@
     <title>UT27 · Research Studio</title>
     <link rel="stylesheet" href="/style.css?v=20261103-workspace">
   <link rel="stylesheet" href="/studio.css?v=20261103-workspace">
-    <link rel="stylesheet" href="/research.css?v=20261109-vehicle">
+    <link rel="stylesheet" href="/research.css?v=20261109-real2sim-build-3">
   </head>
   <body class="research-ui">
     <header class="app-header">
@@ -37,6 +37,7 @@
       <button type="button" aria-controls="station-operation" aria-pressed="true" data-ko="실시간 관찰">Live View</button>
       <button type="button" aria-controls="station-data" aria-pressed="false" data-ut27-only data-ko="시연 · 정책">Demonstrations &amp; Policies</button>
       <button type="button" aria-controls="station-setup" aria-pressed="false" data-ko="실험 조건">Experiment Setup</button>
+      <button type="button" aria-controls="station-real2sim" aria-pressed="false" data-ko="기체 구현·자동 보정">Vehicle Setup &amp; Calibration</button>
     </nav>
     <main id="station-operation" class="app-grid">
       <section id="telemetryPanel" class="panel telemetry-column">
@@ -89,6 +90,7 @@
 
             <fieldset class="group">
               <legend data-ko="시뮬레이션 환경">Simulation Environment</legend>
+              <div class="native-simulation-controls">
               <label class="entry-row sim-preset-row">
                 <span data-ko="환경 프로필">Environment Profile</span>
                 <select id="simLaunchPreset" disabled>
@@ -117,6 +119,20 @@
                 <button id="stackResetBtn" type="button" data-ko="SITL 초기화">Reset SITL</button>
               </div>
               <div id="simStackStatus" class="status-line">sim: stopped</div>
+              </div>
+              <div id="real2simPanel" class="real2sim-panel" hidden>
+                <strong data-ko="보정 기체 재생">Calibrated vehicle replay</strong>
+                <div id="real2simSensors" class="status-line"></div>
+                <div id="real2simReview" class="real2sim-review" role="status" hidden data-ko="보정 결과 검토 필요 · 시뮬레이션 접촉 이력을 확인하세요. 재생은 가능합니다.">Candidate needs review · check simulated contact events. Replay remains available.</div>
+                <label class="entry-row"><span data-ko="실측 주행">Recorded trial</span><select id="real2simTrial"></select></label>
+                <label class="entry-row"><span data-ko="물리 모델">Physics model</span><select id="real2simProfile"></select></label>
+                <div class="button-row">
+                  <button id="real2simViewBtn" type="button" data-ko="MuJoCo 재생">Open MuJoCo replay</button>
+                  <button id="real2simStopBtn" type="button" class="danger" data-ko="재생 종료">Stop replay</button>
+                  <button id="real2simRefreshBtn" type="button" data-ko="기체 목록 새로고침">Refresh vehicles</button>
+                </div>
+                <div id="real2simStatus" class="status-line" aria-live="polite" data-ko="선택한 실측 모터 로그를 재생합니다">Replays the selected recorded motor outputs.</div>
+              </div>
             </fieldset>
 
 
@@ -433,9 +449,37 @@
       <a href="http://127.0.0.1:8882/rl" target="_blank" rel="noopener" data-ko="잔차 PPO 학습 화면 열기 ↗">Open Residual PPO Training ↗</a>
     </div>
   </section>
+  <section id="station-real2sim" class="station-page real2sim-setup" aria-labelledby="real2sim-heading" hidden>
+    <h2 id="real2sim-heading" data-ko="기체 구현·자동 보정">Vehicle Setup &amp; Calibration</h2>
+    <p data-ko="기체 모델과 실측 로그를 불러와 센서를 설정하고 보정 프로필을 만듭니다.">Load a vehicle model and recorded trials to configure sensors and fit a physics profile.</p>
+    <div class="real2sim-steps" aria-label="Calibration workflow" data-ko-aria-label="자동 보정 순서">
+      <span data-ko="1. 입력 준비">1. Prepare files</span><span data-ko="2. 자동 보정">2. Run calibration</span><span data-ko="3. 결과 확인">3. Review result</span>
+    </div>
+    <form id="real2simBuildForm" class="group real2sim-build-form">
+      <h3 data-ko="입력 패키지">Input package</h3>
+      <p class="real2sim-help" data-ko="워크스페이스 기준 폴더 경로를 입력하세요. vehicle.json, model, config, trials가 필요합니다.">Enter a workspace-relative folder containing vehicle.json, model, config and trials.</p>
+      <label for="real2simPackage" data-ko="기체 데이터 폴더">Vehicle data folder</label>
+      <input id="real2simPackage" type="text" autocomplete="off" spellcheck="false" value="outputs/real2sim-bluerov2-input-v2" required>
+      <label for="real2simOutputName" data-ko="결과 폴더 이름">Output folder name</label>
+      <input id="real2simOutputName" type="text" autocomplete="off" spellcheck="false" placeholder="my-rov-calibrated" required>
+      <small data-ko="결과는 outputs 아래 새 폴더에 저장됩니다.">Results are saved in a new folder under outputs.</small>
+      <div class="button-row real2sim-build-actions">
+        <button id="real2simBuildStart" type="submit" class="success" disabled data-ko="기체 구현 및 보정 시작">Build &amp; calibrate</button>
+        <button id="real2simBuildStop" type="button" class="danger" disabled data-ko="보정 중지">Stop calibration</button>
+      </div>
+      <div id="real2simBuildMessage" class="status-line" role="status" aria-live="polite" data-ko="입력 폴더와 결과 이름을 확인하세요.">Enter an input folder and output name to begin.</div>
+    </form>
+    <section class="group real2sim-build-progress" aria-labelledby="real2sim-progress-heading">
+      <h3 id="real2sim-progress-heading" data-ko="진행 상황">Progress</h3>
+      <div id="real2simBuildStatus" class="real2sim-build-state" data-ko="대기 중">Ready</div>
+      <div id="real2simBuildOutput" class="status-line"></div>
+      <pre id="real2simBuildLog" aria-label="Calibration log" data-ko-aria-label="보정 실행 기록"></pre>
+      <p class="real2sim-help" data-ko="완료된 기체는 상단 기체 선택 목록에서 선택할 수 있습니다.">Completed vehicles appear in the vehicle selector above.</p>
+    </section>
+  </section>
   <section id="station-setup" class="station-page" aria-labelledby="setup-heading" hidden>
     <h2 id="setup-heading" data-ko="실험 조건과 로그 재생">Experiment Setup &amp; Replay</h2>
-    <fieldset class="group"><legend data-ko="실험 카메라 · ROS 출력과 광학">Experiment Cameras · ROS Output &amp; Optics</legend>
+    <fieldset class="group native-camera-controls"><legend data-ko="실험 카메라 · ROS 출력과 광학">Experiment Cameras · ROS Output &amp; Optics</legend>
       <div class="camera-config-row">
         <label class="entry-row camera-profile-row">
           <span data-ko="ROS 센서 출력">ROS sensor output</span>
@@ -612,8 +656,9 @@
   <script src="/recorder.js?v=20261109-vehicle"></script>
   <script src="/studio.js?v=20261109-vehicle"></script>
   <script src="/sensors.js?v=20261109-vehicle"></script>
-    <script src="/app.js?v=20261109-virtualgl"></script>
+    <script src="/app.js?v=20261109-real2sim-fit-2"></script>
   <script src="/help.js?v=20261109-vehicle"></script>
-  <script src="/workspace.js?v=20261109-vehicle"></script>
+  <script src="/workspace.js?v=20261109-real2sim-build-3"></script>
+  <script src="/real2sim-build.js?v=20261109-real2sim-build"></script>
   </body>
 </html>

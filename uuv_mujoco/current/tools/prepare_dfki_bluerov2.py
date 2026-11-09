@@ -40,6 +40,9 @@ def interpolate(data: np.ndarray, names: list[str], times: np.ndarray, max_gap: 
     right = left + 1
     valid = (times >= source_t[0]) & (times <= source_t[-1]) & (source_t[right] - source_t[left] <= max_gap)
     result = np.column_stack([np.interp(times, source_t, values[:, i]) for i in range(len(names))])
+    # A measurement at a gap edge is valid even if its next neighbour is far away.
+    exact = np.clip(np.searchsorted(source_t, times), 0, len(source_t) - 1)
+    valid |= np.abs(times - source_t[exact]) <= 1e-9
     result[~valid] = np.nan
     return result, valid
 
@@ -56,43 +59,52 @@ def prepare(source: Path, output: Path, trial: str) -> dict:
     start = max(stream["time"][0] for stream in streams.values())
     end = min(stream["time"][-1] for stream in streams.values())
     velocity = velocity[(velocity["time"] >= start) & (velocity["time"] <= end)]
-    times = velocity["time"]
-
     marker_fields = [f"rov_{name}_{axis}" for name in ("front_left", "front_right", "back_right") for axis in "xyz"]
-    markers, marker_valid = interpolate(marker, marker_fields, times, 0.04001)
-    left, front, rear = markers[:, :3], markers[:, 3:6], markers[:, 6:9]
-    forward = front - rear
-    forward /= np.linalg.norm(forward, axis=1)[:, None]
-    right = front - left
-    right -= np.sum(right * forward, axis=1)[:, None] * forward
-    right /= np.linalg.norm(right, axis=1)[:, None]
-    down = np.cross(forward, right)
-    world_v = np.column_stack([velocity[f"linear_{axis}"] for axis in "xyz"])
-    body_v = np.column_stack([np.sum(world_v * direction, axis=1) for direction in (forward, right, down)])
-    body_valid = marker_valid & np.isfinite(body_v).all(axis=1) & np.isfinite(world_v).all(axis=1)
-    body_v[~body_valid] = np.nan
-    position, pose_valid = interpolate(pose, [f"pos_{axis}" for axis in "xyz"], times, 0.04)
     # The released v3 attitude is already yaw-aligned by its authors. Unwrap
     # before interpolation so crossing +/-pi cannot create artificial turns.
     unwrapped = attitude.copy()
     for name in ("roll", "pitch", "yaw"):
         unwrapped[name] = np.unwrap(unwrapped[name])
-    attitude_values, attitude_valid = interpolate(
-        unwrapped, ["roll", "pitch", "yaw", "roll_speed", "pitch_speed", "yaw_speed"], times, 0.25
-    )
-    pvalues, pressure_valid = interpolate(pressure, ["press_abs"], times, 0.25)
-    vvalues, battery_valid = interpolate(battery, ["voltages_01"], times, 0.25)
-    battery_valid &= (vvalues[:, 0] >= 10) & (vvalues[:, 0] <= 20)
-    initial_candidates = body_valid & pose_valid & attitude_valid & pressure_valid & battery_valid
+
+    def sample(times: np.ndarray) -> tuple:
+        markers, marker_valid = interpolate(marker, marker_fields, times, 0.04001)
+        left, front, rear = markers[:, :3], markers[:, 3:6], markers[:, 6:9]
+        forward = front - rear
+        forward /= np.linalg.norm(forward, axis=1)[:, None]
+        right = front - left
+        right -= np.sum(right * forward, axis=1)[:, None] * forward
+        right /= np.linalg.norm(right, axis=1)[:, None]
+        down = np.cross(forward, right)
+        world_v, velocity_valid = interpolate(velocity, [f"linear_{axis}" for axis in "xyz"], times, 0.04)
+        body_v = np.column_stack([np.sum(world_v * direction, axis=1) for direction in (forward, right, down)])
+        body_valid = marker_valid & velocity_valid & np.isfinite(body_v).all(axis=1)
+        body_v[~body_valid] = np.nan
+        position, pose_valid = interpolate(pose, [f"pos_{axis}" for axis in "xyz"], times, 0.04)
+        attitude_values, attitude_valid = interpolate(
+            unwrapped, ["roll", "pitch", "yaw", "roll_speed", "pitch_speed", "yaw_speed"], times, 0.25
+        )
+        pvalues, pressure_valid = interpolate(pressure, ["press_abs"], times, 0.25)
+        vvalues, battery_valid = interpolate(battery, ["voltages_01"], times, 0.25)
+        battery_valid &= (vvalues[:, 0] >= 10) & (vvalues[:, 0] <= 20)
+        return (body_v, position, attitude_values, pvalues, vvalues, body_valid, marker_valid,
+                pose_valid, attitude_valid, pressure_valid, battery_valid)
+
+    original_times = velocity["time"]
+    original = sample(original_times)
+    initial_candidates = original[5] & original[7] & original[8] & original[9] & original[10]
     candidates = np.flatnonzero(initial_candidates)
     if not len(candidates):
         raise ValueError("No valid common initial state")
-    first = candidates[0]
-    start = float(times[first])
-    times, body_v, position, attitude_values = times[first:], body_v[first:], position[first:], attitude_values[first:]
-    body_valid, marker_valid, pose_valid = body_valid[first:], marker_valid[first:], pose_valid[first:]
-    attitude_valid, pressure_valid, battery_valid = attitude_valid[first:], pressure_valid[first:], battery_valid[first:]
-    pressure_initial = float(pvalues[first, 0])
+    start = float(original_times[candidates[0]])
+    end = float(original_times[-1])
+    # Keep the original velocity and attitude samples and fill their gaps with
+    # a 100 Hz grid. Each channel independently enforces its own gap limit.
+    dense = start + np.arange(int(np.floor((end - start) / 0.01)) + 1) * 0.01
+    attitude_times = attitude["time"][(attitude["time"] >= start) & (attitude["time"] <= end)]
+    times = np.unique(np.round(np.r_[original_times[original_times >= start], attitude_times, dense], 9))
+    (body_v, position, attitude_values, pvalues, vvalues, body_valid, marker_valid,
+     pose_valid, attitude_valid, pressure_valid, battery_valid) = sample(times)
+    pressure_initial = float(pvalues[0, 0])
     depth_initial = (pressure_initial - PRESSURE_ATMOSPHERIC_PA) / (ASSUMED_WATER_DENSITY_KG_M3 * GRAVITY_M_S2)
     initial_body_velocity = body_v[0].tolist()
     initial_rate = attitude_values[0, 3:].tolist()
@@ -111,7 +123,7 @@ def prepare(source: Path, output: Path, trial: str) -> dict:
     bv = battery["voltages_01"]
     select = (bt > start) & (bt <= times[-1])
     voltage_t = np.r_[0.0, bt[select] - start]
-    voltage = np.r_[vvalues[first, 0], bv[select]]
+    voltage = np.r_[vvalues[0, 0], bv[select]]
     if not np.isfinite(voltage).all() or np.any((voltage < 10) | (voltage > 20)) or np.any(np.diff(voltage_t) > 0.25):
         raise ValueError("Battery trace has missing or unsupported samples")
     save(output / "voltage.csv", np.column_stack([voltage_t, voltage]), ["sim_time", "voltage_v"])
@@ -126,7 +138,7 @@ def prepare(source: Path, output: Path, trial: str) -> dict:
         "depth_reference": "negative mocap world z; relative depth should use the first sample",
         "attitude_reference": "published onboard NED roll pitch yaw, yaw unwrapped before interpolation",
         "coverage": {"samples": len(times), "body_velocity_valid": int(body_valid.sum()), "pose_valid": int(pose_valid.sum()), "attitude_valid": int(attitude_valid.sum())},
-        "gap_limits_s": {"marker": 0.04001, "pose": 0.04, "attitude": 0.25, "pressure": 0.25, "battery": 0.25},
+        "gap_limits_s": {"marker": 0.04001, "velocity": 0.04, "pose": 0.04, "attitude": 0.25, "pressure": 0.25, "battery": 0.25},
     }
     (output / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
     return metadata

@@ -4,7 +4,23 @@
 
 A MuJoCo-based underwater robotics simulator. Select and pilot the UT27 research-pool vehicle or a six-thruster BlueROV2 Standard model, with ArduSub SITL, sensor and camera output, ROS 2 integration, and recorded-command replay workflows.
 
-![MuJoCo simulation framework showing the physics engine, Python control and sensor layer, ROS 2, and ArduSub SITL](docs/assets/mujoco-framework.png)
+<div align="center">
+
+<a href="docs/contracts/REAL2SIM_QUICKSTART.md"><img src="https://img.shields.io/badge/REAL2SIM-START%20AUTO%20CALIBRATION-1565C0?style=for-the-badge" height="48" alt="Start automatic calibration"></a>
+
+**Vehicle information · sensor setup · measured log formats · execution**
+
+[Open the calibration guide](docs/contracts/REAL2SIM_QUICKSTART.md)　|　[Six-metric comparison](#automatic-calibration-results)　|　[Workflow PowerPoint](docs/paper/real2sim-automation-workflow.pptx)
+
+</div>
+
+## Automatic calibration results
+
+Measured data (black), existing calibration (blue), and automatic yaw calibration (red) are compared using the same recorded PWM and voltage from the DFKI random-path trial. **Both models were fitted on this trial.** Accumulated yaw RMSE is **28.91°** for the existing calibration and **29.47°** for automatic calibration on the same 2,036 valid yaw samples. [Separate holdout results](docs/contracts/REAL2SIM_QUICKSTART.md#bluerov2에서-재현)
+
+![Six metrics and RMSE for DFKI measurements, existing calibration, and automatic yaw calibration](docs/paper/auto-calibration-comparison.png)
+
+[Required inputs and execution](docs/contracts/REAL2SIM_QUICKSTART.md) · [Editable calibration workflow PPT](docs/paper/real2sim-automation-workflow.pptx)
 
 ## Quick start
 
@@ -23,7 +39,11 @@ Choose **BlueROV2 Standard** or **UT27** from **Vehicle**, then select **Start S
 
 To replay the DFKI random-path pilot inputs through SITL, open `/workspace/docs/paper/data/dfki-random-rcin-bag` in **RC Log Replay** in Docker. [Replay data and conditions](docs/paper/README.md#reproduce-or-replay)
 
+Build a calibrated MuJoCo vehicle from a model, sensor mounts, and recorded motor outputs. Completed models appear in the web GUI’s **Vehicle** menu. [Input contract and BlueROV2 reproduction](docs/contracts/REAL2SIM_AUTOMATION.md)
+
 ## System architecture
+
+![MuJoCo simulation framework showing the physics engine, Python control and sensor layer, ROS 2, and ArduSub SITL](docs/assets/mujoco-framework.png)
 
 | Layer | Responsibility |
 | --- | --- |

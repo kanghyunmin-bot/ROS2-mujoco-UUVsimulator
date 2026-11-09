@@ -42,6 +42,7 @@ from .models import ControlCommands
 from .node import UuvGuiNode
 from .runtime import rclpy
 from .web_process_manager import WebProcessManager
+from .web_real2sim import WebReal2Sim
 from .web_rc_replay import WebRcReplayManager
 from .web_tool_files import WebToolFileManager
 from .web_recorder import WebRecorder
@@ -108,6 +109,7 @@ class WebGuiController:
         self._pinger_auto_arm_request_issued_generation: int | None = None
         self._last_pinger_process_check_wall = 0.0
         self.processes = WebProcessManager(node)
+        self.real2sim = WebReal2Sim()
         self.replay = WebRcReplayManager(node, self.release_rc)
         self.tools = WebToolFileManager(node)
         self.recorder = WebRecorder(node, self.processes)
@@ -186,6 +188,8 @@ class WebGuiController:
             else:
                 self.node.push_event("web pinger homing shutdown disarm confirmation timeout")
 
+        self.real2sim.stop()
+        self.real2sim.build_stop()
         self.processes.stop_all()
         self._stop.set()
         if self._spin_thread is not None and threading.current_thread() is not self._spin_thread:
@@ -1009,6 +1013,15 @@ class UuvWebHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802 - stdlib handler API
         parsed = urlparse(self.path)
+        if parsed.path == "/api/real2sim/vehicles":
+            self._send_json({"vehicles": self.controller.real2sim.vehicles()})
+            return
+        if parsed.path == "/api/real2sim/build/status":
+            self._send_json(self.controller.real2sim.build_status())
+            return
+        if parsed.path == "/api/real2sim/status":
+            self._send_json(self.controller.real2sim.status())
+            return
         if parsed.path == "/api/status":
             self._send_json(self.controller.status_payload())
             return
@@ -1027,12 +1040,22 @@ class UuvWebHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802 - stdlib handler API
         parsed = urlparse(self.path)
-        if parsed.path not in {"/api/command", "/api/rc"}:
+        if parsed.path not in {"/api/command", "/api/rc", "/api/real2sim/view", "/api/real2sim/stop",
+                               "/api/real2sim/build", "/api/real2sim/build/stop"}:
             self._send_error_json(HTTPStatus.NOT_FOUND, "unknown endpoint")
             return
         try:
             payload = self._read_json()
-            result = self._handle_command(payload)
+            if parsed.path == "/api/real2sim/build":
+                result = self.controller.real2sim.build(payload)
+            elif parsed.path == "/api/real2sim/build/stop":
+                result = self.controller.real2sim.build_stop()
+            elif parsed.path == "/api/real2sim/view":
+                result = self.controller.real2sim.start(payload)
+            elif parsed.path == "/api/real2sim/stop":
+                result = self.controller.real2sim.stop()
+            else:
+                result = self._handle_command(payload)
         except ValueError as exc:
             self._send_error_json(HTTPStatus.BAD_REQUEST, str(exc))
             return

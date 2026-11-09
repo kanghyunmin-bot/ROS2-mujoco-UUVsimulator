@@ -120,3 +120,26 @@ test("vehicle selection filters environments and launches the corresponding pres
   assert.equal(node("simVehicle").value, "bluerov2_standard");
   assert.equal(node("simVehicle").disabled, true);
 });
+
+test("calibrated vehicle selection keeps sensors and replay separate from SITL", async () => {
+  const { ctx, state, node, config, requests } = setup();
+  state.real2simVehicles = [{ id: "demo", name: "My ROV", sensors: ["imu", "dvl"], trials: ["route"], profiles: ["initial", "candidate"] }];
+  state.real2simChoice = "demo";
+  ctx.renderSimulationConfig(config, {});
+  assert.equal(node("simVehicle").value, "real2sim:demo");
+  assert.equal(node("real2simPanel").hidden, false);
+  assert.match(node("real2simSensors").textContent, /IMU, DVL/);
+  assert.equal(node("real2simTrial").value, "route");
+  assert.equal(node("real2simProfile").value, "candidate");
+  assert.equal(node("stackStartBtn").disabled, true);
+  ctx.fetch = async (url, options) => {
+    requests.push({ url, ...options });
+    return { ok: true, json: async () => ({ ok: true }) };
+  };
+  await ctx.openReal2SimReplay();
+  assert.equal(requests[0].url, "/api/real2sim/view");
+  assert.deepEqual(JSON.parse(requests[0].body), { id: "demo", trial: "route", profile: "candidate", playback_rate: 1 });
+  assert.equal(node("real2simStopBtn").disabled, false);
+  await ctx.stopReal2SimReplay();
+  assert.equal(requests[1].url, "/api/real2sim/stop");
+});

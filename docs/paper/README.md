@@ -6,11 +6,15 @@
 | 02 | UUV-Sim and public Stonefish and Gazebo model replays | [PDF](figure-02-simulator-comparison.pdf) · [PNG](figure-02-simulator-comparison.png) · [RMSE](data/figure-02-simulator-comparison-rmse.csv) · [Aligned series](data/figure-02-simulator-comparison-timeseries.csv) |
 | 03 | Bounded least-squares workflow for the 6-DOF model | [PDF](figure-03-calibration-workflow.pdf) · [PNG](figure-03-calibration-workflow.png) · [Editable draw.io](figure-03-calibration-workflow.drawio) |
 | 04 | MuJoCo, Python runtime and ROS 2 interfaces | [PDF](figure-04-mujoco-framework.pdf) · [PNG](../assets/mujoco-framework.png) · [SVG](figure-04-mujoco-framework.svg) · [Editable PPTX](figure-04-mujoco-framework.pptx) |
+| Automatic calibration comparison | Measured, existing yaw calibration, and automatic yaw calibration on the DFKI random-path trial | [PDF](auto-calibration-comparison.pdf) · [PNG](auto-calibration-comparison.png) · [RMSE by trial](data/auto-calibration-comparison-rmse.csv) |
+| Real2Sim automation | Input package, MuJoCo replay-based fitting, and held-out evaluation | [Editable PPTX](real2sim-automation-workflow.pptx) · [Workflow preview](real2sim-automation-workflow.png) · [Quickstart](../contracts/REAL2SIM_QUICKSTART.md) |
 | Ablation | Original calibration versus zero lateral center-of-buoyancy offset | [PNG](cob-lateral-comparison.png) · [RMSE](data/cob-lateral-rmse.csv) |
 
 Figures 01 and 02 use the DFKI random-path trial and pair valid measurements and simulations at 10 Hz. Attitude uses the original attitude timestamps. Gaps in surge, sway, and relative depth remain visible. Both figures use the same absolute time grid. Figure 01 uses the first measured timestamp (0.01199675 s) as the reference for relative depth and accumulated yaw. Figure 02 uses the first timestamp shared with Gazebo (0.11199675 s).
 
 The random-path trial was used to fit UUV-Sim. Stonefish and Gazebo use their public BlueROV2 models and individual actuator conversions and tank settings. Figure 02 compares those particular replays. The general DFKI profile is `bluerov2_dfki_calibrated`. The optional experimental yaw fit is the red curve in the figures and is the current interactive GUI preset. Its pooled accumulated yaw error increased on fitting-excluded trials. The lateral CoB ablation compares the same yaw-tuned profile with and without the lateral offset, using the same recorded PWM and voltage.
+
+The DFKI random-path trial was used to fit both yaw profiles in the automatic calibration comparison. Black is measured, dark-blue dashed is the existing calibration, and red is the automatic trial-specific calibration. On the same 2,036 valid 10 Hz yaw samples, accumulated yaw RMSE was 28.91° for the existing profile and 29.47° for the automatic profile. The RMSE CSV also includes separately evaluated holdout trials. [Calibration and validation record](../contracts/REAL2SIM_AUTOMATION.md)
 
 ## Reproduce or replay
 
