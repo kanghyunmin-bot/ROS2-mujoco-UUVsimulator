@@ -14,7 +14,13 @@ MuJoCo 기반 수중 로봇 시뮬레이터입니다. UT27 연구 수조 환경�
 
 </div>
 
-![MuJoCo 시뮬레이션 프레임워크: 물리 엔진, Python 제어·센서 계층, ROS 2 및 ArduSub SITL 연결](docs/assets/mujoco-framework.png)
+## 자동 보정 결과
+
+실측(검정), 기존 보정(파랑), 자동 yaw 보정(빨강)을 동일한 DFKI 무작위 주행의 PWM과 전압으로 비교했습니다. 이 그림은 **두 모델의 보정에 사용된 주행**을 보여줍니다. 동일한 유효 yaw 샘플 2,036개에서 누적 yaw RMSE는 기존 **28.91°**, 자동 **29.47°**입니다. [별도 검증 주행 결과](docs/contracts/REAL2SIM_QUICKSTART.md#bluerov2에서-재현)
+
+![DFKI 실측, 기존 보정, 자동 yaw 보정의 6개 지표와 RMSE 비교](docs/paper/auto-calibration-comparison.png)
+
+[필요 파일과 실행 방법](docs/contracts/REAL2SIM_QUICKSTART.md) · [편집 가능한 보정 흐름 PPT](docs/paper/real2sim-automation-workflow.pptx)
 
 ## 빠른 시작
 
@@ -38,6 +44,8 @@ Docker의 **RC Log Replay**에서 `/workspace/docs/paper/data/dfki-random-rcin-b
 
 ## 시스템 구성
 
+![MuJoCo 시뮬레이션 프레임워크: 물리 엔진, Python 제어·센서 계층, ROS 2 및 ArduSub SITL 연결](docs/assets/mujoco-framework.png)
+
 | 계층 | 역할 |
 | --- | --- |
 | MuJoCo plant | 강체 운동 적분과 접촉 해석 |
@@ -55,14 +63,6 @@ Docker의 **RC Log Replay**에서 `/workspace/docs/paper/data/dfki-random-rcin-b
 그림 01은 계수 적합에 사용된 DFKI 무작위 경로에서 실측과 최초·yaw 적합 결과를 비교합니다. yaw 실험 프로필은 현재 GUI 기본값이며, 적합 제외 로그에서는 누적 yaw 오차가 증가했습니다. 기록된 PWM을 원래 타임스탬프에 맞춰 재생하고 유효한 대응 샘플의 RMSE를 계산합니다. 적합 구간과 별도 시험 구간은 그림 설명에서 구분합니다. 데이터 준비·재생·채점 명령은 [모델 및 재현 절차](docs/contracts/BLUEROV2_MODEL.md)와 [DFKI 자료 레지스터](uuv_mujoco/current/research_workspace/04_paper_evidence/REFERENCES_BLUEROV2.md)에 있습니다. 논문용 그림 및 그 범위는 [그림 색인](docs/paper/README.md)을 참고하세요.
 
 ![DFKI 수조 실측과 BlueROV2 최초 및 yaw 적합 재생 결과](docs/paper/figure-01-initial-final.png)
-
-## 자동 보정 결과
-
-실측(검정), 기존 보정(파랑), 자동 yaw 보정(빨강)을 동일한 DFKI 무작위 주행의 PWM과 전압으로 비교했습니다. 이 그림은 **두 모델의 보정에 사용된 주행**을 보여줍니다. 동일한 유효 yaw 샘플 2,036개에서 누적 yaw RMSE는 기존 **28.91°**, 자동 **29.47°**입니다. [별도 검증 주행 결과](docs/contracts/REAL2SIM_QUICKSTART.md#bluerov2에서-재현)
-
-![DFKI 실측, 기존 보정, 자동 yaw 보정의 6개 지표와 RMSE 비교](docs/paper/auto-calibration-comparison.png)
-
-[필요 파일과 실행 방법](docs/contracts/REAL2SIM_QUICKSTART.md) · [편집 가능한 보정 흐름 PPT](docs/paper/real2sim-automation-workflow.pptx)
 
 ## 다른 시뮬레이터와의 비교
 

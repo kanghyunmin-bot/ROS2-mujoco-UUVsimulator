@@ -14,7 +14,13 @@ A MuJoCo-based underwater robotics simulator. Select and pilot the UT27 research
 
 </div>
 
-![MuJoCo simulation framework showing the physics engine, Python control and sensor layer, ROS 2, and ArduSub SITL](docs/assets/mujoco-framework.png)
+## Automatic calibration results
+
+Measured data (black), existing calibration (blue), and automatic yaw calibration (red) are compared using the same recorded PWM and voltage from the DFKI random-path trial. **Both models were fitted on this trial.** Accumulated yaw RMSE is **28.91°** for the existing calibration and **29.47°** for automatic calibration on the same 2,036 valid yaw samples. [Separate holdout results](docs/contracts/REAL2SIM_QUICKSTART.md#bluerov2에서-재현)
+
+![Six metrics and RMSE for DFKI measurements, existing calibration, and automatic yaw calibration](docs/paper/auto-calibration-comparison.png)
+
+[Required inputs and execution](docs/contracts/REAL2SIM_QUICKSTART.md) · [Editable calibration workflow PPT](docs/paper/real2sim-automation-workflow.pptx)
 
 ## Quick start
 
@@ -37,6 +43,8 @@ Build a calibrated MuJoCo vehicle from a model, sensor mounts, and recorded moto
 
 ## System architecture
 
+![MuJoCo simulation framework showing the physics engine, Python control and sensor layer, ROS 2, and ArduSub SITL](docs/assets/mujoco-framework.png)
+
 | Layer | Responsibility |
 | --- | --- |
 | MuJoCo plant | Rigid-body integration and contact resolution |
@@ -54,14 +62,6 @@ The vehicle geometry converts public BlueROV2 ROS 2 Xacro/CAD meshes into MuJoCo
 Figure 01 compares the initial and yaw-tuned profiles on the DFKI random-path trial used for fitting. The yaw-tuned profile is the current BlueROV2 GUI default. Its pooled accumulated yaw error increased on fitting-excluded runs. The offline comparison replays recorded PWM at its original timestamps and computes RMSE over valid paired samples. See the [model and replay procedure](docs/contracts/BLUEROV2_MODEL.md) for preparation and scoring, and the [figure index](docs/paper/README.md) for the trial split and evaluation scope.
 
 ![DFKI tank measurements and BlueROV2 initial and yaw-tuned replays](docs/paper/figure-01-initial-final.png)
-
-## Automatic calibration results
-
-Measured data (black), existing calibration (blue), and automatic yaw calibration (red) are compared using the same recorded PWM and voltage from the DFKI random-path trial. **Both models were fitted on this trial.** Accumulated yaw RMSE is **28.91°** for the existing calibration and **29.47°** for automatic calibration on the same 2,036 valid yaw samples. [Separate holdout results](docs/contracts/REAL2SIM_QUICKSTART.md#bluerov2에서-재현)
-
-![Six metrics and RMSE for DFKI measurements, existing calibration, and automatic yaw calibration](docs/paper/auto-calibration-comparison.png)
-
-[Required inputs and execution](docs/contracts/REAL2SIM_QUICKSTART.md) · [Editable calibration workflow PPT](docs/paper/real2sim-automation-workflow.pptx)
 
 ## Simulator comparison
 
