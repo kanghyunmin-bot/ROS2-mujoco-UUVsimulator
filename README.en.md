@@ -72,11 +72,11 @@ UUV-Sim hydrodynamic coefficients were fitted using the random-path trial. Stone
 
 ## Simulator recordings
 
-Select a preview to open the 14-second SITL driving demo.
+Both previews show the 14-second SITL driving demos. Select either preview to open its original MP4.
 
 | UT27 | BlueROV2 Standard |
 | --- | --- |
-| [![Play UT27 simulator video](docs/assets/ut27-sitl-poster.png)](docs/assets/ut27-sitl-demo.mp4) | [![Play BlueROV2 Standard simulator video](docs/assets/bluerov2-sitl-poster.png)](docs/assets/bluerov2-sitl-demo.mp4) |
+| [![Play UT27 simulator video](docs/assets/ut27-sitl-preview.gif)](docs/assets/ut27-sitl-demo.mp4) | [![Play BlueROV2 Standard simulator video](docs/assets/bluerov2-sitl-preview.gif)](docs/assets/bluerov2-sitl-demo.mp4) |
 
 [UT27 preview GIF](docs/assets/simulator-demo.gif)
 

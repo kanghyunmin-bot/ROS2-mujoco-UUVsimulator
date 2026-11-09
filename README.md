@@ -77,7 +77,7 @@ UUV-Sim은 평가에 사용한 무작위 경로로 유체력 계수를 적합했
 
 | UT27 | BlueROV2 Standard |
 | --- | --- |
-| [![UT27 시뮬레이터 영상 재생](docs/assets/ut27-sitl-poster.png)](docs/assets/ut27-sitl-demo.mp4) | [![BlueROV2 Standard 시뮬레이터 영상 재생](docs/assets/bluerov2-sitl-poster.png)](docs/assets/bluerov2-sitl-demo.mp4) |
+| [![UT27 시뮬레이터 영상 재생](docs/assets/ut27-sitl-preview.gif)](docs/assets/ut27-sitl-demo.mp4) | [![BlueROV2 Standard 시뮬레이터 영상 재생](docs/assets/bluerov2-sitl-preview.gif)](docs/assets/bluerov2-sitl-demo.mp4) |
 
 [UT27 미리보기 GIF](docs/assets/simulator-demo.gif)
 
