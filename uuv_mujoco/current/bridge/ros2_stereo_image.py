@@ -90,6 +90,9 @@ def configure_stereo_image_runtime(
     bridge._stereo_image_async_latest: dict[str, np.ndarray] = {}
     bridge._stereo_image_async_latest_capture_time: dict[str, float] = {}
     bridge._stereo_image_async_latest_jpeg: dict[str, bytes | None] = {}
+    bridge._stereo_image_async_modeled_frames: dict[str, RenderedCameraFrame] = {}
+    bridge._stereo_image_next_request: dict[str, float] = {}
+    bridge._stereo_image_last_sim_time = -1.0
     bridge._stereo_image_async_thread = None
     _configure_underwater_camera_sensor_model(
         bridge,
@@ -97,13 +100,12 @@ def configure_stereo_image_runtime(
         camera_calib_left=camera_calib_left,
         camera_calib_right=camera_calib_right,
     )
-    # The single-slot async renderer accepts or skips snapshots according to
-    # wall-thread completion timing. That is useful for an interactive legacy
-    # view, but it changes which sim-time frame reaches the stochastic sensor
-    # sequence. Research sensor-model runs therefore render synchronously so a
-    # fixed simulation input and seed have a deterministic capture sequence.
+    # Wall-time scheduling can skip captures. Opt in for interactive piloting;
+    # seeded research runs keep the synchronous simulation-time sequence.
     if bridge._camera_sensor_model_enabled:
-        bridge._stereo_image_async_enabled = False
+        bridge._stereo_image_async_enabled = (
+            bridge._stereo_image_async_requested and _env_bool("ROS2_UUV_CAMERA_SENSOR_MODEL_ASYNC", False)
+        )
     _ensure_offscreen_buffer(bridge, bridge._stereo_image_width, bridge._stereo_image_height)
 
 
@@ -547,6 +549,8 @@ def schedule_stereo_image_jobs(
 def can_share_camera_renderer(self: Any, camera_name: str, width: int, height: int) -> bool:
     if not bool(getattr(self, "_stereo_image_enabled", False)):
         return False
+    if getattr(self, "_stereo_image_async_enabled", False):
+        return False  # OpenGL contexts must stay with their owning render thread.
     if str(camera_name) not in CAMERA_NAMES:
         return False
     return (
@@ -814,15 +818,24 @@ def _modeled_camera_delivery_for_publish(
     if runtime is None:
         return None
     now_s = float(data.time)
-    capture_due = runtime.capture_due(now_s)
-    rendered = (
-        _rendered_camera_frame_for_publish(self, camera_name, data)
-        if capture_due
-        else None
-    )
+    async_mode = self._stereo_image_async_enabled
+    if async_mode:
+        if now_s < self._stereo_image_last_sim_time:
+            reset_stereo_camera_worker(self)
+        self._stereo_image_last_sim_time = now_s
+        with self._stereo_image_async_lock:
+            rendered = self._stereo_image_async_modeled_frames.pop(camera_name, None)
+        if now_s + 1e-9 >= self._stereo_image_next_request.get(camera_name, 0.0):
+            _submit_async_camera_render(self, camera_name, data)
+            self._stereo_image_next_request[camera_name] = now_s + runtime.frame_period_s
+        failed = False  # An outstanding request is not a failed capture.
+    else:
+        capture_due = runtime.capture_due(now_s)
+        rendered = _rendered_camera_frame_for_publish(self, camera_name, data) if capture_due else None
+        failed = capture_due and rendered is None
     try:
         deliveries = runtime.advance(
-            now_s, rendered, capture_failed=capture_due and rendered is None
+            now_s, rendered, capture_failed=failed
         )
     except Exception as exc:
         _warn_once(
@@ -839,27 +852,17 @@ def _rendered_camera_frame_for_publish(
     camera_name: str,
     data: Any,
 ) -> RenderedCameraFrame | None:
-    if not bool(getattr(self, "_stereo_image_async_enabled", False)):
-        profile = getattr(self, "_camera_sensor_profile", None)
-        if profile is not None and profile.optics.path_mode == "depth":
-            try:
-                return render_camera_frame(self, camera_name, data)
-            except Exception as exc:
-                _warn_once(self, f"{camera_name}_depth", f"underwater RGB/depth render failed: {exc}")
-                return None
-        rgb = _render_camera_rgb_or_none(self, camera_name, data)
-        if rgb is None:
+    profile = getattr(self, "_camera_sensor_profile", None)
+    if profile is not None and profile.optics.path_mode == "depth":
+        try:
+            return render_camera_frame(self, camera_name, data)
+        except Exception as exc:
+            _warn_once(self, f"{camera_name}_depth", f"underwater RGB/depth render failed: {exc}")
             return None
-        return RenderedCameraFrame(rgb=rgb, capture_time_s=float(data.time))
-
-    _submit_async_camera_render(self, camera_name, data)
-    lock = self._stereo_image_async_lock
-    with lock:
-        rgb = self._stereo_image_async_latest.get(str(camera_name))
-        capture_time_s = self._stereo_image_async_latest_capture_time.get(str(camera_name))
-    if rgb is None or capture_time_s is None:
+    rgb = _render_camera_rgb_or_none(self, camera_name, data)
+    if rgb is None:
         return None
-    return RenderedCameraFrame(rgb=rgb, capture_time_s=float(capture_time_s))
+    return RenderedCameraFrame(rgb=rgb, capture_time_s=float(data.time))
 
 
 def _submit_async_camera_render(self: Any, camera_name: str, data: Any) -> np.ndarray | None:
@@ -911,6 +914,13 @@ def _start_async_camera_worker(self: Any) -> None:
 
 
 def _async_camera_worker(self: Any) -> None:
+    try:
+        _run_async_camera_worker(self)
+    finally:
+        _close_renderers(self)
+
+
+def _run_async_camera_worker(self: Any) -> None:
     event = self._stereo_image_async_event
     stop = self._stereo_image_async_stop
     lock = self._stereo_image_async_lock
@@ -925,14 +935,16 @@ def _async_camera_worker(self: Any) -> None:
                 if stop.is_set():
                     continue
                 capture_time_s = float(getattr(snapshot, "time", 0.0))
+                if self._camera_sensor_model_enabled:
+                    frame = _rendered_camera_frame_for_publish(self, camera_name, snapshot)
+                    if frame is not None and not stop.is_set():
+                        with lock:
+                            self._stereo_image_async_modeled_frames[camera_name] = frame
+                    continue
                 rgb = _render_camera_rgb_or_none(self, camera_name, snapshot)
                 if rgb is None or stop.is_set():
                     continue
-                encoded = (
-                    None
-                    if bool(getattr(self, "_camera_sensor_model_enabled", False))
-                    else _encode_camera_jpeg(self, camera_name, rgb)
-                )
+                encoded = _encode_camera_jpeg(self, camera_name, rgb)
                 if stop.is_set():
                     continue
                 with lock:
@@ -1057,7 +1069,7 @@ def _env_optional_int(name: str) -> int | None:
     return int(str(raw).strip())
 
 
-def close_stereo_image_renderers(self: Any) -> None:
+def _stop_stereo_camera_worker(self: Any) -> None:
     stop = getattr(self, "_stereo_image_async_stop", None)
     event = getattr(self, "_stereo_image_async_event", None)
     thread = getattr(self, "_stereo_image_async_thread", None)
@@ -1066,7 +1078,8 @@ def close_stereo_image_renderers(self: Any) -> None:
     if event is not None:
         event.set()
     if thread is not None and thread.is_alive() and thread is not threading.current_thread():
-        thread.join(timeout=2.0)
+        thread.join()  # Finish the active GL call before changing or releasing its model.
+    self._stereo_image_async_thread = None
     lock = getattr(self, "_stereo_image_async_lock", None)
     if lock is not None:
         with lock:
@@ -1075,6 +1088,21 @@ def close_stereo_image_renderers(self: Any) -> None:
             getattr(self, "_stereo_image_async_latest", {}).clear()
             getattr(self, "_stereo_image_async_latest_capture_time", {}).clear()
             getattr(self, "_stereo_image_async_latest_jpeg", {}).clear()
+            getattr(self, "_stereo_image_async_modeled_frames", {}).clear()
+            getattr(self, "_stereo_image_next_request", {}).clear()
+
+
+def reset_stereo_camera_worker(self: Any) -> None:
+    """Discard snapshots from the old scene before mutating its MuJoCo model."""
+    if not getattr(self, "_stereo_image_async_enabled", False):
+        return
+    _stop_stereo_camera_worker(self)
+    self._stereo_image_last_sim_time = -1.0
+    self._stereo_image_async_stop.clear()
+
+
+def close_stereo_image_renderers(self: Any) -> None:
+    _stop_stereo_camera_worker(self)
     for runtime in list(getattr(self, "_camera_sensor_runtimes", {}).values()):
         try:
             runtime.close()
@@ -1083,6 +1111,10 @@ def close_stereo_image_renderers(self: Any) -> None:
     getattr(self, "_camera_sensor_runtimes", {}).clear()
     getattr(self, "_camera_path_projectors", {}).clear()
     getattr(self, "_pool_water_lighting", {}).clear()
+    _close_renderers(self)
+
+
+def _close_renderers(self: Any) -> None:
     renderers = getattr(self, "_stereo_image_renderers", {})
     for renderer in list(renderers.values()):
         try:

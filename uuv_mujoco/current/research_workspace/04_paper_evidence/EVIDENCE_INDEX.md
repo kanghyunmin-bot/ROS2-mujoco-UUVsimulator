@@ -3,11 +3,17 @@
 This index lists the current evidence that is clean enough to cite or turn into
 figures/tables.  It points to raw outputs rather than copying them.
 
+## BlueROV2 Standard
+
+See [implementation and replay sources](REFERENCES_BLUEROV2.md) and the
+[BlueROV2 BibTeX file](references_bluerov2.bib) for hardware provenance,
+model assumptions, the DFKI trial split, and Figure 02 baseline settings.
+
 ## Core Evidence
 
 | claim | source | paper use |
 | --- | --- | --- |
-| Literature references for linear-algebra plant identification are fixed with DOI/BibTeX keys. | `/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/research_workspace/04_paper_evidence/REFERENCES_20260601.md` and `/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/research_workspace/04_paper_evidence/references_20260601.bib` | References section and related work. |
+| Literature references for linear-algebra plant identification are fixed with DOI/BibTeX keys. | [REFERENCES_20260601.md](REFERENCES_20260601.md) and [references_20260601.bib](references_20260601.bib) | References section and related work. |
 | Controller output must be compared telemetry-to-telemetry. | `/Users/kanghyunmin/Desktop/uuv_sim/uuv_mujoco/v2.2/debug/controller_parity_412/FINDINGS.md` | Methods: controller parity contract. |
 | Plant replay input is exact in latest full90 audits. | `/Users/kanghyunmin/Desktop/uuv_sim/UUV-HAN/outputs/fossen_residual_full90_20260601/baseline/plant_replay/sensor_overlay/plant_sensor_contract_audit.json` | Methods/validation: real RCOU input contract. |
 | Fossen residual coefficient family was evaluated but not accepted as final. | `/Users/kanghyunmin/Desktop/uuv_sim/UUV-HAN/outputs/fossen_residual_full90_20260601/fossen_residual_ranking.md` | Ablation: residual damping sensitivity. |

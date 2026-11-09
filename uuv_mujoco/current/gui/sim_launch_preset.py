@@ -16,6 +16,7 @@ from .config_paths import (
 )
 
 
+BLUEROV2_PRESET_ID = "bluerov2_standard"
 COURSE_CURRENT_PRESET_ID = "course_current"
 COURSE_REAL2SIM_PRESET_ID = "course_real2sim_bag0402"
 COURSE_REAL2SIM_YAW_PRESET_ID = "course_real2sim_bag0402_yaw"
@@ -40,13 +41,35 @@ class SimLaunchPreset:
     viewer_camera_mode: str
     uses_active_course_scene: bool = False
     profile_path: Path | None = None
+    vehicle: str = "ut27"
+    label_en: str | None = None
+    description_en: str | None = None
 
 
 SIM_LAUNCH_PRESETS = (
     SimLaunchPreset(
+        preset_id=BLUEROV2_PRESET_ID,
+        label="BlueROV2 Standard · Research pool",
+        description=(
+            "Six-thruster BlueROV2 in the research pool with the paper's DFKI yaw-tuned coefficients "
+            "and the standard ArduSub motor mapping."
+        ),
+        scene_path=SIM_STACK_DIR / "scenes" / "bluerov2_research_pool_scene.xml",
+        profile="bluerov2_dfki_yaw_experiment",
+        fluid_model="legacy",
+        viewer_camera_mode="follow",
+        profile_path=SIM_STACK_DIR / "config" / "sim_profiles_bluerov2.json",
+        vehicle="bluerov2_standard",
+    ),
+    SimLaunchPreset(
         preset_id=RESEARCH_POOL_YAW_STABLE_PRESET_ID,
         label="Research pool · yaw 안정화 · 수집용",
         description="중립 회전과 입력 해제 후 되돌림을 줄인 시뮬 수집 환경. 기존 데이터와 별도 저장됩니다. 실측 실기체 보정값은 아닙니다.",
+        label_en="Research pool · yaw-stable · data collection",
+        description_en=(
+            "Collection environment with reduced neutral rotation and rebound after releasing input. "
+            "Data is stored separately. The profile is not calibrated against physical vehicle measurements."
+        ),
         scene_path=RESEARCH_POOL_SCENE_PATH,
         profile="bag0402_yaw_stable",
         fluid_model="distributed",
@@ -193,8 +216,11 @@ def sim_launch_presets_payload() -> list[dict[str, object]]:
     return [
         {
             "id": preset.preset_id,
+            "vehicle": preset.vehicle,
             "label": preset.label,
             "description": preset.description,
+            "label_en": preset.label_en or preset.label,
+            "description_en": preset.description_en or preset.description,
             "scene": str(preset.scene_path),
             "profile": preset.profile,
             "profile_file": str(preset.profile_path or PHYSICS_PROFILE_PATH),
@@ -263,16 +289,23 @@ def build_sim_launch_preset_args(
         "--viewer-camera-mode",
         preset.viewer_camera_mode,
     ]
+    if preset.vehicle != "ut27":
+        args.extend(["--vehicle", preset.vehicle])
     if preset.profile_path is not None:
         args.extend(["--profile-file", str(preset.profile_path)])
     return args
 
 
-def sim_launch_preset_environment(preset: SimLaunchPreset) -> dict[str, str]:
+def sim_launch_preset_environment(
+    preset: SimLaunchPreset,
+    *,
+    env: Mapping[str, str] | None = None,
+) -> dict[str, str]:
     """Select the reviewed simulation controller overlay for this plant.
 
     Args:
         preset: Selected plant and scene preset.
+        env: Operator-provided overrides. Defaults to the current process environment.
 
     Returns:
         Environment overrides for the simulator child process.
@@ -284,11 +317,21 @@ def sim_launch_preset_environment(preset: SimLaunchPreset) -> dict[str, str]:
         RESEARCH_POOL_DISTRIBUTED_PRESET_ID,
     }
     stable = preset.preset_id == RESEARCH_POOL_YAW_STABLE_PRESET_ID
-    return {
+    overrides = {
+        "UUV_VEHICLE": preset.vehicle,
         "SITL_REAL2SIM_BAG0402": "1" if enabled else "0",
         "SITL_YAW_STABLE": "1" if stable else "0",
         "UUV_SITL_YAW_BRAKE": "1" if stable else "0",
     }
+    if preset.preset_id == BLUEROV2_PRESET_ID:
+        source = os.environ if env is None else env
+        # Neutralize the generic GUI overrides so the BlueROV2 profile supplies the fitted values.
+        overrides.update(
+            UUV_YAW_TORQUE_SCALE=source.get("UUV_YAW_TORQUE_SCALE", ""),
+            UUV_YAW_TORQUE_THRUSTER_SCALES_ENABLE=source.get("UUV_YAW_TORQUE_THRUSTER_SCALES_ENABLE", "1"),
+            UUV_VERTICAL_DIRECT_GAIN_SCALE=source.get("UUV_VERTICAL_DIRECT_GAIN_SCALE", ""),
+        )
+    return overrides
 
 
 def merge_sim_launch_preset_args(
@@ -300,6 +343,7 @@ def merge_sim_launch_preset_args(
     result = list(preset_args)
     extras = list(extra_args or ())
     protected = (
+        "--vehicle",
         "--scene",
         "--profile",
         "--profile-file",

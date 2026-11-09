@@ -24,7 +24,8 @@ CAMERA_PRESETS = (
 
 CAMERA_OPTICS_PROFILES = (
     {"id": "inherited", "label": "기존 환경 설정 유지"},
-    {"id": "pool_lite", "label": "수중 풀 · 경량 광학"},
+    {"id": "pool_lite_live", "label": "수중 풀 · 경량 광학 (실시간 조종)"},
+    {"id": "pool_lite", "label": "수중 풀 · 경량 광학 (재현 실험)"},
 )
 
 
@@ -116,9 +117,12 @@ def normalize_camera_config(values: dict[str, object] | None = None, *, strict_p
 
 def camera_optics_environment(config: dict[str, object]) -> dict[str, str]:
     """Return opt-in sensor model overrides; inherited preserves launch settings."""
-    if config.get("optics_profile") == "pool_lite":
+    if config.get("optics_profile") in {"pool_lite", "pool_lite_live"}:
+        live = config["optics_profile"] == "pool_lite_live"
         return {
+            **({"ROS2_UUV_ASYNC_CAMERA_RENDER": "1"} if live else {}),
             "ROS2_UUV_CAMERA_SENSOR_MODEL_ENABLE": "1",
+            "ROS2_UUV_CAMERA_SENSOR_MODEL_ASYNC": "1" if live else "0",
             "ROS2_UUV_CAMERA_SENSOR_MODEL_CONFIG": "config/sensor_models/imx219_underwater_pool_lite.json",
         }
     return {}

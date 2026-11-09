@@ -13,6 +13,11 @@ def add_profile_args(
     profile_path: Path,
     thruster_perf_path: Path,
 ) -> None:
+    parser.add_argument("--vehicle", choices=("ut27", "bluerov2_standard"), default="ut27")
+    parser.add_argument(
+        "--pwm-layout", choices=("standard", "dfki"), default="standard",
+        help="Final ESC PWM wiring. The DFKI option is limited to BlueROV2 recorded-PWM plant replay.",
+    )
     parser.add_argument(
         "--scene",
         type=str,

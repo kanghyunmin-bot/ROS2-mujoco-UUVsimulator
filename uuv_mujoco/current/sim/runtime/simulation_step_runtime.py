@@ -78,6 +78,7 @@ class SimulationStepRuntime(SimulationStepRuntimeState):
             ros_bridge=self.get_ros_bridge(),
             sitl_servo_pwm_values=self.sitl_servo_pwm_values,
             release_initial_depth_hold=self.release_initial_depth_hold,
+            active_channel_count=len(self.sitl_servo_runtime.raw_map),
         )
 
 

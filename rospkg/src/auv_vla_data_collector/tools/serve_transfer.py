@@ -49,7 +49,7 @@ if not args.check_only:
         def get_action(self, observations):
             # The upstream transform may modify the observation mapping in place.
             residual_observation = ({k: np.array(v, copy=True) for k, v in observations.items()
-                                     if k.startswith('state.')} if residual else None)
+                                     if k.startswith(('state.', 'video.'))} if residual else None)
             actions, target = super().get_action(observations)
             if target is not None:
                 raise ValueError("CAP-free checkpoint unexpectedly returned a target")

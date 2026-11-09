@@ -111,6 +111,7 @@ def configure_command_runtime_state(bridge: Any) -> None:
     )
     bridge._sitl_transport_lock = threading.RLock()
     bridge._mavros_rc_override_cache_lock = threading.RLock()
+    bridge._mavros_rc_override_pending_generation = 0
     bridge._mavros_pending_rc_override_channels = None
     bridge._mavros_pending_rc_override_wall = -1.0
     bridge._mavros_last_forwarded_rc_override_wall = -1.0

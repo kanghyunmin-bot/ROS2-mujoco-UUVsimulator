@@ -51,7 +51,10 @@ def apply_distributed_hydrodynamics(
 
     # The distributed core and its safety limiter use the same inertial-centre
     # reference as MuJoCo's xfrc_applied torque.
-    offsets_from_com = result.positions_world_m - com[None, :]
+    buoyancy_positions = result.buoyancy_positions_world_m
+    if buoyancy_positions is None:
+        buoyancy_positions = result.positions_world_m
+    offsets_from_com = buoyancy_positions - com[None, :]
     base_id = int(runtime.base_id)
     runtime.data.xfrc_applied[base_id, 0:3] += result.force_world_n
     runtime.data.xfrc_applied[base_id, 3:6] += result.torque_world_nm
@@ -66,7 +69,7 @@ def apply_distributed_hydrodynamics(
     total_buoyancy_weight = float(np.sum(buoyancy_weights))
     if total_buoyancy_weight > 1.0e-12:
         buoyancy_point = np.sum(
-            result.positions_world_m * buoyancy_weights[:, None],
+            buoyancy_positions * buoyancy_weights[:, None],
             axis=0,
         ) / total_buoyancy_weight
     else:

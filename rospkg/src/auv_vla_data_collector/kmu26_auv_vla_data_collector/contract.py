@@ -32,6 +32,17 @@ STATE_NAMES = (
     "altitude_valid",
 )
 
+STATE_SLICES = {
+    "prev_command": (0, 4),
+    "dvl_velocity": (4, 7),
+    "angular_velocity": (7, 10),
+    "linear_acceleration": (10, 13),
+    "attitude": (13, 17),
+    "depth": (17, 18),
+    "altitude": (18, 19),
+    "validity": (19, 23),
+}
+
 ACTION_NAMES = ("surge", "sway", "heave", "yaw")
 
 # MAVROS OverrideRCIn uses zero-based array offsets. ArduSub channels are

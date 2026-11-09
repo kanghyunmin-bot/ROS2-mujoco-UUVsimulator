@@ -451,6 +451,7 @@ class DvlDeadReckoningTest(unittest.TestCase):
 
             reset_dvl_dead_reckoning(bridge)
             self.assertEqual(bridge._dvl_sensor_position_timing.stats.pending, 0)
+            self.assertEqual(bridge._dvl_sensor_timing.stats.pending, 1)
             state.sim_t = 0.2
             advance_dvl_sensor_runtime(bridge, state)
 
@@ -462,9 +463,11 @@ class DvlDeadReckoningTest(unittest.TestCase):
             state.sim_t = 0.7
             advance_dvl_sensor_runtime(bridge, state)
             delivery = bridge._dvl_sensor_new_position_deliveries[0]
+            velocity = bridge._dvl_sensor_new_deliveries[0]
 
         self.assertEqual(delivery.capture_time_s, 0.2)
         self.assertEqual(delivery.generation, 1)
+        self.assertEqual(velocity.capture_time_s, 0.0)
 
     def test_device_dr_reset_between_captures_retains_post_reset_motion(self) -> None:
         with sensor_config():

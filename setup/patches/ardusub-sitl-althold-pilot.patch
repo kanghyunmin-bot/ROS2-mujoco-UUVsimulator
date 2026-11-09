@@ -1,0 +1,114 @@
+diff --git a/ArduSub/control_althold.cpp b/ArduSub/control_althold.cpp
+index 968255a..5154a4d 100644
+--- a/ArduSub/control_althold.cpp
++++ b/ArduSub/control_althold.cpp
+@@ -14,7 +14,12 @@ bool Sub::althold_init()
+ 
+     // initialize vertical maximum speeds and acceleration
+     // sets the maximum speed up and down returned by position controller
++#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
++    // Seed the depth controller from the motor output at the mode transition.
++    attitude_control.set_throttle_out(motors.get_throttle(), true, 100.0);
++#else
+     attitude_control.set_throttle_out(0.75, true, 100.0);
++#endif
+     pos_control.init_z_controller();
+     pos_control.set_max_speed_accel_z(-get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
+     pos_control.set_correction_speed_accel_z(-get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
+@@ -86,7 +91,17 @@ void Sub::althold_run()
+ void Sub::control_depth() {
+     // We rotate the RC inputs to the earth frame to check if the user is giving an input that would change the depth.
+     // Output the Z controller + pilot input to all motors.
+-    Vector3f earth_frame_rc_inputs = ahrs.get_rotation_body_to_ned() * Vector3f(-channel_forward->norm_input(), -channel_lateral->norm_input(), (2.0f*(-0.5f+channel_throttle->norm_input())));
++#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
++    const float pilot_forward_input = failsafe.pilot_input ? 0.0f : channel_forward->norm_input();
++    const float pilot_lateral_input = failsafe.pilot_input ? 0.0f : channel_lateral->norm_input();
++    const float pilot_throttle_input = failsafe.pilot_input ? 0.5f : channel_throttle->norm_input();
++#else
++    const float pilot_forward_input = channel_forward->norm_input();
++    const float pilot_lateral_input = channel_lateral->norm_input();
++    const float pilot_throttle_input = channel_throttle->norm_input();
++#endif
++    Vector3f earth_frame_rc_inputs = ahrs.get_rotation_body_to_ned() * Vector3f(
++        -pilot_forward_input, -pilot_lateral_input, 2.0f * (pilot_throttle_input - 0.5f));
+     float target_climb_rate_cm_s = get_pilot_desired_climb_rate(500 + g.pilot_speed_up * earth_frame_rc_inputs.z);
+ 
+     bool surfacing = ap.at_surface || pos_control.get_pos_target_z_cm() > g.surface_depth;
+@@ -105,7 +120,14 @@ void Sub::control_depth() {
+     Vector3f throttle_vehicle_frame = ahrs.get_rotation_body_to_ned().transposed() * Vector3f(0, 0, motors.get_throttle_in_bidirectional());
+     //TODO: scale throttle with the ammount of thrusters in the given direction
+     float raw_throttle_factor = (ahrs.get_rotation_body_to_ned() * Vector3f(0, 0, 1.0)).xy().length();
+-    motors.set_throttle(throttle_vehicle_frame.z + raw_throttle_factor * channel_throttle->norm_input());
+-    motors.set_forward(-throttle_vehicle_frame.x + channel_forward->norm_input());
+-    motors.set_lateral(-throttle_vehicle_frame.y + channel_lateral->norm_input());
++#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
++    // The rotated thrust is bidirectional; AP_Motors accepts throttle in [0, 1].
++    const float throttle_normalized = 0.5f + 0.5f * throttle_vehicle_frame.z
++        + raw_throttle_factor * (pilot_throttle_input - 0.5f);
++    motors.set_throttle(constrain_float(throttle_normalized, 0.0f, 1.0f));
++#else
++    motors.set_throttle(throttle_vehicle_frame.z + raw_throttle_factor * pilot_throttle_input);
++#endif
++    motors.set_forward(-throttle_vehicle_frame.x + pilot_forward_input);
++    motors.set_lateral(-throttle_vehicle_frame.y + pilot_lateral_input);
+ }
+\ No newline at end of file
+diff --git a/ArduSub/failsafe.cpp b/ArduSub/failsafe.cpp
+index 454373f..78ae6ab 100644
+--- a/ArduSub/failsafe.cpp
++++ b/ArduSub/failsafe.cpp
+@@ -170,7 +170,13 @@ void Sub::handle_battery_failsafe(const char* type_str, const int8_t action)
+ // Make sure that we are receiving pilot input at an appropriate interval
+ void Sub::failsafe_pilot_input_check()
+ {
+-#if CONFIG_HAL_BOARD != HAL_BOARD_SITL
++#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
++    // Report a loss once per armed episode, including a re-arm with stale input.
++    if (!motors.armed()) {
++        failsafe.pilot_input = false;
++        return;
++    }
++#endif
+     if (g.failsafe_pilot_input == FS_PILOT_INPUT_DISABLED) {
+         failsafe.pilot_input = false;
+         return;
+@@ -195,7 +201,6 @@ void Sub::failsafe_pilot_input_check()
+     if(g.failsafe_pilot_input == FS_PILOT_INPUT_DISARM) {
+         arming.disarm(AP_Arming::Method::PILOT_INPUT_FAILSAFE);
+     }
+-#endif
+ }
+ 
+ // Internal pressure failsafe check
+diff --git a/ArduSub/GCS_Mavlink.cpp b/ArduSub/GCS_Mavlink.cpp
+index 475f9a6..97f10c0 100644
+--- a/ArduSub/GCS_Mavlink.cpp
++++ b/ArduSub/GCS_Mavlink.cpp
+@@ -537,6 +537,27 @@ void GCS_MAVLINK_Sub::handleMessage(const mavlink_message_t &msg)
+ {
+     switch (msg.msgid) {
+ 
++#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
++    case MAVLINK_MSG_ID_RC_CHANNELS_OVERRIDE: {
++        // The simulator pilot uses MAVROS RC overrides, as well as MANUAL_CONTROL.
++        handle_common_message(msg);
++        mavlink_rc_channels_override_t packet;
++        mavlink_msg_rc_channels_override_decode(&msg, &packet);
++        if (msg.sysid == sysid_my_gcs() && (packet.target_system == mavlink_system.sysid || packet.target_system == 0)
++            && rc().gcs_overrides_enabled() && !rc().ignore_overrides()) {
++            const uint16_t axes[] = {packet.chan1_raw, packet.chan2_raw, packet.chan3_raw,
++                                     packet.chan4_raw, packet.chan5_raw, packet.chan6_raw};
++            for (uint8_t i = 0; i < ARRAY_SIZE(axes); i++) {
++                if (axes[i] != 0 && axes[i] != UINT16_MAX && rc().channel(i)->has_override()) {
++                    sub.failsafe.last_pilot_input_ms = AP_HAL::millis();
++                    break;
++                }
++            }
++        }
++        break;
++    }
++#endif
++
+     case MAVLINK_MSG_ID_MANUAL_CONTROL: {     // MAV ID: 69
+         if (msg.sysid != sub.g.sysid_my_gcs) {
+             break;    // Only accept control from our gcs

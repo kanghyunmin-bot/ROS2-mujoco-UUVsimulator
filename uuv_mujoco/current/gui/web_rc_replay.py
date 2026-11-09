@@ -65,7 +65,11 @@ class WebRcReplayManager:
 
     def start(self, path: str | None = None, rate: str | None = None) -> dict[str, Any]:
         if self.running():
-            self._set_status("replay: already running")
+            if self._pause_event.is_set():
+                self._pause_event.clear()
+                self._set_status("replay: running")
+            else:
+                self._set_status("replay: already running")
             return {"status": self.status}
         if path is not None or rate is not None or not self._samples:
             loaded = self.load(path=path, rate=rate)

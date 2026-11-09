@@ -1,0 +1,35 @@
+<mujocoinclude>
+  <mesh name="bluerov2_body_material_01" file="../assets/bluerov2_standard/body_material_01.obj" />
+  <material name="bluerov2_body_material_01" rgba="0.845857 0.833004 0.858824 1.0" />
+  <mesh name="bluerov2_body_material_02" file="../assets/bluerov2_standard/body_material_02.obj" />
+  <material name="bluerov2_body_material_02" rgba="0.188642 0.196958 0.188642 1.0" />
+  <mesh name="bluerov2_body_material_03" file="../assets/bluerov2_standard/body_material_03.obj" />
+  <material name="bluerov2_body_material_03" rgba="0.0585895 0.0585895 0.0585895 1.0" />
+  <mesh name="bluerov2_body_material_04" file="../assets/bluerov2_standard/body_material_04.obj" />
+  <material name="bluerov2_body_material_04" rgba="0.66205 0.645393 0.628732 1.0" />
+  <mesh name="bluerov2_body_material_05" file="../assets/bluerov2_standard/body_material_05.obj" />
+  <material name="bluerov2_body_material_05" rgba="1.0 0.0 0.0 1.0" />
+  <mesh name="bluerov2_body_material_06" file="../assets/bluerov2_standard/body_material_06.obj" />
+  <material name="bluerov2_body_material_06" rgba="0.294118 0.294118 0.294118 1.0" />
+  <mesh name="bluerov2_body_material_07" file="../assets/bluerov2_standard/body_material_07.obj" />
+  <material name="bluerov2_body_material_07" rgba="0.792157 0.819608 0.933333 1.0" />
+  <mesh name="bluerov2_body_material_08" file="../assets/bluerov2_standard/body_material_08.obj" />
+  <material name="bluerov2_body_material_08" rgba="0.956863 0.956863 0.956863 1.0" />
+  <mesh name="bluerov2_body_material_09" file="../assets/bluerov2_standard/body_material_09.obj" />
+  <material name="bluerov2_body_material_09" rgba="0.752941 0.752941 0.752941 1.0" />
+  <mesh name="bluerov2_body_material_10" file="../assets/bluerov2_standard/body_material_10.obj" />
+  <material name="bluerov2_body_material_10" rgba="0.0980392 0.0980392 0.0980392 1.0" />
+  <mesh name="bluerov2_body_material_11" file="../assets/bluerov2_standard/body_material_11.obj" />
+  <material name="bluerov2_body_material_11" rgba="1.0 0.94902 0.909804 1.0" />
+  <mesh name="bluerov2_body_material_12" file="../assets/bluerov2_standard/body_material_12.obj" />
+  <material name="bluerov2_body_material_12" rgba="0.152941 0.658824 1.0 1.0" />
+  <mesh name="bluerov2_body_material_13" file="../assets/bluerov2_standard/body_material_13.obj" />
+  <material name="bluerov2_body_material_13" rgba="0.647059 0.619608 0.588235 1.0" />
+  <mesh name="bluerov2_body_material_14" file="../assets/bluerov2_standard/body_material_14.obj" />
+  <material name="bluerov2_body_material_14" rgba="0.25098 0.25098 0.25098 1.0" />
+  <mesh name="bluerov2_body_material_15" file="../assets/bluerov2_standard/body_material_15.obj" />
+  <material name="bluerov2_body_material_15" rgba="0.14902 0.6 0.815686 1.0" />
+  <mesh name="bluerov2_prop_cw" file="../assets/bluerov2_standard/prop_cw.obj" />
+  <mesh name="bluerov2_prop_ccw" file="../assets/bluerov2_standard/prop_ccw.obj" />
+  <material name="bluerov2_prop" rgba=".16 .16 .17 1" />
+</mujocoinclude>

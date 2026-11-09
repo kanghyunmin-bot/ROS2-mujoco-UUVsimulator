@@ -104,6 +104,71 @@ class _FakeCv2:
 
 
 class CameraPublishIntegrationTest(unittest.TestCase):
+    def test_live_optics_renders_depth_on_worker_and_delivers_original_stamp(self) -> None:
+        profile = CURRENT / "config/sensor_models/imx219_underwater_pool_lite.json"
+        with patch.dict(os.environ, {
+            "ROS2_UUV_CAMERA_SENSOR_MODEL_ENABLE": "1",
+            "ROS2_UUV_CAMERA_SENSOR_MODEL_CONFIG": str(profile),
+            "ROS2_UUV_CAMERA_SENSOR_MODEL_ASYNC": "1",
+            "ROS2_UUV_CAMERA_TRANSPORT_LATENCY_S": "0",
+            "ROS2_UUV_CAMERA_PROCESSING_LATENCY_S": "0",
+        }):
+            owner = _bridge()
+        self.assertTrue(owner._stereo_image_async_enabled)
+        entered, release = threading.Event(), threading.Event()
+        next_render, finish_next = threading.Event(), threading.Event()
+        source = SimpleNamespace(time=2.0)
+        paths = np.full((64, 64), 2.0, dtype=np.float32)
+
+        def render(_, camera_name, snapshot):
+            self.assertEqual(threading.current_thread().name, "uuv-camera-render")
+            self.assertIsNot(snapshot, source)
+            if snapshot.time == 3.0:
+                next_render.set()
+                finish_next.wait(2)
+            else:
+                entered.set()
+                release.wait(2)
+            return camera.RenderedCameraFrame(_rgb(), snapshot.time, paths)
+
+        with (
+            patch.object(camera.mujoco, "MjData", side_effect=lambda _: SimpleNamespace()),
+            patch.object(camera.mujoco, "mj_copyData", side_effect=lambda dst, _, src: setattr(dst, "time", src.time)),
+            patch.object(camera, "render_camera_frame", side_effect=render),
+        ):
+            try:
+                first = camera._modeled_camera_delivery_for_publish(owner, "stereo_left", source)
+                self.assertIsNone(first)
+                self.assertTrue(entered.wait(1))
+                source.time = 3.0
+                release.set()
+                deadline = time.monotonic() + 2
+                while not owner._stereo_image_async_modeled_frames and time.monotonic() < deadline:
+                    time.sleep(.005)
+                self.assertIn("stereo_left", owner._stereo_image_async_modeled_frames)
+                delivery = None
+                while delivery is None and time.monotonic() < deadline:
+                    delivery = camera._modeled_camera_delivery_for_publish(owner, "stereo_left", source)
+                    time.sleep(.005)
+                self.assertIsNotNone(delivery)
+                self.assertEqual(delivery.capture_time_s, 2.0)
+                self.assertEqual(delivery.diagnostics.path_mode, "depth")
+                self.assertTrue(next_render.wait(1))
+                reset = threading.Thread(target=camera.reset_stereo_camera_worker, args=(owner,))
+                reset.start()
+                self.assertTrue(owner._stereo_image_async_stop.wait(1))
+                self.assertTrue(reset.is_alive())
+                finish_next.set()
+                reset.join(1)
+                self.assertFalse(reset.is_alive())
+                self.assertFalse(owner._stereo_image_async_pending)
+                self.assertFalse(owner._stereo_image_async_modeled_frames)
+                self.assertIsNone(owner._stereo_image_async_thread)
+            finally:
+                finish_next.set()
+                release.set()
+                camera.close_stereo_image_renderers(owner)
+
     def test_failed_renders_are_limited_to_configured_capture_rate(self) -> None:
         with patch.dict(os.environ, {"ROS2_UUV_CAMERA_SENSOR_MODEL_ENABLE": "1"}):
             owner = _bridge(hz=15.0)

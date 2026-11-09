@@ -80,7 +80,8 @@ def wrench_accumulation_contract_passes(wrench_py: Path) -> bool:
         wrench_py,
         [
             "runtime.last_force_body += force_body",
-            "runtime.last_torque_body += np.cross(r_body, force_body)",
+            "runtime.last_torque_body += torque_body",
+            "torque_body[2] * (yaw_torque_scale - 1.0)",
             "runtime.last_reaction_torque_world",
         ],
     )

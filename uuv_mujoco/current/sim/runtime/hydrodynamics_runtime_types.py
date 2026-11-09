@@ -43,6 +43,7 @@ class HydrodynamicsRuntimeValues:
     hydro_yawrate_heave_yaw_deadband_radps: float
     heave_extra_damping_n_per_mps: float
     neutral_volume: float
+    yaw_damping_asymmetry: float = 0.0
 
 
 @dataclass
@@ -136,6 +137,7 @@ class HydrodynamicsRuntimeSetup:
     distributed_hydrodynamics: Any
     full_matrix_hydrodynamics: Any
     update_dynamic_fluidcoef: Callable
+    yaw_damping_asymmetry: float = 0.0
 
 
 __all__ = [

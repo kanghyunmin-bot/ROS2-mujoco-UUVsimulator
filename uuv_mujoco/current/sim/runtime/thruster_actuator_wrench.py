@@ -37,7 +37,11 @@ def accumulate_thruster_wrench(
         r_body = np.zeros(3, dtype=np.float64)
     force_body = fdir * force
     runtime.last_force_body += force_body
-    runtime.last_torque_body += np.cross(r_body, force_body)
+    # Both vectors are body-frame 3-vectors. Reuse their moment for yaw scaling.
+    rx, ry, rz = r_body
+    fx, fy, fz = force_body
+    torque_body = np.array((ry * fz - rz * fy, rz * fx - rx * fz, rx * fy - ry * fx))
+    runtime.last_torque_body += torque_body
     if not hasattr(runtime, "last_reaction_torque_body"):
         runtime.last_reaction_torque_body = np.zeros(3, dtype=np.float64)
     reaction_torque_body = (
@@ -52,9 +56,8 @@ def accumulate_thruster_wrench(
         runtime.yaw_torque_thruster_scales.get(name, runtime.yaw_torque_scale)
     )
     if abs(yaw_torque_scale - 1.0) > 1.0e-9 and name in runtime.yaw_thrusters and sid >= 0:
-        tau_body = np.cross(r_body, fdir * force)
         extra_tau_body = np.array(
-            [0.0, 0.0, tau_body[2] * (yaw_torque_scale - 1.0)],
+            [0.0, 0.0, torque_body[2] * (yaw_torque_scale - 1.0)],
             dtype=np.float64,
         )
         runtime.last_reaction_torque_body += extra_tau_body

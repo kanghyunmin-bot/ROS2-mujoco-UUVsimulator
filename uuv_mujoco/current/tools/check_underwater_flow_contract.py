@@ -143,7 +143,8 @@ def _check_buoy_galilean_current_parity() -> None:
     runtime.water_angular_drag_nmsprad = 0.0
     runtime.model = SimpleNamespace(body_mass=np.array([0.01], dtype=np.float64))
     runtime._buoy_center_world = lambda _buoy: np.array([0.0, 0.0, 0.0], dtype=np.float64)
-    runtime._touches_float_waterline = lambda _buoy, _center_z: True
+    runtime.water_surface_z = 0.0
+    runtime.float_half_height_m = 0.05
     runtime._body_angular_velocity = lambda _body_id: np.zeros(3, dtype=np.float64)
     buoy = SimpleNamespace(body_id=0, free_dofadr=-1, detached=False)
 

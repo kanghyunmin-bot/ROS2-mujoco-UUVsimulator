@@ -44,6 +44,9 @@ def create_runtime_model_io_setup(
         mujoco_module.mj_id2name(model, mujoco_module.mjtObj.mjOBJ_ACTUATOR, i): i
         for i in range(model.nu)
     }
+    missing = set(vertical_thrusters + yaw_thrusters) - actuator_ids.keys()
+    if missing:
+        raise ValueError(f"Scene is missing configured thruster actuators: {sorted(missing)}")
     ctrlrange = model.actuator_ctrlrange.copy()
     thruster_params_path = Path(config_dir) / "thruster_params.json"
 

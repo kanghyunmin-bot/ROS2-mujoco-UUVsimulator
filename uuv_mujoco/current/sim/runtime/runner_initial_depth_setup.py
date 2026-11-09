@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from physics.thruster_mapping import PHYSICAL_VERTICAL_THRUSTERS, PHYSICAL_YAW_THRUSTERS
+from physics.thruster_mapping import vehicle_thruster_mapping
 from sim.runtime.initial_depth_runtime import InitialDepthHoldRuntime
 from sim.runtime.initial_state import configure_initial_runtime_state
 
@@ -17,6 +17,7 @@ def create_initial_depth_runtime_setup(
     env_float,
     env_flag,
 ) -> tuple[object, InitialDepthHoldRuntime]:
+    horizontal, vertical, _, _ = vehicle_thruster_mapping(getattr(args, "vehicle", "ut27"))
     base_state = model_setup.base_state
     initial_runtime_state = configure_initial_runtime_state(
         args=args,
@@ -27,7 +28,7 @@ def create_initial_depth_runtime_setup(
         base_state=base_state,
         fluid_geom_ids=model_setup.fluid_geom_ids,
         fluid_geom_names=model_setup.fluid_geom_names,
-        thruster_names=PHYSICAL_VERTICAL_THRUSTERS + PHYSICAL_YAW_THRUSTERS,
+        thruster_names=vertical + horizontal,
         thruster_immersion_half_height_m=thruster_immersion_half_height_m,
         env_float=env_float,
         env_flag=env_flag,

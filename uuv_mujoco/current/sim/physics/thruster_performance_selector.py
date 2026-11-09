@@ -15,8 +15,17 @@ def select_thruster_performance_config(
     active_thruster_voltage: float,
     path: Path,
     plant_replay_direct_rcout: bool,
+    response_model: str = "command",
 ) -> dict:
     """Select the runtime PWM-to-force curve for closed-loop or plant replay."""
+
+    if response_model not in ("command", "rpm"):
+        raise ValueError("thruster_response_model must be 'command' or 'rpm'")
+    include_rpm = response_model == "rpm"
+    if include_rpm and (
+        args.disable_thruster_perf or not (args.thruster_perf_direct or plant_replay_direct_rcout)
+    ):
+        raise ValueError("RPM response requires the measured direct PWM performance model")
 
     perf_cfg = default_thruster_performance_config(
         requested_voltage=float(active_thruster_voltage),
@@ -27,6 +36,7 @@ def select_thruster_performance_config(
             path.expanduser(),
             requested_voltage=float(active_thruster_voltage),
             direct=bool(args.thruster_perf_direct),
+            include_rpm=include_rpm,
         )
     else:
         print(
@@ -61,6 +71,8 @@ def select_thruster_performance_config(
     _force_direct_for_raw_rcou_replay(
         perf_cfg, plant_replay_direct_rcout=plant_replay_direct_rcout
     )
+    if include_rpm:
+        print("[thruster perf] RPM response uses measured steady curves and configured time constants", flush=True)
     return perf_cfg
 
 

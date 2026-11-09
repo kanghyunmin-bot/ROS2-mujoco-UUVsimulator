@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 _MAVROS_DISABLED_PUBLISHER_ATTRS = (
     "pub_mavros_state",
     "pub_mavros_imu_data",
@@ -50,12 +52,20 @@ def create_mavros_publishers(
     sensor_qos=None,
 ) -> None:
     node = bridge.node
+    bridge._sensor_external_nav_enabled = bool(
+        getattr(bridge, "enable_sitl", False)
+        and os.environ.get("ROS2_UUV_SENSOR_EXTERNAL_NAV", "0") == "1"
+    )
     if not bridge._mavros_surface_enabled:
         disable_mavros_publishers(bridge)
         if bool(getattr(bridge, "_strict_sitl_sensor_transport", False)):
             _create_sensor_publishers(
                 bridge,
                 sensor_qos=q10 if sensor_qos is None else sensor_qos,
+            )
+        if bridge._sensor_external_nav_enabled:
+            bridge.pub_mavros_vision_pose = node.create_publisher(
+                bridge.PoseStamped, "/mavros/vision_pose/pose", q10,
             )
         return
 

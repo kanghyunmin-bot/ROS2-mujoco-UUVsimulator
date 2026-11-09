@@ -292,6 +292,7 @@ def _runtime_buoy_row(bridge: Any, prefix: str, body_name: str) -> dict[str, obj
         "release_hand_contact": bool(row.get("release_hand_contact", False)),
         "release_right_fork_stem_contact": bool(row.get("release_right_fork_stem_contact", False)),
         "release_right_fork_region": bool(row.get("release_right_fork_region", False)),
+        "release_contact_evidence": row.get("release_contact_evidence"),
         "hand_contact_active": bool(row.get("hand_contact_active", False)),
     }
 

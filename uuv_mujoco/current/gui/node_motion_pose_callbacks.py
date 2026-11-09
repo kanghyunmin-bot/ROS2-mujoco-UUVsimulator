@@ -39,8 +39,11 @@ def _on_odom(self, msg: Odometry, source: str) -> None:
     position_xyz, velocity_xyz = odom_msg_xyz_velocity(msg)
     with self._lock:
         self._snapshot.position_xyz = position_xyz
-        self._snapshot.velocity_xyz = velocity_xyz
-        self._snapshot.velocity_source = source
+        if now - self._last_wall.get("dvl_velocity", -math.inf) >= 1.0:
+            self._snapshot.velocity_xyz = velocity_xyz
+            self._snapshot.velocity_source = source
+            self._snapshot.velocity_frame = getattr(msg, "child_frame_id", "")
+            self._touch("velocity")
         if _depth_topic_stale(self):
             self._snapshot.depth_m = depth_from_pose_z(position_xyz[2])
             self._snapshot.depth_source = f"{source}.pose.z"

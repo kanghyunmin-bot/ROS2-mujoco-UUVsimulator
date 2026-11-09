@@ -50,6 +50,10 @@ class MavrosPublishBuilderCache:
             self.state.bar30_sensor_deliveries,
             "bar30_sensor_delivery",
         )
+        builders["mavros_vision_pose_batch"] = lambda: self._delivery_batch(
+            "mavros_vision_pose_batch", factories["mavros_vision_pose"],
+            getattr(self.state, "dvl_position_deliveries", ()), "dvl_position_delivery",
+        )
         return builders
 
     def _delivery_batch(self, key, factory, deliveries, state_attr):

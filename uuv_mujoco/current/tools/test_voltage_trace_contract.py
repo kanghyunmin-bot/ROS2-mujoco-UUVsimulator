@@ -143,19 +143,19 @@ def test_actual_mujoco_actuator_uses_aligned_voltage_at_each_update(tmp_path):
     data.qpos[q + 3 : q + 7] = [1, 0, 0, 0]
     data.qvel[:] = 0
     mujoco.mj_forward(model, data)
-    for name, command in (("yaw_lf", 0.5), ("yaw_rr", -0.5)):
+    for name, command, direction in (("yaw_lf", 0.5, -1), ("yaw_rr", -0.5, 1)):
         actuator.target.update({n: 0 for n in actuator.all_thruster_names})
         actuator.target[name] = command
         for sim_time, voltage in ((6.25, 16), (7.25, 14), (8.25, 12)):
             data.time = sim_time
             actuator.update_forces(10, base_id=base)
-            # Independent manufacturer's table knot, not the runtime-selected curve.
+            # Look up the native ESC pulse, then express thrust on the scene axis.
             payload = json.loads(
                 (ROOT / "config/thruster_performance.json").read_text()
             )
             curve = next(c for c in payload["curves"] if c["voltage_v"] == voltage)
-            expected = np.interp(
-                1500 + 400 * command, curve["pwm_us"], curve["force_n"]
+            expected = direction * np.interp(
+                1500 + 400 * direction * command, curve["pwm_us"], curve["force_n"]
             )
             assert actuator.force_cmd[name] == pytest.approx(expected, abs=1e-8)
             mujoco.mj_forward(model, data)

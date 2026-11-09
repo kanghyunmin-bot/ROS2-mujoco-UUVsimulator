@@ -1,0 +1,85 @@
+{
+  "source_sha256": {
+    "docs/assets/real2sim-application-20260915/comparison.json": "781d1b42b4c16a668e68f910f85a24979dc2240da6e06b7a6f676da4a668e8f7",
+    "docs/assets/yaw-release-20260915/full_comparison.json": "dff8f57fd241a875fc5dc8734fbfd57340124d10d07dc572cc925caee0e18b91",
+    "docs/assets/yaw-release-20260915/comparison.json": "09c9d97eff1d3929a5fd048faa2b00da68dffbb154a3bff673f6026248e954b4",
+    "outputs/yaw-release-real2sim-20260915/primary_commands.json": "890776e2bd671e5aa3a34248b77939f9454989b01b4d031f3b62ecd6a504a7c4",
+    "outputs/real-bag-audit-20260911/profile.json": "2d1461459a34b9c2de17d7405ca17899f69d4dc20ef2e6862ceaa6f0ef5017a3",
+    "outputs/real-bag-audit-20260911/numeric.npz": "690005e395930eaa086bb8c834867bd1d521935f0dbc3a552bf70b674411bd0b",
+    "outputs/real2sim-application-20260915/primary_nominal/replay.json": "720ddeafe2b4c320bce1cdfc9f416e59339479a5227ba260eece4a9a37eea228",
+    "outputs/real2sim-application-20260915/primary_nominal/forces.csv": "f55b83d14a46928673af06d482872adfb56440873ac4679d6535d96c22691d14",
+    "outputs/yaw-release-real2sim-20260915/primary_validated/replay.json": "1ac114c8d34313842b6567094816cf1968c4bcc2511c2deaa6f72928a69875cb",
+    "outputs/yaw-release-real2sim-20260915/primary_validated/forces.csv": "b1eecd01903b0e4a2a32d03a235655ba565131c8d1079a01f88939cd967cfdd1",
+    "outputs/yaw-timing-audit-20260915/primary_round/replay.json": "28873bf45e5b0ca3e5884b4458d782562d58790c13dd99e5b5ec9c9dc8bbe050",
+    "outputs/yaw-timing-audit-20260915/primary_round/forces.csv": "a59a87d303a7adcd75d9d773fed6f332cdc4544b6fc044a9c5b07bde716d9705",
+    "outputs/yaw-release-real2sim-20260915/auxiliary_commands.json": "50ffca3e488ee88a71a70ab8edaba84dc7dbba7fd0d3b016066502ba9430c320",
+    "outputs/notion-crossbag-20260915/21-40-11/extracted/profile.json": "cf486a4d934619be311c1846bf1e369ba8d2427bbcac2801480478d869f95c84",
+    "outputs/notion-crossbag-20260915/21-40-11/extracted/numeric.npz": "ed666b3c654fab9adece52230459ea372caa6aa758107267d55bd35f91cd7ad3",
+    "outputs/real2sim-application-20260915/auxiliary_nominal/replay.json": "9eb6f565cc0e1fd7f82804f8e5942d31186eeb2d89adff26084fbae6a912e40b",
+    "outputs/real2sim-application-20260915/auxiliary_nominal/forces.csv": "f4733b2a3bca0a1c9c17563d30d4c34193907d2d6de442df5430421bfb75e469",
+    "outputs/yaw-release-real2sim-20260915/auxiliary_validated/replay.json": "6fad9d317b4ed121a72636ad6e44bd1e72ded4d309673b15689f7521bd759cfb",
+    "outputs/yaw-release-real2sim-20260915/auxiliary_validated/forces.csv": "218c80ef94eced9dd64a0089e51fe2c363e82abc5da732668b9ab5b8ec71926f",
+    "outputs/yaw-timing-audit-20260915/auxiliary_round/replay.json": "4d37f6973351c84ed07cd99934b0266e2759f4c9eb0308e6a1419144d91720d2",
+    "outputs/yaw-timing-audit-20260915/auxiliary_round/forces.csv": "bc07ff543985bac9425868ecf07fc6457609662d2994e32a6658a689591c99c1"
+  },
+  "checks": [
+    {
+      "bag": "primary",
+      "metric": "surge_rmse_mps",
+      "case": "Nominal",
+      "value": 0.5054171756830651,
+      "matches_recorded_summary": true
+    },
+    {
+      "bag": "primary",
+      "metric": "surge_rmse_mps",
+      "case": "Latest calibrated",
+      "value": 0.04358056781057344,
+      "matches_recorded_summary": true
+    },
+    {
+      "bag": "primary",
+      "metric": "release_rmse_deg_s",
+      "case": "baseline",
+      "value": 6.120456536645904,
+      "matches_recorded_summary": true
+    },
+    {
+      "bag": "primary",
+      "metric": "release_rmse_deg_s",
+      "case": "validated",
+      "value": 3.8525583674445403,
+      "matches_recorded_summary": true
+    },
+    {
+      "bag": "auxiliary",
+      "metric": "surge_rmse_mps",
+      "case": "Nominal",
+      "value": 0.3025029965299952,
+      "matches_recorded_summary": true
+    },
+    {
+      "bag": "auxiliary",
+      "metric": "surge_rmse_mps",
+      "case": "Latest calibrated",
+      "value": 0.02984886172730278,
+      "matches_recorded_summary": true
+    },
+    {
+      "bag": "auxiliary",
+      "metric": "release_rmse_deg_s",
+      "case": "baseline",
+      "value": 7.066987626888607,
+      "matches_recorded_summary": true
+    },
+    {
+      "bag": "auxiliary",
+      "metric": "release_rmse_deg_s",
+      "case": "validated",
+      "value": 4.706748684584756,
+      "matches_recorded_summary": true
+    }
+  ],
+  "new_simulation_runs": 0,
+  "method": "Receipt-time alignment; no fitted lag, scale, smoothing or time warp. Valid DVL samples only. Surge baseline is nominal; release baseline is clock-corrected."
+}

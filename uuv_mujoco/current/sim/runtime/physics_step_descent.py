@@ -41,7 +41,11 @@ def enforce_descent_contract(
     log: Callable[[str], None],
 ) -> None:
     base_vz_down_mps = -float(data.qvel[world_qvel_adr + 2])
-    vertical_pwm = [int(value) for value in sitl_servo_runtime.pwm_values[4:8]]
+    vertical_pwm = [
+        int(sitl_servo_runtime.pwm_values[index])
+        for index, name in enumerate(sitl_servo_runtime.raw_map)
+        if name.startswith("ver_")
+    ]
     base_rot = data.xmat[base_id].reshape(3, 3)
     thruster_force_world_z = float((base_rot @ thruster_actuator_runtime.last_force_body)[2])
     message = descent_guard.check(

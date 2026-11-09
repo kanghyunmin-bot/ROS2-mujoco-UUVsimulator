@@ -454,8 +454,60 @@ class A50TcpCommandTest(unittest.TestCase):
             )
             self.assertEqual(emulator.queued_message_count, 0)
 
+    def test_scene_reset_preserves_tcp_framing_and_discards_unsent_telemetry(self) -> None:
+        with A50TcpJsonEmulator(port=0) as emulator:
+            emulator.publish_velocity(_sample(validity_us=1_000_000), 0.1)
+            unsent_velocity = emulator._dequeue()
+            self.assertIsNotNone(unsent_velocity)
+            emulator.reset_dead_reckoning()
+            self.assertIs(emulator._discard_unsent_stale_report(unsent_velocity), unsent_velocity)
+
+            emulator.publish_velocity(_sample(validity_us=1_100_000), 0.1)
+            partial_velocity = emulator._dequeue()
+            self.assertIsNotNone(partial_velocity)
+            partial_velocity.sent_bytes = 1
+            emulator.publish_velocity(_sample(validity_us=1_200_000), 0.1)
+            emulator.publish_position(_delivery(1_200_000))
+            emulator._enqueue_response(emulator._handle_command_line(b'{"command":"get_config"}'))
+
+            emulator.reset_dead_reckoning(scene_reset=True)
+            self.assertIsNone(emulator._discard_unsent_stale_report(unsent_velocity))
+            self.assertIs(emulator._discard_unsent_stale_report(partial_velocity), partial_velocity)
+            self.assertEqual(emulator.queued_message_count, 1)
+            self.assertEqual(_pending_json(emulator._dequeue())["response_to"], "get_config")
+            self.assertIsNone(emulator._dequeue())
+
+            emulator.publish_velocity(_sample(validity_us=1_300_000), 0.1)
+            fresh = emulator._dequeue()
+            self.assertIsNotNone(fresh)
+            self.assertIs(emulator._discard_unsent_stale_report(fresh), fresh)
+            self.assertEqual(_pending_json(fresh)["time_of_validity"], 1_300_000)
+
+            with _connect(emulator) as client:
+                self.assertTrue(_wait_until(lambda: emulator.client_connected))
+                emulator.publish_velocity(_sample(validity_us=1_400_000), 0.1)
+                report, _ = _read_json_line(client)
+                self.assertEqual(report["time_of_validity"], 1_400_000)
+
 
 class A50TcpLifecycleTest(unittest.TestCase):
+    def test_telemetry_uses_server_start_lock_order(self) -> None:
+        with A50TcpJsonEmulator(port=0) as emulator:
+            lifecycle_lock = emulator._lifecycle_lock
+            test = self
+
+            class CheckedLifecycleLock:
+                def __enter__(self):
+                    test.assertFalse(emulator._state_lock._is_owned())
+                    lifecycle_lock.acquire()
+
+                def __exit__(self, *_):
+                    lifecycle_lock.release()
+
+            with patch.object(emulator, "_lifecycle_lock", CheckedLifecycleLock()):
+                self.assertTrue(emulator.publish_velocity(_sample(), 0.1))
+                self.assertTrue(emulator.publish_position(_delivery()))
+
     def test_start_failure_releases_bound_listener(self) -> None:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
             probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

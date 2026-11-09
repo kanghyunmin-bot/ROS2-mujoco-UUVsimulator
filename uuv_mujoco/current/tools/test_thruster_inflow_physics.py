@@ -373,6 +373,37 @@ class ReactionTorqueTests(unittest.TestCase):
             atol=1.0e-12,
         )
 
+    def test_yaw_scaling_reuses_thruster_moment_about_center_of_mass(self) -> None:
+        runtime = self._runtime()
+        runtime.yaw_thrusters = ["thr"]
+        runtime.yaw_torque_thruster_scales = {"thr": 2.4}
+        runtime.model.actuator_gear[0, :3] = [1.0, 2.0, 3.0]
+        runtime.data.site_xpos[0] = [-1.0, 2.0, 0.5]
+        runtime.data.xipos[0] = [0.0, 0.5, -1.0]
+        force = -8.0
+
+        accumulate_thruster_wrench(
+            runtime,
+            name="thr",
+            aid=0,
+            sid=0,
+            force=force,
+            base_id=0,
+            base_rot=np.eye(3),
+            com_body=np.zeros(3),
+            reaction_torque_gain=0.0,
+        )
+
+        axis = runtime.model.actuator_gear[0, :3]
+        expected_force = axis / (np.linalg.norm(axis) + 1e-9) * force
+        lever_arm = runtime.data.site_xpos[0] - runtime.data.xipos[0]
+        expected_moment = np.cross(lever_arm, expected_force)
+        correction = [0.0, 0.0, expected_moment[2] * (2.4 - 1.0)]
+        np.testing.assert_array_equal(runtime.last_force_body, expected_force)
+        np.testing.assert_array_equal(runtime.last_torque_body, expected_moment)
+        np.testing.assert_array_equal(runtime.last_reaction_torque_body, correction)
+        np.testing.assert_array_equal(runtime.last_reaction_torque_world, correction)
+
     def test_wrench_uses_site_world_frame_and_actual_nested_position(self) -> None:
         runtime = self._runtime()
         site_rotation = np.array(

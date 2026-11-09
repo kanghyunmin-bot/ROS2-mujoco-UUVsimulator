@@ -33,6 +33,7 @@ def align_cob_site(
     cob_site_id: int,
     values: HydrostaticRuntimeValues,
     log: Callable[[str], None],
+    lateral_offset: float | None = None,
 ) -> None:
     if cob_site_id < 0:
         return
@@ -41,14 +42,17 @@ def align_cob_site(
     target_z = float(model.body_ipos[base_id][2] + values.cob_vertical_offset)
     old_x = float(model.site_pos[cob_site_id][0])
     old_z = float(model.site_pos[cob_site_id][2])
-    if abs(target_x - old_x) < 1e-6 and abs(target_z - old_z) < 1e-6:
+    old_y = float(model.site_pos[cob_site_id][1])
+    target_y = old_y if lateral_offset is None else float(model.body_ipos[base_id][1] + lateral_offset)
+    if abs(target_x - old_x) < 1e-6 and abs(target_y - old_y) < 1e-6 and abs(target_z - old_z) < 1e-6:
         return
 
     model.site_pos[cob_site_id][0] = target_x
+    model.site_pos[cob_site_id][1] = target_y
     model.site_pos[cob_site_id][2] = target_z
     log(
         f"[model] aligned CoB: x {old_x:.4f} -> {target_x:.4f} "
-        f"(offset={values.cob_longitudinal_offset:+.4f}), "
+        f"(offset={values.cob_longitudinal_offset:+.4f}), y {old_y:.4f} -> {target_y:.4f}, "
         f"z {old_z:.4f} -> {target_z:.4f} "
         f"(offset={values.cob_vertical_offset:+.4f})"
     )

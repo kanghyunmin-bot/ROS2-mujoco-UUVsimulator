@@ -1,0 +1,6 @@
+services:
+  uuv-dev:
+    gpus: !reset []
+    environment:
+      NVIDIA_VISIBLE_DEVICES: void
+      LIBGL_ALWAYS_SOFTWARE: "1"

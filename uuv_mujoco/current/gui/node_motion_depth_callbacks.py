@@ -3,6 +3,23 @@
 from __future__ import annotations
 
 import math
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from geometry_msgs.msg import PoseWithCovarianceStamped
+
+
+def _on_depth_pose(self, msg: PoseWithCovarianceStamped) -> None:
+    """Read base-link depth [m] from the real pressure-to-depth node."""
+    z = float(msg.pose.pose.position.z)
+    if not math.isfinite(z):
+        return
+    with self._lock:
+        self._snapshot.depth_m = max(0.0, -z)
+        # Keep this distinct from truth/odometry fallbacks: only this sensor
+        # may refresh the depth timestamp, not an unrelated pose message.
+        self._snapshot.depth_source = "/depth/pose"
+        self._touch("depth")
 
 
 def _on_depth(self, msg: Float32) -> None:
@@ -47,6 +64,7 @@ __all__ = [
     "_on_atm_pressure",
     "_on_bar30_pressure",
     "_on_depth",
+    "_on_depth_pose",
     "_on_pressure_value",
     "_on_static_pressure",
 ]

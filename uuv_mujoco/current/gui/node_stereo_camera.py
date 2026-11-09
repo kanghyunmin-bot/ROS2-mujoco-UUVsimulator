@@ -25,6 +25,7 @@ class StereoCameraFrame:
     encoding: str
     seq: int
     wall_s: float
+    capture_stamp_s: float | None = None
 
 
 SIDES = ("left", "right")
@@ -187,6 +188,7 @@ def on_stereo_camera_image(owner: Any, side: str, msg: Any) -> None:
             encoding=encoding,
             seq=seq,
             wall_s=time.monotonic(),
+            capture_stamp_s=_message_capture_stamp(msg),
         )
     owner._touch(f"stereo_{side}")
 
@@ -226,8 +228,16 @@ def _on_compressed_stereo_camera_image(
             encoding=encoding,
             seq=seq,
             wall_s=now,
+            capture_stamp_s=_message_capture_stamp(msg),
         )
     owner._touch(f"stereo_{side}")
+
+
+def _message_capture_stamp(msg: Any) -> float | None:
+    stamp = getattr(getattr(msg, "header", None), "stamp", None)
+    if stamp is None:
+        return None
+    return float(stamp.sec) + float(stamp.nanosec) * 1.0e-9
 
 
 def _on_vision_status(owner: Any, msg: Any) -> None:
@@ -316,6 +326,7 @@ def _frame_status(frame: StereoCameraFrame | None, now: float) -> dict[str, Any]
     if frame is None or not _frame_fresh(frame, now):
         return {
             "available": False,
+            "capture_stamp_s": None if frame is None else frame.capture_stamp_s,
             "age_s": None if frame is None else max(0.0, now - frame.wall_s),
             "seq": 0,
             "width": 0,
@@ -324,6 +335,7 @@ def _frame_status(frame: StereoCameraFrame | None, now: float) -> dict[str, Any]
         }
     return {
         "available": True,
+        "capture_stamp_s": frame.capture_stamp_s,
         "age_s": now - frame.wall_s,
         "seq": frame.seq,
         "width": frame.width,

@@ -63,6 +63,30 @@ def _evaluate(model: DistributedHullHydrodynamics, **overrides):
 
 
 class DistributedHydrodynamicsConfigTests(unittest.TestCase):
+    def test_tilted_ellipsoid_moves_buoyancy_centre_at_the_waterline(self) -> None:
+        patch = _profile()["distributed_hydrodynamics"]["patches"][0]
+        patch.update(area_m2=0.0, buoyancy_ellipsoid_half_axes_m=[0.2, 0.1, 0.1])
+        model = DistributedHullHydrodynamics.from_profile(_profile(patches=[patch]))
+        cosine = np.sqrt(0.5)
+        rotation = np.array([[cosine, 0.0, cosine], [0.0, 1.0, 0.0], [-cosine, 0.0, cosine]])
+        result = _evaluate(model, rotation_world_from_body=rotation, surface_height_world_m=0.0)
+        expected_x = (3 / 8) * 0.015 / np.sqrt(0.025)
+        np.testing.assert_allclose(result.submerged_fractions, [0.5])
+        np.testing.assert_allclose(result.force_world_n, [0, 0, 50])
+        np.testing.assert_allclose(result.buoyancy_positions_world_m[0, 0], expected_x)
+        np.testing.assert_allclose(result.torque_world_nm, [0, -50 * expected_x, 0])
+        full = _evaluate(model, rotation_world_from_body=rotation, surface_height_world_m=0.2)
+        dry = _evaluate(model, rotation_world_from_body=rotation, surface_height_world_m=-0.2)
+        np.testing.assert_allclose(full.force_world_n, [0, 0, 100])
+        np.testing.assert_allclose(full.torque_world_nm, 0)
+        np.testing.assert_allclose(dry.force_world_n, 0)
+
+    def test_buoyancy_ellipsoid_rejects_a_drag_patch(self) -> None:
+        patch = _profile()["distributed_hydrodynamics"]["patches"][0]
+        patch["buoyancy_ellipsoid_half_axes_m"] = [0.2, 0.1, 0.1]
+        with self.assertRaisesRegex(ValueError, "volume-only patch"):
+            DistributedHullHydrodynamics.from_profile(_profile(patches=[patch]))
+
     def test_missing_or_disabled_config_is_exact_zero_without_input_validation(self) -> None:
         for profile in ({}, {"distributed_hydrodynamics": {"active": False, "patches": "bad"}}):
             model = DistributedHullHydrodynamics.from_profile(profile)

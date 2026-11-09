@@ -7,17 +7,19 @@ def schedule_mavros_ros_jobs(self, jobs, add_rate_limited, sim_t: float, *, buil
     strict_sensor_transport = bool(
         getattr(self, "_strict_sitl_sensor_transport", False)
     )
-    if not self._mavros_surface_enabled and not strict_sensor_transport:
+    external_nav = bool(getattr(self, "_sensor_external_nav_enabled", False))
+    if not self._mavros_surface_enabled and not strict_sensor_transport and not external_nav:
         return
     if self._mavros_surface_enabled:
         _schedule_mavros_status_jobs(self, jobs, sim_t, builders=builders)
-    _schedule_mavros_sensor_jobs(
-        self,
-        jobs,
-        add_rate_limited,
-        builders=builders,
-        sensor_only=strict_sensor_transport and not self._mavros_surface_enabled,
-    )
+    if self._mavros_surface_enabled or strict_sensor_transport:
+        _schedule_mavros_sensor_jobs(
+            self, jobs, add_rate_limited, builders=builders,
+            sensor_only=strict_sensor_transport and not self._mavros_surface_enabled,
+        )
+    if self._mavros_surface_enabled or external_nav:
+        for message in builders["mavros_vision_pose_batch"]():
+            jobs.add(self.pub_mavros_vision_pose, "/mavros/vision_pose/pose", message)
     if self._mavros_surface_enabled:
         _schedule_mavros_local_position_jobs(
             self,
@@ -118,12 +120,6 @@ def _schedule_mavros_local_position_jobs(self, add_rate_limited, *, builders: di
         "/mavros/local_position/velocity_body_cov",
         builders["mavros_local_vel_body_cov"],
         self._ros_rate_mavros_local_position_hz,
-    )
-    add_rate_limited(
-        self.pub_mavros_vision_pose,
-        "/mavros/vision_pose/pose",
-        builders["mavros_vision_pose"],
-        self._ros_rate_dvl_position_hz,
     )
 
 

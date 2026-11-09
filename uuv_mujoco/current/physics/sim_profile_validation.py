@@ -20,6 +20,7 @@ SIM_PROFILE_PARAM_LIMITS: dict[str, tuple[float, float]] = {
     "cob_torque_scale": (0.0, 5.0),
     "cob_z_offset": (-0.25, 0.25),
     "cob_x_offset": (-0.20, 0.20),
+    "cob_y_offset": (-0.20, 0.20),
     "buoyancy_point_blend": (0.0, 1.0),
     "thruster_force_max": (1.0, 100.0),
     "mujoco_fluidcoef_scale": (0.0, 20.0),
@@ -27,6 +28,7 @@ SIM_PROFILE_PARAM_LIMITS: dict[str, tuple[float, float]] = {
     "water_current_world": (-3.0, 3.0),
     "body_inertia_scale_xyz": (0.10, 5.0),
     "yaw_torque_scale": (0.0, 5.0),
+    "yaw_damping_asymmetry": (-0.8, 0.8),
 }
 
 SIM_PROFILE_VECTOR_LENGTHS: dict[str, int] = {

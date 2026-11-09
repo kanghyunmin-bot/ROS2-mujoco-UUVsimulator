@@ -14,7 +14,8 @@ def defaults():
             'search_yaw_rad': .1, 'policy_groups': {}, 'reward_version': 'legacy',
             'evaluation_repeats': 1, 'ppo_learning_rate': .0003,
             'ppo_clip': .2, 'ppo_kl_limit': .01, 'ppo_drift_limit': .005,
-            'ppo_gamma': .99, 'ppo_lambda': .95, 'ppo_entropy': 0.0}
+            'ppo_gamma': .99, 'ppo_lambda': .95, 'ppo_entropy': 0.0,
+            'spawn_region': None}
 
 
 def validate(data, models):
@@ -58,14 +59,28 @@ def validate(data, models):
             if not isinstance(group['checkpoint'], str) or not Path(group['checkpoint']).is_file():
                 raise ValueError('시작 체크포인트를 찾을 수 없습니다.')
             total += group['environments']
-        if not data['resume_candidate'] or data['reward_version'] != 'precision_v3':
-            raise ValueError('정책 그룹은 precision_v3와 명시적 시작 정책을 사용합니다.')
+        if not data['resume_candidate'] or data['reward_version'] not in ('precision_v3', 'precision_v4'):
+            raise ValueError('정책 그룹은 정밀 보상과 명시적 시작 정책을 사용합니다.')
     if total > 6:
         raise ValueError('전체 환경 수는 최대 6개입니다.')
-    if data['reward_version'] not in ('legacy', 'precision_v3'):
+    if data['reward_version'] not in ('legacy', 'precision_v3', 'precision_v4'):
         raise ValueError('지원하지 않는 보상 버전입니다.')
-    if data['reward_version'] == 'precision_v3' and not groups:
+    if data['reward_version'] in ('precision_v3', 'precision_v4') and not groups:
         raise ValueError('정밀 보상은 명시적 정책 그룹이 필요합니다.')
+    region = data['spawn_region']
+    if data['reward_version'] == 'precision_v4':
+        if not isinstance(region, dict) or set(region) != {'x_m', 'y_m', 'seed'}:
+            raise ValueError('v4는 중앙 스폰 영역과 랜덤 시드가 필요합니다.')
+        if type(region['seed']) is not int or not 0 <= region['seed'] <= 2**53-1000000:
+            raise ValueError('스폰 시드는 음수가 아닌 안전한 정수여야 합니다.')
+        for key, low, high in [('x_m', -2., 2.), ('y_m', -1.5, 1.5)]:
+            bounds = region[key]
+            if (not isinstance(bounds, list) or len(bounds) != 2
+                    or any(type(v) not in (int, float) or not math.isfinite(v) for v in bounds)
+                    or not low <= bounds[0] < bounds[1] <= high):
+                raise ValueError('중앙 스폰 범위 오류: '+key)
+    elif region is not None:
+        raise ValueError('랜덤 스폰은 precision_v4에서만 사용합니다.')
     if type(data['evaluation_repeats']) is not int or not 1 <= data['evaluation_repeats'] <= 5:
         raise ValueError('평가 반복 수는 1~5입니다.')
     for key, low, high in [('ppo_learning_rate', 1e-6, .001), ('ppo_clip', .05, .3),

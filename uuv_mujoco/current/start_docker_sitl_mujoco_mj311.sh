@@ -77,6 +77,40 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+
+# Resolve the model before either the flight controller or the plant starts.
+# Keep the command-line value in MUJOCO_EXTRA_ARGS for the plant.
+selected_vehicle="${UUV_VEHICLE:-}"
+vehicle_arg_present=0
+for ((i = 0; i < ${#MUJOCO_EXTRA_ARGS[@]}; i++)); do
+  arg="${MUJOCO_EXTRA_ARGS[$i]}"
+  case "$arg" in
+    --vehicle)
+      if (( i + 1 >= ${#MUJOCO_EXTRA_ARGS[@]} )); then
+        echo "[start] --vehicle requires a value" >&2
+        exit 2
+      fi
+      arg="${MUJOCO_EXTRA_ARGS[$((i + 1))]}"
+      ;;
+    --vehicle=*) arg="${arg#--vehicle=}" ;;
+    *) continue ;;
+  esac
+  vehicle_arg_present=1
+  if [[ -n "$selected_vehicle" && "$selected_vehicle" != "$arg" ]]; then
+    echo "[start] conflicting vehicle selections" >&2
+    exit 2
+  fi
+  selected_vehicle="$arg"
+done
+export UUV_VEHICLE="${selected_vehicle:-ut27}"
+case "$UUV_VEHICLE" in
+  ut27|bluerov2_standard) ;;
+  *) echo "[start] invalid UUV_VEHICLE=$UUV_VEHICLE" >&2; exit 2 ;;
+esac
+if [[ "$UUV_VEHICLE" == "bluerov2_standard" && "$vehicle_arg_present" == "0" ]]; then
+  MUJOCO_EXTRA_ARGS+=(--vehicle "$UUV_VEHICLE")
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_DIR="${WORKSPACE_DIR:-$(cd "${SCRIPT_DIR}/../.." && pwd)}"
 ACTIVE_RUNTIME_DIR="${UUV_MUJOCO_RUNTIME_DIR:-${WORKSPACE_DIR}/uuv_mujoco/current}"
@@ -312,6 +346,7 @@ cat >"$COMPOSE_OVERRIDE_FILE" <<EOF
 services:
   ardusub-sitl:
     environment:
+      UUV_VEHICLE: "${UUV_VEHICLE}"
       SITL_DIRECT_MAVLINK: "${SITL_DIRECT_MAVLINK}"
       SITL_FORCE_NO_DISPLAY: "${SITL_FORCE_NO_DISPLAY}"
       SITL_NO_REBUILD: "${SITL_NO_REBUILD}"

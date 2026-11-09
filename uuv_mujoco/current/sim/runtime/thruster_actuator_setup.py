@@ -42,6 +42,7 @@ def build_thruster_actuator_kwargs(
         mujoco_module=mujoco_module,
         names=thruster_names,
     )
+    propeller_maps.spin_sign.update(perf_cfg.get("propeller_spin_signs", {}))
     return {
         "model": model,
         "data": data,

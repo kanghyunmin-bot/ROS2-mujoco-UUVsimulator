@@ -44,6 +44,7 @@ def snapshot(owner: Any) -> TelemetrySnapshot:
     snap.state_age_s = now - owner._last_wall.get("state", math.inf)
     snap.imu_age_s = now - owner._last_wall.get("imu", math.inf)
     snap.pose_age_s = now - owner._last_wall.get("pose", math.inf)
+    snap.velocity_age_s = now - owner._last_wall.get("velocity", math.inf)
     # depth_m may legitimately be sourced from a pose/odometry fallback when
     # the strict real-package-compatible stack does not publish the optional
     # Float32 /depth helper topic.  In that case freshness belongs to the pose

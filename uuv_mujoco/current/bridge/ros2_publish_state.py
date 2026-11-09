@@ -6,7 +6,7 @@ from dataclasses import dataclass, replace
 
 import numpy as np
 
-from .ros2_dvl_sensor_runtime import advance_dvl_sensor_runtime
+from .ros2_dvl_sensor_runtime import DvlPositionDelivery, advance_dvl_sensor_runtime
 from .ros2_dvl_beam_geometry import dvl_beam_geometry_if_capture_due
 from .ros2_dvl_device_emulator_runtime import (
     forward_dvl_position_to_device_emulator,
@@ -44,6 +44,7 @@ class RosPublishState:
     rot_world_body: np.ndarray
     dvl_sensor_delivery: object | None = None
     dvl_position_delivery: object | None = None
+    dvl_position_deliveries: tuple[DvlPositionDelivery, ...] = ()
     imu_sensor_delivery: object | None = None
     bar30_sensor_delivery: object | None = None
     imu_sensor_deliveries: tuple[object, ...] = ()
@@ -172,6 +173,7 @@ def prepare_ros_publish_state(self, data, snapshot: Ros2SensorSnapshot) -> RosPu
         dvl_position_delivery=(
             position_deliveries[-1] if position_deliveries else None
         ),
+        dvl_position_deliveries=tuple(position_deliveries),
     )
 
 

@@ -2,12 +2,7 @@
 
 from __future__ import annotations
 
-from physics.thruster_mapping import (
-    ARDUSUB_VECTORED_6DOF_SERVO_MAP,
-    ARDUSUB_VECTORED_6DOF_SERVO_SIGNS,
-    PHYSICAL_VERTICAL_THRUSTERS,
-    PHYSICAL_YAW_THRUSTERS,
-)
+from physics.thruster_mapping import vehicle_thruster_mapping
 from sim.runtime.physics_runtime_setup import create_runtime_physics_setup
 
 
@@ -28,6 +23,9 @@ def create_runner_runtime_physics(
     to_float_array,
     log,
 ):
+    horizontal, vertical, servo_map, servo_signs = vehicle_thruster_mapping(
+        getattr(args, "vehicle", "ut27"), pwm_layout=getattr(args, "pwm_layout", "standard"),
+    )
     return create_runtime_physics_setup(
         args=args,
         mujoco_module=mujoco_module,
@@ -52,10 +50,10 @@ def create_runner_runtime_physics(
         all_thruster_names=model_io.all_thruster_names,
         horizontal_order=model_io.horizontal_order,
         vertical_names=model_io.vertical_names,
-        vertical_thrusters=PHYSICAL_VERTICAL_THRUSTERS,
-        horizontal_thrusters=PHYSICAL_YAW_THRUSTERS,
-        servo_map=list(ARDUSUB_VECTORED_6DOF_SERVO_MAP),
-        servo_signs=list(ARDUSUB_VECTORED_6DOF_SERVO_SIGNS),
+        vertical_thrusters=vertical,
+        horizontal_thrusters=horizontal,
+        servo_map=list(servo_map),
+        servo_signs=list(servo_signs),
         plant_replay_direct_rcout=plant_replay_direct_rcout,
         ros_bridge_runtime=control_setup.ros_bridge_runtime,
         initial_depth_hold=initial_setup.initial_depth_hold,

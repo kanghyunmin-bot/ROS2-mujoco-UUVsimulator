@@ -18,7 +18,7 @@ def apply_viewer_args(args: list[str], events: list[str], base_env: Mapping[str,
     viewer_enabled = env_bool(base_env, "UUV_GUI_MUJOCO_VIEWER", default_viewer)
     if arg_present(args, "--headless"):
         events.append("sim viewer: headless MuJoCo runtime")
-    elif not viewer_enabled:
+    elif not viewer_enabled and not arg_present(args, "--virtualgl"):
         args.append("--headless")
         events.append("sim viewer: headless MuJoCo runtime")
     else:

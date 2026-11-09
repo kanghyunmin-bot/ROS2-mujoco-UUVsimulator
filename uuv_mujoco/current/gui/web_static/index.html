@@ -1,42 +1,52 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>UUV · Control Station</title>
-    <link rel="stylesheet" href="/style.css?v=20260914-industrial">
-  <link rel="stylesheet" href="/studio.css?v=20260914-industrial">
+    <title>UT27 · Research Studio</title>
+    <link rel="stylesheet" href="/style.css?v=20261103-workspace">
+  <link rel="stylesheet" href="/studio.css?v=20261103-workspace">
+    <link rel="stylesheet" href="/research.css?v=20261109-vehicle">
   </head>
-  <body>
+  <body class="research-ui">
     <header class="app-header">
       <div class="title-stack">
         <h1>UUV <span> / CONTROL STATION</span></h1>
-        <p>SIMULATION / TELEOPERATION / DEMONSTRATION</p>
+        <p id="workspaceVehicle" data-ko="UT27 · 수중 로봇 실험 워크스페이스">UT27 · Underwater Robotics Workspace</p>
       </div>
       <div class="header-right">
         <div class="header-pills">
           <span id="simStackPill" class="status-pill">sim: stopped</span>
           <span id="rosPkgPill" class="status-pill">mavros: stopped</span>
-          <span id="ping360Pill" class="status-pill">ping360: no status</span>
+          <span id="controlSummaryLeft" class="status-pill">control: idle</span>
         </div>
-        <div class="header-actions" aria-label="Quick actions">
-          <button id="quickPhysicsOpenBtn" type="button">Open Current Params</button>
-          <button id="quickCourseOpenBtn" type="button">맵 · 위치 편집</button>
+        <div class="header-actions" aria-label="Vehicle operation" data-ko-aria-label="운항 조작">
+          <label id="simVehicleOption" for="simVehicle">
+            <span data-ko="기체">Vehicle</span>
+            <select id="simVehicle" disabled>
+              <option value="" data-ko="불러오는 중…">Loading…</option>
+            </select>
+          </label>
+          <button id="settingsOpen" type="button" aria-label="Open settings" data-ko-aria-label="설정 열기" aria-haspopup="dialog"><span data-ko="설정">Settings</span></button>
           <button id="quickCenterBtn" type="button">Center Sticks</button>
         </div>
       </div>
     </header>
 
-    <main class="app-grid">
+    <nav class="station-nav" aria-label="Workspace navigation" data-ko-aria-label="작업 선택">
+      <button type="button" aria-controls="station-operation" aria-pressed="true" data-ko="실시간 관찰">Live View</button>
+      <button type="button" aria-controls="station-data" aria-pressed="false" data-ut27-only data-ko="시연 · 정책">Demonstrations &amp; Policies</button>
+      <button type="button" aria-controls="station-setup" aria-pressed="false" data-ko="실험 조건">Experiment Setup</button>
+    </nav>
+    <main id="station-operation" class="app-grid">
       <section id="telemetryPanel" class="panel telemetry-column">
         <fieldset class="group">
-          <legend>Vehicle Summary</legend>
+          <legend data-ko="기체 상태">Vehicle Status</legend>
           <div class="summary-row">
             <strong id="vehicleSummary">vehicle: disconnected</strong>
             <button id="vehicleDetailsToggle" type="button">Details &gt;</button>
           </div>
           <p id="motionSummary">motion: n/a</p>
-          <p id="controlSummaryLeft">control: idle</p>
           <div id="vehicleDetails" class="details hidden">
             <p id="statusText">disconnected</p>
             <p id="modeText">mode: UNKNOWN</p>
@@ -53,22 +63,17 @@
 
         <div class="visual-grid">
           <fieldset class="group visual-group">
-            <legend>Attitude</legend>
+            <legend data-ko="기체 자세">Attitude</legend>
             <canvas id="attitudeCanvas" width="360" height="210"></canvas>
             <div id="attitudeText" class="canvas-caption">roll=0.0 pitch=0.0 yaw=0.0</div>
           </fieldset>
           <fieldset class="group visual-group">
-            <legend>Depth</legend>
+            <legend data-ko="수심">Depth</legend>
             <canvas id="depthCanvas" width="360" height="210"></canvas>
             <div id="depthText" class="canvas-caption">depth: n/a</div>
           </fieldset>
         </div>
 
-        <fieldset class="group">
-          <legend>RC Feedback</legend>
-          <div id="rcFeedbackSource" class="status-line">feedback: unavailable</div>
-          <div id="rcFeedbackBars" class="rc-feedback"></div>
-        </fieldset>
 
         <fieldset class="group events-group">
           <legend>Events</legend>
@@ -79,65 +84,44 @@
       <section class="right-column">
         <div class="right-grid">
           <section class="panel control-column">
-            <h2>Control</h2>
+            <h2 data-ko="기체 조종">Vehicle Control</h2>
 
-            <fieldset class="group compact-group">
-              <legend>Telemetry panel</legend>
-              <button id="telemetryToggle" type="button">Hide telemetry</button>
-            </fieldset>
 
             <fieldset class="group">
-              <legend>Simulation Stack</legend>
+              <legend data-ko="시뮬레이션 환경">Simulation Environment</legend>
               <label class="entry-row sim-preset-row">
-                <span>Environment / physics</span>
-                <select id="simLaunchPreset">
-                  <option value="research_pool_yaw_stable" selected>Research pool · yaw 안정화 · 수집용</option>
-                  <option value="research_pool_distributed">Research pool · 기존 물리 비교</option>
+                <span data-ko="환경 프로필">Environment Profile</span>
+                <select id="simLaunchPreset" disabled>
+                  <option value="research_pool_yaw_stable" selected data-ko="Research pool · yaw 안정화 · 수집용">Research pool · yaw-stable data collection</option>
+                  <option value="research_pool_distributed" data-ko="Research pool · 기존 물리 비교">Research pool · distributed physics</option>
                 </select>
               </label>
-              <label><input id="showAdvancedEnvironments" type="checkbox"> 고급·비교 환경 표시</label>
+              <label><input id="showAdvancedEnvironments" type="checkbox" data-ko="고급·비교 환경 표시"> Show advanced environments</label>
               <label class="entry-row">
-                <span>센서 오차</span>
+                <span data-ko="센서 오차">Sensor Error</span>
                 <select id="sensorErrorMode">
-                  <option value="existing">기존 센서 설정</option>
-                  <option value="mathematical">수학적 오차 · 가정값</option>
-                  <option value="bag0402">4월 bag · 압력 부분 보정 (2 Hz)</option>
+                  <option value="existing" data-ko="기존 센서 설정">Existing sensor settings</option>
+                  <option value="mathematical" data-ko="수학적 오차 · 가정값">Model-based error · assumed values</option>
+                  <option value="bag0402" data-ut27-only data-ko="4월 bag · 압력 부분 보정 (2 Hz)">April bag · partial pressure calibration (2 Hz)</option>
                 </select>
               </label>
-              <div id="sensorErrorModeStatus" class="status-line">기존 센서 설정 유지 · 변경은 다음 시작에 적용</div>
+              <div id="sensorErrorModeStatus" class="status-line" data-ko="기존 센서 설정 유지 · 변경은 다음 시작에 적용">Existing sensor settings · changes apply on next start</div>
               <div id="simLaunchPresetStatus" class="status-line">plant: Research pool · distributed physics</div>
               <div class="button-row">
-                <button id="stackStartBtn" type="button">Start SITL/MuJoCo</button>
-                <button id="stackResetBtn" type="button" class="danger">Stop/Reset</button>
-                <button id="ping360PanelBtn" type="button">Ping360 panel</button>
+                <button id="stackStartBtn" type="button" disabled data-ko="시뮬 시작">Start Simulation</button>
+                <label id="virtualglOption" class="virtualgl-option" title="Use vglrun for GPU rendering of the MuJoCo window and cameras." data-ko-title="vglrun으로 MuJoCo 기본 3D 창과 카메라를 GPU로 렌더링합니다.">
+                  <input id="virtualglViewer" type="checkbox"> <span data-ko="VirtualGL · GPU 뷰어">VirtualGL · GPU viewer</span>
+                </label>
+                <button id="stackStopBtn" type="button" class="danger" disabled data-ko="시뮬 정지">Stop Simulation</button>
+                <a id="simOtherGuiLink" class="header-action-link" target="_blank" rel="noopener" hidden></a>
+                <button id="stackResetBtn" type="button" data-ko="SITL 초기화">Reset SITL</button>
               </div>
               <div id="simStackStatus" class="status-line">sim: stopped</div>
             </fieldset>
 
-            <fieldset class="group">
-              <legend>ROS2 sim MAVROS / read-only rospkg</legend>
-              <div class="button-row">
-                <button id="ros2PanelToggle" type="button">ROS2 Panel</button>
-              </div>
-              <div id="ros2Panel" class="details hidden">
-                <strong>ROS2 MAVROS / RViz</strong>
-                <p id="rosPkgSource">rospkg read-only source: loading</p>
-                <label class="entry-row">
-                  <span>fcu_url</span>
-                  <input id="fcuUrlInput" type="text" value="udp://0.0.0.0:14551@">
-                </label>
-                <div class="button-row">
-                  <button id="rosBuildBtn" type="button">Build pkg (Ubuntu)</button>
-                  <button id="mavrosToggleBtn" type="button">MAVROS ON</button>
-                  <button id="rvizToggleBtn" type="button">RViz ON</button>
-                </div>
-                <div id="rosPkgStatus" class="status-line">mavros: stopped</div>
-                <div id="rvizStatus" class="status-line">rviz: stopped</div>
-              </div>
-            </fieldset>
 
             <fieldset class="group">
-              <legend>Arm</legend>
+              <legend data-ko="추진기 구동">Thruster Arming</legend>
               <div class="button-row">
                 <button id="armBtn" type="button" class="success">Arm</button>
                 <button id="disarmBtn" type="button" class="danger">Disarm</button>
@@ -146,38 +130,30 @@
             </fieldset>
 
             <fieldset class="group">
-              <legend>Modes</legend>
+              <legend data-ko="운항 모드">Flight Modes</legend>
               <div id="modeButtons" class="mode-grid"></div>
             </fieldset>
 
-            <fieldset class="group">
-              <legend>VLA 제어 전환</legend>
+            <fieldset class="group" data-ut27-only>
+              <legend data-ko="정책 제어권">Policy Control</legend>
               <div class="button-row">
-                <button id="vlaPrepareControlBtn" type="button">VLA 제어권 준비</button>
-                <button id="vlaRestoreManualBtn" type="button">수동 제어 복귀</button>
+                <button id="vlaPrepareControlBtn" type="button" data-ko="VLA 제어권 준비">Prepare VLA Control</button>
+                <button id="vlaRestoreManualBtn" type="button" data-ko="수동 제어 복귀">Restore Manual Control</button>
               </div>
-              <div id="vlaControlStatus" class="status-line">정책 실행·활성화는 별도 · 자동 Arm 없음</div>
+              <div id="vlaControlStatus" class="status-line" data-ko="정책 실행·활성화는 별도 · 자동 Arm 없음">Launch and enable the policy separately. Arming is manual.</div>
             </fieldset>
             <fieldset id="pilotControlGroup" class="group pilot-group">
-              <legend>Pilot Control</legend>
+              <legend data-ko="수동 조종">Manual Control</legend>
               <div class="summary-row">
                 <label class="check-row">
                   <input id="rcEnabled" type="checkbox">
-                  <span>Pilot input</span>
+                  <span data-ko="수동 입력 켜기">Enable manual input</span>
                 </label>
                 <span id="controlSummary">control: idle</span>
               </div>
-              <div class="gamepad-row">
-                <label class="check-row">
-                  <input id="gamepadEnabled" type="checkbox" checked>
-                  <span>Physical joystick</span>
-                </label>
-                <span id="gamepadStatus">Gamepad: checking browser</span>
-              </div>
-              <label class="entry-row"><span>조종기 선택</span><select id="gamepadDevice"><option value="">연결된 조종기 대기</option></select></label>
               <div class="button-row">
-                <button id="centerBtn" type="button">Center sticks</button>
-                <button id="releaseBtn" type="button">Release input</button>
+                <button id="centerBtn" type="button" data-ko="스틱 중립">Center Sticks</button>
+                <button id="releaseBtn" type="button" data-ko="조종 입력 해제">Release Input</button>
                 <button id="controlDetailsToggle" type="button">Details &gt;</button>
               </div>
               <div class="joystick-grid">
@@ -229,169 +205,77 @@
 
           <section class="panel tools-column">
             <div class="panel-heading">
-              <h2>Tools</h2>
-              <button id="toolsToggle" type="button">Hide tools</button>
+              <h2 data-ko="실험 도구">Experiment Tools</h2>
+              <button id="toolsToggle" type="button" data-ko="실험 도구 접기">Hide Experiment Tools</button>
             </div>
             <div id="toolsBody">
-              <div class="tool-subtitle">Replay / tuning / layout</div>
+
 
               <fieldset class="group">
-                <legend>RC Override Replay</legend>
+                <legend data-ko="조종 명령 로그 재생">RC Log Replay</legend>
                 <div id="rcReplayStatus" class="status-line">replay: unloaded</div>
                 <div class="path-row">
-                  <input id="rcReplayPath" type="text" value="">
-                  <button id="rcReplayBrowseBtn" type="button">Browse</button>
+                  <input id="rcReplayPath" type="text" aria-label="RC log path" data-ko-aria-label="RC 로그 경로" placeholder="Enter the RC log path" data-ko-placeholder="RC 로그 경로 입력">
                 </div>
                 <div class="timeline-row">
                   <input id="rcReplaySlider" type="range" min="0" max="1" step="0.1" value="0">
                   <span id="rcReplayTime">00:00.0 / 00:00.0</span>
                 </div>
                 <div class="button-row replay-row">
-                  <button id="rcReplayLoadBtn" type="button">Load</button>
-                  <button id="rcReplayPlayBtn" type="button">Play</button>
-                  <button id="rcReplayPauseBtn" type="button">Pause</button>
-                  <button id="rcReplayStopBtn" type="button" class="danger">Stop</button>
+                  <button id="rcReplayLoadBtn" type="button" data-ko="불러오기">Load</button>
+                  <button id="rcReplayPlayBtn" type="button" data-ko="재생">Play</button>
+                  <button id="rcReplayPauseBtn" type="button" data-ko="일시 정지">Pause</button>
+                  <button id="rcReplayStopBtn" type="button" class="danger" data-ko="중지">Stop</button>
                   <label class="rate-label">rate <input id="rcReplayRate" type="text" value="1.0"></label>
                 </div>
               </fieldset>
 
-              <fieldset class="group tuning-layout-group">
-                <legend>Tuning / Layout</legend>
+              <fieldset class="group tuning-layout-group" data-ut27-only>
+                <legend data-ko="물리 프로필과 실험 배치">Physics Profiles &amp; Layout</legend>
                 <div class="tool-action-row">
                   <div class="tool-action-main">
-                    <strong>Current-profile Param Tuning</strong>
+                    <strong data-ko="물리 프로필">Physics Profile</strong>
                     <div id="physicsStatus" class="status-line">physics params [current]: idle</div>
                     <div id="physicsPath" class="path-text">path: loading</div>
                   </div>
-                  <button id="physicsOpenBtn" type="button">Open Current Params</button>
+                  <button id="physicsOpenBtn" type="button" data-ko="물리 설정">Edit Physics</button>
                 </div>
                 <div class="tool-action-row">
                   <div class="tool-action-main">
-                    <strong>Course Layout</strong>
+                    <strong data-ko="실험 시작 배치">Initial Scene Layout</strong>
                     <div id="courseStatus" class="status-line">course layout: idle</div>
                     <div id="coursePath" class="path-text">path: loading</div>
                   </div>
-                  <button id="courseOpenBtn" type="button">맵 · 위치 편집</button>
+                  <button id="courseOpenBtn" type="button" data-ko="맵 · 위치 편집">Edit Scene Layout</button>
                 </div>
               </fieldset>
 
               <fieldset id="stereoCameraPanel" class="group stereo-camera-group">
-                <legend>01 / 전방 · 손 카메라</legend>
+                <legend data-ko="01 / 전방 · 손 카메라">01 / Front &amp; Hand Cameras</legend>
                 <div class="panel-heading stereo-camera-heading">
                   <div id="stereoCameraStatus" class="status-line">camera: waiting for ROS image</div>
                   <label class="check-row stereo-camera-toggle">
                     <input id="stereoCameraEnabled" type="checkbox" checked>
-                    <span>Preview feed</span>
+                    <span data-ko="영상 수신">Enable Camera Feed</span>
                   </label>
-                  <label class="check-row stereo-camera-toggle">
+                  <label class="check-row stereo-camera-toggle" data-ut27-only>
                     <input id="stereoCameraVisionEnabled" type="checkbox" checked>
-                    <span>Vision overlay</span>
+                    <span data-ko="인식 오버레이">Detection Overlay</span>
                   </label>
-                  <button id="stereoCameraZoomBtn" type="button">Expand</button>
+                  <button id="stereoCameraZoomBtn" type="button" data-ko="크게 보기">Expand View</button>
                 </div>
-                <div class="camera-config-row">
-                  <label class="entry-row camera-profile-row">
-                    <span>ROS 센서 출력</span>
-                    <select id="stereoCameraProfile">
-                      <option value="balanced">640x360 @ 4Hz</option>
-                      <option value="vla_lite" selected>VLA lite · 640x360 @ 15Hz</option>
-                      <option value="smooth540">960x540 @ 10Hz</option>
-                      <option value="hd720">1280x720 @ 5Hz</option>
-                      <option value="hd720_fast">1280x720 @ 10Hz</option>
-                      <option value="hd720_smooth">1280x720 @ 20Hz</option>
-                      <option value="hd720_realtime">1280x720 @ 30Hz</option>
-                    </select>
-                  </label>
-                  <button id="stereoCameraApplyBtn" type="button">적용 + 재시작</button>
-                  <button id="stereoCameraSaveBtn" type="button">다음 실행에 적용</button>
-                </div>
-                <label class="entry-row"><span>광학</span><select id="stereoCameraOptics"><option value="inherited">기존 환경 설정 유지</option><option value="pool_lite">수중 풀 · 경량 광학</option></select></label>
-                <div class="camera-config-row"><label class="entry-row"><span>미리보기 속도</span><select id="stereoCameraPreviewHz"><option value="0">일시 정지</option><option value="2">2 fps · 절약</option><option value="4" selected>4 fps · 기본</option><option value="10">10 fps · 부드럽게</option></select></label><span class="status-line">이 브라우저만 변경 · ROS 센서와 녹화 주기는 유지</span></div>
-                <div id="stereoCameraConfigStatus" class="status-line">센서 설정 확인 중…</div>
                 <div class="stereo-camera-grid">
                   <div id="stereoLeftView" class="stereo-view no-signal">
-                    <img id="stereoLeftImage" alt="정면 카메라">
-                    <span>정면 · RGB</span>
+                    <img id="stereoLeftImage" alt="Front camera" data-ko-alt="정면 카메라">
+                    <span data-ko="정면 · RGB">Front · RGB</span>
                   </div>
-                  <div id="stereoRightView" class="stereo-view no-signal">
-                    <img id="stereoRightImage" alt="손 카메라">
-                    <span>손 · IMX219 camera1</span>
+                  <div id="stereoRightView" class="stereo-view no-signal" data-ut27-only>
+                    <img id="stereoRightImage" alt="Hand camera" data-ko-alt="손 카메라">
+                    <span data-ko="손 · IMX219 camera1">Hand · IMX219 camera1</span>
                   </div>
                 </div>
               </fieldset>
 
-              <fieldset id="pingerHomingPanel" class="group mission-fsm-group">
-                <legend>Pinger Homing</legend>
-                <div class="mission-status-row">
-                  <div>
-                    <strong>Hydrophone pinger approach</strong>
-                    <div id="pingerHomingStatus" class="status-line">pinger homing: stopped</div>
-                  </div>
-                  <label class="check-row">
-                    <input id="pingerHomingAutoArm" type="checkbox" checked>
-                    <span>Auto arm</span>
-                  </label>
-                </div>
-                <div class="mission-grid">
-                  <label class="entry-row">
-                    <span>Homing signal</span>
-                    <select id="pingerHomingAlgorithm">
-                      <option value="phase" selected>Phase / odometry (real parity)</option>
-                    </select>
-                  </label>
-                  <div id="pingerHomingNavigationStatus" class="status-line">
-                    PHASE_REAL_PARITY · 10 s FFT · /odometry/filtered · ALT_HOLD
-                  </div>
-                  <label class="entry-row">
-                    <span>Transport</span>
-                    <select id="pingerHomingTransport">
-                      <option value="rc_override" selected>RC override</option>
-                    </select>
-                  </label>
-                  <label class="entry-row">
-                    <span>Rate</span>
-                    <input id="pingerHomingRateHz" type="number" min="1" max="120" step="1" value="30">
-                  </label>
-                  <label class="entry-row">
-                    <span>Forward</span>
-                    <input id="pingerHomingForwardFast" type="number" min="0" max="1" step="0.01" value="0.48">
-                  </label>
-                  <label class="entry-row">
-                    <span>Probe PWM ±</span>
-                    <input id="pingerHomingProbePwmDelta" type="number" min="1" max="250" step="1" value="20">
-                  </label>
-                  <label class="entry-row">
-                    <span>Approach PWM ±</span>
-                    <input id="pingerHomingApproachPwmDelta" type="number" min="1" max="250" step="1" value="25">
-                  </label>
-                  <label class="entry-row">
-                    <span>Yaw gain</span>
-                    <input id="pingerHomingYawGain" type="number" min="0.1" max="2" step="0.05" value="0.85">
-                  </label>
-                  <label class="entry-row">
-                    <span>Tank max depth</span>
-                    <input id="pingerHomingTankMaxDepth" type="number" min="0.5" max="30" step="0.01" value="11.00">
-                  </label>
-                  <label class="entry-row">
-                    <span>Success range</span>
-                    <input id="pingerHomingSuccessRange" type="number" min="0" max="10" step="0.05" value="0.00">
-                  </label>
-                  <label class="entry-row">
-                    <span>Success hold</span>
-                    <input id="pingerHomingSuccessHold" type="number" min="0.1" max="10" step="0.1" value="0.8">
-                  </label>
-                  <label class="entry-row">
-                    <span>Mode</span>
-                    <select id="pingerHomingMode" disabled>
-                      <option value="ALT_HOLD" selected>ALT_HOLD</option>
-                    </select>
-                  </label>
-                </div>
-                <div class="button-row">
-                  <button id="pingerHomingStartBtn" type="button" class="success">Start pinger</button>
-                  <button id="pingerHomingStopBtn" type="button" class="danger">Stop pinger</button>
-                </div>
-              </fieldset>
             </div>
           </section>
         </div>
@@ -451,7 +335,7 @@
           <div id="physicsRows"></div>
         </div>
         <div class="button-row dialog-actions">
-          <button id="physicsReloadBtn" type="button">Reload</button>
+          <button id="physicsReloadBtn" type="button" data-ko="다시 불러오기">Reload</button>
           <button id="physicsApplyBtn" type="button" class="success">Apply to File</button>
           <button id="physicsApplyRestartBtn" type="button" class="danger">Apply + Reset Sim</button>
           <button id="physicsRawBtn" type="button">Raw JSON</button>
@@ -462,7 +346,7 @@
     <div id="courseDialog" class="dialog hidden" role="dialog" aria-modal="true" aria-labelledby="courseDialogTitle">
       <div class="dialog-card course-dialog">
         <div class="panel-heading">
-          <h2 id="courseDialogTitle">수영장 · 로봇 · 부표 위치</h2>
+          <h2 id="courseDialogTitle" data-ko="수영장 · 로봇 · 부표 위치">Pool, Vehicle &amp; Buoy Layout</h2>
           <button id="courseCloseBtn" type="button">Close</button>
         </div>
         <fieldset class="group">
@@ -471,9 +355,9 @@
             <label>
               <span>Mode</span>
               <select id="courseModeSelect">
-                <option value="research_pool">리서치 풀 · 10 × 5 × 5 m</option>
+                <option value="research_pool" data-ko="리서치 풀 · 10 × 5 × 5 m">Research pool · 10 × 5 × 5 m</option>
                 <option value="test_tank">Test tank</option>
-                <option value="competition">Competition course</option>
+                <option id="competitionCourseOption" value="competition" hidden disabled data-ko="대회 코스">Competition course</option>
               </select>
             </label>
             <strong id="courseTankDimensions">5.49 x 2.74 x 1.32 m</strong>
@@ -481,7 +365,7 @@
           <div id="courseDialogPath" class="status-line">path: n/a</div>
           <div id="courseDialogStatus" class="status-line">course layout: idle</div>
         </fieldset>
-        <p class="muted">평면도에서 로봇·부표를 드래그하거나 X·Y와 수심을 입력하세요. 수심은 수면에서 아래쪽으로 잰 거리입니다. 저장 후 재시작하면 반영됩니다.</p>
+        <p class="muted" data-ko="평면도에서 로봇·부표를 드래그하거나 X·Y와 수심을 입력하세요. 수심은 수면에서 아래쪽으로 잰 거리입니다. 저장 후 재시작하면 반영됩니다.">Drag the vehicle or buoy on the map, or enter X, Y and depth. Depth is measured down from the surface. Save and restart to apply.</p>
         <div class="course-editor">
           <canvas id="courseCanvas" width="700" height="600"></canvas>
           <aside class="course-side">
@@ -500,19 +384,19 @@
               </table>
             </div>
             <fieldset class="group selected-xy">
-              <legend>선택한 물체 위치 (m)</legend>
+              <legend data-ko="선택한 물체 위치 (m)">Selected Object Position (m)</legend>
               <label><span>X</span><input id="courseXInput" type="number" step="0.001"></label>
               <label><span>Y</span><input id="courseYInput" type="number" step="0.001"></label>
-              <label><span id="courseZLabel">수심</span><input id="courseZInput" type="number" step="0.05" min="0.4" readonly></label>
+              <label><span id="courseZLabel" data-ko="수심">Depth</span><input id="courseZInput" type="number" step="0.05" min="0.4" readonly></label>
               <label><span>Height</span><input id="courseLayerInput" type="text" readonly></label>
-              <button id="courseUpdateSelectedBtn" type="button">위치 반영</button>
+              <button id="courseUpdateSelectedBtn" type="button" data-ko="편집 위치 반영">Apply Position</button>
             </fieldset>
           </aside>
         </div>
         <div class="button-row dialog-actions">
-          <button id="courseReloadBtn" type="button">Reload</button>
-          <button id="courseSaveBtn" type="button" class="success">배치 저장</button>
-          <button id="courseSaveResetBtn" type="button" class="danger">저장 후 시뮬레이션 재시작</button>
+          <button id="courseReloadBtn" type="button" data-ko="다시 불러오기">Reload</button>
+          <button id="courseSaveBtn" type="button" class="success" data-ko="배치 저장">Save Layout</button>
+          <button id="courseSaveResetBtn" type="button" class="danger" data-ko="저장 후 시뮬레이션 재시작">Save and Restart Simulation</button>
           <button id="courseRawBtn" type="button">Raw XML</button>
         </div>
       </div>
@@ -537,14 +421,199 @@
       </div>
     </div>
 
-  <details id="vlaModelPanel" style="position:fixed;right:18px;bottom:18px;z-index:1200;background:#172738;color:#e5edf6;border:1px solid #456078;border-radius:10px;box-shadow:0 8px 28px #0008">
-    <summary style="padding:12px 18px;cursor:pointer;font-weight:700">VLA 모델 선택 · 실행</summary>
-    <iframe title="VLA 모델 실행 패널" src="http://127.0.0.1:8882/" style="width:min(440px,90vw);height:min(660px,78vh);border:0"></iframe>
-  </details>
-  <script src="/windows.js?v=20260914-industrial"></script>
-  <script src="/recorder.js?v=20260914-industrial"></script>
-  <script src="/studio.js?v=20260914-industrial"></script>
-  <script src="/sensors.js?v=20260914-industrial"></script>
-  <script src="/app.js?v=20260914-industrial"></script>
+  <section id="station-data" class="station-page" aria-labelledby="data-heading" hidden>
+    <h2 id="data-heading" data-ko="시연 수집과 정책 실험">Demonstration Collection &amp; Policy Experiments</h2>
+    <p data-ko="전방·손 카메라로 시연을 녹화한 뒤 성공 또는 실패를 기록합니다.">Record demonstrations from the front and hand cameras, then mark success or failure.</p>
+    <div id="collectionActions" class="group"><h3 data-ko="시연 수집">Demonstration Collection</h3></div>
+    <div class="group"><h3 data-ko="정책 실행과 학습">Policy Inference &amp; Training</h3>
+      <details id="vlaModelPanel"><summary data-ko="기존 시뮬레이션 모델 선택 · 실행">Choose and Run a Simulation Policy</summary>
+        <iframe title="Simulation VLA model panel" data-ko-title="시뮬레이션 VLA 모델 실행 패널" loading="lazy" src="http://127.0.0.1:8882/"></iframe>
+      </details>
+      <p><span data-ko="실물용 19상태 추론 명령">Real-vehicle 19-state inference command</span> <code>./docker/ubuntu-dev/dev.sh vla-real</code></p>
+      <a href="http://127.0.0.1:8882/rl" target="_blank" rel="noopener" data-ko="잔차 PPO 학습 화면 열기 ↗">Open Residual PPO Training ↗</a>
+    </div>
+  </section>
+  <section id="station-setup" class="station-page" aria-labelledby="setup-heading" hidden>
+    <h2 id="setup-heading" data-ko="실험 조건과 로그 재생">Experiment Setup &amp; Replay</h2>
+    <fieldset class="group"><legend data-ko="실험 카메라 · ROS 출력과 광학">Experiment Cameras · ROS Output &amp; Optics</legend>
+      <div class="camera-config-row">
+        <label class="entry-row camera-profile-row">
+          <span data-ko="ROS 센서 출력">ROS sensor output</span>
+          <select id="stereoCameraProfile">
+            <option value="balanced">640x360 @ 4Hz</option>
+            <option value="vla_lite" selected>VLA lite · 640x360 @ 15Hz</option>
+            <option value="smooth540">960x540 @ 10Hz</option>
+            <option value="hd720">1280x720 @ 5Hz</option>
+            <option value="hd720_fast">1280x720 @ 10Hz</option>
+            <option value="hd720_smooth">1280x720 @ 20Hz</option>
+            <option value="hd720_realtime">1280x720 @ 30Hz</option>
+          </select>
+        </label>
+        <button id="stereoCameraApplyBtn" type="button" data-ko="적용 + 재시작">Apply and Restart</button>
+        <button id="stereoCameraSaveBtn" type="button" data-ko="다음 실행에 적용">Apply on Next Start</button>
+      </div>
+      <label class="entry-row"><span data-ko="광학">Optics</span><select id="stereoCameraOptics"><option value="inherited" data-ko="기존 환경 설정 유지">Use environment defaults</option><option value="pool_lite_live" data-ko="수중 풀 · 경량 광학 (실시간 조종)">Underwater pool · lightweight optics (live control)</option><option value="pool_lite" data-ko="수중 풀 · 경량 광학 (재현 실험)">Underwater pool · lightweight optics (replay)</option></select></label>
+      <div id="stereoCameraConfigStatus" class="status-line" data-ko="센서 설정 확인 중…">Checking sensor settings…</div>
+    </fieldset>
+  </section>
+  <div id="settingsDialog" class="dialog hidden">
+    <div class="dialog-card station-settings">
+      <div class="summary-row"><h2 data-ko="⚙ 설정">Settings</h2><button type="button" id="settingsClose" data-ko="닫기 · Esc">Close · Esc</button></div>
+      <fieldset class="group">
+        <legend data-ko="일반">General</legend>
+        <label class="entry-row">
+          <span data-ko="언어">Language</span>
+          <select id="stationLanguage">
+            <option value="en">English</option>
+            <option value="ko">한국어</option>
+          </select>
+        </label>
+        <small data-ko="언어를 바꾸면 화면이 새로고침되며 수동 입력이 해제됩니다.">Changing the language reloads the page and releases manual input.</small>
+      </fieldset>
+      <fieldset class="group">
+        <legend data-ko="화면 · 성능">Display &amp; Performance</legend>
+        <label class="entry-row"><span data-ko="카메라 미리보기">Camera Preview</span>
+          <select id="stereoCameraPreviewHz">
+            <option value="auto" selected data-ko="자동 · 표시 부하에 맞춤">Auto · adapt to display load</option>
+            <option value="2" data-ko="절전 · 최대 2 fps">Power saving · up to 2 fps</option>
+            <option value="4" data-ko="최대 4 fps">Up to 4 fps</option>
+            <option value="10" data-ko="최대 10 fps">Up to 10 fps</option>
+            <option value="0" data-ko="일시 정지">Pause</option>
+          </select>
+        </label>
+        <p id="previewReport" class="status-line" data-ko="영상 입력 대기">Waiting for video</p>
+        <small data-ko="이 브라우저의 표시 속도입니다. 센서 출력은 ‘실험 조건’에서 설정합니다.">This controls the browser preview rate. Configure sensor output in Experiment Setup.</small>
+      </fieldset>
+      <details><summary data-ko="화면 패널 · 조종 장치">Display Panels &amp; Controllers</summary>
+        <fieldset class="group compact-group">
+          <legend>Telemetry panel</legend>
+          <button id="telemetryToggle" type="button">Hide telemetry</button>
+        </fieldset>
+        <div class="gamepad-row">
+          <label class="check-row">
+            <input id="gamepadEnabled" type="checkbox" checked>
+            <span>Physical joystick</span>
+          </label>
+          <span id="gamepadStatus">Gamepad: checking browser</span>
+        </div>
+        <label class="entry-row"><span data-ko="조종기 선택">Controller</span><select id="gamepadDevice"><option value="" data-ko="연결된 조종기 대기">Waiting for a controller</option></select></label>
+        <fieldset class="group">
+          <legend>RC Feedback</legend>
+          <div id="rcFeedbackSource" class="status-line">feedback: unavailable</div>
+          <div id="rcFeedbackBars" class="rc-feedback"></div>
+        </fieldset>
+      </details>
+      <details><summary data-ko="연결 · 장비 진단">Connectivity &amp; Diagnostics</summary>
+        <fieldset class="group">
+          <legend data-ko="ROS 2 연결 · MAVROS">ROS 2 Connection · MAVROS</legend>
+          <div class="button-row">
+            <button id="ros2PanelToggle" type="button">ROS2 Panel</button>
+          </div>
+          <div id="ros2Panel" class="details hidden">
+            <strong>ROS2 MAVROS / RViz</strong>
+            <p id="rosPkgSource">rospkg read-only source: loading</p>
+            <label class="entry-row">
+              <span>fcu_url</span>
+              <input id="fcuUrlInput" type="text" value="udp://0.0.0.0:14551@">
+            </label>
+            <div class="button-row">
+              <button id="rosBuildBtn" type="button">Build pkg (Ubuntu)</button>
+              <button id="mavrosToggleBtn" type="button">MAVROS ON</button>
+              <button id="rvizToggleBtn" type="button">RViz ON</button>
+            </div>
+            <div id="rosPkgStatus" class="status-line">mavros: stopped</div>
+            <div id="rvizStatus" class="status-line">rviz: stopped</div>
+          </div>
+        </fieldset>
+        <fieldset class="group" data-ut27-only><legend data-ko="Ping360 스캔 소나">Ping360 Scanning Sonar</legend>
+          <span id="ping360Pill" class="status-pill">ping360: no status</span>
+          <button id="ping360PanelBtn" type="button" data-ko="소나 설정 열기">Open Sonar Settings</button>
+        </fieldset>
+      </details>
+      <details id="legacyTools" data-ut27-only><summary data-ko="대회 레거시 · 선택 기능">Legacy Competition Tools</summary>
+        <label><input id="legacyCourseEnabled" type="checkbox" data-ko="맵 편집기에 대회 코스 표시"> Show competition course in the map editor</label>
+        <fieldset id="pingerHomingPanel" class="group mission-fsm-group">
+          <legend>Pinger Homing</legend>
+          <div class="mission-status-row">
+            <div>
+              <strong>Hydrophone pinger approach</strong>
+              <div id="pingerHomingStatus" class="status-line">pinger homing: stopped</div>
+            </div>
+            <label class="check-row">
+              <input id="pingerHomingAutoArm" type="checkbox" checked>
+              <span>Auto arm</span>
+            </label>
+          </div>
+          <div class="mission-grid">
+            <label class="entry-row">
+              <span>Homing signal</span>
+              <select id="pingerHomingAlgorithm">
+                <option value="phase" selected>Phase / odometry (real parity)</option>
+              </select>
+            </label>
+            <div id="pingerHomingNavigationStatus" class="status-line">
+              PHASE_REAL_PARITY · 10 s FFT · /odometry/filtered · ALT_HOLD
+            </div>
+            <label class="entry-row">
+              <span>Transport</span>
+              <select id="pingerHomingTransport">
+                <option value="rc_override" selected>RC override</option>
+              </select>
+            </label>
+            <label class="entry-row">
+              <span>Rate</span>
+              <input id="pingerHomingRateHz" type="number" min="1" max="120" step="1" value="30">
+            </label>
+            <label class="entry-row">
+              <span>Forward</span>
+              <input id="pingerHomingForwardFast" type="number" min="0" max="1" step="0.01" value="0.48">
+            </label>
+            <label class="entry-row">
+              <span>Probe PWM ±</span>
+              <input id="pingerHomingProbePwmDelta" type="number" min="1" max="250" step="1" value="20">
+            </label>
+            <label class="entry-row">
+              <span>Approach PWM ±</span>
+              <input id="pingerHomingApproachPwmDelta" type="number" min="1" max="250" step="1" value="25">
+            </label>
+            <label class="entry-row">
+              <span>Yaw gain</span>
+              <input id="pingerHomingYawGain" type="number" min="0.1" max="2" step="0.05" value="0.85">
+            </label>
+            <label class="entry-row">
+              <span>Tank max depth</span>
+              <input id="pingerHomingTankMaxDepth" type="number" min="0.5" max="30" step="0.01" value="11.00">
+            </label>
+            <label class="entry-row">
+              <span>Success range</span>
+              <input id="pingerHomingSuccessRange" type="number" min="0" max="10" step="0.05" value="0.00">
+            </label>
+            <label class="entry-row">
+              <span>Success hold</span>
+              <input id="pingerHomingSuccessHold" type="number" min="0.1" max="10" step="0.1" value="0.8">
+            </label>
+            <label class="entry-row">
+              <span>Mode</span>
+              <select id="pingerHomingMode" disabled>
+                <option value="ALT_HOLD" selected>ALT_HOLD</option>
+              </select>
+            </label>
+          </div>
+          <div class="button-row">
+            <button id="pingerHomingStartBtn" type="button" class="success">Start pinger</button>
+            <button id="pingerHomingStopBtn" type="button" class="danger">Stop pinger</button>
+          </div>
+        </fieldset>
+      </details>
+    </div>
+  </div>
+  <script src="/language.js?v=20261109-vehicle"></script>
+  <script src="/windows.js?v=20261109-vehicle"></script>
+  <script src="/recorder.js?v=20261109-vehicle"></script>
+  <script src="/studio.js?v=20261109-vehicle"></script>
+  <script src="/sensors.js?v=20261109-vehicle"></script>
+    <script src="/app.js?v=20261109-virtualgl"></script>
+  <script src="/help.js?v=20261109-vehicle"></script>
+  <script src="/workspace.js?v=20261109-vehicle"></script>
   </body>
 </html>

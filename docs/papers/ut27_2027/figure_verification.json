@@ -1,0 +1,64 @@
+{
+  "method": "Closed-loop RC override replay; receipt-time alignment, initial pose only, no fitted phase/time warp/scale. Real FCU position is an estimate, not external ground truth. Depth compares relative z and does not certify absolute depth.",
+  "source_files": {
+    "outputs/real2sim-application-20260915/primary_effective/replay.json": "fb1a63e9ece79c853b4491dce8fedbe64065dd7218d1bf5c78a969efeae63c74",
+    "outputs/real2sim-application-20260915/primary_effective/profiles.json": "f314145bf938c98c6718eee52a751688d21f2118a9ed35bd7edddca92688e9f1",
+    "outputs/real-bag-audit-20260911/numeric.npz": "690005e395930eaa086bb8c834867bd1d521935f0dbc3a552bf70b674411bd0b",
+    "outputs/real-bag-tuning-20260911/odometry.npz": "253cac75377b8b4aeb133d4495eb8eba7e1173c678e2abc0d0182b48ce81e45b",
+    "outputs/yaw-timing-audit-20260915/primary_round/replay.json": "28873bf45e5b0ca3e5884b4458d782562d58790c13dd99e5b5ec9c9dc8bbe050",
+    "outputs/yaw-timing-audit-20260915/primary_round/profiles.json": "f314145bf938c98c6718eee52a751688d21f2118a9ed35bd7edddca92688e9f1",
+    "outputs/real2sim-application-20260915/auxiliary_effective/replay.json": "5d0a086acb44350d85ffd7c32927c39c9396e8b3dedf78f1e25f451888ccb57e",
+    "outputs/real2sim-application-20260915/auxiliary_effective/profiles.json": "f314145bf938c98c6718eee52a751688d21f2118a9ed35bd7edddca92688e9f1",
+    "outputs/notion-crossbag-20260915/21-40-11/extracted/numeric.npz": "ed666b3c654fab9adece52230459ea372caa6aa758107267d55bd35f91cd7ad3",
+    "outputs/notion-crossbag-20260915/21-40-11/extracted/odometry.npz": "e4469a3f67dd4ee1e4f785c799da60ede5fe700e335bbe9d266340b7834bcfe9",
+    "outputs/yaw-timing-audit-20260915/auxiliary_round/replay.json": "4d37f6973351c84ed07cd99934b0266e2759f4c9eb0308e6a1419144d91720d2",
+    "outputs/yaw-timing-audit-20260915/auxiliary_round/profiles.json": "f314145bf938c98c6718eee52a751688d21f2118a9ed35bd7edddca92688e9f1"
+  },
+  "checks": [
+    {
+      "bag": "primary",
+      "case": "original_clock",
+      "xy_rmse_m": 0.5497201857316524,
+      "yaw_rmse_deg": 4.06890981834419,
+      "matches_recorded_summary": true,
+      "grid_points": 500,
+      "valid_xy_points": 500,
+      "valid_yaw_points": 500,
+      "unsupported_plot_points_masked": true
+    },
+    {
+      "bag": "primary",
+      "case": "rounded_clock",
+      "xy_rmse_m": 0.54998537406876,
+      "yaw_rmse_deg": 4.22909314859052,
+      "matches_recorded_summary": true,
+      "grid_points": 500,
+      "valid_xy_points": 500,
+      "valid_yaw_points": 500,
+      "unsupported_plot_points_masked": true
+    },
+    {
+      "bag": "auxiliary",
+      "case": "original_clock",
+      "xy_rmse_m": 1.6583301121251708,
+      "yaw_rmse_deg": 16.160577764687336,
+      "matches_recorded_summary": true,
+      "grid_points": 980,
+      "valid_xy_points": 980,
+      "valid_yaw_points": 980,
+      "unsupported_plot_points_masked": true
+    },
+    {
+      "bag": "auxiliary",
+      "case": "rounded_clock",
+      "xy_rmse_m": 0.6709635220654062,
+      "yaw_rmse_deg": 2.5063586558630107,
+      "matches_recorded_summary": true,
+      "grid_points": 980,
+      "valid_xy_points": 980,
+      "valid_yaw_points": 980,
+      "unsupported_plot_points_masked": true
+    }
+  ],
+  "new_simulation_runs": 0
+}

@@ -3,6 +3,7 @@
 # Usage:
 #   ./launch_uuv_sim.sh [--headless] [--sitl] [--images] [--no-ros2] [--ros2] [--ros2-real-pkg-compat] [--qgc-video] [--force-clean] [--scene <path>] [--profile <name>] [--tank-35x30x11] [--fluid-model <name>]
 #   ./launch_uuv_sim.sh --sitl
+#   ./launch_uuv_sim.sh --virtualgl
 #   ./launch_uuv_sim.sh --sitl --ros2 --ros2-real-pkg-compat
 # Note:
 #   ROS2 is enabled by default.
@@ -160,6 +161,7 @@ resolve_mjpython() {
 
 # Parse arguments
 HEADLESS=false
+VIRTUALGL=false
 IMAGES=""
 ROS2_REQUESTED=true
 REAL_PKG_COMPAT=false
@@ -231,6 +233,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --headless)
             HEADLESS=true
+            shift
+            ;;
+        --virtualgl)
+            VIRTUALGL=true
             shift
             ;;
         --images)
@@ -314,6 +320,22 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+VIEWER_PREFIX=()
+if [[ "$VIRTUALGL" == true ]]; then
+    if [[ "$HOST_OS" != Linux || "$HEADLESS" == true || -z "${DISPLAY:-}" ]]; then
+        echo "[launch] VirtualGL requires a Linux X11 display and a native viewer." >&2
+        exit 2
+    fi
+    vgl_root="${PROJECT_ROOT}/outputs/virtualgl"
+    vglrun="${vgl_root}/opt/VirtualGL/bin/vglrun"
+    if [[ ! -x "$vglrun" ]]; then
+        echo "[launch] Install VirtualGL with bash setup/install_virtualgl.sh." >&2
+        exit 2
+    fi
+    # The desktop X server may be outside the container's IPC namespace.
+    VIEWER_PREFIX=(env "VGL_USEXSHM=${VGL_USEXSHM:-0}" "$vglrun" -ld "${vgl_root}/usr/lib" -c proxy -d egl0)
+fi
 
 if [[ "$REAL_PKG_COMPAT" == "true" ]]; then
     case "$(printf '%s' "${UUV_REAL_PKG_CAMERA_ENABLE:-1}" | tr '[:upper:]' '[:lower:]')" in
@@ -813,6 +835,9 @@ elif [[ "$HOST_OS" == "Linux" && -n "${DISPLAY:-}" ]]; then
         unset PYOPENGL_PLATFORM
     fi
     echo "[launch] Native viewer and camera capture use GLFW (DISPLAY=${DISPLAY})."
+    if [[ "$VIRTUALGL" == true ]]; then
+        echo "[launch] VirtualGL redirects GLFW rendering to the EGL device (egl0)."
+    fi
 fi
 
 configure_mujoco_viewer_window_backend
@@ -1222,4 +1247,4 @@ if ((${#EXTRA_ARGS[@]})); then
     RUN_ARGS+=("${EXTRA_ARGS[@]}")
 fi
 
-"$PY_LAUNCHER" run_uuv_mujoco.py "${RUN_ARGS[@]}"
+"${VIEWER_PREFIX[@]}" "$PY_LAUNCHER" run_uuv_mujoco.py "${RUN_ARGS[@]}"

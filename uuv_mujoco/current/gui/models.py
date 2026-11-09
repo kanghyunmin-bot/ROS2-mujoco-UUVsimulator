@@ -35,6 +35,8 @@ class TelemetrySnapshot:
     position_xyz: tuple[float, float, float] = (math.nan, math.nan, math.nan)
     velocity_xyz: tuple[float, float, float] = (math.nan, math.nan, math.nan)
     velocity_source: str = "unavailable"
+    velocity_frame: str = ""
+    velocity_age_s: float = math.inf
 
     depth_m: float = math.nan
     depth_source: str = "unavailable"

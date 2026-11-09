@@ -13,7 +13,7 @@ from typing import Iterable
 import cv2
 import numpy as np
 
-from .contract import ACTION_NAMES, STATE_NAMES, validate_sample_times
+from .contract import ACTION_NAMES, STATE_NAMES, STATE_SLICES, validate_sample_times
 
 VIDEO_KEYS = ("observation.images.ego", "observation.images.buoy_release")
 
@@ -79,25 +79,17 @@ def _encode_video(frame_dir: Path, output_path: Path, fps: float) -> tuple[int, 
 
 
 def _modality() -> dict:
-    state_dimensions = (4, 3, 3, 3, 4, 1, 1, 4)
-    state_keys = (
-        "prev_command",
-        "dvl_velocity",
-        "angular_velocity",
-        "linear_acceleration",
-        "attitude",
-        "depth",
-        "altitude",
-        "validity",
-    )
-    start = 0
-    state = {}
-    for key, dimension in zip(state_keys, state_dimensions):
-        state[key] = {"start": start, "end": start + dimension}
-        start += dimension
     return {
-        "state": state,
-        "action": {"motion": {"start": 0, "end": 4}},
+        "state": {
+            key: {"start": start, "end": end, "original_key": "observation.state", "dtype": "float32"}
+            for key, (start, end) in STATE_SLICES.items()
+        },
+        "action": {
+            "motion": {
+                "start": 0, "end": len(ACTION_NAMES), "original_key": "action",
+                "dtype": "float32", "absolute": True,
+            }
+        },
         "video": {
             "ego": {"original_key": VIDEO_KEYS[0]},
             "buoy_release": {"original_key": VIDEO_KEYS[1]},

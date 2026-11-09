@@ -22,7 +22,9 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / 'outputs/vla-gui'
 OUT.mkdir(parents=True, exist_ok=True)
 PYTHON = '/home/khm/miniforge3/envs/gr00t/bin/python'
-PREFIX = 'source /opt/ros/humble/setup.bash; source /workspace/rospkg/install/setup.bash; export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp ROS_DOMAIN_ID=42; '
+# Inherit the selected simulator container's ROS domain and middleware.
+# Overriding these here can isolate policy nodes from the running GUI.
+PREFIX = 'source /opt/ros/humble/setup.bash; source /workspace/rospkg/install/setup.bash; '
 MODELS = {f'{w}-{s}': {'label': f'{label} · 추가 {s // 10000}만',
           'path': f'outputs/vla-sixhour-20260920/weight-{w}/model/checkpoint-{s}'}
           for w, label in [(1, '기본 1배'), (2, '중간 강조'), (3, '강한 강조')]
@@ -89,6 +91,10 @@ NEW_RUN = ROOT / 'outputs/training-135-emphasis110-20260921'
 NEW_MODEL_KEY = 'success-135-110-25000'
 PPO_MODEL_KEY = 'success-135-ppo15'
 PPO_CHECKPOINT = ROOT / 'outputs/rl-training/20260922-025444-1e76ee/success-135-110-25000/collection-00046.pt'
+PRECISION_MODEL_KEY = 'success-135-precision-59'
+PRECISION_CHECKPOINT = ROOT / 'outputs/rl-training/20260922-155955-6c1b18/release-best/collection-00059.pt'
+GENERAL_MODEL_KEY = 'success-135-general-35'
+GENERAL_CHECKPOINT = ROOT / 'outputs/rl-training/20260922-155955-6c1b18/precision-candidate/collection-00035.pt'
 
 def refresh_new_model():
     global DEFAULT_MODEL
@@ -118,12 +124,35 @@ def refresh_new_model():
         DEFAULT_MODEL = PPO_MODEL_KEY
     else:
         MODELS.pop(PPO_MODEL_KEY, None)
+    if ready and PRECISION_CHECKPOINT.is_file():
+        MODELS[PRECISION_MODEL_KEY] = {
+            'label': '정밀 접근 최고 관측 후보 · PPO v3 · 근접 점수 0.856',
+            'path': str(path.relative_to(ROOT)), 'task': DEFAULT_TASK, 'ready': True,
+            'residual_checkpoint': str(PRECISION_CHECKPOINT.relative_to(ROOT)),
+            'description': '이번 v3 실행의 평가 중 최고 삽입 근접 점수 0.856 (성공률이 아닙니다). '
+                           '해당 평가 일반 분리 3/4 · 포크 영역 0/4. PPO 12회 시점의 '
+                           'collection-00059 정책이며 정밀 삽입 성공은 미검증입니다.',
+        }
+    else:
+        MODELS.pop(PRECISION_MODEL_KEY, None)
+    if ready and GENERAL_CHECKPOINT.is_file():
+        MODELS[GENERAL_MODEL_KEY] = {
+            'label': '일반 분리 최고 평가 후보 · PPO v3 · 분리 4/4',
+            'path': str(path.relative_to(ROOT)), 'task': DEFAULT_TASK, 'ready': True,
+            'residual_checkpoint': str(GENERAL_CHECKPOINT.relative_to(ROOT)),
+            'description': '일반 분리 4/4 · 손 시야 0/4 · 포크 영역 0/4. '
+                           '손 시야 성적 하락으로 종합 승인 규칙에서는 미승인된 후보입니다. '
+                           'PPO 7회 시점의 collection-00035 정책이며 소수 평가 결과는 성능 보장이 아닙니다.',
+        }
+    else:
+        MODELS.pop(GENERAL_MODEL_KEY, None)
 
 refresh_new_model()
 
 def request(path, payload=None):
     data = None if payload is None else json.dumps(payload).encode()
-    req = Request('http://127.0.0.1:8878' + path, data=data,
+    base_url = os.environ.get('UUV_GUI_URL', 'http://127.0.0.1:8878').rstrip('/')
+    req = Request(base_url + path, data=data,
                   headers={'Content-Type': 'application/json'})
     try:
         with urlopen(req, timeout=5) as response:

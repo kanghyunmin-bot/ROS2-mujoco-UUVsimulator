@@ -77,7 +77,13 @@ def _reference_float_wrench(
     center_z = float(runtime._buoy_center_world(buoy)[2])
     if not runtime._touches_float_waterline(buoy, center_z):
         return wrench
-    velocity_z = float(runtime._body_linear_velocity(buoy.body_id)[2])
+    if buoy.free_dofadr >= 0:
+        qvel = runtime.data.qvel[buoy.free_dofadr : buoy.free_dofadr + 6]
+        angular = runtime.data.xmat[buoy.body_id].reshape(3, 3) @ qvel[3:]
+        offset = runtime.data.xipos[buoy.body_id] - runtime.data.xpos[buoy.body_id]
+        velocity_z = float((qvel[:3] + np.cross(angular, offset))[2])
+    else:
+        velocity_z = float(runtime._body_linear_velocity(buoy.body_id)[2])
     target_z = _reference_surface_target(runtime, buoy)
     neutral_upthrust_n = _reference_body_weight(runtime, buoy)
     reserve_buoyancy_n = runtime.buoyancy_n if buoy.detached else min(runtime.buoyancy_n, 0.98)
@@ -349,6 +355,28 @@ def _benchmark_full_apply(scene: Path, iterations: int) -> tuple[float, float]:
     )
 
 
+def _check_step_water_sampling() -> None:
+    """The two force calculations share samples only within the current apply call."""
+    runtime = _runtime(CURRENT_DIR / "scenes" / "research_pool_slam_scene.xml")
+    runtime.track_csv_path = None
+    surface_reads, current_reads = [], []
+
+    def surface(position, time_s):
+        surface_reads.append((tuple(position), time_s))
+        return 0.01 * time_s
+
+    def current(position, time_s):
+        current_reads.append((tuple(position), time_s))
+        return np.array([0.1 * time_s, 0.0, 0.0])
+
+    runtime.surface_height_sampler, runtime.water_velocity_sampler = surface, current
+    for t in (0.25, 0.5):
+        runtime.data.time = t
+        runtime.apply(runtime.model.opt.timestep)
+    assert [t for _, t in current_reads] == [0.25, 0.5], current_reads
+    assert surface_reads == current_reads, surface_reads
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -360,6 +388,7 @@ def main() -> int:
     parser.add_argument("--iterations", type=int, default=500)
     parser.add_argument("--full-steps", type=int, default=600)
     args = parser.parse_args()
+    _check_step_water_sampling()
     scene = args.scene.resolve()
     runtime = _runtime(scene)
     cases, max_abs = _check_randomized_parity(runtime, max(1, args.samples_per_buoy))

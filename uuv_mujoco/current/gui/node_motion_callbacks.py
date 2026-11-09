@@ -6,6 +6,7 @@ from .node_motion_depth_callbacks import (
     _on_atm_pressure,
     _on_bar30_pressure,
     _on_depth,
+    _on_depth_pose,
     _on_pressure_value,
     _on_static_pressure,
 )
@@ -20,6 +21,7 @@ from .node_motion_pose_callbacks import (
     _on_rovio_odom,
 )
 from .node_motion_velocity_callbacks import (
+    _on_dvl_twist,
     _on_dvl_velocity,
     _on_velocity,
     _on_velocity_body,
@@ -32,9 +34,11 @@ __all__ = [
     "_on_bar30_pressure",
     "_on_battery",
     "_on_depth",
+    "_on_depth_pose",
     "_on_dvl_odom",
     "_on_filtered_odom",
     "_on_dvl_velocity",
+    "_on_dvl_twist",
     "_on_ground_truth_pose",
     "_on_imu",
     "_on_local_odom",

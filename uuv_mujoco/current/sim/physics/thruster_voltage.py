@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 
 
-def measured_voltage_surface(payload: dict) -> dict:
+def measured_voltage_surface(payload: dict, *, include_rpm: bool = False) -> dict:
     curves = []
     for raw in payload["curves"]:
         if not isinstance(raw, dict):
@@ -45,19 +45,42 @@ def measured_voltage_surface(payload: dict) -> dict:
             raise ValueError("thruster curve must have zero neutral thrust")
         if np.any(force[pwm < 1500] > 1e-9) or np.any(force[pwm > 1500] < -1e-9):
             raise ValueError("thruster curve has inconsistent forward/reverse signs")
-        curves.append((voltage, pwm, force))
+        signed_rpm = None
+        if include_rpm:
+            rpm = np.asarray(raw.get("rpm"), dtype=float)
+            if rpm.shape != pwm.shape or not np.all(np.isfinite(rpm)) or np.any(rpm < 0.0):
+                raise ValueError("RPM response requires measured RPM magnitudes for every PWM sample")
+            signed_rpm = np.sign(pwm - 1500.0) * rpm[order]
+            if np.any((signed_rpm == 0.0) & (np.abs(force) > 1e-9)):
+                raise ValueError("measured thrust requires a nonzero rotor speed")
+            for direction in (-1, 1):
+                indices = np.flatnonzero(direction * signed_rpm > 0.0)[::direction]
+                if indices.size < 2:
+                    raise ValueError("RPM response requires measured forward and reverse curves")
+                # Remove small nonmonotonic speed fluctuations near saturation.
+                signed_rpm[indices] = direction * np.maximum.accumulate(
+                    direction * signed_rpm[indices]
+                )
+        curves.append((voltage, pwm, force, signed_rpm))
     curves.sort(key=lambda c: c[0])
     if not curves or any(a[0] == b[0] for a, b in pairwise(curves)):
         raise ValueError("expected unique measured T200 voltage curves")
     grid = np.unique(np.concatenate([c[1] for c in curves]))
-    return {
+    surface = {
         "voltage_grid": np.array([c[0] for c in curves]),
         "pwm": grid,
         "force_surface": np.array([np.interp(grid, c[1], c[2]) for c in curves]),
     }
+    if include_rpm:
+        surface["rpm_surface"] = np.array([np.interp(grid, c[1], c[3]) for c in curves])
+    return surface
 
 
 def force_curve_at_voltage(config: dict, voltage: float) -> np.ndarray:
+    return _curve_at_voltage(config, voltage, "force_surface")
+
+
+def _curve_at_voltage(config: dict, voltage: float, key: str) -> np.ndarray:
     grid = config["voltage_grid"]
     if not np.isfinite(voltage) or not grid[0] <= voltage <= grid[-1]:
         raise ValueError(
@@ -66,11 +89,27 @@ def force_curve_at_voltage(config: dict, voltage: float) -> np.ndarray:
     hi = min(int(np.searchsorted(grid, voltage)), len(grid) - 1)
     lo = max(0, hi - 1)
     if hi == lo:
-        return config["force_surface"][lo].copy()
+        return config[key][lo].copy()
     fraction = (voltage - grid[lo]) / (grid[hi] - grid[lo])
-    return (1 - fraction) * config["force_surface"][lo] + fraction * config[
-        "force_surface"
-    ][hi]
+    return (1 - fraction) * config[key][lo] + fraction * config[key][hi]
+
+
+def select_supply_voltage(config: dict, voltage: float) -> None:
+    """Select consistent measured thrust and optional rotor-speed curves at voltage [V]."""
+    force = force_curve_at_voltage(config, voltage)
+    if "rpm_surface" in config:
+        rpm = _curve_at_voltage(config, voltage, "rpm_surface")
+        reverse = np.flatnonzero(rpm < 0.0)
+        forward = np.flatnonzero(rpm > 0.0)
+        # Keep the outermost command at a saturated RPM and one neutral knot.
+        reverse = reverse[np.r_[True, np.diff(rpm[reverse]) > 0.0]]
+        forward = forward[np.r_[np.diff(rpm[forward]) > 0.0, True]]
+        config["rpm"] = rpm
+        config["rotor_rpm_knots"] = np.r_[rpm[reverse], 0.0, rpm[forward]]
+        config["rotor_pwm_knots"] = np.r_[config["pwm"][reverse], 1500.0, config["pwm"][forward]]
+        config["rotor_force_knots"] = np.r_[force[reverse], 0.0, force[forward]]
+    config["force"] = force
+    config["selected_voltage"] = voltage
 
 
 def load_voltage_trace(path: Path, config: dict, *, time_offset_s: float = 0.0) -> dict:
@@ -158,5 +197,4 @@ def update_supply_voltage(config: dict, sim_time: float) -> None:
         raise ValueError("simulation time is outside recorded ESC voltage coverage")
     voltage = float(np.interp(source_time, trace["time"], trace["voltage"]))
     if voltage != config["selected_voltage"]:
-        config["force"] = force_curve_at_voltage(config, voltage)
-        config["selected_voltage"] = voltage
+        select_supply_voltage(config, voltage)

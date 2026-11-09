@@ -3,10 +3,13 @@ from copy import deepcopy
 from queue import SimpleQueue, Empty
 import time
 
+from bridge.ros2_stereo_image import reset_stereo_camera_worker
+from bridge.ros2_imu_bar30_sensor_runtime import discard_imu_bar30_scene_samples
 from bridge.ros2_runtime_mavros_state_values import mavros_state_values
 from bridge.ros2_mavros_arm_mode_transport import send_mode_to_sitl
 
 from sim.runtime.underwater_relative_acceleration import reset_relative_acceleration_history
+from sim.runtime.demo_spawn import read_spawn, apply_spawn, record_spawn
 
 
 class DemoReset:
@@ -17,12 +20,13 @@ class DemoReset:
         self.qpos = step.data.qpos.copy()
         self.eq_active = step.data.eq_active.copy()
         self.model_arrays = {name: getattr(step.model, name).copy() for name in
-                             ('eq_data', 'geom_contype', 'geom_conaffinity', 'geom_rgba')}
+                             ('eq_data', 'geom_contype', 'geom_conaffinity', 'geom_rgba', 'body_pos')}
         self.buoy_runtime = bridge._course_buoy_runtime
         self.buoys = deepcopy(self.buoy_runtime.buoys)
         self.requests = SimpleQueue()
         self.pending = None
         self.until = None
+        self.randomized = False
 
     def install(self):
         from rclpy.callback_groups import ReentrantCallbackGroup
@@ -40,6 +44,12 @@ class DemoReset:
 
     def restore(self):
         step, data = self.step, self.step.data
+        placement = read_spawn(step.model, self.qpos, self.buoys)
+        reset_stereo_camera_worker(self.bridge)
+        reset_odometry = getattr(self.bridge, 'reset_odometry', None)
+        if callable(reset_odometry):
+            reset_odometry(scene_reset=True)
+        discard_imu_bar30_scene_samples(self.bridge)
         data.qpos[:] = self.qpos
         for name in ('qvel', 'qacc', 'qacc_warmstart', 'ctrl', 'act', 'xfrc_applied', 'qfrc_applied'):
             getattr(data, name)[:] = 0
@@ -50,6 +60,7 @@ class DemoReset:
         self.buoy_runtime._next_update_time_s = -1.0
         self.buoy_runtime._velocity_cache_active = False
         actuator = self.physics.thruster_actuator_runtime
+        getattr(actuator, 'rotor_rpm', {}).clear()
         for name in ('state', 'target', 'force_cmd', 'prop_phase'):
             values = getattr(actuator, name)
             for key in values:
@@ -63,7 +74,19 @@ class DemoReset:
         # Drop pre-reset delayed camera packets without resetting noise seeds.
         for camera in getattr(self.bridge, '_camera_sensor_runtimes', {}).values():
             camera.transport.discard_pending()
+        apply_spawn(step.model, data, placement)
+        if placement is not None or self.randomized:
+            pose = data.qpos.copy()
+            step.mujoco.mj_setConst(step.model, data)
+            data.qpos[:] = pose
+        self.randomized = placement is not None
         step.mujoco.mj_forward(step.model, data)
+        # The pose stays fixed throughout the settle interval. mj_forward computed
+        # free-body acceleration, but the IMU must report the specific force at rest.
+        data.qacc[:] = 0.0
+        step.mujoco.mj_rnePostConstraint(step.model, data)
+        step.mujoco.mj_sensorAcc(step.model, data)
+        record_spawn(placement)
 
     def tick(self, *, is_paused, publish_ros):
         """Consume requests and hold the restored pose while fresh sensors arrive."""

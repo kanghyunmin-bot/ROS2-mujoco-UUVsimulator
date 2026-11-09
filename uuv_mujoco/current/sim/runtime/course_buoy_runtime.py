@@ -60,6 +60,7 @@ class CourseBuoy:
     release_hand_contact: bool = False
     release_right_fork_stem_contact: bool = False
     release_right_fork_region: bool = False
+    release_contact_evidence: dict[str, object] | None = None
     last_vehicle_contact_time_s: float = -1.0
     contact_release_start_time_s: float = -1.0
     contact_release_peak_n: float = 0.0
@@ -539,6 +540,23 @@ class CourseBuoyRuntime:
             log=log,
         )
 
+    @dataclass(frozen=True, slots=True)
+    class _FloatWater:
+        """Water at one buoy center for one physics step."""
+
+        center_z: float
+        surface_z: float
+        radius: float
+        current: np.ndarray | None  # None when the float is entirely above water.
+
+    def _sample_float_water(self, buoy: CourseBuoy) -> _FloatWater:
+        center = self._buoy_center_world(buoy)
+        center_z = float(center[2])
+        surface_z = self._surface_height_world_m(center)
+        radius = self._float_vertical_radius_m(buoy)
+        current = self._water_velocity_world(center) if center_z <= surface_z + radius else None
+        return self._FloatWater(center_z, surface_z, radius, current)
+
     def apply(self, dt: float) -> None:
         if not self.buoys:
             return
@@ -582,8 +600,9 @@ class CourseBuoyRuntime:
                 # at zero. Reuse it instead of allocating a fifth six-axis array
                 # for every buoy and physics step; contribution order is unchanged.
                 wrench = buoy.last_runtime_wrench
-                wrench += self._float_buoyancy_wrench(buoy, vehicle_contact=vehicle_contact)
-                wrench += self._water_drag_wrench(buoy, vehicle_contact=vehicle_contact, dt=dt)
+                water = self._sample_float_water(buoy)
+                wrench += self._float_buoyancy_wrench(buoy, vehicle_contact=vehicle_contact, water=water)
+                wrench += self._water_drag_wrench(buoy, vehicle_contact=vehicle_contact, dt=dt, water=water)
                 if buoy.detached and was_detached:
                     wrench += self._stabilize_released_buoy(
                         buoy,
@@ -637,6 +656,7 @@ class CourseBuoyRuntime:
                 "release_hand_contact": buoy.release_hand_contact,
                 "release_right_fork_stem_contact": buoy.release_right_fork_stem_contact,
                 "release_right_fork_region": buoy.release_right_fork_region,
+                "release_contact_evidence": buoy.release_contact_evidence,
                 "hand_contact_active": buoy.hand_contact_active,
                 "runtime_time_s": now_s,
                 "magnet_load_n": self._magnet_constraint_force_n(buoy) if self.magnet_force_release else 0.0,
@@ -667,21 +687,24 @@ class CourseBuoyRuntime:
                     current[axis] = current_value - last_value
             last[axis] = 0.0
 
-    def _float_buoyancy_wrench(self, buoy: CourseBuoy, *, vehicle_contact: bool) -> np.ndarray:
+    def _float_buoyancy_wrench(
+        self, buoy: CourseBuoy, *, vehicle_contact: bool, water: _FloatWater | None = None,
+    ) -> np.ndarray:
         wrench = np.zeros(6, dtype=np.float64)
         if self.buoyancy_n <= 0.0:
             return wrench
 
-        center_world = self._buoy_center_world(buoy)
-        center_z = float(center_world[2])
-        if not self._touches_float_waterline(buoy, center_z):
+        if water is None:
+            water = self._sample_float_water(buoy)
+        if water.current is None:
             return wrench
+        center_z = water.center_z
 
         velocity_z = float(
             self._buoy_linear_velocity(buoy)[2]
-            - self._water_velocity_world(center_world)[2]
+            - water.current[2]
         )
-        target_z = self._surface_target_center_z(buoy)
+        target_z = self._surface_target_center_z(buoy, water)
         neutral_upthrust_n = self._body_weight_n(buoy)
         # Keep the tethered magnet load at the original reserve lift so the
         # compliant attachment can tilt under contact. Once physically
@@ -711,20 +734,21 @@ class CourseBuoyRuntime:
         progress = elapsed_s / max(self.release_stabilize_s, 1.0e-9)
         return 0.35 + 0.65 * self._clamp_scalar(progress, 0.0, 1.0)
 
-    def _water_drag_wrench(self, buoy: CourseBuoy, *, vehicle_contact: bool, dt: float) -> np.ndarray:
+    def _water_drag_wrench(
+        self, buoy: CourseBuoy, *, vehicle_contact: bool, dt: float, water: _FloatWater | None = None,
+    ) -> np.ndarray:
         wrench = np.zeros(6, dtype=np.float64)
-        center_world = self._buoy_center_world(buoy)
-        center_z = float(center_world[2])
-        if not self._touches_float_waterline(buoy, center_z):
+        if water is None:
+            water = self._sample_float_water(buoy)
+        if water.current is None:
             return wrench
+        center_z = water.center_z
 
         # xfrc_applied is a world-frame force, so drag must use the same
         # world-frame water-relative velocity as the vehicle fluid contract.
         # Without this subtraction, a configured current moved the vehicle
         # but left free/captured course buoys in still water.
-        velocity = self._buoy_linear_velocity(buoy) - self._water_velocity_world(
-            center_world
-        )
+        velocity = self._buoy_linear_velocity(buoy) - water.current
         if vehicle_contact and not self.shape_drag:
             velocity = velocity.copy()
             velocity[2] = 0.0
@@ -740,11 +764,11 @@ class CourseBuoyRuntime:
             # sliding naturally around it.
             immersion_fraction = self._clamp_scalar(
                 (
-                    self._surface_height_world_m(center_world)
-                    + self._float_vertical_radius_m(buoy)
+                    water.surface_z
+                    + water.radius
                     - center_z
                 )
-                / max(2.0 * self._float_vertical_radius_m(buoy), 1.0e-9),
+                / max(2.0 * water.radius, 1.0e-9),
                 0.0,
                 1.0,
             )
@@ -1205,12 +1229,13 @@ class CourseBuoyRuntime:
             self._surface_height_world_m(center_world) + self._float_vertical_radius_m(buoy)
         )
 
-    def _surface_target_center_z(self, buoy: CourseBuoy) -> float:
-        center_world = self._buoy_center_world(buoy)
+    def _surface_target_center_z(self, buoy: CourseBuoy, water: _FloatWater | None = None) -> float:
         surface_offset = float(buoy.cached_surface_target_center_z) - self.water_surface_z
         if self.shape_drag:
-            surface_offset *= self._float_vertical_radius_m(buoy) / self.float_half_height_m
-        return self._surface_height_world_m(center_world) + surface_offset
+            radius = water.radius if water is not None else self._float_vertical_radius_m(buoy)
+            surface_offset *= radius / self.float_half_height_m
+        surface_z = water.surface_z if water is not None else self._surface_height_world_m(self._buoy_center_world(buoy))
+        return surface_z + surface_offset
 
     def _water_velocity_world(self, position_world: np.ndarray) -> np.ndarray:
         sampler = getattr(self, "water_velocity_sampler", None)
@@ -1638,20 +1663,10 @@ class CourseBuoyRuntime:
                 body_id = self._buoy_body_by_geom.get(geom2)
                 if body_id is not None:
                     contacted.add(body_id)
-            if vehicle_geom in self._right_fork_geom_ids:
-                geom_name = self.mujoco_module.mj_id2name(
-                    self.model, self.mujoco_module.mjtObj.mjOBJ_GEOM, buoy_geom) or ''
-                if geom_name.endswith('_pvc_pipe'):
-                    self._right_fork_stem_contacts.add(body_id)
             if geom2 in vehicle_geom_ids:
                 body_id = self._buoy_body_by_geom.get(geom1)
                 if body_id is not None:
                     contacted.add(body_id)
-            if vehicle_geom in self._right_fork_geom_ids:
-                geom_name = self.mujoco_module.mj_id2name(
-                    self.model, self.mujoco_module.mjtObj.mjOBJ_GEOM, buoy_geom) or ''
-                if geom_name.endswith('_pvc_pipe'):
-                    self._right_fork_stem_contacts.add(body_id)
         return contacted
 
     def _has_release_probe_proximity(self, buoy: CourseBuoy) -> bool:
@@ -1901,9 +1916,48 @@ class CourseBuoyRuntime:
                 return True
         return False
 
+    def release_contact_snapshot(self, buoy: CourseBuoy) -> dict[str, object]:
+        """Capture vehicle contact evidence before changing constraints.
+
+        Positions and signed separation are [m]; contact force magnitude is [N].
+        This instantaneous snapshot does not establish exclusive causality or
+        contact duration. It is diagnostic truth, never a policy observation.
+        """
+        contacts = []
+        force = np.zeros(6, dtype=np.float64)
+        for contact_id in range(int(self.data.ncon)):
+            contact = self.data.contact[contact_id]
+            first, second = int(contact.geom1), int(contact.geom2)
+            if first in self.vehicle_geom_ids and second in buoy.geom_ids:
+                vehicle_geom, buoy_geom = first, second
+            elif second in self.vehicle_geom_ids and first in buoy.geom_ids:
+                vehicle_geom, buoy_geom = second, first
+            else:
+                continue
+            vehicle_name = self.model.geom(vehicle_geom).name
+            buoy_name = self.model.geom(buoy_geom).name
+            if vehicle_geom in self._right_fork_geom_ids:
+                kind = "right_fork_stem" if buoy_name.endswith("_pvc_pipe") else "right_fork_other"
+            elif vehicle_geom in self._hand_geom_id_set:
+                kind = "other_hand"
+            else:
+                kind = "vehicle_body"
+            force[:] = 0.0
+            self.mujoco_module.mj_contactForce(self.model, self.data, contact_id, force)
+            contacts.append({
+                "vehicle_geom": vehicle_name, "buoy_geom": buoy_name,
+                "kind": kind, "position_world_m": np.asarray(contact.pos).tolist(),
+                "separation_m": float(contact.dist),
+                "force_n": float(np.linalg.norm(force[:3])),
+                "solver_active": bool(contact.efc_address >= 0),
+            })
+        return {"schema": "uuv.release_contact.v1", "time_s": float(self.data.time),
+                "contacts": contacts, "duration_s": None}
+
     def _detach(self, buoy: CourseBuoy, *, reason: str, force_n: float) -> None:
         if buoy.detached:
             return
+        buoy.release_contact_evidence = self.release_contact_snapshot(buoy)
         buoy.release_right_fork_region = self.right_fork_region_contains(buoy)
         buoy.release_reason = reason
         buoy.release_force_n = float(force_n)

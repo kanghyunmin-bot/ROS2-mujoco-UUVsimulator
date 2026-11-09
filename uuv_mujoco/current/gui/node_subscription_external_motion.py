@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from geometry_msgs.msg import TwistWithCovarianceStamped
+
 from .runtime import Odometry, PoseStamped, TwistStamped, qos_profile_sensor_data
 
 
 def initialize_external_motion_subscriptions(self) -> None:
+    self.create_subscription(TwistWithCovarianceStamped, "/dvl/twist", self._on_dvl_twist, qos_profile_sensor_data)
     self.create_subscription(
         Odometry,
         "/sim/odom",

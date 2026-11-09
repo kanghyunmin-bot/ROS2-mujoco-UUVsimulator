@@ -7,11 +7,14 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from gui.sim_launch_preset import (  # noqa: E402
+    BLUEROV2_PRESET_ID,
     RESEARCH_POOL_DISTRIBUTED_PRESET_ID,
     RESEARCH_POOL_YAW_STABLE_PRESET_ID,
     COURSE_CURRENT_PRESET_ID,
@@ -22,12 +25,107 @@ from gui.sim_launch_preset import (  # noqa: E402
     merge_sim_launch_preset_args,
     resolve_sim_launch_preset,
     sim_launch_preset_environment,
+    sim_launch_presets_payload,
     validate_sim_launch_preset,
+)
+from gui.sensor_error_mode import MODES  # noqa: E402
+from gui.sim_stack_env_contract import build_gui_sim_stack_env  # noqa: E402
+from sim.physics.thruster_direct_overrides import apply_thruster_direct_gain_overrides  # noqa: E402
+from sim.runtime.env import env_float  # noqa: E402
+from sim.runtime.hydrodynamics_runtime_coefficients import (  # noqa: E402
+    read_yaw_torque_scale,
+    read_yaw_torque_thruster_scales,
 )
 from physics.sim_profile_helpers import build_sim_profile, load_sim_profiles  # noqa: E402
 
 
 class TestReal2SimLaunch(unittest.TestCase):
+    def test_browser_metadata_has_english_labels_and_preserves_vehicle_ids(self):
+        presets = {item["id"]: item for item in sim_launch_presets_payload()}
+        self.assertEqual(presets[BLUEROV2_PRESET_ID]["vehicle"], "bluerov2_standard")
+        self.assertEqual(presets[RESEARCH_POOL_YAW_STABLE_PRESET_ID]["vehicle"], "ut27")
+        for item in (*presets.values(), *MODES):
+            with self.subTest(identifier=item["id"]):
+                self.assertNotRegex(item["label_en"], r"[가-힣]")
+                self.assertNotRegex(item["description_en"], r"[가-힣]")
+                self.assertTrue(item["label"])
+                self.assertTrue(item["description"])
+
+    def test_bluerov2_preset_and_controller_configuration(self):
+        preset = resolve_sim_launch_preset(BLUEROV2_PRESET_ID)
+        validate_sim_launch_preset(preset)
+        args = build_sim_launch_preset_args(preset)
+        self.assertEqual(args[args.index("--vehicle") + 1], "bluerov2_standard")
+        self.assertEqual(args[args.index("--fluid-model") + 1], "legacy")
+        self.assertEqual(args[args.index("--profile") + 1], "bluerov2_dfki_yaw_experiment")
+        self.assertEqual(preset.scene_path.name, "bluerov2_research_pool_scene.xml")
+        self.assertNotIn("--pwm-layout", args)
+        env = sim_launch_preset_environment(preset)
+        self.assertEqual(env["UUV_VEHICLE"], "bluerov2_standard")
+        self.assertEqual(env["SITL_REAL2SIM_BAG0402"], "0")
+        self.assertEqual(env["SITL_YAW_STABLE"], "0")
+        with self.assertRaises(ValueError):
+            merge_sim_launch_preset_args(args, ["--vehicle", "ut27"])
+
+        source = (ROOT / "start_ardusub_sitl_mj311.sh").read_text()
+        vehicle_case = source[source.index('case "${UUV_VEHICLE:-ut27}"'):source.index('SIM_VEHICLE=')]
+        layout = source[source.index("# Core frame/output layout"):source.index('case "${SITL_SERIAL0_UDPCLIENT')]
+        shell = ('set -eu\n' + vehicle_case + '\n'
+                 + 'append_param_if_not_overridden() { printf "%s=%s\\n" "$1" "$2"; }\n'
+                 + layout)
+        result = subprocess.run(["bash", "-c", shell], check=True, text=True,
+                                capture_output=True,
+                                env={**os.environ, "UUV_VEHICLE": "bluerov2_standard",
+                                     "SITL_YAW_STABLE": "1"})
+        params = dict(line.split("=", 1) for line in result.stdout.splitlines())
+        self.assertEqual(params["FRAME_CONFIG"], "1")
+        self.assertEqual([params[f"SERVO{i}_FUNCTION"] for i in range(1, 9)],
+                         ["33", "34", "35", "36", "37", "38", "0", "0"])
+        self.assertEqual([params[f"MOT_{i}_DIRECTION"] for i in range(1, 7)],
+                         ["-1", "-1", "1", "1", "1", "1"])
+
+    def test_bluerov2_gui_environment_preserves_final_calibrated_coefficients(self):
+        preset = resolve_sim_launch_preset(BLUEROV2_PRESET_ID)
+        profiles, warning = load_sim_profiles(preset.profile_path)
+        self.assertIsNone(warning)
+        plant = build_sim_profile(profiles, "bluerov2_dfki_yaw_experiment")
+        env = build_gui_sim_stack_env({}, backend="native", sim_stack_dir=ROOT)
+        env.update(sim_launch_preset_environment(preset, env={}))
+
+        horizontal = ["yaw_lf", "yaw_lr", "yaw_rf", "yaw_rr"]
+        vertical = ["ver_lf", "ver_rf"]
+        scales = {name: 1.0 for name in horizontal + vertical}
+        apply_thruster_direct_gain_overrides(
+            plant, scales, vertical_thrusters=vertical, horizontal_thrusters=horizontal,
+            env_get=env.get, log=lambda _: None,
+        )
+        for name in scales:
+            with self.subTest(thruster=name):
+                self.assertAlmostEqual(scales[name], plant["thruster_direct_gain_scales"][name])
+
+        with patch.dict(os.environ, env, clear=True):
+            configured, effective = read_yaw_torque_scale(
+                hydro_cfg=SimpleNamespace(yaw_torque_scale=plant["yaw_torque_scale"]),
+                env_float=env_float,
+            )
+            yaw_scales = read_yaw_torque_thruster_scales(sim_profile=plant, env_float=env_float)
+        self.assertAlmostEqual(configured, plant["yaw_torque_scale"])
+        self.assertAlmostEqual(effective, plant["yaw_torque_scale"])
+        self.assertEqual(yaw_scales, plant["yaw_torque_thruster_scales"])
+
+    def test_bluerov2_gui_environment_keeps_explicit_operator_overrides(self):
+        preset = resolve_sim_launch_preset(BLUEROV2_PRESET_ID)
+        explicit = {
+            "UUV_YAW_TORQUE_SCALE": "0.9",
+            "UUV_YAW_TORQUE_THRUSTER_SCALES_ENABLE": "0",
+            "UUV_VERTICAL_DIRECT_GAIN_SCALE": "0.8",
+        }
+        env = build_gui_sim_stack_env(explicit, backend="native", sim_stack_dir=ROOT)
+        env.update(sim_launch_preset_environment(preset, env=explicit))
+        for key, value in explicit.items():
+            with self.subTest(key=key):
+                self.assertEqual(env[key], value)
+
     def test_yaw_candidate_preserves_default_and_controller_overlay(self):
         self.assertEqual(default_sim_launch_preset_id({}), RESEARCH_POOL_YAW_STABLE_PRESET_ID)
         preset = resolve_sim_launch_preset(COURSE_REAL2SIM_YAW_PRESET_ID)

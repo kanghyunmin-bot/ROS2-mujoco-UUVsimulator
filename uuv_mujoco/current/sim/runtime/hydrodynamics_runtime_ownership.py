@@ -25,6 +25,11 @@ def validate_advanced_hydrodynamics_ownership(
     distributed_active = bool(distributed_hydrodynamics.active)
     matrix_active = bool(full_matrix_hydrodynamics.active)
     cfd_active = bool(wrenches.cfd_dynamic_wrench_enabled)
+    if getattr(values, "yaw_damping_asymmetry", 0.0) and (
+        not use_custom_hydrodynamics or distributed_active or matrix_active
+        or float(values.linear_damping_diag[5]) <= 0.0
+    ):
+        raise ValueError("yaw_damping_asymmetry requires positive legacy diagonal yaw damping")
     if (distributed_active or matrix_active) and not use_custom_hydrodynamics:
         raise ValueError(
             "distributed/full-matrix hydrodynamics require --fluid-model distributed "

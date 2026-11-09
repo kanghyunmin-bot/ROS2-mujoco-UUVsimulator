@@ -36,7 +36,10 @@ def configure_hydrostatic_runtime(
     )
     active_body_components, active_buoyancy_points, hydrostatic_source_used = resolve_hydrostatic_sources(hydro_cfg)
     log_cob_runtime_override(values=values, hydro_cfg=hydro_cfg, log=log)
-    align_cob_site(model=model, base_id=base_id, cob_site_id=cob_site_id, values=values, log=log)
+    align_cob_site(
+        model=model, base_id=base_id, cob_site_id=cob_site_id, values=values, log=log,
+        lateral_offset=sim_profile.get("cob_y_offset"),
+    )
     log_hydrostatic_runtime(
         values=values,
         active_body_components=active_body_components,

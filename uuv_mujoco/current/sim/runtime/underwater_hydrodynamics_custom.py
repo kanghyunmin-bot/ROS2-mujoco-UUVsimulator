@@ -41,6 +41,10 @@ def apply_custom_hydrodynamics(
     )
     immersed_linear_damping[2] *= hyd.heave_damping_scale
     immersed_quadratic_damping[2] *= hyd.heave_damping_scale
+    # Positive profile asymmetry increases drag during right turns (negative FLU yaw rate).
+    asymmetry = getattr(hyd, "yaw_damping_asymmetry", 0.0)
+    if asymmetry:
+        immersed_linear_damping[5] *= 1.0 - np.sign(nu_rel_body[5]) * asymmetry
 
     hydro_wrench_body = np.zeros(6, dtype=np.float64)
     if np.any(immersed_added_mass > 1e-9):

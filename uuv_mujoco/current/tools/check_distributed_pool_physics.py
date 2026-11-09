@@ -16,6 +16,7 @@ TOOLS = Path(__file__).resolve().parent
 if str(TOOLS) not in sys.path:
     sys.path.insert(0, str(TOOLS))
 
+from check_rope_fluid_ownership import assert_environment_only_fluid  # noqa: E402
 from check_research_pool_physics import DT_S, _build_runtime  # noqa: E402
 
 
@@ -33,8 +34,7 @@ def main() -> int:
     hyd = runtime.hydrodynamics
     underwater = runtime.underwater
 
-    if float(model.opt.density) != 0.0 or float(model.opt.viscosity) != 0.0:
-        raise AssertionError("MuJoCo built-in fluid must be disabled for distributed ownership")
+    assert_environment_only_fluid(model)
     if not hyd.distributed_hydrodynamics.active:
         raise AssertionError("distributed hull model is not active")
     if not hyd.full_matrix_hydrodynamics.active:

@@ -12,11 +12,17 @@ PREFIXES = ("ROS2_UUV_IMU_SENSOR_", "ROS2_UUV_BAR30_SENSOR_", "ROS2_UUV_DVL_SENS
 COMMON = "ROS2_UUV_IMU_BAR30_SENSOR_CONFIG_PATH"
 MODES = (
     {"id": "existing", "label": "기존 센서 설정",
-     "description": "기존 수학적 센서 모델과 명시적 환경 설정 유지. 무오차 모드가 아닙니다."},
+     "description": "기존 수학적 센서 모델과 명시적 환경 설정 유지. 무오차 모드가 아닙니다.",
+     "label_en": "Existing sensor settings",
+     "description_en": "Keep the existing mathematical sensor models and explicit environment settings."},
     {"id": "mathematical", "label": "수학적 오차 · 가정값",
-     "description": "고정 seed의 IMU·수심 bias/드리프트 및 DVL 측정·적분 모델. 실측 보정값 아님."},
+     "description": "고정 seed의 IMU·수심 bias/드리프트 및 DVL 측정·적분 모델. 실측 보정값 아님.",
+     "label_en": "Mathematical error · assumed values",
+     "description_en": "Fixed-seed IMU and depth bias/drift with DVL measurement and integration models. Values are assumed."},
     {"id": "bag0402", "label": "4월 bag · 압력 부분 보정 (2 Hz)",
-     "description": "압력 변동과 당시 2 Hz 출력만 부분 보정. IMU·DVL은 가정값이며 10 Hz VLA 수집용이 아닙니다."},
+     "description": "압력 변동과 당시 2 Hz 출력만 부분 보정. IMU·DVL은 가정값이며 10 Hz VLA 수집용이 아닙니다.",
+     "label_en": "April bag · partial pressure calibration (2 Hz)",
+     "description_en": "Pressure variation and the recorded 2 Hz output are partially calibrated. IMU and DVL use assumed values; this mode is not intended for 10 Hz VLA collection."},
 )
 
 

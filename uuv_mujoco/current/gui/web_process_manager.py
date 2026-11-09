@@ -73,6 +73,8 @@ from .test_tank_layout_model import (
     prepare_active_course_runtime,
 )
 
+EXTERNAL_SIM_STATUS = "외부 시뮬 실행 중 · 시작한 GUI에서 정지하세요"
+
 
 class WebProcessManager:
     """Owns simulator, ROS, RViz, and Ping360 viewer child processes."""
@@ -81,6 +83,7 @@ class WebProcessManager:
         self.node = node
         self._lock = threading.Lock()
         self._sim_process: subprocess.Popen[str] | None = None
+        self._sim_virtualgl_viewer = False
         self._ros_build_process: subprocess.Popen[str] | None = None
         self._ros_pkg_process: subprocess.Popen[str] | None = None
         self._rviz_process: subprocess.Popen[str] | None = None
@@ -112,9 +115,17 @@ class WebProcessManager:
         )
 
     def status_payload(self) -> dict[str, Any]:
-        sim_stack_status = self._live_sim_stack_status()
+        owned = _process_running(self._sim_process)
+        running = owned or self._simulation_runtime_available()
+        external = running and not owned
+        sim_stack_status = "sim: running" if owned else self._sim_stack_status
+        virtualgl_issue = self._virtualgl_unavailable_reason()
         return {
-            "sim_running": self._simulation_runtime_available(),
+            "sim_running": running,
+            "sim_external": external,
+            "virtualgl_viewer": owned and self._sim_virtualgl_viewer,
+            "virtualgl_available": virtualgl_issue is None,
+            "virtualgl_unavailable_reason": virtualgl_issue,
             "ros_build_running": _process_running(self._ros_build_process),
             "mavros_running": _process_running(self._ros_pkg_process),
             "rviz_running": _process_running(self._rviz_process),
@@ -122,7 +133,7 @@ class WebProcessManager:
             "pinger_homing_running": _process_running(self._pinger_homing_process),
             "vision_running": _process_running(self._vision_process),
             "mission_running": _process_running(self._mission_process),
-            "sim_stack_status": sim_stack_status,
+            "sim_stack_status": EXTERNAL_SIM_STATUS if external else sim_stack_status,
             "ros_pkg_status": self._ros_pkg_status,
             "rviz_status": self._rviz_status,
             "ping360_view_status": self._ping360_view_status,
@@ -164,7 +175,14 @@ class WebProcessManager:
         purpose: str | None = None,
         preset_id: str | None = None,
         sensor_error_mode: str | None = None,
+        virtualgl_viewer: bool = False,
     ) -> dict[str, Any]:
+        if virtualgl_viewer:
+            virtualgl_issue = self._virtualgl_unavailable_reason()
+            if virtualgl_issue == "display_or_gpu":
+                raise ValueError("VirtualGL requires a Linux X11 display and access to the NVIDIA GPU.")
+            if virtualgl_issue == "missing_install":
+                raise ValueError("Install VirtualGL with bash setup/install_virtualgl.sh.")
         try:
             selected_error_mode = resolve_sensor_error_mode(
                 self._sensor_error_mode if sensor_error_mode is None else sensor_error_mode
@@ -191,7 +209,6 @@ class WebProcessManager:
         if error:
             self._set_sim_stack_status(error)
             return {"status": self._sim_stack_status}
-
         course_runtime = None
         if selected_preset.uses_active_course_scene:
             try:
@@ -278,6 +295,8 @@ class WebProcessManager:
                     selected_preset,
                     scene_path=scene_path,
                 )
+            if virtualgl_viewer:
+                launch_args.append("--virtualgl")
             cmd = build_sim_stack_launch_command(
                 self,
                 start_script=target.start_script,
@@ -316,6 +335,7 @@ class WebProcessManager:
             self._active_sensor_error = sensor_error_snapshot
             self._active_plant_evidence = plant_evidence
             self._sim_process = proc
+            self._sim_virtualgl_viewer = virtualgl_viewer
             self._active_camera_config = {
                 **camera_config_from_launch_command(self._camera_config, cmd),
                 "sensor_model_enabled": env.get("ROS2_UUV_CAMERA_SENSOR_MODEL_ENABLE", "0"),
@@ -388,6 +408,7 @@ class WebProcessManager:
         }
 
     def stop_sim_stack(self) -> dict[str, Any]:
+        self._require_local_simulation()
         self._terminate_named_process("_mission_process", "_mission_status", "mission", push_event=False)
         self._terminate_named_process(
             "_pinger_homing_process", "_pinger_homing_status", "pinger homing", push_event=False
@@ -400,12 +421,8 @@ class WebProcessManager:
         return {"status": self._sim_stack_status}
 
     def reset_sim_stack(self) -> dict[str, Any]:
-        self._terminate_named_process("_mission_process", "_mission_status", "mission", push_event=False)
-        self._terminate_named_process(
-            "_pinger_homing_process", "_pinger_homing_status", "pinger homing", push_event=False
-        )
-        self._clear_mission_status_file()
-        self._terminate_named_process("_sim_process", "_sim_stack_status", "sim")
+        self.stop_sim_stack()
+        self._sim_virtualgl_viewer = False
         if not RESET_SIM_STACK_SCRIPT.exists():
             self._set_sim_stack_status(f"sim reset missing: {RESET_SIM_STACK_SCRIPT}")
             return {"status": self._sim_stack_status}
@@ -426,6 +443,7 @@ class WebProcessManager:
         )
         self._clear_mission_status_file()
         proc = self._sim_process
+        virtualgl_viewer = _process_running(proc) and self._sim_virtualgl_viewer
         if _process_running(proc):
             terminate_process_group(proc, 4.0)
             self.node.push_event("sim restart requested")
@@ -438,7 +456,7 @@ class WebProcessManager:
             with self._lock:
                 if self._sim_process is proc:
                     self._sim_process = None
-        return self.start_sim_stack(preset_id=preset_id) if preset_id else self.start_sim_stack()
+        return self.start_sim_stack(preset_id=preset_id, virtualgl_viewer=virtualgl_viewer)
 
     def camera_config_payload(self) -> dict[str, Any]:
         config = normalize_camera_config(self._camera_config)
@@ -1349,13 +1367,21 @@ class WebProcessManager:
         self._sim_stack_status = text
         self.node.push_event(text)
 
-    def _live_sim_stack_status(self) -> str:
-        status = str(self._sim_stack_status)
-        if self._simulation_runtime_available():
-            return "sim: running"
-        if not status.startswith("sim: starting"):
-            return status
-        return status
+    def _require_local_simulation(self) -> None:
+        if not _process_running(self._sim_process) and self._simulation_runtime_available():
+            raise ValueError(EXTERNAL_SIM_STATUS)
+
+    @staticmethod
+    def _virtualgl_unavailable_reason() -> str | None:
+        if (
+            not sys.platform.startswith("linux")
+            or not os.environ.get("DISPLAY")
+            or not os.access("/dev/nvidiactl", os.R_OK | os.W_OK)
+        ):
+            return "display_or_gpu"
+        if not os.access(APP_ROOT / "outputs/virtualgl/opt/VirtualGL/bin/vglrun", os.X_OK):
+            return "missing_install"
+        return None
 
     def _simulation_runtime_available(self) -> bool:
         """Recognize a GUI-owned or already-running MuJoCo/SITL stack."""

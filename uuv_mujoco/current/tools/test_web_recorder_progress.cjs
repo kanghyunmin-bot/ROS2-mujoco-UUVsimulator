@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const source = fs.readFileSync(require('node:path').join(__dirname, '../gui/web_static/recorder.js'), 'utf8');
 function fixture() {
   const elements = Object.fromEntries(['recTargetSeconds','recProgress','recProgressPercent','recProgressTime','recProgressHint'].map(id=>[id,{value: id === 'recTargetSeconds' ? 30 : 0}]));
-  const ctx = vm.createContext({el:id=>elements[id], pending:false});
+  const ctx = vm.createContext({el:id=>elements[id], pending:false, t: (_english, korean) => korean});
   vm.runInContext(source.slice(source.indexOf('  let lastRecorderStatus'),source.indexOf("  el('recTargetSeconds').addEventListener")),ctx);
   return {elements, render:ctx.renderProgress};
 }
