@@ -52,7 +52,7 @@ def yaw_diagnostics(time: np.ndarray, traces: dict, names: list[str]) -> dict:
     return result
 
 
-def evaluate(real_path: Path, runs: list[Path]) -> tuple[dict, dict]:
+def evaluate(real_path: Path, runs: list[Path], *, measured_max_gap_s: float = .04) -> tuple[dict, dict]:
     measured = read_rows(real_path)
     tracks = [measured, *(read_rows(run / "simulation.csv") for run in runs)]
     start = max(track["t_s"][0] for track in tracks)
@@ -60,16 +60,25 @@ def evaluate(real_path: Path, runs: list[Path]) -> tuple[dict, dict]:
     time = start + np.arange(int(np.floor((end - start) * 10 + 1e-8)) + 1) * .1
     if len(time) < 10:
         raise ValueError("Less than one second of common time support")
-    output = {"interval_s": [float(time[0]), float(time[-1])], "metrics": [], "kinematic_metrics": []}
+    run_metadata = {run.name: json.loads((run / "run.json").read_text()) for run in runs}
+    contacts = {name: meta.get("first_contact_s") for name, meta in run_metadata.items()}
+    first_contact = min((stamp for stamp in contacts.values() if stamp is not None), default=None)
+    free_motion = time < first_contact if first_contact is not None else np.ones(len(time), dtype=bool)
+    output = {
+        "interval_s": [float(time[0]), float(time[-1])],
+        "metrics": [], "kinematic_metrics": [], "runs": run_metadata,
+        "free_motion": {"first_contact_s": contacts, "common_end_exclusive_s": first_contact, "metrics": []},
+    }
     traces = {"t_s": time}
+    gaps = [measured_max_gap_s, *([.04] * len(runs))]
     for axis, key, unit, scale in METRICS:
         sampled = []
-        for track in tracks:
+        for track, max_gap in zip(tracks, gaps, strict=True):
             values = track[key].copy()
             if key == "yaw_deg":
                 valid = np.isfinite(values)
                 values[valid] = np.rad2deg(np.unwrap(np.deg2rad(values[valid])))
-            values = interpolate_valid(track["t_s"], values, time, max_gap_s=.04) * scale
+            values = interpolate_valid(track["t_s"], values, time, max_gap_s=max_gap) * scale
             if key in {"yaw_deg", "depth_m"}:
                 if not np.isfinite(values[0]):
                     raise ValueError(f"No common starting value for {key}")
@@ -85,13 +94,25 @@ def evaluate(real_path: Path, runs: list[Path]) -> tuple[dict, dict]:
         traces[f"{axis.lower()}_measured"] = sampled[0]
         traces[f"{axis.lower()}_valid"] = common
         output["metrics"].append({"axis": axis, "unit": unit, "samples": int(common.sum()), "rmse": scores})
+        prefix = common & free_motion
+        output["free_motion"]["metrics"].append({
+            "axis": axis, "unit": unit, "samples": int(prefix.sum()),
+            "rmse": {
+                run.name: float(np.sqrt(np.mean((values[prefix] - sampled[0][prefix]) ** 2)))
+                if prefix.sum() >= 10 else None
+                for run, values in zip(runs, sampled[1:], strict=True)
+            },
+        })
         if key == "yaw_deg":
             errors = [(values[common] - sampled[0][common] + 180) % 360 - 180 for values in sampled[1:]]
             output["wrapped_yaw_rmse_deg"] = {
                 run.name: float(np.sqrt(np.mean(error**2))) for run, error in zip(runs, errors, strict=True)
             }
     for axis, key, unit, scale in KINEMATIC_METRICS:
-        sampled = [interpolate_valid(track["t_s"], track[key], time, max_gap_s=.04) * scale for track in tracks]
+        sampled = [
+            interpolate_valid(track["t_s"], track[key], time, max_gap_s=max_gap) * scale
+            for track, max_gap in zip(tracks, gaps, strict=True)
+        ]
         common = np.isfinite(sampled).all(axis=0)
         if common.sum() < 10:
             raise ValueError(f"Too few valid paired samples for {axis}")
@@ -109,7 +130,6 @@ def evaluate(real_path: Path, runs: list[Path]) -> tuple[dict, dict]:
             for run, values in zip(runs, sampled[1:], strict=True):
                 traces[f"yaw_rate_{run.name}"] = values
     output["yaw_diagnostics"] = yaw_diagnostics(time, traces, [run.name for run in runs])
-    output["runs"] = {run.name: json.loads((run / "run.json").read_text()) for run in runs}
     return output, traces
 
 

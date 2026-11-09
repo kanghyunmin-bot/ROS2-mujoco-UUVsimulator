@@ -9,7 +9,6 @@ from typing import Any, Callable
 from physics.thruster_mapping import (
     BLUEROV2_PROP_SPIN_SIGNS,
     BLUEROV2_T200_FORWARD_SIGNS,
-    vehicle_thruster_mapping,
 )
 from sim.physics.fluid_model import (
     normalize_fluid_model,
@@ -18,6 +17,7 @@ from sim.physics.fluid_model import (
 from sim.physics.profile_runtime import select_runtime_profile
 from sim.physics.thruster_performance import select_thruster_performance_config
 from sim.runtime.run_mode import resolve_runtime_mode
+from sim.runtime.vehicle_manifest import load_vehicle_manifest, runtime_thruster_mapping
 
 
 @dataclass(frozen=True)
@@ -42,7 +42,7 @@ def load_runner_profile_setup(
     runtime_mode = resolve_runtime_mode(env_get, env_flag)
     if pwm_layout == "dfki" and (not runtime_mode.plant_replay_direct_rcout or getattr(args, "sitl", False)):
         raise ValueError("The DFKI PWM layout requires recorded-PWM plant replay without SITL")
-    _, _, servo_map, servo_signs = vehicle_thruster_mapping(vehicle, pwm_layout=pwm_layout)
+    _, _, servo_map, servo_signs = runtime_thruster_mapping(args)
     if vehicle == "bluerov2_standard":
         scene = Path(args.scene)
         default_scene = Path(__file__).resolve().parents[2] / "scenes" / "tank_current_scene.xml"
@@ -56,6 +56,8 @@ def load_runner_profile_setup(
             args.profile = "bluerov2_standard"
         if args.fluid_model == "current":
             args.fluid_model = "legacy"
+    if vehicle == "custom" and args.fluid_model == "current":
+        args.fluid_model = "legacy"
     requested_fluid_model = str(args.fluid_model)
     args.fluid_model = normalize_fluid_model(requested_fluid_model)
 
@@ -87,9 +89,15 @@ def load_runner_profile_setup(
         plant_replay_direct_rcout=bool(runtime_mode.plant_replay_direct_rcout),
         response_model=profile_selection.sim_profile.get("thruster_response_model", "command"),
     )
-    curve_signs = BLUEROV2_T200_FORWARD_SIGNS if vehicle == "bluerov2_standard" else servo_signs
+    manifest = load_vehicle_manifest(args.vehicle_manifest) if vehicle == "custom" else None
+    curve_signs = (
+        tuple(item.get("forward_sign", 1) for item in manifest["thrusters"]) if manifest
+        else BLUEROV2_T200_FORWARD_SIGNS if vehicle == "bluerov2_standard" else servo_signs
+    )
     perf_cfg["native_pwm_directions"] = dict(zip(servo_map, curve_signs, strict=True))
-    if vehicle == "bluerov2_standard":
+    if manifest:
+        perf_cfg["propeller_spin_signs"] = {item["name"]: item.get("spin_sign", 1) for item in manifest["thrusters"]}
+    elif vehicle == "bluerov2_standard":
         perf_cfg["propeller_spin_signs"] = dict(zip(servo_map, BLUEROV2_PROP_SPIN_SIGNS, strict=True))
     return RunnerProfileSetup(
         listed_profiles=False,

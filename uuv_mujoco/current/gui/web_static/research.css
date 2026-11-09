@@ -196,7 +196,8 @@
 .research-ui .rec-count, .research-ui .rec-progress,
 .research-ui #autoCollectionPanel { background: #232a34; border-color: #3c4654; }
 .research-ui:not([data-vehicle="bluerov2_standard"]) [data-bluerov-only],
-.research-ui[data-vehicle="bluerov2_standard"] [data-ut27-only] {
+.research-ui[data-vehicle="bluerov2_standard"] [data-ut27-only],
+.research-ui[data-vehicle="real2sim"] [data-ut27-only] {
   display: none !important;
 }
 
@@ -224,3 +225,35 @@
   font: 500 10px/1.5 var(--mono);
   white-space: nowrap;
 }
+
+.real2sim-panel { margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid var(--line, #cbd5e1); }
+.real2sim-panel[hidden] { display: none; }
+.native-simulation-controls { display: contents; }
+.research-ui[data-vehicle="real2sim"] :is(
+  .native-simulation-controls, .native-camera-controls, .workspace-inspector,
+  .workspace-pilot, .workspace-timeline, .workspace-toolbar-actions, .workspace-views,
+  [aria-controls="station-operation"], #stackStartBtn, #stackStopBtn, #virtualglOption, #quickCenterBtn
+) { display: none; }
+.research-ui .calibration-workspace :is(
+  .workspace-inspector, .workspace-pilot, .workspace-timeline, .workspace-toolbar-actions
+) { display: none; }
+.research-ui[data-vehicle="real2sim"] .workbench,
+.research-ui .workbench.calibration-workspace {
+  grid-template-columns: minmax(150px, 192px) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.real2sim-setup { max-width: 840px; margin: 0 auto; }
+.real2sim-setup > p, .real2sim-help { color: #aab5c4; line-height: 1.6; }
+.real2sim-steps { display: flex; gap: 8px; flex-wrap: wrap; margin: 20px 0; }
+.real2sim-steps span { flex: 1 1 160px; padding: 10px 12px; background: #26334d; color: #d8e3ff; border-radius: 4px; font-size: 12px; }
+.real2sim-build-form { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.real2sim-build-form h3, .real2sim-build-form p, .real2sim-build-progress h3 { margin: 0 0 4px; }
+.real2sim-build-form label { margin-top: 8px; font-weight: 600; }
+.real2sim-build-form small { color: #aab5c4; }
+.real2sim-build-actions { margin-top: 12px; }
+.real2sim-build-state { color: #b7cef9; font-weight: 600; margin: 10px 0; }
+.real2sim-build-progress pre { min-height: 120px; max-height: 320px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: #10151d; color: #c9d5e7; border: 1px solid #343e4b; border-radius: 4px; padding: 12px; font: 12px/1.5 var(--mono); }
+.real2sim-review { margin: 8px 0; padding: 8px; color: #ffe1a6; border: 1px solid #96743d; background: #49391f; border-radius: 4px; font-size: 11px; }
+.real2sim-review[hidden] { display: none; }
+.research-ui .station-nav button[aria-controls="station-real2sim"] { white-space: normal; }

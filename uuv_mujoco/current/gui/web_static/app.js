@@ -34,6 +34,11 @@ const state = {
   simVehicleSignature: "",
   simPresetSignature: "",
   simPresetChoice: "",
+  real2simVehicles: [],
+  real2simChoice: "",
+  real2simSignature: "",
+  real2simViewPending: false,
+  real2simRunning: false,
   sensorErrorTouched: false,
   lastSimulationConfig: null,
   lastSimulationProcesses: null,
@@ -682,12 +687,22 @@ function renderSimulationConfig(config, processes) {
     || allPresets[0];
 
   const vehicles = [...new Set(allPresets.map(preset => preset.vehicle))];
-  const signature = vehicles.join("|");
+  const importedVehicles = state.real2simVehicles || [];
+  const selectedReal2Sim = importedVehicles.find(vehicle => vehicle.id === state.real2simChoice);
+  const signature = JSON.stringify([vehicles, importedVehicles.map(vehicle => [vehicle.id, vehicle.name, vehicle.output])]);
   if (signature && signature !== state.simVehicleSignature) {
-    vehicleSelect.replaceChildren(...vehicles.map(vehicle => new Option(vehicleLabel(vehicle), vehicle)));
+    vehicleSelect.replaceChildren(
+      ...vehicles.map(vehicle => new Option(vehicleLabel(vehicle), vehicle)),
+      ...importedVehicles.map(vehicle => {
+        const duplicate = importedVehicles.some(other => other.id !== vehicle.id && other.name === vehicle.name);
+        const label = duplicate && vehicle.output ? vehicle.output : vehicle.name;
+        return new Option(`${label} · Real2Sim`, `real2sim:${vehicle.id}`);
+      })
+    );
     state.simVehicleSignature = signature;
   }
-  if (selected) vehicleSelect.value = selected.vehicle;
+  if (selectedReal2Sim) vehicleSelect.value = `real2sim:${selectedReal2Sim.id}`;
+  else if (selected) vehicleSelect.value = selected.vehicle;
   const vehiclePresets = allPresets.filter(preset => preset.vehicle === selected?.vehicle);
   const presets = vehiclePresets.filter(preset => advanced.checked
     || preset === selected || preset === vehiclePresets[0]);
@@ -702,17 +717,18 @@ function renderSimulationConfig(config, processes) {
   }
   if (selected) {
     select.value = selected.id;
-    const vehicleName = vehicleLabel(selected.vehicle);
-    window.setWorkspaceVehicle?.(selected.vehicle);
+    const vehicleName = selectedReal2Sim ? selectedReal2Sim.name : vehicleLabel(selected.vehicle);
+    window.setWorkspaceVehicle?.(selectedReal2Sim ? "real2sim" : selected.vehicle, selectedReal2Sim?.name);
     setText("workspaceVehicle", `${vehicleName} · ${tr("Underwater Robotics Workspace", "수중 로봇 실험 워크스페이스")}`);
     document.title = `${vehicleName} · Research Studio`;
     const label = select.selectedOptions[0]?.textContent || selected.id;
     const activeText = active ? tr(" · active", " · 실행 중") : "";
     setText("simLaunchPresetStatus", `${label} · ${selected.profile}/${selected.fluid_model}${activeText}`);
   }
-  vehicleSelect.disabled = locked || !selected || vehicles.length < 2;
-  select.disabled = locked || !selected;
-  advanced.disabled = locked || vehiclePresets.length < 2;
+  vehicleSelect.disabled = locked || !selected || vehicles.length + importedVehicles.length < 2;
+  select.disabled = locked || !selected || Boolean(selectedReal2Sim);
+  advanced.disabled = locked || vehiclePresets.length < 2 || Boolean(selectedReal2Sim);
+  renderReal2SimPanel(selectedReal2Sim, locked);
 
   const errorSelect = $("sensorErrorMode");
   if (!state.sensorErrorTouched) errorSelect.value = config.selected_sensor_error_mode || "existing";
@@ -720,7 +736,7 @@ function renderSimulationConfig(config, processes) {
   const aprilBagOption = errorSelect.querySelector('[value="bag0402"]');
   aprilBagOption.disabled = blue;
   if (blue && errorSelect.value === "bag0402") errorSelect.value = "existing";
-  errorSelect.disabled = locked || !selected;
+  errorSelect.disabled = locked || !selected || Boolean(selectedReal2Sim);
   const errorMode = (config.sensor_error_modes || []).find(mode => mode.id === errorSelect.value);
   const activeError = config.active_sensor_error?.mode;
   const errorDescription = errorMode
@@ -730,13 +746,13 @@ function renderSimulationConfig(config, processes) {
     ? tr(` · active: ${activeError}`, ` · 실행 중: ${activeError}`)
     : tr(" · applies on next start", " · 다음 시작에 적용")));
 
-  $("stackStartBtn").disabled = locked || !selected;
+  $("stackStartBtn").disabled = locked || !selected || Boolean(selectedReal2Sim);
   $("stackStartBtn").textContent = external ? tr("External Sim Running", "외부 시뮬 실행 중")
     : running ? tr("Simulation Running", "시뮬 실행 중")
     : state.simStartPending ? tr("Starting…", "시작 중…") : tr("Start Simulation", "시뮬 시작");
   $("stackStopBtn").disabled = state.configurationLocked || !running || external || state.simStartPending || state.simStopPending;
   $("stackStopBtn").textContent = state.simStopPending ? tr("Stopping…", "정지 중…") : tr("Stop Simulation", "시뮬 정지");
-  $("stackResetBtn").disabled = state.configurationLocked || external || state.simStartPending || state.simStopPending;
+  $("stackResetBtn").disabled = state.configurationLocked || external || state.simStartPending || state.simStopPending || Boolean(selectedReal2Sim);
   const otherGuiLink = $("simOtherGuiLink");
   const otherGui = {
     "8878": ["18879", tr("Open Research GUI ↗", "연구 GUI 열기 ↗")],
@@ -750,7 +766,7 @@ function renderSimulationConfig(config, processes) {
   }
   const virtualglOption = $("virtualglViewer");
   const virtualglUnavailable = processes?.virtualgl_available === false;
-  virtualglOption.disabled = locked || !selected || virtualglUnavailable;
+  virtualglOption.disabled = locked || !selected || virtualglUnavailable || Boolean(selectedReal2Sim);
   if (running || virtualglUnavailable) virtualglOption.checked = Boolean(processes?.virtualgl_viewer);
   const viewerHelp = {
     display_or_gpu: tr("VirtualGL requires a Linux X11 desktop and access to the NVIDIA GPU.",
@@ -761,6 +777,97 @@ function renderSimulationConfig(config, processes) {
   $("virtualglOption").title = viewerHelp || (running || external
     ? tr("Stop the simulation before changing the GPU viewer option.", "GPU 뷰어 설정을 바꾸려면 시뮬레이션을 먼저 정지하세요.")
     : tr("Open the MuJoCo desktop viewer using VirtualGL.", "VirtualGL로 MuJoCo 데스크톱 뷰어를 엽니다."));
+}
+
+function renderReal2SimPanel(vehicle, locked) {
+  const panel = $("real2simPanel");
+  if (!panel) return;
+  panel.hidden = !vehicle;
+  if (!vehicle) return;
+  const sensorNames = { imu: "IMU", pressure: tr("Pressure", "압력"), dvl: "DVL",
+    camera_left: tr("Left camera", "왼쪽 카메라"), camera_right: tr("Right camera", "오른쪽 카메라") };
+  const sensors = (vehicle.sensors || []).map(name => sensorNames[name] || name);
+  setText("real2simSensors", `${tr("Configured sensors", "설정된 센서")} · ${sensors.join(", ") || tr("None", "없음")}`);
+  $("real2simReview").hidden = !vehicle.needs_review;
+  const trialSelect = $("real2simTrial");
+  const profileSelect = $("real2simProfile");
+  const signature = JSON.stringify([vehicle.id, vehicle.trials, vehicle.profiles]);
+  if (state.real2simSignature !== signature) {
+    trialSelect.replaceChildren(...(vehicle.trials || []).map(name => new Option(name, name)));
+    profileSelect.replaceChildren(...(vehicle.profiles || []).map(name => new Option(name, name)));
+    trialSelect.value = vehicle.trials?.[0] || "";
+    profileSelect.value = vehicle.profiles?.includes("candidate") ? "candidate" : (vehicle.profiles?.[0] || "");
+    state.real2simSignature = signature;
+  }
+  trialSelect.disabled = locked || state.real2simViewPending;
+  profileSelect.disabled = locked || state.real2simViewPending;
+  $("real2simViewBtn").disabled = locked || state.real2simViewPending || state.real2simRunning || !trialSelect.value || !profileSelect.value;
+  $("real2simStopBtn").disabled = state.real2simViewPending || !state.real2simRunning;
+}
+
+async function refreshReal2SimVehicles() {
+  try {
+    const response = await fetch("/api/real2sim/vehicles", { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    state.real2simVehicles = Array.isArray(data.vehicles) ? data.vehicles : [];
+    const statusResponse = await fetch("/api/real2sim/status", { cache: "no-store" });
+    if (statusResponse.ok && !state.real2simViewPending) {
+      const status = await statusResponse.json();
+      if (state.real2simRunning && !status.running) {
+        setText("real2simStatus", status.status === "Viewer finished"
+          ? tr("Replay finished.", "재생이 끝났습니다.")
+          : status.status);
+      }
+      state.real2simRunning = Boolean(status.running);
+    }
+    if (state.real2simChoice && !state.real2simVehicles.some(vehicle => vehicle.id === state.real2simChoice)) {
+      state.real2simChoice = "";
+    }
+    if (state.lastSimulationConfig) renderSimulationConfig(state.lastSimulationConfig, state.lastSimulationProcesses);
+  } catch (error) {
+    setText("real2simStatus", tr(`Vehicle list unavailable: ${error.message}`, `기체 목록을 불러오지 못했습니다: ${error.message}`));
+  }
+}
+
+async function openReal2SimReplay() {
+  if (!state.real2simChoice || $("real2simViewBtn").disabled) return;
+  state.real2simViewPending = true;
+  renderSimulationConfig(state.lastSimulationConfig, state.lastSimulationProcesses);
+  try {
+    const response = await fetch("/api/real2sim/view", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: state.real2simChoice, trial: $("real2simTrial").value,
+        profile: $("real2simProfile").value, playback_rate: 1.0 }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.ok === false) throw new Error(result.error || `HTTP ${response.status}`);
+    state.real2simRunning = true;
+    setText("real2simStatus", tr("MuJoCo replay opened.", "MuJoCo 재생 창을 열었습니다."));
+  } catch (error) {
+    setText("real2simStatus", tr(`Replay failed: ${error.message}`, `재생 실패: ${error.message}`));
+  } finally {
+    state.real2simViewPending = false;
+    renderSimulationConfig(state.lastSimulationConfig, state.lastSimulationProcesses);
+  }
+}
+
+async function stopReal2SimReplay() {
+  if (!state.real2simRunning || state.real2simViewPending) return;
+  state.real2simViewPending = true;
+  renderSimulationConfig(state.lastSimulationConfig, state.lastSimulationProcesses);
+  try {
+    const response = await fetch("/api/real2sim/stop", { method: "POST" });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.ok === false) throw new Error(result.error || `HTTP ${response.status}`);
+    state.real2simRunning = false;
+    setText("real2simStatus", tr("Replay stopped.", "재생을 종료했습니다."));
+  } catch (error) {
+    setText("real2simStatus", tr(`Stop failed: ${error.message}`, `종료 실패: ${error.message}`));
+  } finally {
+    state.real2simViewPending = false;
+    renderSimulationConfig(state.lastSimulationConfig, state.lastSimulationProcesses);
+  }
 }
 
 function vehicleLabel(vehicle) {
@@ -2098,6 +2205,13 @@ function bindControls() {
   });
 
   $("simVehicle").addEventListener("change", (event) => {
+    if (event.target.value.startsWith("real2sim:")) {
+      state.real2simChoice = event.target.value.slice("real2sim:".length);
+      renderSimulationConfig(state.lastSimulationConfig, state.lastSimulationProcesses);
+      document.querySelector('.station-nav [aria-controls="station-setup"]')?.click();
+      return;
+    }
+    state.real2simChoice = "";
     const preset = state.lastSimulationConfig?.presets?.find(entry => entry.vehicle === event.target.value);
     if (preset) {
       state.simPresetChoice = preset.id;
@@ -2110,6 +2224,9 @@ function bindControls() {
     state.simStartError = "";
     renderSimulationConfig(state.lastSimulationConfig, state.lastSimulationProcesses);
   });
+  $("real2simViewBtn").addEventListener("click", openReal2SimReplay);
+  $("real2simStopBtn").addEventListener("click", stopReal2SimReplay);
+  $("real2simRefreshBtn").addEventListener("click", refreshReal2SimVehicles);
   $("stackStartBtn").addEventListener("click", startSimStack);
   $("stackStopBtn").addEventListener("click", () => stopSimStack().catch(console.error));
   $("stackResetBtn").addEventListener("click", () => postCommand({ command: "stack_reset" }).then(pollStatus).catch(console.error));
@@ -2237,6 +2354,8 @@ document.addEventListener("visibilitychange", () => {
 });
 window.addEventListener("pagehide", releaseRcForInactivePage);
 pollStatus();
+refreshReal2SimVehicles();
+setInterval(refreshReal2SimVehicles, 15000);
 setInterval(pollStatus, STATUS_POLL_MS);
 setInterval(pollCameraStatus, CAMERA_POLL_MS);
 setInterval(pollPhysicalGamepad, GAMEPAD_POLL_MS);

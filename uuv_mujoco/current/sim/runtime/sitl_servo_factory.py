@@ -20,7 +20,7 @@ def build_sitl_servo_runtime_kwargs(
         "raw_map": list(raw_map),
         "servo_signs": [float(value) for value in servo_signs],
         "cmd_norm": {name: 0.0 for name in all_thruster_names},
-        "pwm_values": [1500] * 8,
+        "pwm_values": [1500] * max(8, len(raw_map)),
         "last_wall": {"value": -1.0},
         "scale": float(np.clip(sitl_servo_scale, 0.0, 2.0)),
         "lock": RLock(),

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from physics.thruster_mapping import vehicle_thruster_mapping
+from sim.runtime.vehicle_manifest import runtime_thruster_mapping
 from sim.runtime.initial_depth_runtime import InitialDepthHoldRuntime
 from sim.runtime.initial_state import configure_initial_runtime_state
 
@@ -17,7 +17,7 @@ def create_initial_depth_runtime_setup(
     env_float,
     env_flag,
 ) -> tuple[object, InitialDepthHoldRuntime]:
-    horizontal, vertical, _, _ = vehicle_thruster_mapping(getattr(args, "vehicle", "ut27"))
+    horizontal, vertical, _, _ = runtime_thruster_mapping(args)
     base_state = model_setup.base_state
     initial_runtime_state = configure_initial_runtime_state(
         args=args,
