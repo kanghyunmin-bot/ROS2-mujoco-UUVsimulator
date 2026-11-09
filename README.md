@@ -18,10 +18,11 @@ MuJoCo 기반 수중 로봇 시뮬레이터입니다. UT27 연구 수조 환경�
 ./docker/ubuntu-dev/dev.sh web
 ```
 
-GUI의 **Vehicle → BlueROV2 Standard**에서 기체를 선택하고 시뮬레이션을 시작합니다. UT27 기체도 같은 선택 메뉴에 유지되어 있습니다. 기본 프로필은 실측 DFKI 시험에 맞춘 yaw 실험 프로필입니다. 이 프로필은 해당 로그에 대한 오프라인 적합 결과이며, 모든 BlueROV2 실물 구성에 대한 독립 검증값은 아닙니다. 화면 언어는 Settings에서 English 또는 한국어로 바꿀 수 있습니다.
+상단 **Vehicle**에서 **BlueROV2 Standard** 또는 **UT27**을 고른 뒤 **Start Simulation**을 누릅니다. 언어는 **Settings → General → Language**에서 바꿀 수 있습니다.
 
 ![BlueROV2 Standard가 선택된 연구 GUI](docs/assets/blue-rov2-web-gui.png)
 
+Docker의 **RC Log Replay**에서 `/workspace/docs/paper/data/dfki-random-rcin-bag`를 열면 DFKI 무작위 주행의 조종 입력을 SITL에 재생할 수 있습니다. [재생 데이터와 사용 조건](docs/paper/README.md#reproduce-or-replay)
 
 ## 시스템 구성
 
@@ -39,7 +40,9 @@ GUI의 **Vehicle → BlueROV2 Standard**에서 기체를 선택하고 시뮬레�
 
 기체 형상은 공개 BlueROV2 ROS 2 Xacro/CAD 메시를 MuJoCo OBJ 자산으로 변환하고, 공개 장착 위치와 T200 특성표를 적용했습니다. 공개 자료가 정하지 않는 질량 분포, 부력중심, 추가질량, 마찰·감쇠 일부는 초기 가정입니다. DFKI 공개 데이터는 실험 맥락과 RC/PWM·상태 로그를 제공하지만, 그 기록만으로 시험 기체의 모든 물리 파라미터를 확정할 수 없습니다.
 
-그림 01의 무작위 경로는 UUV-Sim 계수 적합에 사용된 구간입니다. 따라서 그 그림은 독립 시험 성능이 아니라 해당 경로에서의 초기/적합 모델 재현을 보여줍니다. yaw 실험 프로필 역시 현재 GUI 기본값이며, 적합 제외 로그에서 누적 yaw 오차가 증가했습니다. 기록된 PWM을 원래 타임스탬프에 맞춰 재생하고 유효한 대응 샘플의 RMSE를 계산합니다. 적합 구간, 시험 구간과 프로필은 그림 설명에서 구분합니다. 데이터 준비·재생·채점 명령은 [모델 및 재현 절차](docs/contracts/BLUEROV2_MODEL.md)와 [DFKI 자료 레지스터](uuv_mujoco/current/research_workspace/04_paper_evidence/REFERENCES_BLUEROV2.md)에 있습니다. 논문용 그림 및 그 범위는 [그림 색인](docs/paper/README.md)을 참고하세요.
+그림 01은 계수 적합에 사용된 DFKI 무작위 경로에서 실측과 최초·yaw 적합 결과를 비교합니다. yaw 실험 프로필은 현재 GUI 기본값이며, 적합 제외 로그에서는 누적 yaw 오차가 증가했습니다. 기록된 PWM을 원래 타임스탬프에 맞춰 재생하고 유효한 대응 샘플의 RMSE를 계산합니다. 적합 구간과 별도 시험 구간은 그림 설명에서 구분합니다. 데이터 준비·재생·채점 명령은 [모델 및 재현 절차](docs/contracts/BLUEROV2_MODEL.md)와 [DFKI 자료 레지스터](uuv_mujoco/current/research_workspace/04_paper_evidence/REFERENCES_BLUEROV2.md)에 있습니다. 논문용 그림 및 그 범위는 [그림 색인](docs/paper/README.md)을 참고하세요.
+
+![DFKI 수조 실측과 BlueROV2 최초 및 yaw 적합 재생 결과](docs/paper/figure-01-initial-final.png)
 
 ## 다른 시뮬레이터와의 비교
 

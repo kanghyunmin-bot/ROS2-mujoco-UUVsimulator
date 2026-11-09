@@ -17,10 +17,11 @@ The supported setup target is Ubuntu 22.04 / ROS 2 Humble / Linux x86_64. Clone 
 ./docker/ubuntu-dev/dev.sh build-ros
 ./docker/ubuntu-dev/dev.sh web
 ```
- Select **Vehicle → BlueROV2 Standard**, then start the simulation. UT27 remains available in the same vehicle menu. The default profile is the yaw experiment profile fitted to the DFKI measurement trials. It is an offline fit to those logs, not an independently validated parameter set for every physical BlueROV2 configuration. Change the display language to English or Korean in Settings.
+Choose **BlueROV2 Standard** or **UT27** from **Vehicle**, then select **Start Simulation**. Change the display language under **Settings → General → Language**.
 
 ![Research GUI with BlueROV2 Standard selected](docs/assets/blue-rov2-web-gui.png)
 
+To replay the DFKI random-path pilot inputs through SITL, open `/workspace/docs/paper/data/dfki-random-rcin-bag` in **RC Log Replay** in Docker. [Replay data and conditions](docs/paper/README.md#reproduce-or-replay)
 
 ## System architecture
 
@@ -38,7 +39,9 @@ The closed loop is `MuJoCo state → sensors/SITL → ArduSub PWM → thrust and
 
 The vehicle geometry converts public BlueROV2 ROS 2 Xacro/CAD meshes into MuJoCo OBJ assets and applies public thruster mounting locations and T200 performance data. Some mass distribution, center of buoyancy, added mass, friction, and damping values are starting assumptions because public sources do not specify them. The public DFKI dataset supplies experimental context and RC/PWM and state logs; those records alone do not establish every physical parameter of the tested vehicle.
 
-Figure 01 uses the random-path trial that was used to fit UUV-Sim coefficients. It shows initial and fitted model replay on that trial, not independent test performance. The yaw-experiment profile is also the current GUI default, and its accumulated yaw error increased on fitting-excluded logs. Calibration comparisons replay recorded PWM at its original timestamps and calculate RMSE over valid paired samples. The figures distinguish fitting trials, held-out trials, and the yaw-experiment profile. Data preparation, replay, and scoring commands are documented in the [model and replay procedure](docs/contracts/BLUEROV2_MODEL.md) and [DFKI source register](uuv_mujoco/current/research_workspace/04_paper_evidence/REFERENCES_BLUEROV2.md). See the [paper figure index](docs/paper/README.md) for figures and their scope.
+Figure 01 compares the initial and yaw-tuned profiles on the DFKI random-path trial used for fitting. The yaw-tuned profile is the current BlueROV2 GUI default. Its pooled accumulated yaw error increased on fitting-excluded runs. The offline comparison replays recorded PWM at its original timestamps and computes RMSE over valid paired samples. See the [model and replay procedure](docs/contracts/BLUEROV2_MODEL.md) for preparation and scoring, and the [figure index](docs/paper/README.md) for the trial split and evaluation scope.
+
+![DFKI tank measurements and BlueROV2 initial and yaw-tuned replays](docs/paper/figure-01-initial-final.png)
 
 ## Simulator comparison
 
@@ -69,7 +72,7 @@ UUV-Sim hydrodynamic coefficients were fitted using the random-path trial. Stone
 
 ## Simulator recordings
 
-Simulator recordings:
+Select a preview to open the 14-second SITL driving demo.
 
 | UT27 | BlueROV2 Standard |
 | --- | --- |
