@@ -12,22 +12,28 @@ function setup() {
   const nodes = {};
   const node = id => nodes[id] ||= {
     value: "", checked: false, children: [], disabled: false,
-    replaceChildren() { this.children = []; this.value = ""; },
-    appendChild(child) { this.children.push(child); },
+    replaceChildren(...children) { this.children = children; this.value = ""; },
+    get selectedOptions() { return this.children.filter(option => option.value === this.value); },
+    querySelector() { return this.aprilOption ||= {}; },
   };
-  const state = { simPresetTouched: false, simPresetSignature: "", configurationLocked: false, simStopPending: false };
+  const state = { simPresetChoice: "", simPresetSignature: "", configurationLocked: false, simStopPending: false };
   const requests = [];
   const ctx = vm.createContext({
-    state, $: node, window: { location: { port: "8878" } }, document: { activeElement: null, createElement: () => ({}) },
+    state, $: node, window: { location: { port: "8878" } }, document: {},
+    Option: function (textContent, value) { Object.assign(this, { textContent, value }); },
+    tr: english => english,
     setText: (id, text) => { node(id).textContent = text; },
-    postCommand: async payload => { requests.push(payload); return {}; },
+    postCommand: async payload => { requests.push(payload); return { simulation_config: {} }; },
     pollStatus: async () => {},
   });
   vm.runInContext(render + "\n" + start, ctx);
   const config = {
     selected_preset_id: "research_pool_distributed",
     selected_sensor_error_mode: "existing",
-    presets: ["research_pool_distributed", "course_current"].map(id => ({ id, label: id })),
+    presets: [
+      ...["research_pool_distributed", "course_current"].map(id => ({ id, label: id, vehicle: "ut27" })),
+      { id: "bluerov2_standard", label: "BlueROV2 Standard", vehicle: "bluerov2_standard" },
+    ],
     sensor_error_modes: [
       { id: "existing", description: "existing" },
       { id: "bag0402", description: "2 Hz; partial calibration" },
@@ -44,8 +50,7 @@ test("primary view shows pool only, advanced preserves selected comparison", () 
   node("showAdvancedEnvironments").checked = true;
   ctx.renderSimulationConfig(config, {});
   assert.equal(node("simLaunchPreset").children.length, 2);
-  state.simPresetTouched = true;
-  node("simLaunchPreset").value = "course_current";
+  state.simPresetChoice = "course_current";
   node("showAdvancedEnvironments").checked = false;
   ctx.renderSimulationConfig(config, {});
   assert.equal(node("simLaunchPreset").value, "course_current");
@@ -98,4 +103,20 @@ test("error selection survives polling and locks while running", async () => {
   assert.equal(node("sensorErrorMode").value, "bag0402");
   assert.equal(node("sensorErrorMode").disabled, true);
   assert.equal(node("showAdvancedEnvironments").disabled, true);
+});
+
+test("vehicle selection filters environments and launches the corresponding preset", async () => {
+  const { ctx, state, node, config, requests } = setup();
+  state.simPresetChoice = "bluerov2_standard";
+  config.selected_sensor_error_mode = "bag0402";
+  node("showAdvancedEnvironments").checked = true;
+  ctx.renderSimulationConfig(config, {});
+  assert.equal(node("simVehicle").value, "bluerov2_standard");
+  assert.deepEqual(Array.from(node("simLaunchPreset").children, option => option.value), ["bluerov2_standard"]);
+  assert.equal(node("sensorErrorMode").value, "existing");
+  await ctx.startSimStack();
+  assert.equal(requests[0].sim_preset, "bluerov2_standard");
+  ctx.renderSimulationConfig({ ...config, active_preset_id: "bluerov2_standard" }, { sim_running: true });
+  assert.equal(node("simVehicle").value, "bluerov2_standard");
+  assert.equal(node("simVehicle").disabled, true);
 });

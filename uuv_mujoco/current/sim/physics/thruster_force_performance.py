@@ -18,14 +18,15 @@ _NATIVE_PWM_TO_SCENE_DIRECTIONS = dict(zip(
 ESC_DEADBAND_US = 25.0
 
 
-def native_pwm_direction(name: str) -> float:
-    """Return the direction between the scene actuator and the native ESC curve."""
-    return float(_NATIVE_PWM_TO_SCENE_DIRECTIONS.get(name, 1.0))
+def native_pwm_direction(name: str, perf_cfg: Mapping[str, Any] | None = None) -> float:
+    """Return the direction between positive scene thrust and the test curve's forward direction."""
+    directions = (perf_cfg or {}).get("native_pwm_directions", _NATIVE_PWM_TO_SCENE_DIRECTIONS)
+    return float(directions.get(name, 1.0))
 
 
 def rotor_rpm_from_command(name: str, command: float, perf_cfg: Mapping[str, Any]) -> float:
     """Return steady, signed rotor speed [RPM] for the scene-axis PWM command."""
-    direction = native_pwm_direction(name)
+    direction = native_pwm_direction(name, perf_cfg)
     pwm = 1500.0 + 400.0 * direction * float(np.clip(command, -1.0, 1.0))
     if abs(pwm - 1500.0) <= ESC_DEADBAND_US:
         return 0.0
@@ -56,10 +57,9 @@ def force_from_performance_curve(
     thruster_direct_scale: Mapping[str, float],
 ) -> float:
     if perf_cfg.get("direct"):
-        # Commands already use the scene actuator axis. Restore the native
-        # ESC polarity for the asymmetric measured curve, then rotate the
-        # resulting force into that scene axis. This never reapplies MOT_DIR.
-        direction = native_pwm_direction(name)
+        # Commands already use the scene actuator axis. Select the test curve
+        # branch from the mounted thrust direction, independent of servo wiring.
+        direction = native_pwm_direction(name, perf_cfg)
         return float(
             direction * pwm_to_force_from_performance(command_shaped * direction, perf_cfg)
             * float(thruster_direct_scale.get(name, 1.0))

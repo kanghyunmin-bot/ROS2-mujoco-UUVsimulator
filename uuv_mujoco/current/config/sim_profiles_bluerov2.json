@@ -1,0 +1,130 @@
+{
+  "bluerov2_standard": {
+    "profile_note": "Standard BlueROV2 hydrodynamic prior for the research pool. T200 response uses the measured RPM and thrust tables.",
+    "half_height": 0.127,
+    "buoyancy_model": "ellipsoid",
+    "buoyancy_scale": 1.0,
+    "buoyancy_slope_scale": 1.0,
+    "cob_torque_scale": 1.0,
+    "buoyancy_point_blend": 1.0,
+    "cob_x_offset": 0.0,
+    "cob_z_offset": 0.02,
+    "hydrostatic_restoring": {
+      "active": false
+    },
+    "thruster_voltage": 14.8,
+    "thruster_response_model": "rpm",
+    "thruster_force_max": 60.0,
+    "linear_drag": 1.0,
+    "angular_drag": 1.0,
+    "air_linear_drag": 0.0,
+    "air_angular_drag": 0.0,
+    "surface_heave_damping": 0.0,
+    "heave_damping_scale": 1.0,
+    "current_world": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "spin_gain": 0.0,
+    "yaw_torque_scale": 1.0,
+    "distributed_hydrodynamics": {
+      "active": false
+    },
+    "hydrodynamic_matrices": {
+      "active": false
+    },
+    "fossen_residual": {
+      "active": false
+    },
+    "linear_damping_linear": [
+      1.3125,
+      9.1435,
+      2.015
+    ],
+    "linear_damping_angular": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "quadratic_damping_linear": [
+      38.169,
+      129.6607,
+      243.25
+    ],
+    "quadratic_damping_angular": [
+      3.992,
+      3.992,
+      4.86
+    ],
+    "added_mass_linear": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "added_mass_angular": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "bluerov2_dfki_calibrated": {
+    "extends": "bluerov2_standard",
+    "profile_note": "Effective submerged DFKI plant fit on random, circle, 5m, 10m, 15m. No tether model.",
+    "buoyancy_scale": 1.0110089946035155,
+    "cob_x_offset": 0.0024192251636819795,
+    "cob_z_offset": 0.029019028306256543,
+    "yaw_torque_scale": 0.3869449213619431,
+    "linear_damping_linear": [
+      84.73783854456063,
+      77.10391164665783,
+      69.17395899406606
+    ],
+    "linear_damping_angular": [
+      1.9096057695689295,
+      0.016131730486466447,
+      4.2369424952449615
+    ],
+    "quadratic_damping_linear": [
+      0.021545150024704335,
+      116.17774451302044,
+      2.46372911269868e-11
+    ],
+    "quadratic_damping_angular": [
+      17.477294507337273,
+      19.04254242567184,
+      5.11756703901639e-10
+    ],
+    "cob_y_offset": 0.005919366181578126,
+    "hydro_pitch_moment_coeff": 2.0805520247247187,
+    "thruster_direct_gain_scales": {
+      "yaw_rf": 1.2476122237002345,
+      "yaw_lf": 0.7508920560667527,
+      "yaw_rr": 1.2617937075770522,
+      "yaw_lr": 1.3060516705753706,
+      "ver_rf": 0.5835001361865009,
+      "ver_lf": 0.5500000000000003
+    }
+  },
+  "bluerov2_dfki_yaw_experiment": {
+    "extends": "bluerov2_dfki_calibrated",
+    "profile_note": "Experimental directional yaw fit. Reproduces the DFKI comparison overlay. Retain the calibrated profile for general replay.",
+    "linear_damping_angular": [
+      1.9096057695689295,
+      0.016131730486466447,
+      4.765269414503703
+    ],
+    "quadratic_damping_angular": [
+      17.477294507337273,
+      19.04254242567184,
+      0.3817650792750599
+    ],
+    "yaw_torque_thruster_scales": {
+      "yaw_rf": 0.6164339347159357,
+      "yaw_lf": 0.5411125149723981,
+      "yaw_rr": 0.35936442684313463,
+      "yaw_lr": 0.5866656570180308
+    },
+    "yaw_damping_asymmetry": 0.5999999999999996
+  }
+}

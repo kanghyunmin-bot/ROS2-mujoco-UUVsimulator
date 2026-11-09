@@ -103,5 +103,33 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
+# BlueROV2 Standard VECTORED frame. Sites follow the public ROS 2 URDF.
+BLUEROV2_HORIZONTAL_THRUSTERS = ("yaw_rf", "yaw_lf", "yaw_rr", "yaw_lr")
+BLUEROV2_VERTICAL_THRUSTERS = ("ver_rf", "ver_lf")
+BLUEROV2_SERVO_MAP = BLUEROV2_HORIZONTAL_THRUSTERS + BLUEROV2_VERTICAL_THRUSTERS
+BLUEROV2_SERVO_SIGNS = (-1, -1, 1, 1, 1, 1)
+# DFKI RC_OUT logs identify reversed motor 5 relative to the stock SITL setup.
+BLUEROV2_DFKI_SERVO_SIGNS = (-1, -1, 1, 1, -1, 1)
+# Positive actuator gears point toward the T200 cable-side nose on every
+# mount. The R4 propeller arrangement is CCW, CCW, CW, CW, CCW, CW as viewed
+# from that nose. All BlueROV2 rotor joint axes point along positive thrust.
+BLUEROV2_T200_FORWARD_SIGNS = (1, 1, 1, 1, 1, 1)
+BLUEROV2_PROP_SPIN_SIGNS = (1, 1, -1, -1, 1, -1)
+
+
+def vehicle_thruster_mapping(vehicle: str, *, pwm_layout: str = "standard"):
+    """Return horizontal names, vertical names, channel order and PWM signs."""
+    if pwm_layout not in ("standard", "dfki") or (pwm_layout == "dfki" and vehicle != "bluerov2_standard"):
+        raise ValueError(f"PWM layout {pwm_layout!r} is unsupported for {vehicle}")
+    if vehicle == "ut27":
+        return (PHYSICAL_YAW_THRUSTERS, PHYSICAL_VERTICAL_THRUSTERS,
+                ARDUSUB_VECTORED_6DOF_SERVO_MAP, ARDUSUB_VECTORED_6DOF_SERVO_SIGNS)
+    if vehicle == "bluerov2_standard":
+        signs = BLUEROV2_DFKI_SERVO_SIGNS if pwm_layout == "dfki" else BLUEROV2_SERVO_SIGNS
+        return (BLUEROV2_HORIZONTAL_THRUSTERS, BLUEROV2_VERTICAL_THRUSTERS,
+                BLUEROV2_SERVO_MAP, signs)
+    raise ValueError(f"Unknown vehicle: {vehicle}")
+
+
 if __name__ == "__main__":
     raise SystemExit(main())

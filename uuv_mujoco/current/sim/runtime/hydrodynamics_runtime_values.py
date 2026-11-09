@@ -95,6 +95,7 @@ def collect_hydrodynamics_runtime_values(
             neutral_volume=resolved_neutral_volume(hydro_cfg, neutral_volume),
         ),
         yaw_torque_thruster_scales=yaw_torque_thruster_scales,
+        yaw_damping_asymmetry=float(sim_profile.get("yaw_damping_asymmetry", 0.0)),
         water_current_world=water_current_world,
         **damping_array_fields(hydro_cfg),
         body_components=active_body_components,

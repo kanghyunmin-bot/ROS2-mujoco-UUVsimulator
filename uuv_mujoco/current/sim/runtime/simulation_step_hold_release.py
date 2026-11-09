@@ -14,6 +14,7 @@ def maybe_release_initial_depth_hold(
     ros_bridge: Any,
     sitl_servo_pwm_values: Sequence[int],
     release_initial_depth_hold: Callable[[str], Any],
+    active_channel_count: int = 8,
 ) -> None:
     if not initial_depth_hold["active"] or not auto_release:
         return
@@ -29,7 +30,7 @@ def maybe_release_initial_depth_hold(
         if bridge_aligned(ros_bridge):
             release_initial_depth_hold("startup:aligned_and_operator_armed")
         return
-    valid_pwm = [int(v) for v in sitl_servo_pwm_values[:8] if int(v) not in (0, 65535)]
+    valid_pwm = [int(v) for v in sitl_servo_pwm_values[:active_channel_count] if int(v) not in (0, 65535)]
     max_delta = max((abs(v - 1500) for v in valid_pwm), default=0)
     if mode != "ALT_HOLD" and max_delta > 12:
         release_initial_depth_hold("auto:armed_nonneutral_servo")

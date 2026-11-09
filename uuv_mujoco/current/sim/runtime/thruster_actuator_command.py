@@ -17,7 +17,7 @@ def update_thruster_state(runtime, name: str, dt: float, params: ThrusterUpdateP
     tau_up, tau_down = thruster_tau(runtime, name, params)
     perf = runtime.perf_cfg
     if "rpm" in perf:
-        direction = native_pwm_direction(name)
+        direction = native_pwm_direction(name, perf)
         target_rpm = rotor_rpm_from_command(name, target_norm, perf)
         rpm = thruster_response(runtime.rotor_rpm.get(name, 0.0), target_rpm, dt, tau_up, tau_down)
         runtime.rotor_rpm[name] = rpm
@@ -39,7 +39,7 @@ def shaped_thruster_command(runtime, state_value: float, params: ThrusterUpdateP
 def thruster_force(runtime, name: str, shaped_cmd: float) -> float:
     perf = runtime.perf_cfg
     if "rpm" in perf:
-        direction = native_pwm_direction(name)
+        direction = native_pwm_direction(name, perf)
         force = direction * float(np.interp(
             direction * runtime.rotor_rpm[name], perf["rotor_rpm_knots"], perf["rotor_force_knots"]
         )) * float(runtime.thruster_direct_scale.get(name, 1.0))

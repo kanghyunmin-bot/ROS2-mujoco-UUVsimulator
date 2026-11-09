@@ -44,10 +44,10 @@ def profile_file_paths(arguments: list[str]) -> list[Path]:
     ))
 
 
-def validate_pwm_rows(rows: np.ndarray) -> None:
-    """Check received times [s] and eight PWM commands [µs], preserving disabled values."""
-    if rows.ndim != 2 or rows.shape[1] != 9 or not len(rows):
-        raise ValueError("Expected time and exactly eight PWM channels")
+def validate_pwm_rows(rows: np.ndarray, *, motor_count: int = 8) -> None:
+    """Check received times [s] and active PWM commands [µs], preserving disabled values."""
+    if rows.ndim != 2 or rows.shape[1] != 1 + motor_count or not len(rows):
+        raise ValueError(f"Expected time and exactly {motor_count} PWM channels")
     if not np.isfinite(rows).all() or np.any(np.diff(rows[:, 0]) <= 0):
         raise ValueError("PWM observations must be finite and strictly time ordered")
     pwm = rows[:, 1:]

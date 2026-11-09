@@ -58,6 +58,23 @@ if [[ -z "${ARDUPILOT_DIR:-}" && -d "${WORKSPACE_DIR}/ardupilot_sub_stable" ]]; 
   ARDUPILOT_DIR="${WORKSPACE_DIR}/ardupilot_sub_stable"
 fi
 ARDUPILOT_DIR="${ARDUPILOT_DIR:-${WORKSPACE_DIR}/ardupilot}"
+case "${UUV_VEHICLE:-ut27}" in
+  ut27) SITL_FRAME_NAME="vectored_6dof" ;;
+  bluerov2_standard)
+    SITL_FRAME_NAME="vectored"
+    # Keep this controller's EEPROM separate from UT27 and discard stale values.
+    SITL_USE_REAL_PARAM_FILE=0
+    SITL_REAL2SIM_BAG0402=0
+    SITL_YAW_STABLE=0
+    UUV_SITL_YAW_BRAKE=0
+    SITL_PARAM_AB_PROFILE=real
+    SITL_FRAME_CONFIG=1
+    SITL_WIPE_EEPROM=1
+    SITL_BATT_VOLTAGE="${SITL_BATT_VOLTAGE:-14.8}"
+    export SITL_USE_REAL_PARAM_FILE SITL_REAL2SIM_BAG0402 SITL_YAW_STABLE UUV_SITL_YAW_BRAKE SITL_PARAM_AB_PROFILE
+    ;;
+  *) echo "[error] unsupported UUV_VEHICLE=${UUV_VEHICLE}" >&2; exit 2 ;;
+esac
 if [[ "${SITL_YAW_STABLE:-0}" == "1" ]]; then
   export UUV_SITL_YAW_BRAKE=1
   if [[ ! -s "${SCRIPT_DIR}/config/ardusub_yaw_stable.param" ]]; then
@@ -438,6 +455,10 @@ user_arg_present_option() {
 }
 
 SIM_ARGS=()
+if [[ "${UUV_VEHICLE:-ut27}" == "bluerov2_standard" ]]; then
+  SITL_VEHICLE_WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/uuv-bluerov2-sitl.XXXXXX")"
+  SIM_ARGS+=(--use-dir "$SITL_VEHICLE_WORK_DIR")
+fi
 if ! user_arg_present_option "-I"; then
   if [[ "$SITL_INSTANCE" == "auto" ]]; then
     SITL_INSTANCE_EFFECTIVE=""
@@ -794,8 +815,13 @@ append_param_if_not_overridden "SERVO3_FUNCTION" "35"
 append_param_if_not_overridden "SERVO4_FUNCTION" "36"
 append_param_if_not_overridden "SERVO5_FUNCTION" "37"
 append_param_if_not_overridden "SERVO6_FUNCTION" "38"
-append_param_if_not_overridden "SERVO7_FUNCTION" "39"
-append_param_if_not_overridden "SERVO8_FUNCTION" "40"
+if [[ "${UUV_VEHICLE:-ut27}" == "bluerov2_standard" ]]; then
+  append_param_if_not_overridden "SERVO7_FUNCTION" "0"
+  append_param_if_not_overridden "SERVO8_FUNCTION" "0"
+else
+  append_param_if_not_overridden "SERVO7_FUNCTION" "39"
+  append_param_if_not_overridden "SERVO8_FUNCTION" "40"
+fi
 # The real rosbag RCOUT channels are bounded by 1100..1900us. ArduSub motor
 # functions use MOT_PWM_* for SERVO_OUTPUT_RAW limits, so keep SITL on the same
 # PWM envelope instead of the SITL default 1000..2000us.
@@ -806,14 +832,22 @@ append_param_if_not_overridden "MOT_PWM_MAX" "1900"
 # writing SERVO_OUTPUT_RAW. SERVO*_REVERSED is intentionally not used here:
 # QGC's Motor Config reverse checkboxes correspond to motor direction, not a
 # generic servo-channel reverse in the SITL output path.
-append_param_if_not_overridden "MOT_1_DIRECTION" "1"
-append_param_if_not_overridden "MOT_2_DIRECTION" "1"
-append_param_if_not_overridden "MOT_3_DIRECTION" "-1"
-append_param_if_not_overridden "MOT_4_DIRECTION" "-1"
-append_param_if_not_overridden "MOT_5_DIRECTION" "-1"
-append_param_if_not_overridden "MOT_6_DIRECTION" "1"
-append_param_if_not_overridden "MOT_7_DIRECTION" "1"
-append_param_if_not_overridden "MOT_8_DIRECTION" "-1"
+if [[ "${UUV_VEHICLE:-ut27}" == "bluerov2_standard" ]]; then
+  append_param_if_not_overridden "MOT_1_DIRECTION" "-1"
+  append_param_if_not_overridden "MOT_2_DIRECTION" "-1"
+  for motor in 3 4 5 6; do
+    append_param_if_not_overridden "MOT_${motor}_DIRECTION" "1"
+  done
+else
+  append_param_if_not_overridden "MOT_1_DIRECTION" "1"
+  append_param_if_not_overridden "MOT_2_DIRECTION" "1"
+  append_param_if_not_overridden "MOT_3_DIRECTION" "-1"
+  append_param_if_not_overridden "MOT_4_DIRECTION" "-1"
+  append_param_if_not_overridden "MOT_5_DIRECTION" "-1"
+  append_param_if_not_overridden "MOT_6_DIRECTION" "1"
+  append_param_if_not_overridden "MOT_7_DIRECTION" "1"
+  append_param_if_not_overridden "MOT_8_DIRECTION" "-1"
+fi
 case "${SITL_SERIAL0_UDPCLIENT:-0}" in
   1|true|TRUE|yes|YES|on|ON|enable|enabled)
     # Non-blocking bootstrap only for explicit direct-MAVLink experiments. In
@@ -1334,7 +1368,7 @@ if [[ "$USE_DIRECT_MAVLINK" -eq 1 ]]; then
   SITL_CMD=("$MJ311_PYTHON" "$SIM_VEHICLE" \
     -L RATBeach \
     -v ArduSub \
-    -f vectored_6dof \
+    -f "$SITL_FRAME_NAME" \
     --model JSON \
     -A "$SERIAL_ARGS")
   if ((${#SIM_ARGS[@]})); then
@@ -1386,7 +1420,7 @@ fi
 SITL_CMD=("$MJ311_PYTHON" "$SIM_VEHICLE" \
   -L RATBeach \
   -v ArduSub \
-  -f vectored_6dof \
+  -f "$SITL_FRAME_NAME" \
   --model JSON \
   -A "--sim-address=${SITL_JSON_HOST} --sim-port-in=${SITL_JSON_SENSOR_PORT} --sim-port-out=${SITL_JSON_SERVO_PORT}" \
   "${MAVPROXY_OUT_ARGS[@]}")

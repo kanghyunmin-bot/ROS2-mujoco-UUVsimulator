@@ -1,5 +1,6 @@
 // Research workspace composition. Move existing controls to preserve command contracts.
 (() => {
+  const tr = window.StationLanguage.text;
   const byId = id => document.getElementById(id);
   const node = (tag, className, html = '') => {
     const element = document.createElement(tag);
@@ -17,19 +18,19 @@
   const data = byId('station-data');
   const setup = byId('station-setup');
   const shell = node('section', 'workbench');
-  shell.setAttribute('aria-label', 'UT27 실험 워크스페이스');
+  shell.setAttribute('aria-label', tr("Underwater Robotics Workspace", "수중 로봇 실험 워크스페이스"));
   document.querySelector('.app-header').after(shell);
 
   // The sidebar describes work and visible views; it is not a second command surface.
-  const sidebar = node('aside', 'workspace-sidebar', `<div class="sidebar-heading">WORKSPACE</div><div class="workspace-project">${icon('layers')}<div><strong>UT27 Research</strong><small>수중 로봇 시뮬레이션</small></div></div><div class="sidebar-heading">작업</div>`);
+  const sidebar = node('aside', 'workspace-sidebar', `<div class="sidebar-heading">WORKSPACE</div><div class="workspace-project">${icon('layers')}<div><strong id="workspaceProject">UT27 Research</strong><small>${tr("Underwater Simulation", "수중 로봇 시뮬레이션")}</small></div></div><div class="sidebar-heading">${tr("Workspace Pages", "작업")}</div>`);
   sidebar.append(nav);
   const navIcons = ['activity', 'folder', 'sliders'];
   [...nav.children].forEach((button, index) => button.insertAdjacentHTML('afterbegin', icon(navIcons[index])));
-  const views = node('div', 'workspace-views', `<div class="sidebar-heading">관찰 화면</div><button type="button" data-camera-layout="split" aria-pressed="true">${icon('layers')}전체 보기</button><button type="button" data-camera-layout="front" aria-pressed="false">${icon('video')}전방 카메라</button><button type="button" data-camera-layout="hand" aria-pressed="false">${icon('video')}손 카메라</button><div class="sidebar-heading">실험 도구</div><button type="button" id="workspacePhysics">${icon('sliders')}물리 프로필</button><button type="button" id="workspaceCourse">${icon('crosshair')}시작 배치</button>`);
-  sidebar.append(views, node('div', 'sidebar-foot', `${icon('cpu')}<span>MuJoCo · ROS 2<small>UT27 / local workspace</small></span>`));
+  const views = node('div', 'workspace-views', `<div class="sidebar-heading">${tr("Camera Views", "관찰 화면")}</div><button type="button" data-camera-layout="split" aria-pressed="true" data-ut27-only>${icon('layers')}${tr("All Cameras", "전체 보기")}</button><button type="button" data-camera-layout="front" aria-pressed="false">${icon('video')}${tr("Front Camera", "전방 카메라")}</button><button type="button" data-camera-layout="hand" aria-pressed="false" data-ut27-only>${icon('video')}${tr("Hand Camera", "손 카메라")}</button><div class="sidebar-heading" data-ut27-only>${tr("Experiment Tools", "실험 도구")}</div><button type="button" id="workspacePhysics" data-ut27-only>${icon('sliders')}${tr("Physics Profile", "물리 프로필")}</button><button type="button" id="workspaceCourse" data-ut27-only>${icon('crosshair')}${tr("Initial Layout", "시작 배치")}</button>`);
+  sidebar.append(views, node('div', 'sidebar-foot', `${icon('cpu')}<span>MuJoCo · ROS 2<small id="workspaceFoot">UT27 / local workspace</small></span>`));
 
   const stage = node('section', 'workspace-stage');
-  const stageHeader = node('div', 'workspace-toolbar', `<div><span class="workspace-breadcrumb">UT27 / </span><strong id="workspaceTitle">실시간 관찰</strong></div><div class="workspace-toolbar-actions"><span class="workspace-hint">화면</span><button id="workspaceInspectorToggle" type="button" aria-pressed="true" aria-label="상세 패널 표시 전환">${icon('sidebar')}상세 패널</button></div>`);
+  const stageHeader = node('div', 'workspace-toolbar', `<div><span class="workspace-breadcrumb" id="workspaceBreadcrumb">UT27 / </span><strong id="workspaceTitle">${tr("Live View", "실시간 관찰")}</strong></div><div class="workspace-toolbar-actions"><span class="workspace-hint">${tr("View", "화면")}</span><button id="workspaceInspectorToggle" type="button" aria-pressed="true" aria-label="${tr("Toggle the inspector", "상세 패널 표시 전환")}">${icon('sidebar')}${tr("Inspector", "상세 패널")}</button></div>`);
   const pages = node('div', 'workspace-pages');
   pages.append(main, data, setup);
   stage.append(stageHeader, pages);
@@ -37,7 +38,7 @@
 
   // Keep the original camera element intact so pop-out and collection can reuse it.
   const cameraLegend = camera.querySelector('legend');
-  cameraLegend.textContent = '카메라';
+  cameraLegend.textContent = tr("Cameras", "카메라");
   const visualGrid = telemetry.querySelector('.visual-grid');
   const sensor = center.querySelector('fieldset:not(#stereoCameraPanel)');
   sensor.classList.add('workspace-sensors');
@@ -49,17 +50,20 @@
 
   // Explicit empty states replace a repeated NO SIGNAL label.
   for (const [id, title, detail] of [
-    ['stereoLeftView', '전방 카메라 대기 중', '시뮬레이션을 시작하면 영상이 표시됩니다.'],
-    ['stereoRightView', '손 카메라 대기 중', '포크와 목표물의 접촉을 확인합니다.'],
+    ['stereoLeftView', tr("Waiting for front camera", "전방 카메라 대기 중"), tr("Start the simulation to see video.", "시뮬레이션을 시작하면 영상이 표시됩니다.")],
+    ['stereoRightView', tr("Waiting for hand camera", "손 카메라 대기 중"), tr("Monitor contact between the fork and the target.", "포크와 목표물의 접촉을 확인합니다.")],
   ]) {
     byId(id).append(node('div', 'camera-empty', `${icon('video')}<strong>${title}</strong><small>${detail}</small>`));
   }
 
-  const inspector = node('aside', 'workspace-inspector', '<div class="inspector-title"><strong>상세 패널</strong><button type="button" id="workspaceInspectorClose" aria-label="상세 패널 닫기">닫기</button></div><div class="inspector-tabs" role="tablist" aria-label="상세 패널 선택"><button type="button" id="inspectorControlTab" role="tab" aria-controls="inspectorControls" aria-selected="true">조종</button><button type="button" id="inspectorStatusTab" role="tab" aria-controls="telemetryPanel" aria-selected="false">기체 상태</button></div>');
+  const inspector = node('aside', 'workspace-inspector', `<div class="inspector-title"><strong>${tr("Inspector", "상세 패널")}</strong><button type="button" id="workspaceInspectorClose" aria-label="${tr("Close inspector", "상세 패널 닫기")}">${tr("Close", "닫기")}</button></div><div class="inspector-tabs" role="tablist" aria-label="${tr("Inspector tabs", "상세 패널 선택")}"><button type="button" id="inspectorControlTab" role="tab" aria-controls="inspectorControls" aria-selected="true">${tr("Controls", "조종")}</button><button type="button" id="inspectorStatusTab" role="tab" aria-controls="telemetryPanel" aria-selected="false">${tr("Vehicle Status", "기체 상태")}</button></div>`);
   const inspectorBody = node('div', 'inspector-body');
   controls.id = 'inspectorControls';
   controls.setAttribute('role', 'tabpanel');
   controls.setAttribute('aria-labelledby', 'inspectorControlTab');
+  const motorStatus = node('fieldset', 'group bluerov-motors', `<legend>${tr("Thruster Output · PWM", "추진기 출력 · PWM")}</legend><div id="bluerovMotorSource" class="status-line">${tr("Waiting for output", "출력 수신 대기")}</div><div id="bluerovMotorRows" class="bluerov-motor-rows"></div>`);
+  motorStatus.setAttribute('data-bluerov-only', '');
+  controls.insertBefore(motorStatus, byId('pilotControlGroup'));
   telemetry.setAttribute('role', 'tabpanel');
   telemetry.setAttribute('aria-labelledby', 'inspectorStatusTab');
   telemetry.hidden = true;
@@ -73,7 +77,7 @@
   inspector.append(inspectorBody);
   const resizer = node('div', 'inspector-resizer');
   resizer.setAttribute('role', 'separator');
-  resizer.setAttribute('aria-label', '상세 패널 너비 조절');
+  resizer.setAttribute('aria-label', tr("Resize the inspector", "상세 패널 너비 조절"));
   resizer.setAttribute('aria-orientation', 'vertical');
   resizer.setAttribute('aria-valuemin', '240');
   resizer.setAttribute('aria-valuemax', '600');
@@ -133,12 +137,12 @@
   // This is the existing RC command replay, not a new video timeline.
   const replay = byId('rcReplayStatus').closest('fieldset');
   const dock = node('section', 'workspace-timeline');
-  dock.setAttribute('aria-label', '조종 명령 로그 재생');
-  replay.querySelector('legend').textContent = '조종 명령 재생';
-  byId('rcReplaySlider').setAttribute('aria-label', '조종 명령 재생 위치');
-  byId('rcReplayRate').setAttribute('aria-label', '조종 명령 재생 배속');
-  byId('rcReplayRate').closest('label').firstChild.textContent = '배속 ';
-  const replayNote = node('p', 'replay-note', '기록된 조종 명령을 시뮬레이터에 입력합니다. 영상 탐색과 구분해 사용하세요.');
+  dock.setAttribute('aria-label', tr("RC Log Replay", "조종 명령 로그 재생"));
+  replay.querySelector('legend').textContent = tr("RC Log Replay", "조종 명령 재생");
+  byId('rcReplaySlider').setAttribute('aria-label', tr("RC replay position", "조종 명령 재생 위치"));
+  byId('rcReplayRate').setAttribute('aria-label', tr("RC replay speed", "조종 명령 재생 배속"));
+  byId('rcReplayRate').closest('label').firstChild.textContent = tr("Speed ", "배속 ");
+  const replayNote = node('p', 'replay-note', tr("Replay recorded RC inputs from a rosbag in the simulator.", "기록된 RC 입력 rosbag을 시뮬레이터에 입력합니다."));
   replay.append(replayNote);
   dock.append(replay);
   shell.append(inspector, dock);
@@ -167,15 +171,43 @@
   };
   byId('workspaceInspectorClose').onclick = () => byId('workspaceInspectorToggle').click();
   byId('inspectorStatusTab').tabIndex = -1;
-  document.querySelector('.title-stack').innerHTML = '<h1>UT27 <span>Research Studio</span></h1>';
-  byId('settingsOpen').textContent = '설정';
-  byId('settingsDialog').querySelector('h2').textContent = '설정';
-  byId('setup-heading').textContent = '실험 조건';
+  document.querySelector('.title-stack').innerHTML = '<h1><span id="workspaceVehicleName">UT27</span> <span>Research Studio</span></h1><p id="workspaceVehicle" hidden></p>';
+  byId('settingsOpen').textContent = tr("Settings", "설정");
+  byId('settingsDialog').querySelector('h2').textContent = tr("Settings", "설정");
+  byId('setup-heading').textContent = tr("Experiment Setup", "실험 조건");
   byId('telemetryToggle').hidden = true;
-  byId('cameraDialog').querySelector('h2').textContent = '카메라 확대';
-  byId('recorderDialog').querySelector('h2').textContent = '시연 수집';
-  byId('vehicleDetailsToggle').textContent = '상세';
-  byId('controlDetailsToggle').textContent = '축 값';
+  byId('cameraDialog').querySelector('h2').textContent = tr("Expanded Camera View", "카메라 확대");
+  byId('recorderDialog').querySelector('h2').textContent = tr("Demonstration Collection", "시연 수집");
+  byId('vehicleDetailsToggle').textContent = tr("Details", "상세");
+  byId('controlDetailsToggle').textContent = tr("Axis Values", "축 값");
+
+  const quick = byId('vlaQuickOpen');
+  quick.setAttribute('data-ut27-only', '');
+  let previousLayout = camera.dataset.layout || 'split';
+  window.setWorkspaceVehicle = vehicle => {
+    const blue = vehicle === 'bluerov2_standard';
+    const previous = document.body.dataset.vehicle;
+    document.body.dataset.vehicle = blue ? 'bluerov2_standard' : 'ut27';
+    const label = blue ? 'BlueROV2 Standard' : 'UT27';
+    byId('workspaceVehicleName').textContent = label;
+    byId('workspaceProject').textContent = `${label} Research`;
+    byId('workspaceBreadcrumb').textContent = `${label} / `;
+    byId('workspaceFoot').textContent = `${label} / local workspace`;
+    if (blue && previous !== 'bluerov2_standard') {
+      previousLayout = camera.dataset.layout || 'split';
+      camera.dataset.layout = 'front';
+      byId('rcReplayPath').value = '';
+      byId('rcReplayPath').placeholder = tr("RC input rosbag path", "RC 입력 rosbag 경로");
+      if (!data.hidden) nav.querySelector('[aria-controls=station-operation]').click();
+    } else if (!blue && previous === 'bluerov2_standard') {
+      camera.dataset.layout = previousLayout;
+      byId('rcReplayPath').value = '';
+      byId('rcReplayPath').placeholder = tr("Enter the RC log path", "RC 로그 경로 입력");
+    }
+    views.querySelectorAll('[data-camera-layout]').forEach(button => {
+      button.setAttribute('aria-pressed', String(button.dataset.cameraLayout === camera.dataset.layout));
+    });
+  };
 
   // Static, locally vendored Feather icons need no client-side library or network.
   const actionIcons = {

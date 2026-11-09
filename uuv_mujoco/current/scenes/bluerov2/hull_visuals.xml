@@ -1,0 +1,17 @@
+<mujocoinclude>
+  <geom name="bluerov2_body_material_01" type="mesh" mesh="bluerov2_body_material_01" material="bluerov2_body_material_01" pos="0 0 .0725" group="2" contype="0" conaffinity="0" density="0" />
+  <geom name="bluerov2_body_material_02" type="mesh" mesh="bluerov2_body_material_02" material="bluerov2_body_material_02" pos="0 0 .0725" group="2" contype="0" conaffinity="0" density="0" />
+  <geom name="bluerov2_body_material_03" type="mesh" mesh="bluerov2_body_material_03" material="bluerov2_body_material_03" pos="0 0 .0725" group="2" contype="0" conaffinity="0" density="0" />
+  <geom name="bluerov2_body_material_04" type="mesh" mesh="bluerov2_body_material_04" material="bluerov2_body_material_04" pos="0 0 .0725" group="2" contype="0" conaffinity="0" density="0" />
+  <geom name="bluerov2_body_material_05" type="mesh" mesh="bluerov2_body_material_05" material="bluerov2_body_material_05" pos="0 0 .0725" group="2" contype="0" conaffinity="0" density="0" />
+  <geom name="bluerov2_body_material_06" type="mesh" mesh="bluerov2_body_material_06" material="bluerov2_body_material_06" pos="0 0 .0725" group="2" contype="0" conaffinity="0" density="0" />
+  <geom name="bluerov2_body_material_07" type="mesh" mesh="bluerov2_body_material_07" material="bluerov2_body_material_07" pos="0 0 .0725" group="2" contype="0" conaffinity="0" density="0" />
+  <geom name="bluerov2_body_material_08" type="mesh" mesh="bluerov2_body_material_08" material="bluerov2_body_material_08" pos="0 0 .0725" group="2" contype="0" conaffinity="0" density="0" />
+  <geom name="bluerov2_body_material_09" type="mesh" mesh="bluerov2_body_material_09" material="bluerov2_body_material_09" pos="0 0 .0725" group="2" contype="0" conaffinity="0" density="0" />
+  <geom name="bluerov2_body_material_10" type="mesh" mesh="bluerov2_body_material_10" material="bluerov2_body_material_10" pos="0 0 .0725" group="2" contype="0" conaffinity="0" density="0" />
+  <geom name="bluerov2_body_material_11" type="mesh" mesh="bluerov2_body_material_11" material="bluerov2_body_material_11" pos="0 0 .0725" group="2" contype="0" conaffinity="0" density="0" />
+  <geom name="bluerov2_body_material_12" type="mesh" mesh="bluerov2_body_material_12" material="bluerov2_body_material_12" pos="0 0 .0725" group="2" contype="0" conaffinity="0" density="0" />
+  <geom name="bluerov2_body_material_13" type="mesh" mesh="bluerov2_body_material_13" material="bluerov2_body_material_13" pos="0 0 .0725" group="2" contype="0" conaffinity="0" density="0" />
+  <geom name="bluerov2_body_material_14" type="mesh" mesh="bluerov2_body_material_14" material="bluerov2_body_material_14" pos="0 0 .0725" group="2" contype="0" conaffinity="0" density="0" />
+  <geom name="bluerov2_body_material_15" type="mesh" mesh="bluerov2_body_material_15" material="bluerov2_body_material_15" pos="0 0 .0725" group="2" contype="0" conaffinity="0" density="0" />
+</mujocoinclude>

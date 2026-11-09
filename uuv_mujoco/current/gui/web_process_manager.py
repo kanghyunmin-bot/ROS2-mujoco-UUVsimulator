@@ -119,11 +119,13 @@ class WebProcessManager:
         running = owned or self._simulation_runtime_available()
         external = running and not owned
         sim_stack_status = "sim: running" if owned else self._sim_stack_status
+        virtualgl_issue = self._virtualgl_unavailable_reason()
         return {
             "sim_running": running,
             "sim_external": external,
             "virtualgl_viewer": owned and self._sim_virtualgl_viewer,
-            "virtualgl_available": self._virtualgl_display_available(),
+            "virtualgl_available": virtualgl_issue is None,
+            "virtualgl_unavailable_reason": virtualgl_issue,
             "ros_build_running": _process_running(self._ros_build_process),
             "mavros_running": _process_running(self._ros_pkg_process),
             "rviz_running": _process_running(self._rviz_process),
@@ -176,10 +178,11 @@ class WebProcessManager:
         virtualgl_viewer: bool = False,
     ) -> dict[str, Any]:
         if virtualgl_viewer:
-            if not self._virtualgl_display_available():
-                raise ValueError("VirtualGL은 GPU가 연결된 Linux 데스크톱에서 simstart로 실행하세요.")
-            if not os.access(APP_ROOT / "outputs/virtualgl/opt/VirtualGL/bin/vglrun", os.X_OK):
-                raise ValueError("VirtualGL 설치 필요: bash setup/install_virtualgl.sh")
+            virtualgl_issue = self._virtualgl_unavailable_reason()
+            if virtualgl_issue == "display_or_gpu":
+                raise ValueError("VirtualGL requires a Linux X11 display and access to the NVIDIA GPU.")
+            if virtualgl_issue == "missing_install":
+                raise ValueError("Install VirtualGL with bash setup/install_virtualgl.sh.")
         try:
             selected_error_mode = resolve_sensor_error_mode(
                 self._sensor_error_mode if sensor_error_mode is None else sensor_error_mode
@@ -1369,12 +1372,16 @@ class WebProcessManager:
             raise ValueError(EXTERNAL_SIM_STATUS)
 
     @staticmethod
-    def _virtualgl_display_available() -> bool:
-        return (
-            sys.platform.startswith("linux")
-            and bool(os.environ.get("DISPLAY"))
-            and os.access("/dev/nvidiactl", os.R_OK | os.W_OK)
-        )
+    def _virtualgl_unavailable_reason() -> str | None:
+        if (
+            not sys.platform.startswith("linux")
+            or not os.environ.get("DISPLAY")
+            or not os.access("/dev/nvidiactl", os.R_OK | os.W_OK)
+        ):
+            return "display_or_gpu"
+        if not os.access(APP_ROOT / "outputs/virtualgl/opt/VirtualGL/bin/vglrun", os.X_OK):
+            return "missing_install"
+        return None
 
     def _simulation_runtime_available(self) -> bool:
         """Recognize a GUI-owned or already-running MuJoCo/SITL stack."""

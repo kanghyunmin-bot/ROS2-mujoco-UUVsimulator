@@ -15,6 +15,8 @@
 .research-ui .header-pills { gap: 6px; }
 .research-ui .status-pill { background: transparent; border: 0; padding: 3px 4px; font: 11px/1.5 var(--mono); color: #acb2bc; }
 .research-ui .header-actions { flex-wrap: nowrap; gap: 7px; }
+#simVehicleOption { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+#simVehicle { max-width: 155px; padding: 4px 6px; }
 .virtualgl-option { display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px; white-space: nowrap; }
 .virtualgl-option:has(input:disabled) { opacity: .65; }
 .header-action-link { color: #a9bdff; white-space: nowrap; }
@@ -193,3 +195,32 @@
 .research-ui .recorder-dialog > .summary-row,
 .research-ui .rec-count, .research-ui .rec-progress,
 .research-ui #autoCollectionPanel { background: #232a34; border-color: #3c4654; }
+.research-ui:not([data-vehicle="bluerov2_standard"]) [data-bluerov-only],
+.research-ui[data-vehicle="bluerov2_standard"] [data-ut27-only] {
+  display: none !important;
+}
+
+.bluerov-motor-rows {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.bluerov-motor-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  background: #202731;
+  border: 1px solid #364252;
+  border-radius: 4px;
+  color: #bac6d5;
+  font: 10px/1.5 system-ui;
+}
+
+.bluerov-motor-row strong {
+  color: #dce6f5;
+  font: 500 10px/1.5 var(--mono);
+  white-space: nowrap;
+}

@@ -69,7 +69,7 @@ test("a monitoring tab never starts RC keepalives from another controller's stat
   const context = vm.createContext({
     state, CLIENT_ID: 'this-tab', window: {}, document: { activeElement: null },
     $: id => { if (!nodes.has(id)) nodes.set(id, {}); return nodes.get(id); },
-    setText() {}, setValue() {}, renderStep() {}, telemetryNumber: () => NaN,
+    setText() {}, setValue() {}, renderStep() {}, telemetryNumber: () => NaN, tr: english => english,
     setInterval: callback => callback(), RC_KEEPALIVE_MS: 20,
     sendRc: () => sent.push('command'),
   });

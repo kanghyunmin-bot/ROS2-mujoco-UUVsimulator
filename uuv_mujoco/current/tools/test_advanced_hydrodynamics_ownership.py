@@ -23,6 +23,7 @@ from sim.physics.hydrodynamic_state_scaling import HydrodynamicStateScaler  # no
 from sim.runtime.hydrodynamics_runtime_ownership import (  # noqa: E402
     validate_advanced_hydrodynamics_ownership,
 )
+from sim.runtime.underwater_hydrodynamics_custom import apply_custom_hydrodynamics  # noqa: E402
 
 
 class AdvancedHydrodynamicsOwnershipTests(unittest.TestCase):
@@ -67,6 +68,31 @@ class AdvancedHydrodynamicsOwnershipTests(unittest.TestCase):
     def test_shipped_distributed_profile_has_one_owner(self) -> None:
         validate_advanced_hydrodynamics_ownership(**self._arguments())
         validate_requested_fluid_model_profile("distributed", self.profile)
+
+    def test_asymmetric_yaw_drag_requires_legacy_diagonal_damping(self) -> None:
+        arguments = self._arguments()
+        arguments["values"].yaw_damping_asymmetry = 0.6
+        with self.assertRaisesRegex(ValueError, "requires positive legacy diagonal yaw damping"):
+            validate_advanced_hydrodynamics_ownership(**arguments)
+
+    def test_asymmetric_yaw_drag_opposes_both_turn_directions(self) -> None:
+        drag = SimpleNamespace(
+            surface_heave_damping=0.0, water_current_world=np.zeros(3), heave_damping_scale=1.0,
+            added_mass_diag=np.zeros(6), quadratic_damping_diag=np.zeros(6),
+            linear_damping_diag=np.array([0., 0., 0., 0., 0., 5.]), yaw_damping_asymmetry=0.6,
+        )
+        scales = SimpleNamespace(
+            added_mass_diag=np.ones(6), linear_damping_diag=np.ones(6), quadratic_damping_diag=np.ones(6),
+        )
+        runtime = SimpleNamespace(hydrodynamics=drag, data=SimpleNamespace(xfrc_applied=np.zeros((1, 6))), base_id=0)
+        for rate, expected in ((-1.0, 8.0), (1.0, -2.0)):
+            runtime.data.xfrc_applied.fill(0)
+            apply_custom_hydrodynamics(
+                runtime, base_rot=np.eye(3), lin_vel_body=np.zeros(3), rel_lin_vel_world=np.zeros(3),
+                nu_rel_body=np.array([0., 0., 0., 0., 0., rate]), rel_acc_body=np.zeros(6),
+                coefficient_scales=scales, submerged=1.0,
+            )
+            np.testing.assert_allclose(runtime.data.xfrc_applied[0], [0, 0, 0, 0, 0, expected])
 
     def test_distributed_alias_requires_an_active_patch_profile(self) -> None:
         for alias in ("distributed", "patch"):

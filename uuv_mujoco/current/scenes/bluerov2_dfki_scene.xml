@@ -1,0 +1,39 @@
+<mujoco model="bluerov2_standard_dfki">
+  <!-- Replay scene with separate flat tank. The pool GUI uses bluerov2_research_pool_scene.xml. -->
+  <compiler angle="radian" />
+  <option timestep="0.0005" integrator="implicit" density="1000" viscosity="0.001" />
+  <visual>
+    <map znear="0.001" />
+    <headlight diffuse="0.5 0.5 0.5" ambient="0.3 0.3 0.3" />
+  </visual>
+  <default>
+    <site size=".005" rgba="0 0 0 0" />
+  </default>
+  <asset>
+    <include file="bluerov2/visual_assets.xml" />
+  </asset>
+  <worldbody>
+    <light pos="0 0 1" dir="0 0 -1" diffuse="0.8 0.8 0.8" />
+    <camera name="course_overview" pos="3 -4 -3" xyaxes="0.8 0.6 0 -0.3 0.4 0.86" />
+    <camera name="course_side" pos="0 -4 -5.5" xyaxes="1 0 0 0 0 1" />
+    <geom name="pool_floor" type="plane" pos="0 0 -8" size="12 10 0.1" rgba="0.55 0.6 0.64 1" />
+    <body name="base_link" pos="0 0 -5.63">
+      <include file="bluerov2/vehicle_body.xml" />
+      <include file="bluerov2/hull_visuals.xml" />
+    </body>
+  </worldbody>
+  <actuator>
+    <motor name="yaw_rf" site="thr_yaw_rf" gear="-0.707106781 -0.707106781 0 0 0 0" ctrlrange="-1200 1200" />
+    <motor name="yaw_lf" site="thr_yaw_lf" gear="-0.707106781 0.707106781 0 0 0 0" ctrlrange="-1200 1200" />
+    <motor name="yaw_rr" site="thr_yaw_rr" gear="0.707106781 -0.707106781 0 0 0 0" ctrlrange="-1200 1200" />
+    <motor name="yaw_lr" site="thr_yaw_lr" gear="0.707106781 0.707106781 0 0 0 0" ctrlrange="-1200 1200" />
+    <motor name="ver_rf" site="thr_ver_rf" gear="0 0 -1 0 0 0" ctrlrange="-1200 1200" />
+    <motor name="ver_lf" site="thr_ver_lf" gear="0 0 -1 0 0 0" ctrlrange="-1200 1200" />
+  </actuator>
+  <sensor>
+    <framequat name="imu_quat" objtype="site" objname="imu_site" />
+    <gyro name="imu_gyro" site="imu_site" />
+    <accelerometer name="imu_acc" site="imu_site" />
+    <framepos name="depth_pos" objtype="site" objname="bar30_site" />
+  </sensor>
+</mujoco>

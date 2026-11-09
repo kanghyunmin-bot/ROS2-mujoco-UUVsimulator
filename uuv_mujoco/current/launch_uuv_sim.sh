@@ -333,7 +333,8 @@ if [[ "$VIRTUALGL" == true ]]; then
         echo "[launch] Install VirtualGL with bash setup/install_virtualgl.sh." >&2
         exit 2
     fi
-    VIEWER_PREFIX=("$vglrun" -ld "${vgl_root}/usr/lib" -c proxy -d egl0)
+    # The desktop X server may be outside the container's IPC namespace.
+    VIEWER_PREFIX=(env "VGL_USEXSHM=${VGL_USEXSHM:-0}" "$vglrun" -ld "${vgl_root}/usr/lib" -c proxy -d egl0)
 fi
 
 if [[ "$REAL_PKG_COMPAT" == "true" ]]; then

@@ -28,9 +28,12 @@ const state = {
   cameraPollBusy: false,
   cameraPresetSignature: "",
   configurationLocked: false,
+  simStartPending: false,
+  simStartError: "",
   simStopPending: false,
+  simVehicleSignature: "",
   simPresetSignature: "",
-  simPresetTouched: false,
+  simPresetChoice: "",
   sensorErrorTouched: false,
   lastSimulationConfig: null,
   lastSimulationProcesses: null,
@@ -49,6 +52,7 @@ const GAMEPAD_DEADZONE = 0.10;
 const CLIENT_ID = `web-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 
 const $ = (id) => document.getElementById(id);
+const tr = window.StationLanguage.text;
 
 function fixed(value, digits = 2) {
   const number = value === null || value === undefined || value === "" ? NaN : Number(value);
@@ -127,7 +131,7 @@ function currentGamepad() {
   const selector = $("gamepadDevice");
   const signature = JSON.stringify(pads.map(pad => [pad.index, pad.id]));
   if (selector && selector.dataset.devices !== signature) {
-    selector.replaceChildren(new Option("조종기를 선택하세요", ""));
+    selector.replaceChildren(new Option(tr("Select a controller", "조종기를 선택하세요"), ""));
     for (const pad of pads) selector.add(new Option(`${pad.index + 1}: ${pad.id}`, String(pad.index)));
     selector.dataset.devices = signature;
   }
@@ -405,7 +409,7 @@ function pollPhysicalGamepad() {
     if (state.controlSource === "gamepad" || state.gamepadDriving) {
       releasePhysicalGamepad("disconnected");
     } else {
-      renderGamepadStatus("Gamepad: 조종기를 선택하고 버튼 또는 스틱을 움직이세요");
+      renderGamepadStatus(tr("Gamepad: select a controller and move a stick or press a button", "Gamepad: 조종기를 선택하고 버튼 또는 스틱을 움직이세요"));
     }
     return;
   }
@@ -414,8 +418,8 @@ function pollPhysicalGamepad() {
   const active = Object.values(axes).some((value) => Math.abs(value) > 0.001);
   renderGamepadStatus(
     active
-      ? `Gamepad: ${gamepadLabel(gamepad)} — RC active${gamepadAxisCalibration(gamepad) ? " · 프로콘 범위 보정" : ""}`
-      : `Gamepad: ${gamepadLabel(gamepad)} — centered${gamepadAxisCalibration(gamepad) ? " · 프로콘 범위 보정" : ""}`
+      ? `Gamepad: ${gamepadLabel(gamepad)} — RC active${gamepadAxisCalibration(gamepad) ? tr(" · Pro Controller range correction", " · 프로콘 범위 보정") : ""}`
+      : `Gamepad: ${gamepadLabel(gamepad)} — centered${gamepadAxisCalibration(gamepad) ? tr(" · Pro Controller range correction", " · 프로콘 범위 보정") : ""}`
   );
   // Leave a virtual-stick pilot session untouched while a connected physical
   // gamepad remains centred. Once the operator moves a physical stick, it
@@ -575,7 +579,7 @@ function renderStatus(payload) {
   if (state.vlaControlPrepared) {
     state.rcEnabled = false;
     state.rcPending = null;
-    setText("vlaControlStatus", "VLA 제어권 준비됨 · 정책 종료 후 수동 복귀");
+    setText("vlaControlStatus", tr("VLA control ready · restore manual control after stopping the policy", "VLA 제어권 준비됨 · 정책 종료 후 수동 복귀"));
   }
 
   const tools = payload.tools || {};
@@ -597,7 +601,7 @@ function renderStatus(payload) {
   setText("rosPkgPill", ui.ros_pkg_status || "mavros: stopped");
   setText("ping360Pill", ui.ping360_summary || "ping360: no status");
   setText("vehicleSummary", ui.vehicle_summary || "vehicle: disconnected");
-  setText("motionSummary", Number.isFinite(telemetryNumber(telemetry, "imu_age_s")) ? (ui.motion_summary || "motion: n/a") : "IMU 미수신 · 자세 정보 없음");
+  setText("motionSummary", Number.isFinite(telemetryNumber(telemetry, "imu_age_s")) ? (ui.motion_summary || "motion: n/a") : tr("Waiting for IMU · attitude unavailable", "IMU 미수신 · 자세 정보 없음"));
   setText("controlSummaryLeft", ui.control_summary || "control: idle");
   setText("statusText", ui.status || "disconnected");
   setText("modeText", ui.mode || "mode: UNKNOWN");
@@ -613,7 +617,7 @@ function renderStatus(payload) {
   setText("controlText", ui.control || "setpoint: x=0.00 y=0.00 z=0.00 yaw=0.00");
   setText("rcOverrideText", ui.rc_override || "pilot input: off");
   setText("commandReady", ui.command_ready || "WAIT: vehicle");
-  setText("simStackStatus", ui.sim_stack_status || "sim: stopped");
+  setText("simStackStatus", state.simStartError || ui.sim_stack_status || "sim: stopped");
   setText("rosPkgStatus", ui.ros_pkg_status || "mavros: stopped");
   setText("rvizStatus", ui.rviz_status || "rviz: stopped");
   setText("pingerHomingStatus", ui.pinger_homing_status || processes.pinger_homing_status || "pinger homing: stopped");
@@ -629,9 +633,12 @@ function renderStatus(payload) {
   renderStep("depth", () => drawDepth(telemetry));
   renderStep("camera config", () => renderCameraConfig(payload.camera_config || processes.camera_config || {}));
   renderStep("simulation config", () => renderSimulationConfig(processes.simulation_config || {}, processes));
+  renderStep("BlueROV2 motor output", () => renderBlueRovMotors(telemetry));
   renderStep("stereo camera", () => renderStereoCamera(payload.stereo_camera || {}));
 
-  setValue("rcReplayPath", tools.rc_replay_path || "");
+  if (document.body?.dataset?.vehicle !== "bluerov2_standard") {
+    setValue("rcReplayPath", tools.rc_replay_path || "");
+  }
   setValue("rcReplayRate", tools.rc_replay_rate || "1.0");
   setValue("fcuUrlInput", processes.ros_pkg_fcu_url || "udp://0.0.0.0:14551@");
   setText("rosPkgSource", `rospkg read-only source: ${payload.server?.ros_package_dir || ""}`);
@@ -660,93 +667,130 @@ function renderStatus(payload) {
 }
 
 function renderSimulationConfig(config, processes) {
-  const select = $("simLaunchPreset");
-  if (!select) {
-    return;
-  }
   state.lastSimulationConfig = config;
   state.lastSimulationProcesses = processes;
-  const allPresets = Array.isArray(config.presets) ? config.presets : [];
-  const selectedConfigId = String(config.selected_preset_id || "research_pool_yaw_stable");
-  const visibleId = state.simPresetTouched ? select.value : selectedConfigId;
-  const advanced = $("showAdvancedEnvironments").checked;
-  const presets = allPresets.filter(preset => advanced
-    || preset.id === "research_pool_yaw_stable" || preset.id === visibleId);
-
-  const signature = presets
-    .map((preset) => `${preset.id}:${preset.profile}:${preset.fluid_model}:${preset.scene}`)
-    .join("|");
-  if (signature && signature !== state.simPresetSignature) {
-    select.replaceChildren();
-    for (const preset of presets) {
-      const option = document.createElement("option");
-      option.value = String(preset.id || "");
-      option.textContent = String(preset.label || preset.id || "unknown");
-      option.title = String(preset.description || "");
-      select.appendChild(option);
-    }
-    select.value = visibleId;
-    state.simPresetSignature = signature;
-  }
-  const selectedId = String(config.selected_preset_id || "research_pool_yaw_stable");
-  if (!state.simPresetTouched && selectedId && document.activeElement !== select) {
-    select.value = selectedId;
-  }
-  const selected = presets.find((preset) => String(preset.id) === select.value);
-  const label = String(selected?.label || config.selected_label || select.value || "n/a");
-  const profile = String(selected?.profile || config.selected_profile || "n/a");
-  const fluid = String(selected?.fluid_model || config.selected_fluid_model || "n/a");
-  const active = String(config.active_preset_id || "");
-  const activeText = active ? ` · active ${active}` : "";
-  setText("simLaunchPresetStatus", `plant: ${label} · ${profile}/${fluid}${activeText}`);
+  const allPresets = config.presets || [];
+  const vehicleSelect = $("simVehicle");
+  const select = $("simLaunchPreset");
+  const advanced = $("showAdvancedEnvironments");
   const running = Boolean(processes?.sim_running);
-  select.disabled = state.configurationLocked || running;
-  $("showAdvancedEnvironments").disabled = state.configurationLocked || running;
-  const errorSelect = $("sensorErrorMode");
-  if (!state.sensorErrorTouched) {
-    errorSelect.value = config.selected_sensor_error_mode || "existing";
+  const external = Boolean(processes?.sim_external);
+  const locked = state.configurationLocked || state.simStartPending || state.simStopPending || running || external;
+  const active = running && !external ? config.active_preset_id : "";
+  const selected = allPresets.find(preset => preset.id === (active || state.simPresetChoice))
+    || allPresets.find(preset => preset.id === config.selected_preset_id)
+    || allPresets[0];
+
+  const vehicles = [...new Set(allPresets.map(preset => preset.vehicle))];
+  const signature = vehicles.join("|");
+  if (signature && signature !== state.simVehicleSignature) {
+    vehicleSelect.replaceChildren(...vehicles.map(vehicle => new Option(vehicleLabel(vehicle), vehicle)));
+    state.simVehicleSignature = signature;
   }
-  errorSelect.disabled = state.configurationLocked || running;
+  if (selected) vehicleSelect.value = selected.vehicle;
+  const vehiclePresets = allPresets.filter(preset => preset.vehicle === selected?.vehicle);
+  const presets = vehiclePresets.filter(preset => advanced.checked
+    || preset === selected || preset === vehiclePresets[0]);
+  const presetSignature = presets.map(preset => preset.id).join("|");
+  if (presetSignature && presetSignature !== state.simPresetSignature) {
+    select.replaceChildren(...presets.map(preset => {
+      const option = new Option(tr(preset.label_en || preset.label, preset.label), preset.id);
+      option.title = tr(preset.description_en || preset.description, preset.description);
+      return option;
+    }));
+    state.simPresetSignature = presetSignature;
+  }
+  if (selected) {
+    select.value = selected.id;
+    const vehicleName = vehicleLabel(selected.vehicle);
+    window.setWorkspaceVehicle?.(selected.vehicle);
+    setText("workspaceVehicle", `${vehicleName} · ${tr("Underwater Robotics Workspace", "수중 로봇 실험 워크스페이스")}`);
+    document.title = `${vehicleName} · Research Studio`;
+    const label = select.selectedOptions[0]?.textContent || selected.id;
+    const activeText = active ? tr(" · active", " · 실행 중") : "";
+    setText("simLaunchPresetStatus", `${label} · ${selected.profile}/${selected.fluid_model}${activeText}`);
+  }
+  vehicleSelect.disabled = locked || !selected || vehicles.length < 2;
+  select.disabled = locked || !selected;
+  advanced.disabled = locked || vehiclePresets.length < 2;
+
+  const errorSelect = $("sensorErrorMode");
+  if (!state.sensorErrorTouched) errorSelect.value = config.selected_sensor_error_mode || "existing";
+  const blue = selected?.vehicle === "bluerov2_standard";
+  const aprilBagOption = errorSelect.querySelector('[value="bag0402"]');
+  aprilBagOption.disabled = blue;
+  if (blue && errorSelect.value === "bag0402") errorSelect.value = "existing";
+  errorSelect.disabled = locked || !selected;
   const errorMode = (config.sensor_error_modes || []).find(mode => mode.id === errorSelect.value);
   const activeError = config.active_sensor_error?.mode;
-  setText("sensorErrorModeStatus", (errorMode?.description || "기존 센서 설정 유지")
-    + (activeError ? ` · 실행 중: ${activeError}` : " · 다음 시작에 적용"));
+  const errorDescription = errorMode
+    ? tr(errorMode.description_en || errorMode.description, errorMode.description)
+    : tr("Use existing sensor settings", "기존 센서 설정 유지");
+  setText("sensorErrorModeStatus", errorDescription + (activeError
+    ? tr(` · active: ${activeError}`, ` · 실행 중: ${activeError}`)
+    : tr(" · applies on next start", " · 다음 시작에 적용")));
 
-  const external = Boolean(processes?.sim_external);
-  $("stackStartBtn").disabled = state.configurationLocked || running || state.simStopPending;
-  $("stackStartBtn").textContent = external ? "외부 시뮬 실행 중" : running ? "시뮬 실행 중" : "시뮬 시작";
-  $("stackStopBtn").disabled = state.configurationLocked || !running || external || state.simStopPending;
-  $("stackStopBtn").textContent = state.simStopPending ? "정지 중…" : "시뮬 정지";
-  $("stackResetBtn").disabled = state.configurationLocked || external || state.simStopPending;
+  $("stackStartBtn").disabled = locked || !selected;
+  $("stackStartBtn").textContent = external ? tr("External Sim Running", "외부 시뮬 실행 중")
+    : running ? tr("Simulation Running", "시뮬 실행 중")
+    : state.simStartPending ? tr("Starting…", "시작 중…") : tr("Start Simulation", "시뮬 시작");
+  $("stackStopBtn").disabled = state.configurationLocked || !running || external || state.simStartPending || state.simStopPending;
+  $("stackStopBtn").textContent = state.simStopPending ? tr("Stopping…", "정지 중…") : tr("Stop Simulation", "시뮬 정지");
+  $("stackResetBtn").disabled = state.configurationLocked || external || state.simStartPending || state.simStopPending;
   const otherGuiLink = $("simOtherGuiLink");
-  const otherGui = { "8878": ["18879", "연구 GUI"], "18879": ["8878", "기본 GUI"] }[window.location.port];
+  const otherGui = {
+    "8878": ["18879", tr("Open Research GUI ↗", "연구 GUI 열기 ↗")],
+    "18879": ["8878", tr("Open Main GUI ↗", "기본 GUI 열기 ↗")],
+  }[window.location.port];
   otherGuiLink.hidden = !external || !otherGui;
   if (external && otherGui) {
     const [port, label] = otherGui;
     otherGuiLink.href = `http://127.0.0.1:${port}/`;
-    otherGuiLink.textContent = `${label} 열기 ↗`;
+    otherGuiLink.textContent = label;
   }
   const virtualglOption = $("virtualglViewer");
   const virtualglUnavailable = processes?.virtualgl_available === false;
-  virtualglOption.disabled = state.configurationLocked || running || state.simStopPending || virtualglUnavailable;
+  virtualglOption.disabled = locked || !selected || virtualglUnavailable;
   if (running || virtualglUnavailable) virtualglOption.checked = Boolean(processes?.virtualgl_viewer);
+  const viewerHelp = {
+    display_or_gpu: tr("VirtualGL requires a Linux X11 desktop and access to the NVIDIA GPU.",
+      "VirtualGL을 사용하려면 Linux X11 화면과 NVIDIA GPU 연결이 필요합니다."),
+    missing_install: tr("Install VirtualGL before using the GPU viewer.",
+      "GPU 뷰어를 사용하려면 VirtualGL을 먼저 설치하세요."),
+  }[processes?.virtualgl_unavailable_reason];
+  $("virtualglOption").title = viewerHelp || (running || external
+    ? tr("Stop the simulation before changing the GPU viewer option.", "GPU 뷰어 설정을 바꾸려면 시뮬레이션을 먼저 정지하세요.")
+    : tr("Open the MuJoCo desktop viewer using VirtualGL.", "VirtualGL로 MuJoCo 데스크톱 뷰어를 엽니다."));
+}
+
+function vehicleLabel(vehicle) {
+  return { bluerov2_standard: "BlueROV2 Standard", ut27: "UT27" }[vehicle] || vehicle;
 }
 
 async function startSimStack() {
-  const presetId = $("simLaunchPreset").value;
-  setText("simStackStatus", "sim: start requested");
-  const body = await postCommand({
+  if ($("stackStartBtn").disabled) return;
+  const payload = {
     command: "stack_start",
-    sim_preset: presetId,
+    sim_preset: $("simLaunchPreset").value,
     sensor_error_mode: $("sensorErrorMode").value,
     virtualgl_viewer: $("virtualglViewer").checked,
-  });
-  state.simPresetTouched = false;
-  state.sensorErrorTouched = false;
-  if (body.status) {
-    setText("simStackStatus", body.status);
+  };
+  state.simStartPending = true;
+  state.simStartError = "";
+  renderSimulationConfig(state.lastSimulationConfig, state.lastSimulationProcesses);
+  setText("simStackStatus", tr("Simulation start requested", "시뮬레이션 시작 요청"));
+  try {
+    const result = await postCommand(payload);
+    if (!result.simulation_config) throw new Error(result.status || tr("Start rejected", "시작 요청 거부"));
+    state.simPresetChoice = "";
+    state.sensorErrorTouched = false;
+  } catch (error) {
+    state.simStartError = tr(`Start failed: ${error.message}`, `시작 실패: ${error.message}`);
+    setText("simStackStatus", state.simStartError);
+  } finally {
+    state.simStartPending = false;
+    await pollStatus();
   }
-  await pollStatus();
 }
 
 async function stopSimStack() {
@@ -786,9 +830,10 @@ function renderStereoCamera(camera) {
   const errorText = camera.error ? ` | ${camera.error}` : "";
   const source = camera.display_source === "vision" ? "vision" : "raw";
   const fallback = camera.vision_fallback ? " (waiting for overlay)" : "";
+  const detectionStatus = document.body?.dataset?.vehicle === "bluerov2_standard" ? "" : yoloStatusText(camera.detection);
   setText(
     "stereoCameraStatus",
-    `camera: ${stereoStatusText(frame)} | view: ${source}${fallback}${yoloStatusText(camera.detection)}${errorText}`
+    `camera: ${stereoStatusText(frame)} | view: ${source}${fallback}${detectionStatus}${errorText}`
   );
 }
 
@@ -828,7 +873,7 @@ function renderCameraConfig(config) {
     return;
   }
   const presets = Array.isArray(config.presets) ? config.presets : [];
-  const signature = presets
+  const signature = (document.body?.dataset?.vehicle || "ut27") + "|" + presets
     .map((preset) => `${preset.id}:${preset.width}x${preset.height}@${preset.hz}`)
     .join("|");
   if (signature && signature !== state.cameraPresetSignature) {
@@ -853,13 +898,14 @@ function renderCameraConfig(config) {
   }
   const optics = $("stereoCameraOptics");
   if (optics && document.activeElement !== optics) optics.value = config.optics_profile || "inherited";
-  const launched = config.launched ? ` · 실행 요청: ${cameraConfigLabel(config.launched)}` : " · 실행값 미확인";
-  setText("stereoCameraConfigStatus", `센서 선택: ${cameraConfigLabel(config)}${launched} · 실측 주기는 별도 확인`);
+  const launched = config.launched ? tr(` · requested at launch: ${cameraConfigLabel(config.launched)}`, ` · 실행 요청: ${cameraConfigLabel(config.launched)}`) : tr(" · applied profile unknown", " · 실행값 미확인");
+  setText("stereoCameraConfigStatus", tr(`Selected sensor profile: ${cameraConfigLabel(config)}${launched} · see the preview status for measured rates`, `센서 선택: ${cameraConfigLabel(config)}${launched} · 실측 주기는 별도 확인`));
 }
 
 function cameraConfigLabel(config) {
   if (config && config.label) {
-    return String(config.label);
+    const label = String(config.label);
+    return document.body?.dataset?.vehicle === "bluerov2_standard" ? label.replace(/^VLA lite · /, "") : label;
   }
   const width = Number(config?.width) || 0;
   const height = Number(config?.height) || 0;
@@ -974,7 +1020,7 @@ function setPreviewMode(value) {
   lastPreviewTick = null;
   lastCameraPoll = -Infinity;
   state.previewLastFrame = {left: -Infinity, right: -Infinity};
-  setText("previewReport", previewRate.hz ? "미리보기 측정 대기" : "미리보기 일시 정지");
+  setText("previewReport", previewRate.hz ? tr("Waiting for preview measurement", "미리보기 측정 대기") : tr("Preview paused", "미리보기 일시 정지"));
 }
 
 function updateStereoView(side, frame) {
@@ -1017,7 +1063,7 @@ function setStereoCameraExpanded(expanded) {
   document.body.classList.toggle("camera-expanded", Boolean(expanded));
   setPilotControlDocked(Boolean(expanded) && window.innerWidth >= 900);
   if (expanded && state.pilotDock) $("cameraWindowBody").append($("pilotControlGroup"));
-  button.textContent = expanded ? "확대 닫기 · Esc" : "크게 보기";
+  button.textContent = expanded ? tr("Close expanded view · Esc", "확대 닫기 · Esc") : tr("Expand View", "크게 보기");
   if (expanded) {
     window.StationWindows.open("cameraDialog", button);
   } else {
@@ -1082,6 +1128,34 @@ function renderRcFeedback(telemetry) {
     row.className = "rc-row";
     row.innerHTML = `<span>Ch ${String(index + 1).padStart(2, "0")}</span><div class="bar"><i style="width:${pct}%"></i></div><strong>${value}</strong>`;
     container.appendChild(row);
+  }
+}
+
+function renderBlueRovMotors(telemetry) {
+  const container = $("bluerovMotorRows");
+  if (!container || document.body?.dataset?.vehicle !== "bluerov2_standard") return;
+  const labels = [tr("Front right", "전방 우측"), tr("Front left", "전방 좌측"), tr("Rear right", "후방 우측"), tr("Rear left", "후방 좌측"), tr("Vertical right", "수직 우측"), tr("Vertical left", "수직 좌측")];
+  const values = Array.isArray(telemetry.rc_out) ? telemetry.rc_out : [];
+  const age = telemetryNumber(telemetry, "rc_out_age_s");
+  const fresh = Number.isFinite(age) && age <= 2.5;
+  const source = telemetry.rc_out_source || "unavailable";
+  setText("bluerovMotorSource", fresh ? tr(`Output: ${source} · received ${age.toFixed(1)} s ago`, `출력: ${source} · ${age.toFixed(1)} s 전 수신`) : tr("Waiting for thruster output", "추진기 출력 수신 대기"));
+  if (container.childElementCount !== labels.length) {
+    container.replaceChildren();
+    for (let index = 0; index < labels.length; index += 1) {
+      const row = document.createElement("div");
+      row.className = "bluerov-motor-row";
+      const label = document.createElement("span");
+      label.textContent = `T${index + 1} · ${labels[index]}`;
+      const value = document.createElement("strong");
+      row.append(label, value);
+      container.appendChild(row);
+    }
+  }
+  for (let index = 0; index < labels.length; index += 1) {
+    const pwm = Number(values[index]);
+    const valid = fresh && Number.isFinite(pwm) && pwm >= 1000 && pwm <= 2000;
+    container.children[index].lastElementChild.textContent = valid ? `${Math.round(pwm)} μs` : "—";
   }
 }
 
@@ -1269,8 +1343,8 @@ async function pollCameraStatus() {
   if (!previewVisible() || !state.stereoCameraEnabled || !previewRate.hz) {
     if (lastPreviewTick !== null) previewRate.reset();
     lastPreviewTick = null;
-    const label = !previewRate.hz ? "미리보기 일시 정지" :
-      !state.stereoCameraEnabled ? "카메라 꺼짐" : "영상 화면을 열면 미리보기가 재개됩니다.";
+    const label = !previewRate.hz ? tr("Preview paused", "미리보기 일시 정지") :
+      !state.stereoCameraEnabled ? tr("Camera off", "카메라 꺼짐") : tr("Open the camera view to resume the preview.", "영상 화면을 열면 미리보기가 재개됩니다.");
     setText("previewReport", label);
     return;
   }
@@ -1279,9 +1353,9 @@ async function pollCameraStatus() {
   lastPreviewTick = now;
   if (previewRate.sample(now, lag)) {
     const [left, right] = previewRate.fps;
-    const mode = previewRate.mode === "auto" ? "자동" : "수동";
-    setText("previewReport", `${mode} · 상한 ${previewRate.hz} fps · 전방 ${left.toFixed(1)} / 손 ${right.toFixed(1)} fps`
-      + (left || right ? "" : " · 새 영상 대기"));
+    const mode = previewRate.mode === "auto" ? tr("Auto", "자동") : tr("Manual", "수동");
+    setText("previewReport", tr(`${mode} · cap ${previewRate.hz} fps · front ${left.toFixed(1)} / hand ${right.toFixed(1)} fps`, `${mode} · 상한 ${previewRate.hz} fps · 전방 ${left.toFixed(1)} / 손 ${right.toFixed(1)} fps`)
+      + (left || right ? "" : tr(" · waiting for new frames", " · 새 영상 대기")));
   }
   if (state.cameraPollBusy || now - lastCameraPoll < 1000 / previewRate.hz - 5) return;
   lastCameraPoll = now;
@@ -1311,6 +1385,10 @@ function buildModeButtons() {
 }
 
 function replayPayload() {
+  if (document.body?.dataset?.vehicle === "bluerov2_standard" && !$("rcReplayPath").value.trim()) {
+    setText("rcReplayStatus", tr("Enter the RC input rosbag path.", "RC 입력 rosbag 경로를 입력하세요."));
+    return null;
+  }
   return {
     path: $("rcReplayPath").value,
     rate: $("rcReplayRate").value,
@@ -1517,7 +1595,7 @@ function renderCourseMode() {
     ? `${fixed(length, 2)} x ${fixed(width, 2)} x ${fixed(depth, 2)} m`
     : `${fixed(length, 2)} x ${fixed(width, 2)} m`;
   setText("courseTankDimensions", dimensions);
-  setText("courseDepthHeading", layout.mode === "research_pool" ? "수심 ↓" : "Z");
+  setText("courseDepthHeading", layout.mode === "research_pool" ? tr("Depth ↓", "수심 ↓") : "Z");
   $("courseRawBtn").hidden = layout.mode === "research_pool";
 }
 
@@ -1552,7 +1630,7 @@ function renderCourseSelection() {
   $("courseZInput").value = target ? fixed(research ? -target.z : target.z, 3) : "";
   $("courseZInput").min = research ? "0.4" : "-100";
   $("courseZInput").max = research ? String(state.courseLayout.tank.depth_m - (target?.kind === "robot" ? .45 : .7)) : "100";
-  setText("courseZLabel", research ? "수심 ↓" : "Z (고정)");
+  setText("courseZLabel", research ? tr("Depth ↓", "수심 ↓") : tr("Z (fixed)", "Z (고정)"));
   $("courseLayerInput").value = target ? target.layer || "" : "";
 }
 
@@ -1572,7 +1650,7 @@ function updateSelectedCourseFromInputs() {
     const depth = Number($("courseZInput").value);
     const maximum = state.courseLayout.tank.depth_m - (target.kind === "robot" ? .45 : .7);
     if (!Number.isFinite(depth) || depth < .4 || depth > maximum) {
-      setText("courseDialogStatus", `수심은 0.4 ~ ${maximum} m 범위로 입력하세요.`);
+      setText("courseDialogStatus", tr(`Enter a depth between 0.4 and ${maximum} m.`, `수심은 0.4 ~ ${maximum} m 범위로 입력하세요.`));
       return false;
     }
     target.z = -depth;
@@ -1881,7 +1959,7 @@ async function saveCourseLayout(reset = false) {
   try {
     body = await postCommand({ command: "course_save", ...payload, reset });
   } catch (error) {
-    setText("courseDialogStatus", `저장 실패: ${error.message}`);
+    setText("courseDialogStatus", tr(`Save failed: ${error.message}`, `저장 실패: ${error.message}`));
     return;
   }
   state.courseLayout = normalizeCourseLayout(body);
@@ -1964,8 +2042,8 @@ function bindControls() {
   $("telemetryToggle").addEventListener("click", () => {
     document.body.classList.toggle("telemetry-hidden");
     $("telemetryToggle").textContent = document.body.classList.contains("telemetry-hidden")
-      ? "상태 패널 펼치기"
-      : "상태 패널 접기";
+      ? tr("Show Telemetry", "상태 패널 펼치기")
+      : tr("Hide Telemetry", "상태 패널 접기");
     $("telemetryToggle").setAttribute("aria-expanded", String(!document.body.classList.contains("telemetry-hidden")));
   });
   $("vehicleDetailsToggle").addEventListener("click", () =>
@@ -1977,7 +2055,7 @@ function bindControls() {
   $("ros2PanelToggle").addEventListener("click", () =>
     setToggle("ros2Panel", "ros2PanelToggle", "ROS2 Panel", "Hide ROS2")
   );
-  $("toolsToggle").addEventListener("click", () => setToggle("toolsBody", "toolsToggle", "실험 도구 펼치기", "실험 도구 접기"));
+  $("toolsToggle").addEventListener("click", () => setToggle("toolsBody", "toolsToggle", tr("Show Experiment Tools", "실험 도구 펼치기"), tr("Hide Experiment Tools", "실험 도구 접기")));
   $("stereoCameraEnabled").addEventListener("change", (event) => {
     state.stereoCameraEnabled = event.target.checked;
     postCommand({ command: "stereo_camera_enabled", enabled: state.stereoCameraEnabled })
@@ -2019,12 +2097,20 @@ function bindControls() {
     }
   });
 
-  $("simLaunchPreset").addEventListener("change", () => {
-    state.simPresetTouched = true;
-    const label = $("simLaunchPreset").selectedOptions[0]?.textContent || "n/a";
-    setText("simLaunchPresetStatus", `plant: ${label} selected; press Start`);
+  $("simVehicle").addEventListener("change", (event) => {
+    const preset = state.lastSimulationConfig?.presets?.find(entry => entry.vehicle === event.target.value);
+    if (preset) {
+      state.simPresetChoice = preset.id;
+      state.simStartError = "";
+      renderSimulationConfig(state.lastSimulationConfig, state.lastSimulationProcesses);
+    }
   });
-  $("stackStartBtn").addEventListener("click", () => startSimStack().catch(console.error));
+  $("simLaunchPreset").addEventListener("change", (event) => {
+    state.simPresetChoice = event.target.value;
+    state.simStartError = "";
+    renderSimulationConfig(state.lastSimulationConfig, state.lastSimulationProcesses);
+  });
+  $("stackStartBtn").addEventListener("click", startSimStack);
   $("stackStopBtn").addEventListener("click", () => stopSimStack().catch(console.error));
   $("stackResetBtn").addEventListener("click", () => postCommand({ command: "stack_reset" }).then(pollStatus).catch(console.error));
   $("rosBuildBtn").addEventListener("click", () => postCommand({ command: "ros_build" }).then(pollStatus).catch(console.error));
@@ -2038,12 +2124,14 @@ function bindControls() {
     setText("pingerHomingStatus", "pinger homing: stopping");
     postCommand({ command: "pinger_homing_stop" }).then(pollStatus).catch(console.error);
   });
-  $("rcReplayLoadBtn").addEventListener("click", () =>
-    postCommand({ command: "rc_replay_load", ...replayPayload() }).then(pollStatus).catch(console.error)
-  );
-  $("rcReplayPlayBtn").addEventListener("click", () =>
-    postCommand({ command: "rc_replay_play", ...replayPayload() }).then(pollStatus).catch(console.error)
-  );
+  $("rcReplayLoadBtn").addEventListener("click", () => {
+    const values = replayPayload();
+    if (values) postCommand({ command: "rc_replay_load", ...values }).then(pollStatus).catch(console.error);
+  });
+  $("rcReplayPlayBtn").addEventListener("click", () => {
+    const values = replayPayload();
+    if (values) postCommand({ command: "rc_replay_play", ...values }).then(pollStatus).catch(console.error);
+  });
   $("rcReplayPauseBtn").addEventListener("click", () =>
     postCommand({ command: "rc_replay_pause" }).then(pollStatus).catch(console.error)
   );
@@ -2054,8 +2142,8 @@ function bindControls() {
     postCommand({ command: "rc_replay_seek", time_s: Number(event.target.value) || 0 }).then(pollStatus).catch(console.error)
   );
 
-  $("physicsOpenBtn").addEventListener("click", () => openPhysicsDialog().catch(error => setText("physicsDialogStatus", `불러오기 실패: ${error.message}`)));
-  $("courseOpenBtn").addEventListener("click", () => openCourseDialog().catch(error => setText("courseDialogStatus", `불러오기 실패: ${error.message}`)));
+  $("physicsOpenBtn").addEventListener("click", () => openPhysicsDialog().catch(error => setText("physicsDialogStatus", tr(`Load failed: ${error.message}`, `불러오기 실패: ${error.message}`))));
+  $("courseOpenBtn").addEventListener("click", () => openCourseDialog().catch(error => setText("courseDialogStatus", tr(`Load failed: ${error.message}`, `불러오기 실패: ${error.message}`))));
   $("physicsCloseBtn").addEventListener("click", () => window.StationWindows.close("physicsDialog"));
   $("physicsReloadBtn").addEventListener("click", () => loadPhysicsParams().catch(console.error));
   $("physicsApplyBtn").addEventListener("click", () => applyPhysicsParams(false).catch(console.error));

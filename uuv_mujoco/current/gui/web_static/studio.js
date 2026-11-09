@@ -1,5 +1,6 @@
 // One-time layout composition; no render loop, dependencies or 3-D engine.
 (() => {
+  const tr = window.StationLanguage.text;
   const main = document.querySelector('main');
   const telemetry = document.getElementById('telemetryPanel');
   const controls = document.querySelector('.control-column');
@@ -8,34 +9,34 @@
   const tools = document.getElementById('toolsBody').closest('section');
   const center = document.createElement('section');
   center.className = 'studio-center';
-  center.setAttribute('aria-label', '영상 및 시연 수집');
+  center.setAttribute('aria-label', tr("Video and Sensor Status", "영상 및 센서 상태"));
   const sensor = document.createElement('fieldset');
   sensor.className = 'group';
-  sensor.innerHTML = `<legend>센서 수신 상태</legend><div class="sensor-grid">
-    <div class="sensor-cell"><span>IMU / ATTITUDE</span><strong id="sensorAttitude">—</strong><small id="sensorImuAge">수신 대기</small></div>
-    <div class="sensor-cell"><span>DEPTH / m</span><strong id="sensorDepth">—</strong><small id="sensorDepthAge">수신 대기</small></div>
-    <div class="sensor-cell"><span>VELOCITY / m·s⁻¹</span><strong id="sensorVelocity">—</strong><small id="sensorVelocitySource">수신 대기</small></div>
-    <div class="sensor-cell"><span>CAMERAS / FRAME AGE</span><strong id="sensorCameras">—</strong><small>전방 / 손 · 수신 후 경과 시간</small><small id="sensorCameraCaptureAge">촬영 지연 · —</small></div>
+  sensor.innerHTML = `<legend>${tr("Sensor Status", "센서 수신 상태")}</legend><div class="sensor-grid">
+    <div class="sensor-cell"><span>IMU / ATTITUDE</span><strong id="sensorAttitude">—</strong><small id="sensorImuAge">${tr("Waiting for data", "수신 대기")}</small></div>
+    <div class="sensor-cell"><span>DEPTH / m</span><strong id="sensorDepth">—</strong><small id="sensorDepthAge">${tr("Waiting for data", "수신 대기")}</small></div>
+    <div class="sensor-cell"><span>VELOCITY / m·s⁻¹</span><strong id="sensorVelocity">—</strong><small id="sensorVelocitySource">${tr("Waiting for data", "수신 대기")}</small></div>
+    <div class="sensor-cell"><span>CAMERAS / FRAME AGE</span><strong id="sensorCameras">—</strong><small id="sensorCameraDescription">${tr("Front / Hand · time since receipt", "전방 / 손 · 수신 후 경과 시간")}</small><small id="sensorCameraCaptureAge">${tr("Capture latency · —", "촬영 지연 · —")}</small></div>
   </div>`;
   const launch = document.createElement('fieldset');
   launch.className = 'group';
-  launch.innerHTML = `<legend>시연 기록</legend><div class="vla-launch"><div><strong>시연 수집 워크스페이스</strong><p id="vlaOverview">카메라와 조종 입력을 보면서 녹화 · 저장</p></div><button id="vlaOpenBtn">VLA 수집 창 열기</button></div>`;
+  launch.innerHTML = `<legend>${tr("Demonstration Recording", "시연 기록")}</legend><div class="vla-launch"><div><strong>${tr("Demonstration Workspace", "시연 수집 워크스페이스")}</strong><p id="vlaOverview">${tr("Record and save while monitoring the cameras and controls", "카메라와 조종 입력을 보면서 녹화 · 저장")}</p></div><button id="vlaOpenBtn">${tr("Open VLA Recorder", "VLA 수집 창 열기")}</button></div>`;
   center.append(camera, sensor);
   const collectionActions = document.getElementById("collectionActions");
   collectionActions.append(launch);
   const dialog = document.createElement('div');
   dialog.id = 'recorderDialog'; dialog.className = 'dialog hidden';
-  dialog.innerHTML = `<div class="dialog-card recorder-dialog"><div class="summary-row"><h2>VLA / DEMONSTRATION WORKSPACE</h2><button id="vlaCloseBtn">닫기 · Esc</button></div><p class="status-line">이 창을 닫아도 녹화는 계속됩니다. 종료하려면 저장 또는 폐기를 선택하세요.</p><div class="collection-workspace"><div id="recorderLiveMount"></div><div class="collection-controls"><div id="recorderMount"></div><div id="recorderPilotMount"></div></div></div><div class="recorder-guide"><div><strong>01 / PREPARE</strong><p>작업 지시문과 모드를 정하고 입력 준비 상태를 확인합니다.</p></div><div><strong>02 / DEMONSTRATE</strong><p>전방·손 영상을 보면서 조종하고 녹화합니다.</p></div><div><strong>03 / REVIEW</strong><p>영상 옆에서 성공·실패를 저장하거나 현재 시연을 폐기합니다.</p></div></div></div>`;
+  dialog.innerHTML = `<div class="dialog-card recorder-dialog"><div class="summary-row"><h2>VLA / DEMONSTRATION WORKSPACE</h2><button id="vlaCloseBtn">${tr("Close · Esc", "닫기 · Esc")}</button></div><p class="status-line">${tr("Recording continues if you close this window. Save or discard the recording to stop.", "이 창을 닫아도 녹화는 계속됩니다. 종료하려면 저장 또는 폐기를 선택하세요.")}</p><div class="collection-workspace"><div id="recorderLiveMount"></div><div class="collection-controls"><div id="recorderMount"></div><div id="recorderPilotMount"></div></div></div><div class="recorder-guide"><div><strong>01 / PREPARE</strong><p>${tr("Set the instruction and mode, then check control readiness.", "작업 지시문과 모드를 정하고 입력 준비 상태를 확인합니다.")}</p></div><div><strong>02 / DEMONSTRATE</strong><p>${tr("Pilot and record using the front and hand camera feeds.", "전방·손 영상을 보면서 조종하고 녹화합니다.")}</p></div><div><strong>03 / REVIEW</strong><p>${tr("Save the demonstration as a success or failure, or discard it.", "영상 옆에서 성공·실패를 저장하거나 현재 시연을 폐기합니다.")}</p></div></div></div>`;
   document.body.append(dialog);
   const cameraDialog = document.createElement('div');
   cameraDialog.id = 'cameraDialog'; cameraDialog.className = 'dialog hidden';
   cameraDialog.innerHTML = '<div class="dialog-card camera-dialog"><h2>CAMERA / LIVE VIEW</h2><div id="cameraWindowBody"></div></div>';
   document.body.append(cameraDialog);
   dialog.querySelector('#recorderMount').append(recorder);
-  const quick = document.createElement('button'); quick.id = 'vlaQuickOpen'; quick.textContent = 'VLA 수집';
+  const quick = document.createElement('button'); quick.id = 'vlaQuickOpen'; quick.textContent = tr("VLA Recorder", "VLA 수집");
   document.querySelector('.header-actions').append(quick);
   const autoQuick = document.createElement('button');
-  autoQuick.id = 'autoCollectionQuickOpen'; autoQuick.textContent = '자동 수집 모드';
+  autoQuick.id = 'autoCollectionQuickOpen'; autoQuick.textContent = tr("Auto Collection", "자동 수집 모드");
   collectionActions.append(autoQuick);
   autoQuick.onclick = () => { openCollection(); document.getElementById('autoCollectionPanel').scrollIntoView({block:'center'}); };
   let collectionHomes = [];
@@ -61,7 +62,7 @@
   document.getElementById('vlaCloseBtn').onclick = () => window.StationWindows.close('recorderDialog');
   const setup = document.getElementById('station-setup');
   const headerActions = document.querySelector('.header-actions');
-  headerActions.prepend(...['stackStartBtn', 'virtualglOption', 'stackStopBtn', 'simOtherGuiLink'].map(id => document.getElementById(id)));
+  headerActions.prepend(...['simVehicleOption', 'stackStartBtn', 'virtualglOption', 'stackStopBtn', 'simOtherGuiLink'].map(id => document.getElementById(id)));
   headerActions.append(document.getElementById('settingsOpen'));
   setup.prepend(document.getElementById('simLaunchPreset').closest('fieldset'));
   setup.prepend(document.getElementById('setup-heading'));
@@ -80,8 +81,8 @@
     });
   }
   main.className = 'studio-grid';
-  controls.querySelector('h2').textContent = '기체 조종';
-  for (const [id,label] of Object.entries({stackStartBtn:'시뮬 시작',armBtn:'ARM · 구동 허용',disarmBtn:'DISARM · 구동 해제',quickCenterBtn:'스틱 중립',telemetryToggle:'상태 패널 접기'})) {
+  controls.querySelector('h2').textContent = tr("Vehicle Control", "기체 조종");
+  for (const [id,label] of Object.entries({stackStartBtn:tr("Start Simulation", "시뮬 시작"),armBtn:tr("Arm", "ARM · 구동 허용"),disarmBtn:tr("Disarm", "DISARM · 구동 해제"),quickCenterBtn:tr("Center Sticks", "스틱 중립"),telemetryToggle:tr("Hide Telemetry", "상태 패널 접기")})) {
     const button = document.getElementById(id);
     if(button) button.textContent = label;
   }
@@ -90,7 +91,7 @@
     const target = document.getElementById(id).closest('fieldset');
     const details = document.createElement('details');
     const title = document.createElement('summary');
-    title.textContent = '이벤트 로그';
+    title.textContent = tr("Event Log", "이벤트 로그");
     target.before(details); details.append(title,target);
   }
 })();

@@ -1,0 +1,231 @@
+{
+  "source": "https://github.com/CentraleNantesROV/bluerov2",
+  "revision": "dd7111b609b1d8bad052e4990d9b439e5317ad7c",
+  "body_original_bounds_m": [
+    [
+      -0.23538470268249512,
+      -0.17207780480384827,
+      -0.18881966173648834
+    ],
+    [
+      0.22224777936935425,
+      0.17210093140602112,
+      0.06642787158489227
+    ]
+  ],
+  "body": {
+    "body_material_01.obj": {
+      "source_material": "material_1",
+      "rgba": [
+        0.845857,
+        0.833004,
+        0.858824,
+        1.0
+      ],
+      "vertices": 3578,
+      "faces": 4080
+    },
+    "body_material_10.obj": {
+      "source_material": "material_10",
+      "rgba": [
+        0.0980392,
+        0.0980392,
+        0.0980392,
+        1.0
+      ],
+      "vertices": 110738,
+      "faces": 122722
+    },
+    "body_material_11.obj": {
+      "source_material": "material_11",
+      "rgba": [
+        1.0,
+        0.94902,
+        0.909804,
+        1.0
+      ],
+      "vertices": 5760,
+      "faces": 5350
+    },
+    "body_material_12.obj": {
+      "source_material": "material_12",
+      "rgba": [
+        0.152941,
+        0.658824,
+        1.0,
+        1.0
+      ],
+      "vertices": 3513,
+      "faces": 2934
+    },
+    "body_material_13.obj": {
+      "source_material": "material_13",
+      "rgba": [
+        0.647059,
+        0.619608,
+        0.588235,
+        1.0
+      ],
+      "vertices": 3581,
+      "faces": 2966
+    },
+    "body_material_14.obj": {
+      "source_material": "material_14",
+      "rgba": [
+        0.25098,
+        0.25098,
+        0.25098,
+        1.0
+      ],
+      "vertices": 4236,
+      "faces": 3691
+    },
+    "body_material_15.obj": {
+      "source_material": "material_15",
+      "rgba": [
+        0.14902,
+        0.6,
+        0.815686,
+        1.0
+      ],
+      "vertices": 12978,
+      "faces": 13368
+    },
+    "body_material_02.obj": {
+      "source_material": "material_2",
+      "rgba": [
+        0.188642,
+        0.196958,
+        0.188642,
+        1.0
+      ],
+      "vertices": 2323,
+      "faces": 2373
+    },
+    "body_material_03.obj": {
+      "source_material": "material_3",
+      "rgba": [
+        0.0585895,
+        0.0585895,
+        0.0585895,
+        1.0
+      ],
+      "vertices": 11483,
+      "faces": 10512
+    },
+    "body_material_04.obj": {
+      "source_material": "material_4",
+      "rgba": [
+        0.66205,
+        0.645393,
+        0.628732,
+        1.0
+      ],
+      "vertices": 116894,
+      "faces": 99948
+    },
+    "body_material_05.obj": {
+      "source_material": "material_5",
+      "rgba": [
+        1.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "vertices": 19342,
+      "faces": 16801
+    },
+    "body_material_06.obj": {
+      "source_material": "material_6",
+      "rgba": [
+        0.294118,
+        0.294118,
+        0.294118,
+        1.0
+      ],
+      "vertices": 7041,
+      "faces": 6410
+    },
+    "body_material_07.obj": {
+      "source_material": "material_7",
+      "rgba": [
+        0.792157,
+        0.819608,
+        0.933333,
+        1.0
+      ],
+      "vertices": 6960,
+      "faces": 6501
+    },
+    "body_material_08.obj": {
+      "source_material": "material_8",
+      "rgba": [
+        0.956863,
+        0.956863,
+        0.956863,
+        1.0
+      ],
+      "vertices": 6139,
+      "faces": 5192
+    },
+    "body_material_09.obj": {
+      "source_material": "material_9",
+      "rgba": [
+        0.752941,
+        0.752941,
+        0.752941,
+        1.0
+      ],
+      "vertices": 5771,
+      "faces": 4937
+    }
+  },
+  "propellers": {
+    "prop_cw.obj": {
+      "bounds_m": [
+        [
+          -0.01799731255466447,
+          -0.03607908255998011,
+          -0.025125056856298508
+        ],
+        [
+          0.012018375309710292,
+          0.03562621829269302,
+          0.038100083304429176
+        ]
+      ],
+      "source_unit_m": 0.04499998,
+      "vertices": 4340,
+      "faces": 6135,
+      "rgba": [
+        0.14902,
+        0.6,
+        0.815686,
+        1.0
+      ]
+    },
+    "prop_ccw.obj": {
+      "bounds_m": [
+        [
+          -0.018024963233286728,
+          -0.03780879477434854,
+          -0.030383383331064703
+        ],
+        [
+          0.011990775226262736,
+          0.032181392389945405,
+          0.0380675320576055
+        ]
+      ],
+      "source_unit_m": 0.04499998,
+      "vertices": 4583,
+      "faces": 6359,
+      "rgba": [
+        0.14902,
+        0.6,
+        0.815686,
+        1.0
+      ]
+    }
+  }
+}

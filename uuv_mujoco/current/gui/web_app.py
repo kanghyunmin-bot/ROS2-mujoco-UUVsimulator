@@ -843,7 +843,7 @@ class WebGuiController:
         if reset:
             if mode == "research_pool":
                 selected = self.processes.simulation_config_payload()["selected_preset_id"]
-                preset = selected if selected.startswith("research_pool_") else "research_pool_current"
+                preset = selected if selected.startswith("research_pool_") or selected == "bluerov2_standard" else "research_pool_current"
                 result["process"] = self.processes.restart_sim_stack(preset_id=preset)
             else:
                 result["process"] = self.processes.restart_sim_stack()

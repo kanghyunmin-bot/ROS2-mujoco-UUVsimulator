@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import re
 import sys
 
 
@@ -203,11 +204,11 @@ def check_frontend_and_backend_wiring() -> None:
     tk_start = (ROOT / "gui" / "sim_stack_start_runtime.py").read_text(encoding="utf-8")
 
     required = {
-        "web selector": (index, 'id="simLaunchPreset"'),
+        "web vehicle selector": (index, 'id="simVehicle"'),
+        "web environment selector": (index, 'id="simLaunchPreset"'),
         "distributed option": (index, 'value="research_pool_distributed"'),
         "advanced environment toggle": (index, 'id="showAdvancedEnvironments"'),
         "sensor error selection": (index, 'id="sensorErrorMode"'),
-        "web preset request": (app_js, 'sim_preset: presetId'),
         "web handler validation boundary": (web_app, 'payload.get("sim_preset"'),
         "web child launch": (web_manager, "build_sim_launch_preset_args("),
         "Tk selector": (tk_layout, "sim_launch_preset_labels()"),
@@ -218,11 +219,11 @@ def check_frontend_and_backend_wiring() -> None:
             raise AssertionError(f"missing {label}: {needle}")
 
     forbidden_browser_fields = ('scene_path:', 'profile:', 'fluid_model:')
-    start_call = 'postCommand({ command: "stack_start", sim_preset: presetId, sensor_error_mode: $("sensorErrorMode").value })'
-    if start_call not in app_js:
+    start_call = re.search(r'const payload = \{\s*command:\s*"stack_start"(?P<fields>.*?)\};', app_js, re.DOTALL)
+    if start_call is None or 'sim_preset: $("simLaunchPreset").value' not in start_call.group("fields"):
         raise AssertionError("browser must submit only the stable preset identifier")
     for field in forbidden_browser_fields:
-        if field in start_call:
+        if field in start_call.group("fields"):
             raise AssertionError(f"browser start request exposes raw launch field: {field}")
 
 

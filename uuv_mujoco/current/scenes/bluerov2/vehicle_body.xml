@@ -1,0 +1,60 @@
+<mujocoinclude>
+  <freejoint name="world_joint" />
+  <inertial pos="0 0 0.011" mass="10.01194" diaginertia="0.099 0.178 0.269" />
+  <!-- Hull and rotor visual positions share the +0.0725 m URDF registration. -->
+  <site name="base_link_origin_site" pos="0 0 0" />
+  <site name="cob_site" pos="0 0 0.031" />
+  <site name="thr_yaw_rf" pos=".1355 -.1000 0" />
+  <site name="thr_yaw_lf" pos=".1355 .1000 0" />
+  <site name="thr_yaw_rr" pos="-.1475 -.1000 0" />
+  <site name="thr_yaw_lr" pos="-.1475 .1000 0" />
+  <site name="thr_ver_rf" pos=".0025 -.1105 .0675" />
+  <site name="thr_ver_lf" pos=".0025 .1105 .0675" />
+  <site name="imu_site" pos=".058 -.021 .0905" />
+  <site name="bar30_site" pos="-.15 .04 .0925" />
+  <site name="cam_left_site" pos=".17 0 .0725" />
+  <!-- Place the render eye just ahead of the opaque CAD dome. -->
+  <camera name="stereo_left" pos=".225 0 .0725" xyaxes="0 -1 0 0 0 1" fovy="70" />
+  <!-- Contact priors, not wet-material measurements. See docs/contracts/BLUEROV2_CONTACT.md. -->
+  <geom name="frame_port" type="box" pos="0 .155 .010" size=".222 .012 .110" density="0" friction=".35 .01 .001" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" condim="3" rgba="0 0 0 0" group="3" />
+  <geom name="frame_starboard" type="box" pos="0 -.155 .010" size=".222 .012 .110" density="0" friction=".35 .01 .001" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" condim="3" rgba="0 0 0 0" group="3" />
+  <geom name="electronics_enclosure" type="cylinder" pos=".025 0 .060" size=".061 .162" density="0" friction=".40 .01 .001" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" condim="3" rgba="0 0 0 0" group="3" quat=".707106781 0 .707106781 0" />
+  <geom name="electronics_enclosure_cap_front" type="cylinder" pos=".193 0 .060" size=".061 .006" density="0" friction=".50 .01 .001" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" condim="3" rgba="0 0 0 0" group="3" quat=".707106781 0 .707106781 0" />
+  <geom name="electronics_enclosure_cap_rear" type="cylinder" pos="-.143 0 .060" size=".061 .006" density="0" friction=".50 .01 .001" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" condim="3" rgba="0 0 0 0" group="3" quat=".707106781 0 .707106781 0" />
+  <geom name="battery_enclosure" type="cylinder" pos="-.016 0 -.069" size=".041 .122" density="0" friction=".40 .01 .001" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" condim="3" rgba="0 0 0 0" group="3" quat=".707106781 0 .707106781 0" />
+  <geom name="battery_enclosure_cap_front" type="cylinder" pos=".112 0 -.069" size=".041 .006" density="0" friction=".50 .01 .001" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" condim="3" rgba="0 0 0 0" group="3" quat=".707106781 0 .707106781 0" />
+  <geom name="battery_enclosure_cap_rear" type="cylinder" pos="-.144 0 -.069" size=".041 .006" density="0" friction=".50 .01 .001" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" condim="3" rgba="0 0 0 0" group="3" quat=".707106781 0 .707106781 0" />
+  <geom name="foam_port" type="box" pos="0 .125 .107" size=".16 .035 .028" density="0" friction=".45 .01 .001" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" condim="3" rgba="0 0 0 0" group="3" />
+  <geom name="foam_starboard" type="box" pos="0 -.125 .107" size=".16 .035 .028" density="0" friction=".45 .01 .001" priority="2" solref=".004 1" solimp=".999 .9999 .0005 .5 2" condim="3" rgba="0 0 0 0" group="3" />
+  <!-- Propeller link transforms from CentraleNantesROV thrusters.xacro, with the same registration as the hull. -->
+  <body name="prop_yaw_rf" pos=".1355 -.1000 0" euler="0 0 -2.3561944902">
+    <inertial pos="0 0 0" mass=".00001" diaginertia="1e-8 1e-8 1e-8" />
+    <joint name="prop_yaw_rf_j" type="hinge" axis="1 0 0" damping=".01" />
+    <geom name="prop_yaw_rf_visual" type="mesh" mesh="bluerov2_prop_ccw" material="bluerov2_prop" density="0" contype="0" conaffinity="0" group="2" />
+  </body>
+  <body name="prop_yaw_lf" pos=".1355 .1000 0" euler="0 0 2.3561944902">
+    <inertial pos="0 0 0" mass=".00001" diaginertia="1e-8 1e-8 1e-8" />
+    <joint name="prop_yaw_lf_j" type="hinge" axis="1 0 0" damping=".01" />
+    <geom name="prop_yaw_lf_visual" type="mesh" mesh="bluerov2_prop_ccw" material="bluerov2_prop" density="0" contype="0" conaffinity="0" group="2" />
+  </body>
+  <body name="prop_yaw_rr" pos="-.1475 -.1000 0" euler="0 0 -.7853981634">
+    <inertial pos="0 0 0" mass=".00001" diaginertia="1e-8 1e-8 1e-8" />
+    <joint name="prop_yaw_rr_j" type="hinge" axis="1 0 0" damping=".01" />
+    <geom name="prop_yaw_rr_visual" type="mesh" mesh="bluerov2_prop_cw" material="bluerov2_prop" density="0" contype="0" conaffinity="0" group="2" />
+  </body>
+  <body name="prop_yaw_lr" pos="-.1475 .1000 0" euler="0 0 .7853981634">
+    <inertial pos="0 0 0" mass=".00001" diaginertia="1e-8 1e-8 1e-8" />
+    <joint name="prop_yaw_lr_j" type="hinge" axis="1 0 0" damping=".01" />
+    <geom name="prop_yaw_lr_visual" type="mesh" mesh="bluerov2_prop_cw" material="bluerov2_prop" density="0" contype="0" conaffinity="0" group="2" />
+  </body>
+  <body name="prop_ver_rf" pos=".0025 -.1105 .0675" euler="0 -1.5707963268 0">
+    <inertial pos="0 0 0" mass=".00001" diaginertia="1e-8 1e-8 1e-8" />
+    <joint name="prop_ver_rf_j" type="hinge" axis="-1 0 0" damping=".01" />
+    <geom name="prop_ver_rf_visual" type="mesh" mesh="bluerov2_prop_ccw" material="bluerov2_prop" density="0" contype="0" conaffinity="0" group="2" />
+  </body>
+  <body name="prop_ver_lf" pos=".0025 .1105 .0675" euler="0 -1.5707963268 0">
+    <inertial pos="0 0 0" mass=".00001" diaginertia="1e-8 1e-8 1e-8" />
+    <joint name="prop_ver_lf_j" type="hinge" axis="-1 0 0" damping=".01" />
+    <geom name="prop_ver_lf_visual" type="mesh" mesh="bluerov2_prop_cw" material="bluerov2_prop" density="0" contype="0" conaffinity="0" group="2" />
+  </body>
+</mujocoinclude>
