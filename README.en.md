@@ -1,25 +1,89 @@
-# UT27 Research Studio
+# UUV-Sim · MuJoCo Underwater Robotics Simulator
 
 [한국어](README.md) · **English**
 
-Pilot an underwater robot in a MuJoCo research pool and collect demonstrations for vision-language-action policies. The dashboard shows the front and hand cameras alongside attitude, depth, and Doppler velocity log (DVL) readings.
+A MuJoCo-based underwater robotics simulator. Select and pilot the UT27 research-pool vehicle or a six-thruster BlueROV2 Standard model, with ArduSub SITL, sensor and camera output, ROS 2 integration, and recorded-command replay workflows.
 
-![UT27 live workspace with navigation on the left, two camera feeds and sensor readings in the center, and manual control sticks on the right.](docs/assets/ut27-live-workspace.png)
+![MuJoCo simulation framework showing the physics engine, Python control and sensor layer, ROS 2, and ArduSub SITL](docs/assets/mujoco-framework.png)
 
-## Run
+## Quick start
 
-Follow the [Docker setup guide](docker/ubuntu-dev/README.md), then run this command from the root of this branch.
+The supported setup target is Ubuntu 22.04 / ROS 2 Humble / Linux x86_64. Clone with Git LFS and the ArduPilot submodule, then follow the [Docker setup guide](docker/ubuntu-dev/README.md) to build and install the container. Build SITL and the ROS workspace using the same guide, then start the web GUI. Open the Docker web GUI at [http://127.0.0.1:8878/](http://127.0.0.1:8878/). See [README_FIRST.md](README_FIRST.md) for prerequisites and distribution notes.
 
 ```bash
-bash tools/start_research_gui.sh
+./docker/ubuntu-dev/dev.sh build
+./docker/ubuntu-dev/dev.sh install
+./docker/ubuntu-dev/dev.sh build-sitl
+./docker/ubuntu-dev/dev.sh build-ros
+./docker/ubuntu-dev/dev.sh web
 ```
+ Select **Vehicle → BlueROV2 Standard**, then start the simulation. UT27 remains available in the same vehicle menu. The default profile is the yaw experiment profile fitted to the DFKI measurement trials. It is an offline fit to those logs, not an independently validated parameter set for every physical BlueROV2 configuration. Change the display language to English or Korean in Settings.
 
-Open the [research GUI](http://127.0.0.1:18879/). Select **시뮬 시작** (start simulation), choose **STABILIZE**, select **ARM**, then enable **수동 입력 켜기** (manual input). When finished, select **조종 입력 해제** (release input), then **DISARM**.
+![Research GUI with BlueROV2 Standard selected](docs/assets/blue-rov2-web-gui.png)
 
-## Validation · 2026-11-03
 
-- **Control and sensors** — Four-axis control, automatic input release, both cameras, and IMU, depth, and DVL readings were verified.
-- **Recording** — On the test PC, CPU rendering produced about one new frame per second per camera. Capture delay exceeded the collector’s 0.25-second limit, so recording was blocked.
-- **Open items** — GUIDED and POSHOLD transitions and YOLO startup failed in this environment. GPU policy inference still requires validation.
+## System architecture
 
-[UT27 paper and figures](docs/papers/ut27_2027/) · [Data collector](rospkg/src/auv_vla_data_collector/README.md) · [Run a VLA model](tools/vla_gui/README.md) · [Training results](docs/UUV_UPDATE_20260922.md)
+| Layer | Responsibility |
+| --- | --- |
+| MuJoCo plant | Rigid-body integration and contact resolution |
+| Python physics/runtime | Loads models, scenes and profiles; calculates buoyancy, drag, and propulsion; produces sensor state and manages the viewer |
+| ArduSub SITL | Receives IMU/depth inputs, runs controller and mixer, outputs servo PWM |
+| Bridges | Connect SITL JSON/MAVLink, ROS 2 sensor/camera topics, and external commands |
+| GUI | Selects vehicle, scene and profile; controls lifecycle and piloting; displays cameras and sensors |
+
+The closed loop is `MuJoCo state → sensors/SITL → ArduSub PWM → thrust and hydrodynamics → next MuJoCo state`. See the [architecture guide](docs/SIM_ARCHITECTURE.md) for runtime paths and ports. The [BlueROV2 model note](docs/contracts/BLUEROV2_MODEL.md) records CAD geometry, frame conventions, sensor placements and T200 assumptions. The [contact note](docs/contracts/BLUEROV2_CONTACT.md) lists contact-material and coefficient assumptions.
+
+## BlueROV2 model and replay scope
+
+The vehicle geometry converts public BlueROV2 ROS 2 Xacro/CAD meshes into MuJoCo OBJ assets and applies public thruster mounting locations and T200 performance data. Some mass distribution, center of buoyancy, added mass, friction, and damping values are starting assumptions because public sources do not specify them. The public DFKI dataset supplies experimental context and RC/PWM and state logs; those records alone do not establish every physical parameter of the tested vehicle.
+
+Figure 01 uses the random-path trial that was used to fit UUV-Sim coefficients. It shows initial and fitted model replay on that trial, not independent test performance. The yaw-experiment profile is also the current GUI default, and its accumulated yaw error increased on fitting-excluded logs. Calibration comparisons replay recorded PWM at its original timestamps and calculate RMSE over valid paired samples. The figures distinguish fitting trials, held-out trials, and the yaw-experiment profile. Data preparation, replay, and scoring commands are documented in the [model and replay procedure](docs/contracts/BLUEROV2_MODEL.md) and [DFKI source register](uuv_mujoco/current/research_workspace/04_paper_evidence/REFERENCES_BLUEROV2.md). See the [paper figure index](docs/paper/README.md) for figures and their scope.
+
+## Simulator comparison
+
+| Item | UUV-Sim (MuJoCo) | Stonefish public BlueROV2 model | Gazebo public BlueROV2 model |
+| --- | --- | --- | --- |
+| Purpose | Run this repository's ROV/SITL/sensor integration and replay measured logs | Replay a public Stonefish ROS 2 scenario | Replay a public Gazebo Harmonic BlueROV2 SDF model |
+| Compared model | BlueROV2 Standard CAD-converted model in this repository | Public six-thruster `bluerov_fls.scn` scenario | Public `bluerov2_gz` SDF model |
+| SITL / ROS 2 | Platform includes ArduSub SITL and sensor bridge; this comparison replay uses logged PWM in a physics-only path | Public ROS 2 scenario; this comparison replay uses physics only | Public Gazebo model; this comparison replay uses physics only |
+| Hydrodynamic coefficients | UUV-Sim profile fitted to the DFKI trial | Public model coefficients | Public model coefficients |
+| Physics / fluid update | 1 ms integration, Python fluid and propulsion forces each step | 5 ms physics, 50 Hz hull-fluid update | 5 ms physics and public-model hydrodynamics update |
+| PWM conversion | T200 PWM-to-RPM-to-thrust tables using recorded voltage | `(PWM − 1500)/400` normalized command | `(PWM − 1500)/8` N |
+| Interpretation | Replay result with a disclosed fitted profile and measurement scope | Replay result under its own public model and PWM conversion | Replay result under its own public model and PWM conversion |
+
+Figure 02 shows **offline physics-only replays of the same public DFKI input record in each configuration**. The two baseline models retain their public hydrodynamic and actuator settings; UUV-Sim uses coefficients fitted to this random-path trial. The table summarizes update rates and command conversions. See the [figure index](docs/paper/README.md) and [BlueROV2 source register](uuv_mujoco/current/research_workspace/04_paper_evidence/REFERENCES_BLUEROV2.md) for full run conditions and pinned versions.
+
+![DFKI tank measurements and UUV-Sim, Stonefish, and Gazebo replays](docs/paper/figure-02-simulator-comparison.png)
+
+| Axis RMSE | Stonefish | Gazebo | UUV-Sim |
+| --- | ---: | ---: | ---: |
+| Surge (m/s) | 0.334 | 0.348 | 0.145 |
+| Sway (m/s) | 0.087 | 0.195 | 0.044 |
+| Relative depth (cm) | 322.3 | 251.6 | 55.7 |
+| Roll (deg) | 10.36 | 16.13 | 5.40 |
+| Pitch (deg) | 12.56 | 17.91 | 12.79 |
+| Accumulated yaw (deg) | 487.0 | 419.7 | 28.9 |
+
+UUV-Sim hydrodynamic coefficients were fitted using the random-path trial. Stonefish and Gazebo use the coefficients and actuator models from their respective public models. The table compares UUV-Sim on its fitting trial with replay results from the two public baseline models; it does not represent generalization to independent logs. See the full [PDF figure](docs/paper/figure-02-simulator-comparison.pdf).
+
+## Simulator recordings
+
+Simulator recordings:
+
+| UT27 | BlueROV2 Standard |
+| --- | --- |
+| [![Play UT27 simulator video](docs/assets/ut27-sitl-poster.png)](docs/assets/ut27-sitl-demo.mp4) | [![Play BlueROV2 Standard simulator video](docs/assets/bluerov2-sitl-poster.png)](docs/assets/bluerov2-sitl-demo.mp4) |
+
+[UT27 preview GIF](docs/assets/simulator-demo.gif)
+
+## Paper figures and references
+
+- [Figure index and use notes](docs/paper/README.md): initial/final fit, Stonefish/Gazebo comparison, calibration workflow, framework
+- [BlueROV2 source register](uuv_mujoco/current/research_workspace/04_paper_evidence/REFERENCES_BLUEROV2.md) · [BibTeX](uuv_mujoco/current/research_workspace/04_paper_evidence/references_bluerov2.bib)
+- [Vehicle assets and licenses](uuv_mujoco/current/assets/bluerov2_standard/README.md)
+- [DFKI v3 public dataset](https://zenodo.org/records/17360027) · [paper DOI](https://doi.org/10.1038/s41597-025-06347-0)
+
+## UT27 research features
+
+The [UT27 research update](docs/UUV_UPDATE_20260922.md) describes the VLA demonstration interface and its validation limits. The presence of a GUI or collection tool does not by itself establish learned-policy success or transfer to a physical vehicle.
