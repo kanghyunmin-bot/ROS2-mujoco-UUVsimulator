@@ -1,16 +1,18 @@
 # 실측 로그로 MuJoCo 기체 자동 보정
 
-**① 입력 폴더 준비 → ② 웹 GUI에서 보정 → ③ 별도 주행으로 확인**
+**① 기체와 로그 준비 → ② 웹 GUI에서 계수 추정과 후보 선택 → ③ 별도 주행으로 검증**
 
-기체의 MuJoCo 장면과 센서 장착 정보를 등록하고, 실측 모터 PWM과 전압을 재생해 물리 계수를 추정합니다. 완료된 기체와 프로필은 웹 GUI에서 선택해 다시 재생할 수 있습니다.
+기존 MuJoCo 기체 모델과 장착 정보를 입력하면, 보정용 주행의 모터 PWM·전압과 실제 운동을 이용해 감쇠·부력 등 물리 계수를 추정합니다. MuJoCo 재생으로 후보를 선택한 뒤, 별도로 기록한 주행에서 같은 프로필을 검증합니다.
 
-[편집 가능한 PowerPoint](../paper/real2sim-automation-workflow.pptx) · [입력 규격과 보정 알고리즘](REAL2SIM_AUTOMATION.md) · [BlueROV2 비교 그래프](../paper/README.md)
+[입력 규격과 보정 알고리즘](REAL2SIM_AUTOMATION.md) · [BlueROV2 비교 그래프](../paper/README.md)
 
-![기체와 로그 준비부터 MuJoCo 보정, 별도 주행 검증까지의 흐름](../paper/real2sim-automation-workflow.png)
+![Real2Sim 보정 절차. (a) 입력 검증과 장면 구성, (b) 8초·60초·전체 주행을 이용한 계수 추정, (c) MuJoCo에서 보정용 주행을 재생해 후보 선택, (d) 고정된 후보로 별도 주행 검증](../paper/real2sim-ieee.png)
 
-## 1. 입력 폴더 준비
+*그림의 시간 막대는 보정에 쓰는 시간창의 배치를 보여주는 도식입니다.*
 
-아래처럼 기체별로 한 폴더에 모읍니다. 파일 경로는 `vehicle.json`이 있는 폴더를 기준으로 적습니다.
+## 1. 입력 폴더 준비 — 그림 (a)
+
+기체 모델과 보정·검증용 로그를 아래처럼 한 폴더에 모읍니다. 파일 경로는 `vehicle.json`이 있는 폴더를 기준으로 적습니다. 자동 장면 구성은 제공한 MJCF·메시·질량·관성을 바탕으로 입력을 검증하고 센서 장착 설정을 반영합니다.
 
 ```text
 my_rov/
@@ -118,13 +120,18 @@ sim_time,voltage_v
 
 > **입력 점검** · `pwm.csv`와 `real.csv`는 같은 시계의 원본 시각을 사용하세요. `real.csv`의 첫 행은 모든 값이 유효해야 하고 이후 결측은 `nan`으로 둡니다. ROS 2 bag은 먼저 위 CSV로 변환합니다. 보정용 `train`과 검증용 `holdout`은 각각 따로 기록하세요. 실행 최소 길이는 보정 주행 3.1초, 검증 주행 1초이며 축마다 유효 대응 표본이 10개 이상 필요합니다.
 
-## 2. 웹 GUI에서 보정
+## 2. 웹 GUI에서 보정 — 그림 (b), (c)
 
 [웹 GUI를 시작](../../README.md#빠른-시작)하고 [보정용 Python 환경](REAL2SIM_AUTOMATION.md#실행)을 준비합니다.
 
 1. 웹 GUI 왼쪽 **Vehicle Setup & Calibration**을 엽니다.
 2. **Vehicle data folder**에 저장소 기준 입력 경로를 입력합니다. 예를 들어 `outputs/my_rov`입니다.
 3. **Output folder name**에 새 이름을 넣고 **Build & calibrate**를 누릅니다. 기본 설정에서는 `outputs/<이름>/`에 저장합니다.
+
+버튼을 누르면 두 단계가 이어서 실행됩니다.
+
+- **(b) 계수 추정.** 실측 PWM과 전압을 추진기 RPM과 추력으로 변환해 50 Hz 경량 6자유도 모델에 넣습니다. 8초·60초 창은 각 창의 시작 시점 실측 상태로 초기화하고, 전체 주행은 처음에 한 번만 초기화합니다. 세 시간 범위의 예측 오차를 모아 한 세트의 물리 계수를 추정합니다.
+- **(c) 후보 선택.** 초기 프로필과 보정 후보를 같은 `train` 주행의 PWM·전압·초기 상태로 MuJoCo에서 재생합니다. 접촉이 발생한 주행이 적은 후보를 우선하고, 정규화한 축별 오차와 짧은 구간의 yaw 변화 오차로 비교합니다. 선택 결과는 `fit.json`에 기록합니다.
 
 <details>
 <summary><b>터미널에서 실행하기</b></summary>
@@ -138,9 +145,11 @@ python uuv_mujoco/current/tools/real2sim_auto.py run outputs/my_rov \
 
 </details>
 
-## 3. 별도 주행으로 확인
+## 3. 별도 주행으로 검증 — 그림 (d)
 
-완료 후 상단 **Vehicle**에서 생성된 기체를 선택합니다. **Recorded trial**에서 검증 주행을 고르고, **Physics model**에서 초기 모델 또는 자동 보정 후보를 선택해 **Open MuJoCo replay**를 누릅니다.
+후보 선택이 끝나면 계수를 고정하고, 보정과 후보 선택에 사용하지 않은 `holdout` 주행을 MuJoCo에서 재생합니다. 실측 대비 축별 RMSE와 첫 접촉 시각을 함께 확인하세요.
+
+완료 후 상단 **Vehicle**에서 생성된 기체를 선택합니다. **Recorded trial**에서 검증 주행을 고른 뒤, **Physics model**에서 비교할 프로필을 선택하고 **Open MuJoCo replay**를 누릅니다.
 
 | 결과 파일 | 확인할 내용 |
 | --- | --- |
@@ -148,7 +157,7 @@ python uuv_mujoco/current/tools/real2sim_auto.py run outputs/my_rov \
 | `rmse.csv`, `replays/<trial>/aligned.csv` | 축별 오차와 공통 10 Hz 실측·재생 궤적 |
 | `fit.json`, `report.json` | 추정 범위, 후보 선택 기록, 접촉 여부 및 검토 상태 |
 
-일반 목적 프로필은 `candidate`입니다. 특정 학습 주행의 누적 yaw에 추가로 맞추려면 `yaw_target_trial`을 지정하세요. 이 경우 별도 `yaw_target` 프로필을 생성합니다. 두 프로필의 성능은 보정에 사용하지 않은 주행의 RMSE와 접촉 기록으로 비교합니다.
+일반 보정 결과는 `candidate`로 저장됩니다. 특정 보정 주행의 누적 yaw를 재현하려면 `yaw_target_trial`을 지정하세요. 이 경우 별도 `yaw_target` 프로필을 생성합니다. 각 프로필의 다른 주행에 대한 성능은 `holdout` 결과에서 비교할 수 있습니다.
 
 ### BlueROV2에서 재현
 
